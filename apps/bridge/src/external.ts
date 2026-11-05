@@ -112,6 +112,7 @@ export function parseSimbrief(j: any, now = Date.now()): FlightPlan {
     scheduledOut: num(j?.times?.sched_out), scheduledOff: num(j?.times?.sched_off),
     scheduledOn: num(j?.times?.sched_on), scheduledIn: num(j?.times?.sched_in),
     blockTimeS: num(j?.times?.sched_block ?? j?.times?.est_block), airTimeS: num(j?.times?.est_time_enroute),
+    originUtcOffsetH: num(j?.times?.orig_timezone), destinationUtcOffsetH: num(j?.times?.dest_timezone),
     fuelUnits: units,
     fuelRampKg: toKg(j?.fuel?.plan_ramp), fuelBurnKg: toKg(j?.fuel?.enroute_burn), fuelLandingKg: toKg(j?.fuel?.plan_landing),
     fetchedAt: now,

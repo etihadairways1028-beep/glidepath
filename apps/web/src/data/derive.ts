@@ -3,8 +3,8 @@
  * direct reading or a clearly-labelled estimate (`estimate: true`).
  */
 import { useMemo } from "react";
-import type { FlightPhase, FlightPlan, FlightSummary, TelemetryFrame } from "@glidepath/protocol";
-import { computeTopOfDescent, distanceNm, routeProgress, type LatLon, type TodResult } from "@glidepath/flight-engine";
+import type { FlightEvent, FlightPhase, FlightPlan, FlightSummary, TelemetryFrame } from "@glidepath/protocol";
+import { clockAt, computeTimings, computeTopOfDescent, distanceNm, routeProgress, type FlightTimings, type LatLon, type TodResult } from "@glidepath/flight-engine";
 import { useApp } from "./store";
 
 export interface Live {
@@ -27,6 +27,8 @@ export interface Live {
   fuelAtDestinationKg: number | null;
   destination: (LatLon & { icao: string; name: string | null; elevationFt: number | null }) | null;
   completed: boolean;
+  /** Every scheduled / estimated / actual time for the flight. */
+  timings: FlightTimings | null;
 }
 
 export function useLive(): Live {
@@ -34,10 +36,43 @@ export function useLive(): Live {
   const flight = useApp((s) => s.lastFlight ?? s.flight);
   const phase = useApp((s) => s.phase);
   const mode = useApp((s) => s.mode);
-  return useMemo(() => derive(frame, flight, phase, mode === "demo"), [frame, flight, phase, mode]);
+  const events = useApp((s) => s.events);
+  return useMemo(() => derive(frame, flight, phase, mode === "demo", events), [frame, flight, phase, mode, events]);
 }
 
-export function derive(frame: TelemetryFrame | null, flight: FlightSummary | null, phase: FlightPhase, isDemo: boolean): Live {
+/** Times of the first event of a type (top of climb / descent are not on the flight summary). */
+export function eventTime(events: FlightEvent[], type: FlightEvent["type"]): number | null {
+  return events.find((e) => e.type === type)?.t ?? null;
+}
+
+/** Timings for any flight, live or finished. `now` is the latest frame time (or end of flight). */
+export function timingsFor(flight: FlightSummary, events: FlightEvent[], frame: TelemetryFrame | null, extra: { toGoNm: number | null; minutesToTod: number | null; now: number }): FlightTimings {
+  const p = flight.plan;
+  return computeTimings({
+    now: extra.now,
+    airborne: !!frame && !frame.position.onGround && flight.status !== "completed",
+    completed: flight.status === "completed",
+    groundSpeedKt: frame?.speed.gsKt ?? null,
+    altitudeFt: frame?.position.altMslFt ?? null,
+    verticalSpeedFpm: frame?.speed.vsFpm ?? null,
+    toGoNm: extra.toGoNm,
+    minutesToTod: extra.minutesToTod,
+    cruiseAltitudeFt: p?.cruiseAltitudeFt ?? null,
+    actual: {
+      offBlock: flight.offBlockAt, wheelsUp: flight.wheelsUpAt, topOfClimb: eventTime(events, "TOP_OF_CLIMB"),
+      topOfDescent: eventTime(events, "TOP_OF_DESCENT"), wheelsDown: flight.wheelsDownAt, onBlock: flight.onBlockAt,
+    },
+    plan: p ? { out: p.scheduledOut, off: p.scheduledOff, on: p.scheduledOn, in: p.scheduledIn, airTimeS: p.airTimeS } : null,
+  });
+}
+
+/** Local clock time at the departure or arrival airport, when the plan gives its UTC offset. */
+export function localAt(ms: number | null, plan: FlightPlan | null, side: "origin" | "destination"): string | null {
+  if (!ms || !plan) return null;
+  return clockAt(ms, side === "origin" ? plan.originUtcOffsetH : plan.destinationUtcOffsetH);
+}
+
+export function derive(frame: TelemetryFrame | null, flight: FlightSummary | null, phase: FlightPhase, isDemo: boolean, events: FlightEvent[] = []): Live {
   const plan = flight?.plan ?? null;
   const completed = flight?.status === "completed";
   const dest = plan
@@ -47,8 +82,11 @@ export function derive(frame: TelemetryFrame | null, flight: FlightSummary | nul
   const airborne = !!frame && !frame.position.onGround;
   const base: Live = {
     frame, flight, phase, plan, isDemo, airborne, flownNm, toGoNm: null, progress: completed ? 1 : 0, etaLanding: null, etaOnBlock: null,
-    scheduleDeltaMin: null, tod: null, fuelAtDestinationKg: null, destination: dest, completed,
+    scheduleDeltaMin: null, tod: null, fuelAtDestinationKg: null, destination: dest, completed, timings: null,
   };
+  if (flight && (completed || !frame)) {
+    base.timings = timingsFor(flight, events, frame, { toGoNm: null, minutesToTod: null, now: flight.endedAt ?? frame?.t ?? Date.now() });
+  }
   if (!frame || completed) return base;
 
   let toGo: number | null = null;
@@ -63,10 +101,6 @@ export function derive(frame: TelemetryFrame | null, flight: FlightSummary | nul
 
   const gs = frame.speed.gsKt ?? 0;
   if (toGo !== null && airborne && gs > 60) {
-    base.etaLanding = frame.t + (toGo / gs) * 3_600_000;
-    const taxiIn = plan?.scheduledIn && plan?.scheduledOn ? (plan.scheduledIn - plan.scheduledOn) * 1000 : 5 * 60_000;
-    base.etaOnBlock = base.etaLanding + taxiIn;
-    if (plan?.scheduledIn) base.scheduleDeltaMin = Math.round((base.etaOnBlock - plan.scheduledIn * 1000) / 60_000);
     const flow = frame.fuel.totalFlowKgH;
     if (frame.fuel.totalKg !== null && flow !== null) base.fuelAtDestinationKg = Math.round(frame.fuel.totalKg - flow * (toGo / gs));
   }
@@ -79,6 +113,13 @@ export function derive(frame: TelemetryFrame | null, flight: FlightSummary | nul
       descentHeadwindKt: frame.speed.tasKt !== null ? frame.speed.tasKt - gs : null, target,
     });
     base.tod = { ...r, targetLabel: `${(elev + 3000).toLocaleString("en-US")} ft, 10 nm before ${dest.icao}` };
+  }
+  if (flight) {
+    const t = timingsFor(flight, events, frame, { toGoNm: toGo, minutesToTod: base.tod && !base.tod.pastTod ? base.tod.minutesToTod : null, now: frame.t });
+    base.timings = t;
+    base.etaLanding = t.milestones[4]!.actual ?? t.milestones[4]!.estimated;
+    base.etaOnBlock = t.milestones[5]!.actual ?? t.milestones[5]!.estimated;
+    base.scheduleDeltaMin = t.arrival?.deltaMin ?? null;
   }
   return base;
 }
@@ -97,6 +138,15 @@ export function zulu(ms: number | null | undefined): string {
 export function dur(ms: number | null | undefined): string {
   if (ms === null || ms === undefined || !Number.isFinite(ms)) return "—";
   const m = Math.max(0, Math.round(ms / 60000));
+  return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`;
+}
+
+/** Countdown wording: "under 1 min", "12 min", "1h 05m". */
+export function countdown(ms: number | null | undefined): string {
+  if (ms === null || ms === undefined || !Number.isFinite(ms)) return "—";
+  const m = Math.round(ms / 60000);
+  if (ms < 60_000) return "under 1 min";
+  if (m < 60) return `${m} min`;
   return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`;
 }
 

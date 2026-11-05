@@ -136,7 +136,7 @@ function demoPlan(frames: TelemetryFrame[], db: Awaited<ReturnType<typeof loadAi
     destination: { icao: d.code, name: d.name, runway: "23R", lat: d.lat, lon: d.lon, elevationFt: d.elevationFt },
     alternate: "EGNM", route: "Demo route (synthetic)", fixes, cruiseAltitudeFt: 24000, distanceNm: 154,
     scheduledOut: Math.round(start + 60), scheduledOff: Math.round(start + 420), scheduledOn: Math.round(start + 2160), scheduledIn: Math.round(start + 2400),
-    blockTimeS: 2340, airTimeS: 1740, fuelUnits: "kg" as const, fuelRampKg: 6200, fuelBurnKg: 950, fuelLandingKg: 5250, fetchedAt: Date.now(),
+    blockTimeS: 2340, airTimeS: 1740, originUtcOffsetH: 0, destinationUtcOffsetH: 0, fuelUnits: "kg" as const, fuelRampKg: 6200, fuelBurnKg: 950, fuelLandingKg: 5250, fetchedAt: Date.now(),
   };
 }
 

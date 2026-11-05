@@ -6,7 +6,7 @@
 import { useMemo } from "react";
 import type { TrailPoint } from "../data/store";
 import { useApp } from "../data/store";
-import { dur, fmt, PHASE_LABEL, useLive, zulu } from "../data/derive";
+import { countdown, dur, fmt, PHASE_LABEL, useLive, zulu } from "../data/derive";
 
 const BARS = 34;
 
@@ -40,21 +40,36 @@ export function LiveCard({ big }: { big?: boolean }) {
     main = flight.wheelsUpAt && flight.wheelsDownAt ? dur(flight.wheelsDownAt - flight.wheelsUpAt) : "—";
     under = `airborne · ${fmt(flight.distanceNm)} nm`;
   } else if (L.airborne) {
-    over = L.tod && !L.tod.pastTod && L.tod.minutesToTod !== null ? `Top of descent in ${Math.max(1, Math.round(L.tod.minutesToTod))} min` : PHASE_LABEL[phase];
-    main = L.etaLanding && frame ? dur(L.etaLanding - frame.t) : L.toGoNm !== null ? `${fmt(L.toGoNm)} nm` : PHASE_LABEL[phase];
-    under = L.etaLanding ? `to landing · ${fmt(L.toGoNm)} nm to go` : "connect a plan for time to go";
+    const T = L.timings;
+    over = T?.toTopOfDescentMs != null ? `Top of descent in ${countdown(T.toTopOfDescentMs)}` : T?.toTopOfClimbMs != null ? `Top of climb in ${countdown(T.toTopOfClimbMs)}` : PHASE_LABEL[phase];
+    if (T?.toGateMs != null) {
+      main = countdown(T.toGateMs);
+      under = `to the gate · lands ${zulu(L.etaLanding)} · ${fmt(L.toGoNm)} nm to go`;
+    } else if (L.toGoNm !== null) {
+      main = `${fmt(L.toGoNm)} nm`;
+      under = "to go";
+    } else {
+      main = PHASE_LABEL[phase];
+      under = "link a SimBrief plan for arrival times";
+    }
   } else if (flight.wheelsDownAt) {
     over = "Taxiing to the gate";
     main = flight.arrivalStand ? `Stand ${flight.arrivalStand}` : fmt(frame?.speed.gsKt) + " kt";
     under = flight.arrivalRunway ? `landed ${flight.arrivalRunway}` : "landed";
   } else if (flight.offBlockAt) {
     over = PHASE_LABEL[phase];
-    main = frame ? dur(frame.t - flight.offBlockAt) : "—";
-    under = "since off block";
+    if (L.timings?.toTakeoffMs != null && phase !== "TAKEOFF") {
+      main = countdown(L.timings.toTakeoffMs);
+      under = `to take-off (est) · off block ${countdown(frame ? frame.t - flight.offBlockAt : null)} ago`;
+    } else {
+      main = frame ? dur(frame.t - flight.offBlockAt) : "—";
+      under = "since off block";
+    }
   } else {
     over = "At the gate";
+    const toOut = plan?.scheduledOut && frame ? plan.scheduledOut * 1000 - frame.t : null;
     main = flight.departureStand ? `Stand ${flight.departureStand}` : plan?.scheduledOut ? zulu(plan.scheduledOut * 1000) : "Ready";
-    under = plan?.scheduledOut ? "scheduled off block" : "waiting for off-block";
+    under = toOut !== null ? (toOut > 0 ? `off block due in ${countdown(toOut)}` : `off block was due ${countdown(-toOut)} ago`) : "waiting for off-block";
   }
 
   return (

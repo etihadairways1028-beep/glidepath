@@ -2,9 +2,10 @@ import { useMemo, useState } from "react";
 import type { LandingReport } from "@glidepath/protocol";
 import { computeTopOfDescent } from "@glidepath/flight-engine";
 import { LiveCard } from "../components/LiveCard";
+import { TimingsTable } from "../components/Timings";
 import { ProfileChart } from "../components/ProfileChart";
 import { Grade, Kv, Notice, onOff, Section, Tile } from "../components/ui";
-import { dur, EVENT_LABEL, fmt, fuel, useLive, zulu } from "../data/derive";
+import { countdown, dur, EVENT_LABEL, fmt, fuel, useLive, zulu } from "../data/derive";
 import { useApp, useSettings } from "../data/store";
 
 export function FlightScreen() {
@@ -46,6 +47,12 @@ export function FlightScreen() {
         <Tile k="Above ground" v={fmt(f.position.altAglFt)} unit="ft" na={f.position.altAglFt === null} />
       </div>
 
+      {L.timings && (
+        <Section title="Timings" right={<span className="faint" style={{ fontSize: 12.5 }}>scheduled · estimated · actual</span>}>
+          <TimingsTable t={L.timings} plan={L.plan} live={!L.completed} />
+        </Section>
+      )}
+
       <Section title="Profile" right={<span className="faint" style={{ fontSize: 12.5 }}>altitude, groundspeed dashed</span>}>
         <ProfileChart trail={trail} showSpeed marks={marks} />
       </Section>
@@ -54,11 +61,10 @@ export function FlightScreen() {
         <Section title="Progress">
           <Kv k="Flown" v={`${fmt(L.flownNm)} nm`} />
           <Kv k="To go" v={L.toGoNm === null ? "needs a plan" : `${fmt(L.toGoNm)} nm`} />
-          <Kv k="Off block" v={zulu(L.flight.offBlockAt)} />
-          <Kv k="Wheels up" v={zulu(L.flight.wheelsUpAt)} />
-          <Kv k="Landing" v={L.flight.wheelsDownAt ? zulu(L.flight.wheelsDownAt) : L.etaLanding ? <>{zulu(L.etaLanding)} <span className="est">est</span></> : "—"} />
-          <Kv k="Planned in" v={L.plan?.scheduledIn ? zulu(L.plan.scheduledIn * 1000) : "—"} />
-          <Kv k="Against plan" v={L.scheduleDeltaMin === null ? "—" : Math.abs(L.scheduleDeltaMin) <= 2 ? "On time" : L.scheduleDeltaMin < 0 ? `${-L.scheduleDeltaMin} min ahead` : `${L.scheduleDeltaMin} min behind`} />
+          <Kv k="Progress" v={`${Math.round(L.progress * 100)}%`} />
+          <Kv k="Time to landing" v={L.timings?.toLandingMs != null ? <>{countdown(L.timings.toLandingMs)} <span className="est">est</span></> : "—"} />
+          <Kv k="Time to gate" v={L.timings?.toGateMs != null ? <>{countdown(L.timings.toGateMs)} <span className="est">est</span></> : "—"} />
+          <Kv k="Block time so far" v={L.timings?.blockMs != null ? dur(L.timings.blockMs) : "—"} />
         </Section>
         <Section title="Fuel">
           <Kv k="On board" v={fuel(f.fuel.totalKg, fuelUnit)} />

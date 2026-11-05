@@ -99,6 +99,9 @@ export function SettingsScreen() {
             <div className="between"><span>Fuel</span><div className="seg">{(["kg", "lb"] as const).map((u) => <button key={u} className={s.fuelUnit === u ? "on" : ""} onClick={() => settingsStore.set({ fuelUnit: u })}>{u}</button>)}</div></div>
           </Section>
           <Section title="Appearance">
+            <div className="between" style={{ padding: "6px 0" }}><span>Theme</span>
+              <div className="seg">{([["system", "Automatic"], ["dark", "Dark"], ["light", "Light"]] as const).map(([k, l]) => <button key={k} className={(s.theme ?? "system") === k ? "on" : ""} onClick={() => settingsStore.set({ theme: k })}>{l}</button>)}</div>
+            </div>
             <div className="between" style={{ padding: "6px 0" }}><span>Accent</span>
               <div className="seg">{([["glideslope", "Glideslope"], ["aurora", "Aurora"], ["ice", "Ice"]] as const).map(([k, l]) => <button key={k} className={s.accent === k ? "on" : ""} onClick={() => settingsStore.set({ accent: k })}>{l}</button>)}</div>
             </div>

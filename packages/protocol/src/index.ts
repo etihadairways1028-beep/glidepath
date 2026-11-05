@@ -288,6 +288,9 @@ export const FlightPlan = z.object({
   scheduledIn: z.number().nullable(),
   blockTimeS: z.number().nullable(),
   airTimeS: z.number().nullable(),
+  /** Airport UTC offsets in hours (from the plan), for local clock times. */
+  originUtcOffsetH: z.number().nullable().default(null),
+  destinationUtcOffsetH: z.number().nullable().default(null),
   fuelUnits: z.enum(["kg", "lb"]),
   /** Values in kg regardless of the plan's units. */
   fuelRampKg: z.number().nullable(),

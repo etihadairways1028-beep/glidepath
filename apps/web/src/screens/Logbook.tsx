@@ -4,7 +4,8 @@ import { MapView } from "../components/MapView";
 import { ProfileChart } from "../components/ProfileChart";
 import { Grade, Icon, Kv, Notice, Section, Tile } from "../components/ui";
 import { activeBridge } from "../data/bridge";
-import { dur, EVENT_LABEL, fmt, fuel, zulu } from "../data/derive";
+import { dur, EVENT_LABEL, fmt, fuel, timingsFor, zulu } from "../data/derive";
+import { TimingsTable } from "../components/Timings";
 import { framesToTrail, useApp, useSettings, type TrailPoint } from "../data/store";
 import { LandingSummary } from "./Flight";
 import { gradeOf } from "./Home";
@@ -145,14 +146,17 @@ export function FlightDetail({ id }: { id: string }) {
         <Tile k="Simulator" v={flight.simulator.name.replace("Microsoft Flight Simulator", "MSFS")} />
       </div>
       <Section title="Profile"><ProfileChart trail={trail} showSpeed marks={marks} height={200} /></Section>
+      <Section title="Timings" right={<span className="faint" style={{ fontSize: 12.5 }}>{flight.plan ? "planned against actual" : "actual, from telemetry"}</span>}>
+        <TimingsTable t={timingsFor(flight, events, null, { toGoNm: null, minutesToTod: null, now: flight.onBlockAt ?? flight.endedAt ?? flight.startedAt })} plan={flight.plan} live={false} />
+      </Section>
       <div className="grid cols-2">
-        <Section title="Times">
+        <Section title="Gates and runways">
           <Kv k="Off block" v={`${zulu(flight.offBlockAt)}${flight.departureStand ? ` · stand ${flight.departureStand}` : ""}`} />
           <Kv k="Wheels up" v={`${zulu(flight.wheelsUpAt)}${flight.departureRunway ? ` · runway ${flight.departureRunway}` : ""}`} />
           <Kv k="Wheels down" v={`${zulu(flight.wheelsDownAt)}${flight.arrivalRunway ? ` · runway ${flight.arrivalRunway}` : ""}`} />
           <Kv k="On block" v={`${zulu(flight.onBlockAt)}${flight.arrivalStand ? ` · stand ${flight.arrivalStand}` : ""}`} />
           {flight.plan && <Kv k="Planned block" v={dur((flight.plan.blockTimeS ?? 0) * 1000)} />}
-          <p className="faint" style={{ fontSize: 12, margin: "8px 0 0" }}>Times are actual, from telemetry, in UTC. Stands come from OpenStreetMap when one is mapped there.</p>
+          <p className="faint" style={{ fontSize: 12, margin: "8px 0 0" }}>Times in UTC, recorded by the Bridge. Stands come from OpenStreetMap when one is mapped there.</p>
         </Section>
         <Section title="Landing" right={flight.landings.length ? <Grade grade={flight.landings.at(-1)!.grade} /> : undefined}>
           {flight.landings.length ? <LandingSummary l={flight.landings.at(-1)!} /> : <p className="muted">No landing was recorded on this flight.</p>}

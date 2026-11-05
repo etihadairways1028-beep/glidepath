@@ -31,11 +31,12 @@ describe("external data parsers (documented response shapes)", () => {
       atc: { callsign: "BAW123" }, aircraft: { icaocode: "B77W", reg: "G-STBA" },
       origin: { icao_code: "EGLL", name: "London Heathrow", pos_lat: "51.47", pos_long: "-0.46", elevation: "83", plan_rwy: "27R" },
       destination: { icao_code: "KJFK", name: "New York JFK", pos_lat: "40.64", pos_long: "-73.78", elevation: "13", plan_rwy: "22L" },
-      times: { sched_out: "1793520000", sched_in: "1793548800", est_time_enroute: "27000" },
+      times: { sched_out: "1793520000", sched_in: "1793548800", est_time_enroute: "27000", orig_timezone: "0", dest_timezone: "-5" },
       fuel: { plan_ramp: "200000", enroute_burn: "150000", plan_landing: "50000" },
       navlog: { fix: [{ ident: "CPT", pos_lat: "51.5", pos_long: "-1.2", altitude_feet: "20000" }, { ident: "BAD" }] },
     });
     expect(p.origin.runway).toBe("27R");
+    expect(p.destinationUtcOffsetH).toBe(-5);
     expect(p.fuelRampKg).toBe(90718);
     expect(p.fixes).toHaveLength(1);
     expect(p.callsign).toBe("BAW123");

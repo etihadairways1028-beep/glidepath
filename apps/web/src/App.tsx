@@ -57,6 +57,37 @@ export function App() {
     document.documentElement.dataset.glass = s.reduceTransparency ? "solid" : "glass";
   }, [s.accent, s.reduceTransparency]);
 
+  // Light / dark / follow the device.
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: light)");
+    const apply = () => {
+      const theme = (s.theme ?? "system") === "system" ? (mq.matches ? "light" : "dark") : s.theme;
+      document.documentElement.dataset.theme = theme;
+      document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "light" ? "#DCE8F7" : "#03050C");
+    };
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, [s.theme]);
+
+  // The glass highlight follows the pointer (desktop / Apple Pencil hover).
+  useEffect(() => {
+    let raf = 0;
+    const on = (e: PointerEvent) => {
+      if (e.pointerType === "touch") return;
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const el = (e.target as Element | null)?.closest?.(".glass") as HTMLElement | null;
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        el.style.setProperty("--mx", `${e.clientX - r.left}px`);
+        el.style.setProperty("--my", `${e.clientY - r.top}px`);
+      });
+    };
+    window.addEventListener("pointermove", on, { passive: true });
+    return () => window.removeEventListener("pointermove", on);
+  }, []);
+
   const [screen, ...rest] = route;
   const full = screen === "map" || screen === "glance";
   let body: ReactNode;
@@ -72,7 +103,7 @@ export function App() {
 
   return (
     <>
-      <div className="sky" />
+      <Sky />
       <div className="shell" style={screen === "glance" ? { gridTemplateColumns: "1fr" } : undefined}>
         {screen !== "glance" && (
           <nav className="glass side" aria-label="Main">
@@ -100,3 +131,20 @@ export function App() {
 }
 
 export { store };
+
+/** The sky behind the glass follows the flight: apron dusk, climb, high cruise, descent. */
+function Sky() {
+  const phase = useApp((st) => st.phase);
+  const hasFlight = useApp((st) => !!(st.lastFlight ?? st.flight));
+  const sky = !hasFlight ? "ground"
+    : phase === "TAKEOFF" || phase === "CLIMB" ? "climb"
+    : phase === "CRUISE" ? "cruise"
+    : phase === "DESCENT" || phase === "APPROACH" || phase === "LANDING" ? "descent" : "ground";
+  return (
+    <div className="sky" data-sky={sky} aria-hidden="true">
+      <div className="stars" />
+      <div className="light a" /><div className="light b" /><div className="light c" />
+      <div className="grain" />
+    </div>
+  );
+}

@@ -35,11 +35,12 @@ export interface Settings {
   showIvao: boolean;
   fuelUnit: "kg" | "lb";
   accent: "glideslope" | "aurora" | "ice";
+  theme: "system" | "dark" | "light";
   reduceTransparency: boolean;
 }
 
 const DEFAULT_SETTINGS: Settings = {
-  bridgeUrl: "", token: "", simbriefUser: "", showVatsim: true, showIvao: false, fuelUnit: "kg", accent: "glideslope", reduceTransparency: false,
+  bridgeUrl: "", token: "", simbriefUser: "", showVatsim: true, showIvao: false, fuelUnit: "kg", accent: "glideslope", theme: "system", reduceTransparency: false,
 };
 
 const initial: AppState = {

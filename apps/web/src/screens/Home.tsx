@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { FlightSummary } from "@glidepath/protocol";
 import { LiveCard } from "../components/LiveCard";
+import { TimingsStrip } from "../components/Timings";
 import { ConnPill, Grade, Icon, Notice, Tile } from "../components/ui";
 import { activeBridge } from "../data/bridge";
 import { startDemo } from "../data/demo";
@@ -27,6 +28,7 @@ export function Home() {
       {mode === "none" && <Onboarding />}
       {mode === "bridge" && conn !== "live" && msg && <Notice>{msg} <a href="#/settings">Connection settings</a></Notice>}
       {mode !== "none" && flight && <LiveCard />}
+      {mode !== "none" && flight && <HomeTimings />}
       {mode === "bridge" && conn === "live" && !flight && (
         <section className="glass pad empty">
           <div className="h2">{sim === "connected" ? "Ready when you are" : "Waiting for Microsoft Flight Simulator"}</div>
@@ -144,4 +146,9 @@ function Stats() {
 
 export function gradeOf(score: number): string {
   return score >= 95 ? "A+" : score >= 88 ? "A" : score >= 78 ? "B" : score >= 65 ? "C" : score >= 50 ? "D" : "F";
+}
+
+function HomeTimings() {
+  const L = useLive();
+  return L.timings ? <TimingsStrip t={L.timings} /> : null;
 }
