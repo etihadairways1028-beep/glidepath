@@ -30,7 +30,7 @@ body{background:radial-gradient(1200px 600px at 70% -10%,rgba(90,169,255,.12),tr
 a{color:var(--accent)}
 `;
 
-const LOGO = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 5 L15 15" stroke="#5AA9FF" stroke-width="2" stroke-linecap="round"/><path d="M11 19 H21" stroke="#E8EEF9" stroke-width="2" stroke-linecap="round"/></svg>`;
+const LOGO = `<svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true" style="border-radius:6px"> <defs>  <linearGradient id="gp-bg" x1="0.1" y1="0" x2="0.9" y2="1">   <stop offset="0" stop-color="#4FB4FF"/>   <stop offset="0.5" stop-color="#2F6BFF"/>   <stop offset="1" stop-color="#7A3CFF"/>  </linearGradient>  <linearGradient id="gp-sheen" x1="0" y1="0" x2="0" y2="1">   <stop offset="0" stop-color="#fff" stop-opacity="0.42"/>   <stop offset="0.55" stop-color="#fff" stop-opacity="0.04"/>   <stop offset="1" stop-color="#fff" stop-opacity="0"/>  </linearGradient>  <linearGradient id="gp-path" x1="0" y1="0" x2="1" y2="1">   <stop offset="0" stop-color="#fff" stop-opacity="0.55"/>   <stop offset="0.6" stop-color="#fff"/>  </linearGradient> </defs> <rect width="64" height="64" rx="15" fill="url(#gp-bg)"/> <rect x="0.75" y="0.75" width="62.5" height="62.5" rx="14.4" fill="url(#gp-sheen)" stroke="#fff" stroke-opacity="0.28" stroke-width="1.5"/> <path d="M11 16 C 24 16, 31 26, 37 36 C 41.5 43.5, 45 47, 53 47" fill="none" stroke="url(#gp-path)" stroke-width="5.2" stroke-linecap="round"/> <path d="M27 53 H 53" stroke="#fff" stroke-opacity="0.5" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="4.5 4"/> <circle cx="11" cy="16" r="4.2" fill="#fff"/></svg>`;
 
 /** QR code as inline SVG (generated locally, nothing leaves the PC). */
 function qrSvg(text: string): string {

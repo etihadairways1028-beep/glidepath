@@ -66,7 +66,9 @@ export function App() {
   useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: light)");
     const apply = () => {
-      const theme = (s.theme ?? "system") === "system" ? (mq.matches ? "light" : "dark") : s.theme;
+      // ?theme=dark|light (used by the website's iPad preview) overrides without saving.
+      const forced = new URLSearchParams(location.search).get("theme");
+      const theme = forced === "dark" || forced === "light" ? forced : (s.theme ?? "system") === "system" ? (mq.matches ? "light" : "dark") : s.theme;
       document.documentElement.dataset.theme = theme;
       document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "light" ? "#DCE8F7" : "#03050C");
     };

@@ -22,14 +22,8 @@ export const Icon = {
   download: () => <svg viewBox="0 0 24 24" {...P}><path d="M12 4v11m0 0 4.5-4.5M12 15l-4.5-4.5M5 20h14" /></svg>,
 };
 
-export function Mark({ size = 26 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
-      <rect width="32" height="32" rx="9" fill="#0D1730" />
-      <path d="M6 8 L21 21" stroke="var(--accent)" strokeWidth="2.6" strokeLinecap="round" />
-      <path d="M15 25 H27" stroke="#EEF3FC" strokeWidth="2.6" strokeLinecap="round" />
-    </svg>
-  );
+export function Mark({ size = 28 }: { size?: number }) {
+  return <img src="icons/mark.svg" width={size} height={size} alt="" aria-hidden="true" style={{ display: "block", borderRadius: size * 0.234, boxShadow: "0 4px 14px rgba(47,107,255,.35)" }} />;
 }
 
 export function ConnPill() {

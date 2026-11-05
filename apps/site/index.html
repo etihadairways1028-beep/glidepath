@@ -3,171 +3,334 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Glidepath — your sim flight, on the screen next to you</title>
-  <meta name="description" content="Glidepath is a flight simulator companion. A small Windows app reads your flight from Microsoft Flight Simulator and shows it live on your iPad or phone, records it, and grades your landing.">
-  <meta name="theme-color" content="#060B18">
+  <title>Glidepath: your sim flight, live on the screen beside you</title>
+  <meta name="description" content="Glidepath is a free flight simulator companion. A small Windows app reads your flight from Microsoft Flight Simulator and shows it live on your iPad or phone: timings, map, copilot, and a debrief of every takeoff and landing.">
+  <meta name="theme-color" content="#050B1C">
   <link rel="icon" href="assets/mark.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="app/icons/apple-touch-icon.png">
+  <meta property="og:title" content="Glidepath">
+  <meta property="og:description" content="Your sim flight, live on the screen beside you. Free for Microsoft Flight Simulator 2020 and 2024.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=B612+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <script src="config.js"></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
 
+  <div class="sky" aria-hidden="true"><i class="l1"></i><i class="l2"></i><i class="l3"></i><span class="stars"></span><span class="grain"></span></div>
+
   <header class="top">
-    <a class="brand" href="#" aria-label="Glidepath home">
-      <img src="assets/mark.svg" alt="" width="26" height="26">
-      <span>Glidepath</span>
-    </a>
-    <nav aria-label="Main">
-      <a href="#demo">Demo</a>
-      <a href="#today">What works</a>
-      <a href="#landings">Landings</a>
-      <a href="#download">Download</a>
-      <a href="#roadmap">Roadmap</a>
-      <a href="app/">App</a>
-      <a class="gh" data-repo-link href="#">GitHub</a>
+    <nav class="nav glass" aria-label="Main">
+      <a class="brand" href="#" aria-label="Glidepath home"><img src="assets/mark.svg" alt="" width="28" height="28"><span>Glidepath</span></a>
+      <div class="links">
+        <a href="#features">Features</a>
+        <a href="#debrief">Debrief</a>
+        <a href="#demo">Demo</a>
+        <a href="#today">What works</a>
+        <a href="app/">App</a>
+      </div>
+      <a class="btn primary small" data-download href="#download">Download</a>
     </nav>
   </header>
 
   <main id="main">
+    <!-- HERO -->
     <section class="hero" aria-labelledby="hero-title">
-      <div class="hero-copy">
-        <h1 id="hero-title">Your sim flight, on the screen next to you.</h1>
-        <p class="lede">A small Windows app reads your flight from Microsoft Flight Simulator. Your iPad or phone shows it live, every flight is recorded, and every landing is graded with the reasons behind the grade.</p>
+      <div class="hero-copy reveal">
+        <p class="eyebrow glass"><span class="live-dot" aria-hidden="true"></span>Free for MSFS 2020 and 2024</p>
+        <h1 id="hero-title">Your sim flight, live on the screen beside you.</h1>
+        <p class="lede">A small Windows app reads your flight straight from Microsoft Flight Simulator. Your iPad or phone shows it live, gate to gate, and when you park you get a proper debrief: how the rotation went, whether the approach was stable, and how that landing really felt.</p>
         <div class="cta">
-          <a class="btn primary" data-download href="#download">Download for Windows</a>
-          <a class="btn" href="app/">Open the app</a>
-          <a class="btn" href="#demo">Play the demo flight</a>
+          <a class="btn primary" data-download href="#download"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Download for Windows</a>
+          <a class="btn glass" href="app/?demo=1">Try the app now</a>
         </div>
-        <p class="fine">Free early test build, version 0.3. Not signed yet, so Windows will ask you to confirm before it opens.</p>
+        <p class="fine" id="build-line">Early test build. Not code-signed yet, so Windows asks you to confirm before it opens.</p>
+      </div>
+
+      <div class="devices reveal" aria-label="The Glidepath app on an iPad and a phone">
+        <div class="ipad">
+          <div class="screen">
+            <iframe id="ipad-frame" title="The Glidepath app, running the demo flight" data-src="app/?demo=1&theme=dark#/home" loading="lazy" tabindex="-1"></iframe>
+            <div class="screen-cover" id="ipad-cover"><img src="assets/mark.svg" alt="" width="56" height="56"><span>Loading the live app…</span></div>
+          </div>
+        </div>
+
+        <div class="phone">
+          <div class="phone-screen">
+            <div class="lock-time" id="lock-time">9:41</div>
+            <div class="lock-date" id="lock-date">Thursday 5 November</div>
+            <aside class="card" aria-live="polite" aria-label="Live flight card">
+              <div class="card-top">
+                <span class="callsign"><img src="assets/mark.svg" alt="" width="18" height="18">GPD1 · A320</span>
+                <span class="phase" id="phase">At the gate</span>
+              </div>
+              <div class="card-route">
+                <div>
+                  <div class="icao data">EGLL</div>
+                  <div class="sub" id="dep-time">Heathrow</div>
+                </div>
+                <div class="bars" id="bars" aria-hidden="true"></div>
+                <div class="right">
+                  <div class="icao data">EGCC</div>
+                  <div class="sub" id="arr-time">Manchester</div>
+                </div>
+              </div>
+              <div class="card-mid">
+                <div class="big data" id="mid-big">—</div>
+                <div class="sub" id="mid-sub">Waiting for off-block</div>
+              </div>
+              <dl class="readouts">
+                <div><dt>Altitude</dt><dd class="data" id="r-alt">—</dd></div>
+                <div><dt>Speed</dt><dd class="data" id="r-gs">—</dd></div>
+                <div><dt>V/S fpm</dt><dd class="data" id="r-vs">—</dd></div>
+                <div><dt>Fuel</dt><dd class="data" id="r-fuel">—</dd></div>
+              </dl>
+              <p class="tod" id="tod" hidden></p>
+              <div class="grade" id="grade" hidden>
+                <span class="g data" id="g-letter">A+</span>
+                <span id="g-text"></span>
+              </div>
+            </aside>
+            <p class="phone-note">Demo replay</p>
+          </div>
+        </div>
       </div>
     </section>
 
+    <p class="sources reveal">Built on open data: <span>OurAirports</span><span>SimBrief</span><span>VATSIM</span><span>IVAO</span><span>aviationweather.gov</span><span>OpenStreetMap</span><span>Sentinel-2</span></p>
+
+    <!-- FEATURES -->
+    <section id="features" class="features" aria-labelledby="features-title">
+      <div class="section-head reveal">
+        <p class="kicker">Everything on one screen</p>
+        <h2 id="features-title">Built for the hour you spend at FL360, and the thirty seconds before touchdown.</h2>
+      </div>
+
+      <div class="bento">
+        <article class="tile glass t-timings reveal">
+          <h3>Every timing, the way airlines keep them</h3>
+          <p>Off block to on block, scheduled against estimated against actual, with local times from your SimBrief plan.</p>
+          <div class="oooi" aria-label="Example timings from the demo flight">
+            <div class="done"><b>OUT</b><span class="data">1001Z</span><small>off block</small></div>
+            <div class="done"><b>OFF</b><span class="data">1006Z</span><small>take-off</small></div>
+            <div class="done"><b>TOC</b><span class="data">1018Z</span><small>top of climb</small></div>
+            <div class="now"><b>TOD</b><span class="data">1020Z</span><small class="est">est</small></div>
+            <div><b>ON</b><span class="data">1037Z</span><small class="est">est</small></div>
+            <div><b>IN</b><span class="data">1041Z</span><small class="est">est</small></div>
+          </div>
+          <p class="tile-foot">From the demo flight</p>
+        </article>
+
+        <article class="tile glass t-map reveal">
+          <div class="map-art" aria-hidden="true">
+            <svg viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice">
+              <defs>
+                <linearGradient id="trailg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#64D2FF"/><stop offset=".6" stop-color="#0A84FF"/><stop offset="1" stop-color="#BF5AF2"/></linearGradient>
+                <radialGradient id="land" cx=".4" cy=".55" r=".8"><stop offset="0" stop-color="#1d3a2c"/><stop offset=".6" stop-color="#14261f"/><stop offset="1" stop-color="#0b1a24"/></radialGradient>
+                <filter id="glow"><feGaussianBlur stdDeviation="4"/></filter>
+              </defs>
+              <rect width="400" height="260" fill="url(#land)"/>
+              <path d="M0 210 C 60 200, 90 230, 150 225 S 260 250, 400 235 V260 H0Z" fill="#0b2033"/>
+              <path d="M300 0 C 320 40, 360 60, 400 70 V0Z" fill="#0b2033"/>
+              <path class="route" d="M80 205 C 140 170, 190 120, 250 92 S 320 52, 336 44" fill="none" stroke="#E05CFF" stroke-width="2" stroke-dasharray="6 5" opacity=".9"/>
+              <path class="trail" d="M80 205 C 140 170, 190 120, 250 92" fill="none" stroke="url(#trailg)" stroke-width="10" opacity=".35" filter="url(#glow)"/>
+              <path class="trail" d="M80 205 C 140 170, 190 120, 250 92" fill="none" stroke="url(#trailg)" stroke-width="3.5" stroke-linecap="round"/>
+              <circle cx="80" cy="205" r="6" fill="#30D158" stroke="#fff" stroke-width="2.5"/>
+              <circle cx="336" cy="44" r="6" fill="#FF9F0A" stroke="#fff" stroke-width="2.5"/>
+              <g transform="translate(250 92) rotate(58)"><circle r="18" fill="#0A84FF" opacity=".3"/><path d="M0 -12c1 0 1.7 1 1.7 2.4v6.8l9.4 5.5v2.6l-9.4-2.8v5.6l2.8 2.2v1.8L0 24.9l-4.5 1.1v-1.8l2.8-2.2v-5.6l-9.4 2.8v-2.6l9.4-5.5v-6.8C-1.7-11-1-12 0-12z" fill="#fff" stroke="#0A84FF" stroke-width="1.2" transform="translate(0 -6)"/></g>
+            </svg>
+          </div>
+          <div class="tile-over">
+            <h3>Satellite map with your trail</h3>
+            <p>Sentinel-2 imagery or a clean street map. Your route, your trail, and VATSIM and IVAO traffic around you.</p>
+          </div>
+        </article>
+
+        <article class="tile glass t-copilot reveal">
+          <h3>A copilot that talks like one</h3>
+          <div class="chat">
+            <p class="me">When do we start down?</p>
+            <p class="fo"><b>Copilot</b>Top of descent in about 12 minutes, around 1020Z. Plan on 2,000 fpm for a 3° path at this groundspeed.</p>
+            <p class="me">Fuel?</p>
+            <p class="fo"><b>Copilot</b>5,480 kg on board. At this burn we land with about 5,380, 130 above plan.</p>
+          </div>
+          <p class="tile-foot">Answers from the demo flight. Works with no AI service at all; hook up a free model on your PC for open questions.</p>
+        </article>
+
+        <article class="tile glass t-glance reveal">
+          <h3>Glance mode</h3>
+          <p>Prop your iPad on the desk. Big numbers, screen kept awake, and spoken callouts from 2,500 ft down to 10.</p>
+          <div class="callouts" aria-hidden="true"><span>2500</span><span>1000</span><span>500</span><span>100</span><span>50</span><span>40</span><span>30</span><span>20</span><span>10</span></div>
+        </article>
+
+        <article class="tile glass t-log reveal">
+          <h3>A logbook that keeps itself</h3>
+          <p>Every flight is saved on your own PC as you fly, so a dropped Wi-Fi connection loses nothing.</p>
+          <ul class="logrows" aria-label="Example logbook entries">
+            <li><span class="data r">EGLL → EGCC</span><span class="m">A320, 168 nm, 0h 45m</span><span class="w"><b>Smooth</b><span class="data">140 fpm</span></span><span class="gr">A+</span></li>
+            <li class="ex"><span class="data r">OMDB → OOMS</span><span class="m">B738, 182 nm, 1h 05m</span><span class="w"><b>Firm</b><span class="data">310 fpm</span></span><span class="gr b">B</span></li>
+            <li class="ex"><span class="data r">EGKK → LPFR</span><span class="m">A20N, 1,040 nm, 2h 51m</span><span class="w"><b>Normal</b><span class="data">205 fpm</span></span><span class="gr">A</span></li>
+          </ul>
+          <p class="tile-foot">First row from the demo flight. The other two are examples of the layout.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- DEBRIEF -->
+    <section id="debrief" class="debrief" aria-labelledby="debrief-title">
+      <div class="section-head reveal">
+        <p class="kicker">The debrief</p>
+        <h2 id="debrief-title">Park at the gate and find out how it actually went.</h2>
+        <p class="section-lede">Glidepath measures your takeoff from the roll to 1,500 ft, checks your approach at 1,000 and 500 ft, and describes your touchdown in the words pilots use. Drag the slider to feel the difference.</p>
+      </div>
+
+      <div class="deb-grid">
+        <div class="meter glass strong reveal">
+          <div class="meter-top">
+            <span class="kicker">Touchdown</span>
+            <span class="meter-word" id="m-word">Smooth</span>
+          </div>
+          <div class="meter-num"><span class="data" id="m-fpm">140</span><small>fpm</small></div>
+          <input id="m-range" type="range" min="20" max="800" step="5" value="140" aria-label="Touchdown sink rate in feet per minute">
+          <div class="meter-scale" aria-hidden="true"><span>Very soft</span><span>Smooth</span><span>Normal</span><span>Firm</span><span>Heavy</span><span>Hard</span></div>
+          <p class="meter-text" id="m-text">Smooth touchdown at 140 fpm. Exactly what you want.</p>
+          <p class="tile-foot">The same wording the app uses after every landing.</p>
+        </div>
+
+        <div class="deb-card glass reveal">
+          <p class="kicker">From the demo flight</p>
+          <h3 class="deb-h">Good flight. Tidy from start to finish.</h3>
+          <p class="deb-sum">A smooth takeoff and a smooth landing at 140 fpm on 23R.</p>
+          <ul class="dlist">
+            <li><i class="ok">✓</i>Smooth rotation at 2.7° a second, right where it should be.</li>
+            <li><i class="ok">✓</i>Climb attitude of 15°, in the normal 12–18° range.</li>
+            <li><i class="ok">✓</i>Stable at 1,000 ft: 140 kt, 699 fpm down, gear down.</li>
+            <li><i class="ok">✓</i>In the touchdown zone, 1,671 ft in, on the centreline.</li>
+          </ul>
+          <div class="deb-rows">
+            <div><span>Takeoff</span><b>Smooth, by-the-book</b><em>A+</em></div>
+            <div><span>Climb and cruise</span><b>Within limits</b><em>✓</em></div>
+            <div><span>Approach</span><b>Stable</b><em>✓</em></div>
+            <div><span>Landing</span><b>Smooth, 140 fpm</b><em>A+</em></div>
+          </div>
+        </div>
+
+        <div class="deb-card glass reveal">
+          <p class="kicker">When it goes wrong, it says so</p>
+          <ul class="dlist">
+            <li><i class="bad">!</i>You snatched the rotation at 7° a second. That's how tail strikes happen; pull steadily, about 2–3.5° a second.</li>
+            <li><i class="bad">!</i>Pitched up too far after lift-off, 24° nose up. Follow the flight director, normally 12–18°, or the speed bleeds away.</li>
+            <li><i class="bad">!</i>Not stable at 1,000 ft: gear still up. Most airlines would call a go-around there.</li>
+            <li><i class="bad">!</i>Hard landing at 720 fpm. Beyond about 600 fpm (10 ft/s) most airliners need a hard-landing inspection.</li>
+          </ul>
+          <p class="tile-foot">Real lines the engine writes for flights we generated to be rough.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- DEMO -->
     <section id="demo" class="demo" aria-labelledby="demo-title">
-      <div class="demo-head">
-        <h2 id="demo-title">Heathrow to Manchester, gate to gate</h2>
-        <p>This is the real Glidepath flight engine running over a <strong>synthetic test flight</strong> we generated to test it. It isn't a real flight. Press play and watch it detect each phase, predict the top of descent, and grade the landing.</p>
+      <div class="section-head demo-head reveal">
+        <p class="kicker">Demo</p>
+        <h2 id="demo-title">Heathrow to Manchester in two minutes.</h2>
+        <p class="section-lede">This is the real flight engine running over a <strong>synthetic test flight</strong> we generated to test it. Watch it spot each phase, predict the top of descent, and grade the landing. The live card on the phone above follows along.</p>
       </div>
 
-      <div class="deck">
-        <figure class="profile" aria-label="Vertical profile of the demo flight">
-          <svg id="profile" viewBox="0 0 1000 430" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="profile-desc">
-            <desc id="profile-desc">Altitude against distance flown, from London Heathrow to Manchester. The flown path is drawn as the replay advances.</desc>
-          </svg>
-          <div class="axis-labels" aria-hidden="true">
-            <span id="ax-from">EGLL 27R</span>
-            <span id="ax-to">EGCC 23R</span>
-          </div>
-          <div class="controls">
-            <button id="play" class="play" type="button" aria-label="Play">
-              <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path id="play-icon" d="M6 4l10 6-10 6z" fill="currentColor"/></svg>
-            </button>
-            <input id="scrub" type="range" min="0" max="1000" value="0" aria-label="Replay position">
-            <span id="clock" class="data">00:00</span>
-            <button id="speed" class="speed" type="button" aria-label="Replay speed">40×</button>
-          </div>
-        </figure>
-
-        <aside class="card" aria-live="polite" aria-label="Live flight card">
-          <div class="card-top">
-            <span class="data callsign">A320 test aircraft</span>
-            <span class="phase" id="phase">At the gate</span>
-          </div>
-          <div class="card-route">
-            <div>
-              <div class="icao data">EGLL</div>
-              <div class="sub" id="dep-time">Heathrow</div>
-            </div>
-            <div class="bars" id="bars" aria-hidden="true"></div>
-            <div class="right">
-              <div class="icao data">EGCC</div>
-              <div class="sub" id="arr-time">Manchester</div>
-            </div>
-          </div>
-          <div class="card-mid">
-            <div class="big data" id="mid-big">—</div>
-            <div class="sub" id="mid-sub">Waiting for off-block</div>
-          </div>
-          <dl class="readouts">
-            <div><dt>Altitude</dt><dd class="data" id="r-alt">—</dd></div>
-            <div><dt>Ground speed</dt><dd class="data" id="r-gs">—</dd></div>
-            <div><dt>Vertical speed</dt><dd class="data" id="r-vs">—</dd></div>
-            <div><dt>Fuel</dt><dd class="data" id="r-fuel">—</dd></div>
-          </dl>
-          <p class="tod" id="tod" hidden></p>
-          <div class="grade" id="grade" hidden>
-            <span class="g data" id="g-letter">A+</span>
-            <span id="g-text"></span>
-          </div>
-          <p class="card-foot">Synthetic test flight, replayed in your browser</p>
-        </aside>
-      </div>
-
-      <ol class="timeline" id="timeline" aria-label="Flight events detected so far"></ol>
+      <figure class="profile glass strong reveal" aria-label="Vertical profile of the demo flight">
+        <svg id="profile" viewBox="0 0 1000 430" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="profile-desc">
+          <desc id="profile-desc">Altitude against distance flown, from London Heathrow to Manchester. The flown path is drawn as the replay advances.</desc>
+        </svg>
+        <div class="axis-labels" aria-hidden="true"><span id="ax-from">EGLL 27R</span><span id="ax-to">EGCC 23R</span></div>
+        <div class="controls">
+          <button id="play" class="play" type="button" aria-label="Play">
+            <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path id="play-icon" d="M6 4l10 6-10 6z" fill="currentColor"/></svg>
+          </button>
+          <input id="scrub" type="range" min="0" max="1000" value="0" aria-label="Replay position">
+          <span id="clock" class="data">00:00</span>
+          <button id="speed" class="speed" type="button" aria-label="Replay speed">40×</button>
+        </div>
+      </figure>
+      <ol class="timeline reveal" id="timeline" aria-label="Flight events detected so far"></ol>
     </section>
 
-    <section id="today" class="today" aria-labelledby="today-title">
-      <h2 id="today-title">What works today, and what doesn't yet</h2>
-      <p class="section-lede">Glidepath is early. This list is kept honest: if a feature isn't built or hasn't been tested with a real simulator, it says so.</p>
-      <div class="status-grid">
-        <div class="status-col">
-          <h3><span class="dot ok" aria-hidden="true"></span>Built and tested</h3>
-          <ul>
-            <li><b>Flight phases.</b> Preflight, pushback, taxi, takeoff, climb, cruise, descent, approach, landing, taxi in and on blocks. Handles pauses, slew, bounces and go-arounds.</li>
-            <li><b>Landing grades.</b> Seven factors, aircraft-aware, with every threshold published below.</li>
-            <li><b>Top of descent.</b> A 3° path estimate with wind and deceleration allowances, always labelled as an estimate.</li>
-            <li><b>Flight recording.</b> Saved on your PC every few seconds, so a dropped Wi-Fi connection or a closed tablet loses nothing.</li>
-            <li><b>Debrief after every flight.</b> Takeoff rotation rate, lift-off attitude and climb pitch, speed below 10,000 ft, a stable-approach check at 1,000 and 500 ft, and your touchdown in plain words, from very soft to hard. Tested on generated flights so far.</li>
-            <li><b>Copilot.</b> Answers from your live flight, flags sink rate, gear, speed, fuel, crosswind and descent timing, and can speak callouts. Optional AI chat runs free on your PC with Ollama, or with your own Gemini or Groq key.</li>
-            <li><b>Every timing.</b> Off block to on block, scheduled against estimated against actual, with on-time status.</li>
-            <li><b>Live view on iPad.</b> Opens in Safari on the same Wi-Fi as your PC.</li>
-          </ul>
-        </div>
-        <div class="status-col">
-          <h3><span class="dot wait" aria-hidden="true"></span>Built, waiting for real-sim testing</h3>
-          <ul>
-            <li><b>Microsoft Flight Simulator 2020 and 2024.</b> The connection is written against Microsoft's documentation. It needs its first test flights on a real PC.</li>
-            <li><b>Windows app.</b> It's packaged and has been checked, but it hasn't been run on Windows yet.</li>
-          </ul>
-          <h3><span class="dot next" aria-hidden="true"></span>Not built yet</h3>
-          <ul>
-            <li><b>iPad and iPhone app with Lock Screen card.</b> This needs a native app. It's the next big piece.</li>
-            <li><b>SimBrief plans, live map, VATSIM and IVAO traffic, airport briefings.</b></li>
-            <li><b>Remote control of your aircraft, X-Plane, flight replay.</b></li>
-          </ul>
-        </div>
-      </div>
-    </section>
-
+    <!-- HOW -->
     <section class="how" aria-labelledby="how-title">
-      <h2 id="how-title">How it connects</h2>
+      <div class="section-head reveal">
+        <p class="kicker">Set up in two minutes</p>
+        <h2 id="how-title">No account. No Community folder. Your flight stays on your Wi-Fi.</h2>
+      </div>
       <ol class="steps">
-        <li><h3>Run the Bridge on your sim PC</h3><p>Unzip it and double-click <i>Start Bridge</i>. Nothing goes into your Community folder.</p></li>
-        <li><h3>Start a flight</h3><p>The Bridge finds Microsoft Flight Simulator on its own and starts recording when you leave the gate.</p></li>
-        <li><h3>Open it on your iPad</h3><p>On the PC, go to <span class="data">localhost:4810</span> and open the link it shows on your iPad. Your flight stays on your home network.</p></li>
+        <li class="glass reveal"><span class="n data">1</span><h3>Run the Bridge</h3><p>Unzip it on your sim PC and double-click <i>Start Bridge</i>. It finds Microsoft Flight Simulator by itself.</p></li>
+        <li class="glass reveal"><span class="n data">2</span><h3>Scan the code</h3><p>The Bridge opens a page with a QR code. Point your iPad or phone camera at it and the app opens, already paired.</p></li>
+        <li class="glass reveal"><span class="n data">3</span><h3>Fly</h3><p>Recording starts when you push back. When you park, your debrief is waiting.</p></li>
       </ol>
     </section>
 
+    <!-- LANDINGS -->
     <section id="landings" class="landings" aria-labelledby="landings-title">
-      <h2 id="landings-title">A landing grade you can check</h2>
-      <p class="section-lede">Sink rate alone doesn't tell you how good a landing was. Glidepath scores seven things against limits for your type of aircraft. A factor without data, such as centreline when the runway isn't known, is left out rather than guessed. A hard landing caps the grade, however good the rest was.</p>
-      <table class="weights">
-        <caption>Scoring for a narrow-body jet such as the A320 or 737. These numbers come straight from the engine.</caption>
-        <thead><tr><th scope="col">Factor</th><th scope="col">Full marks</th><th scope="col">Weight</th><th scope="col">Demo landing</th></tr></thead>
-        <tbody id="weights-body"></tbody>
-      </table>
+      <div class="section-head reveal">
+        <p class="kicker">No black box</p>
+        <h2 id="landings-title">A landing grade you can check.</h2>
+        <p class="section-lede">Sink rate alone doesn't tell you how good a landing was. Glidepath scores seven things against limits for your type of aircraft. A factor without data is left out rather than guessed, and a hard landing caps the grade however good the rest was.</p>
+      </div>
+      <div class="glass table-wrap reveal">
+        <table class="weights">
+          <caption>Scoring for a narrow-body jet such as the A320 or 737, straight from the engine.</caption>
+          <thead><tr><th scope="col">Factor</th><th scope="col">Full marks</th><th scope="col">Weight</th><th scope="col">Demo landing</th></tr></thead>
+          <tbody id="weights-body"></tbody>
+        </table>
+      </div>
     </section>
 
+    <!-- WHAT WORKS -->
+    <section id="today" class="today" aria-labelledby="today-title">
+      <div class="section-head reveal">
+        <p class="kicker">Honest status</p>
+        <h2 id="today-title">What works today, and what doesn't yet.</h2>
+        <p class="section-lede">Glidepath is early. If something isn't built, or hasn't been tested with a real simulator, this list says so.</p>
+      </div>
+      <div class="status-grid">
+        <div class="status-col glass reveal">
+          <h3><span class="dot ok" aria-hidden="true"></span>Built and tested</h3>
+          <ul>
+            <li><b>Flight phases</b>, from preflight to on blocks, including pauses, bounces and go-arounds.</li>
+            <li><b>Debrief</b> of takeoff, handling, approach and landing, in plain words.</li>
+            <li><b>Landing grades</b> from seven factors, aircraft-aware, all thresholds published above.</li>
+            <li><b>Every timing</b>, scheduled against estimated against actual.</li>
+            <li><b>Copilot</b> answers, alerts and spoken callouts.</li>
+            <li><b>Recording and logbook</b> on your PC, resumed after a sim restart.</li>
+            <li><b>The app</b> on iPad, iPhone, Android, Mac and PC, in dark and light mode.</li>
+          </ul>
+        </div>
+        <div class="status-col glass reveal">
+          <h3><span class="dot wait" aria-hidden="true"></span>Built, waiting for real-world testing</h3>
+          <ul>
+            <li><b>Microsoft Flight Simulator 2020 and 2024.</b> Written against Microsoft's documentation; first real test flights are happening now.</li>
+            <li><b>The Windows app.</b> Packaged and checked, not yet run on many PCs.</li>
+            <li><b>SimBrief, weather, VATSIM and IVAO, satellite map, aircraft photos.</b> Built against each service's published format.</li>
+          </ul>
+          <h3><span class="dot next" aria-hidden="true"></span>Not built yet</h3>
+          <ul>
+            <li><b>Native iPhone and iPad app</b> with a Lock Screen Live Activity.</li>
+            <li><b>Remote control</b> of your aircraft, <b>X-Plane</b>, and full flight replay.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- DOWNLOAD -->
     <section id="download" class="download" aria-labelledby="download-title">
-      <h2 id="download-title">Download the Bridge</h2>
-      <div class="dl">
-        <div>
-          <p class="dl-name">Glidepath Bridge 0.3 for Windows</p>
-          <p class="sub">For 64-bit Windows 10 or 11 with Microsoft Flight Simulator 2020 or 2024. A 33 MB zip.</p>
-          <a class="btn primary" data-download href="#">Download the zip</a>
+      <div class="dl glass strong reveal">
+        <div class="dl-main">
+          <img class="dl-icon" src="assets/mark.svg" alt="" width="84" height="84">
+          <h2 id="download-title">Glidepath Bridge for Windows</h2>
+          <p class="sub" id="dl-sub">For 64-bit Windows 10 or 11 with Microsoft Flight Simulator 2020 or 2024. Free.</p>
+          <div class="cta">
+            <a class="btn primary" data-download href="#">Download the zip</a>
+            <a class="btn glass" href="app/?demo=1">Try the app first</a>
+          </div>
           <p class="fine">SHA-256 <span class="data hash" id="sha">—</span></p>
         </div>
         <div class="dl-notes">
@@ -176,29 +339,17 @@
             <li>Windows SmartScreen will warn you because this test build isn't code-signed yet. Choose <i>More info</i>, then <i>Run anyway</i>.</li>
             <li>When Windows Firewall asks, allow it on <i>private</i> networks only.</li>
             <li>Try <i>Run demo flight</i> first. It doesn't need the simulator.</li>
-            <li>Then run <i>Test MSFS connection</i> with the sim open, and share the report it writes. That's how the simulator support gets verified.</li>
+            <li>If the sim doesn't connect, run <i>Test MSFS connection</i> and share the report it writes.</li>
           </ul>
         </div>
       </div>
     </section>
-
-    <section id="roadmap" class="roadmap" aria-labelledby="roadmap-title">
-      <h2 id="roadmap-title">Roadmap</h2>
-      <ol class="stages">
-        <li class="done"><span class="data">1</span><div><h3>Foundation</h3><p>Flight engine, the Bridge, Windows build.</p></div></li>
-        <li class="now"><span class="data">2</span><div><h3>Design system</h3><p>The full app's look across phone, tablet and desktop.</p></div></li>
-        <li><span class="data">3</span><div><h3>App and accounts</h3><p>Sign-in, logbook, airports, SimBrief, VATSIM traffic.</p></div></li>
-        <li><span class="data">4</span><div><h3>First real flights</h3><p>The Bridge verified against MSFS on real PCs.</p></div></li>
-        <li><span class="data">5</span><div><h3>Advanced</h3><p>iPad app with Lock Screen card, remote control, X-Plane, IVAO, replay.</p></div></li>
-        <li><span class="data">6</span><div><h3>Hardening</h3><p>Long-haul soak tests and recovery from every kind of disconnect.</p></div></li>
-        <li><span class="data">7</span><div><h3>Public release</h3><p>A signed installer, app store builds and guides.</p></div></li>
-      </ol>
-    </section>
   </main>
 
   <footer class="foot">
-    <p>Glidepath is a working name for an independent project. It isn't affiliated with Microsoft, Laminar Research, VATSIM, IVAO, Navigraph, SimBrief, or any airline or aircraft developer. Not for real-world navigation.</p>
-    <p><a data-repo-link href="#">Source code on GitHub</a></p>
+    <div class="foot-brand"><img src="assets/mark.svg" alt="" width="24" height="24"><b>Glidepath</b></div>
+    <p>An independent project, not affiliated with Microsoft, Laminar Research, VATSIM, IVAO, Navigraph, SimBrief, or any airline or aircraft maker. Not for real-world navigation.</p>
+    <p><a data-repo-link href="#">Source code on GitHub</a> · <a href="app/">Open the app</a></p>
   </footer>
 
   <script src="app.js" defer></script>
