@@ -142,66 +142,76 @@ const clock = (ms: number | null | undefined) => {
 };
 const mins = (ms: number | null | undefined) => (ms === null || ms === undefined ? null : ms < 60_000 ? "under a minute" : `${r(ms / 60_000)} min`);
 
-/** Answers to the quick questions, built only from data. */
+/** Altitude the way pilots say it: flight levels above 18,000 ft. */
+export function altWords(ft: number): string {
+  return ft >= 18000 ? `FL${Math.round(ft / 100)}` : `${nf(Math.round(ft / 10) * 10)} ft`;
+}
+
+/** Answers to the quick questions, in the voice of a first officer, from data only. */
 export function copilotAnswer(q: QuickQuestion, s: CopilotSnapshot): string {
   const t = s.timings;
+  const to = s.arrival ?? "destination";
   switch (q) {
     case "status": {
-      const parts: string[] = [];
-      parts.push(`${phaseWords(s.phase)}${s.altFt !== null && s.airborne ? ` at ${nf(s.altFt)} ft` : ""}${s.gsKt !== null && (s.gsKt > 30 || s.airborne) ? `, ${nf(s.gsKt)} kt over the ground` : ""}.`);
-      if (s.toGoNm !== null && s.arrival) parts.push(`${nf(s.toGoNm)} nm to ${s.arrival}.`);
-      if (t?.toGateMs != null) parts.push(`About ${mins(t.toGateMs)} to the gate.`);
-      if (t?.arrival) parts.push(`Arrival is ${t.arrival.label.toLowerCase()}.`);
+      const head: string[] = [];
+      if (s.airborne && s.altFt !== null) head.push(altWords(s.altFt));
+      if (s.gsKt !== null && (s.airborne || s.gsKt > 30)) head.push(`${nf(s.gsKt)} knots`);
+      let line = head.length ? `${phaseWords(s.phase)}, ${head.join(", ")}` : phaseWords(s.phase);
+      if (s.toGoNm !== null && s.arrival) line += `, ${nf(s.toGoNm)} miles to run to ${s.arrival}`;
+      const parts = [line + "."];
+      if (t?.toGateMs != null) parts.push(`Gate in about ${mins(t.toGateMs)}${t.arrival ? `, ${t.arrival.label.toLowerCase()}` : ""}.`);
       const alerts = copilotAlerts(s);
-      parts.push(alerts.length ? `Worth a look: ${alerts.map((a) => a.title.toLowerCase()).join("; ")}.` : "Nothing needs your attention.");
+      parts.push(alerts.length ? `Keep an eye on: ${alerts.map((a) => a.title.toLowerCase()).join(", ")}.` : "Nothing to flag.");
       return parts.join(" ");
     }
     case "descent": {
-      if (!s.airborne) return "We're on the ground. I'll work out the top of descent once you're airborne with a destination.";
-      if (["DESCENT", "APPROACH", "LANDING"].includes(s.phase)) return `We're already descending${s.vsFpm !== null ? ` at ${nf(-s.vsFpm)} fpm` : ""}.${s.toGoNm !== null ? ` ${nf(s.toGoNm)} nm to go.` : ""}`;
-      if (!s.tod) return "I need a destination for that. Link a SimBrief plan in Settings and I'll calculate it.";
-      if (s.tod.pastTod) return `We're past the ideal top of descent. Start down now at about ${nf(-(s.tod.requiredVsNowFpm ?? s.tod.plannedVsFpm))} fpm.`;
+      if (!s.airborne) return "Still on the ground. I'll work out top of descent once we're airborne with a destination.";
+      if (["DESCENT", "APPROACH", "LANDING"].includes(s.phase)) return `Already on the way down${s.vsFpm !== null ? ` at ${nf(-s.vsFpm)} fpm` : ""}${s.toGoNm !== null ? `, ${nf(s.toGoNm)} miles to run` : ""}.`;
+      if (!s.tod) return "I need a destination for that. Link your SimBrief plan in Settings.";
+      if (s.tod.pastTod) return `We're past top of descent. Start down now, about ${nf(-(s.tod.requiredVsNowFpm ?? s.tod.plannedVsFpm))} fpm to make it.`;
       const at = t?.milestones.find((m) => m.id === "tod")?.estimated;
-      return `Top of descent in about ${s.tod.minutesToTod !== null ? `${r(s.tod.minutesToTod)} min` : "—"}${at ? ` (${clock(at)})` : ""}. Then about ${nf(-s.tod.plannedVsFpm)} fpm holds a 3° path. This is an estimate from distance to go and groundspeed.`;
+      return `Top of descent in about ${s.tod.minutesToTod !== null ? `${r(s.tod.minutesToTod)} minutes` : "—"}${at ? `, around ${clock(at)}` : ""}. Plan on ${nf(-s.tod.plannedVsFpm)} fpm for a 3° path. That's an estimate from distance and groundspeed.`;
     }
     case "arrival": {
-      if (!t) return "No flight to time yet.";
+      if (!t) return "Nothing to time yet.";
       const on = t.milestones.find((m) => m.id === "on")!;
       const inn = t.milestones.find((m) => m.id === "in")!;
-      if (inn.actual) return `On block at ${clock(inn.actual)}${t.arrival ? `, ${t.arrival.label.toLowerCase()}` : ""}. Block time ${t.blockMs !== null ? `${Math.floor(t.blockMs / 3_600_000)}h ${String(r((t.blockMs % 3_600_000) / 60_000)).padStart(2, "0")}m` : "—"}.`;
-      if (!inn.estimated && !inn.scheduled) return "I can't estimate arrival without a destination. Link a SimBrief plan in Settings.";
-      const lines = [`Estimated landing ${clock(on.actual ?? on.estimated) ?? "—"}, on block ${clock(inn.estimated) ?? "—"}.`];
-      if (inn.scheduled) lines.push(`Scheduled in ${clock(inn.scheduled)}: ${t.arrival ? t.arrival.label.toLowerCase() : "no estimate yet"}.`);
-      if (t.basis) lines.push(`Based on ${t.basis}.`);
-      return lines.join(" ");
+      if (inn.actual) return `On blocks at ${clock(inn.actual)}${t.arrival ? `, ${t.arrival.label.toLowerCase()}` : ""}.${t.blockMs !== null ? ` Block time ${Math.floor(t.blockMs / 3_600_000)}h ${String(r((t.blockMs % 3_600_000) / 60_000)).padStart(2, "0")}m.` : ""}`;
+      if (!inn.estimated && !inn.scheduled) return "I can't time the arrival without a destination. Link your SimBrief plan in Settings.";
+      let line = `Landing around ${clock(on.actual ?? on.estimated) ?? "—"}, on blocks ${clock(inn.estimated) ?? "—"}.`;
+      if (inn.scheduled) line += ` Schedule says ${clock(inn.scheduled)}, so ${t.arrival ? (t.arrival.tone === "on-time" ? "we're on time" : `we're ${t.arrival.label.toLowerCase()}`) : "no estimate yet"}.`;
+      return line;
     }
     case "fuel": {
-      if (s.fuelKg === null) return "This aircraft doesn't report its fuel to the simulator connection.";
-      const parts = [`${nf(s.fuelKg)} kg on board.`];
-      if (s.fuelAtDestinationKg !== null) parts.push(`At this burn, about ${nf(s.fuelAtDestinationKg)} kg at ${s.arrival ?? "destination"}.`);
-      if (s.fuelAtDestinationKg !== null && s.plannedLandingFuelKg !== null) {
-        const m = s.fuelAtDestinationKg - s.plannedLandingFuelKg;
-        parts.push(m >= 0 ? `That's ${nf(m)} kg above the planned landing fuel.` : `That's ${nf(-m)} kg below the planned landing fuel.`);
+      if (s.fuelKg === null) return "This aircraft doesn't report fuel to the sim connection, so I can't see it.";
+      let line = `${nf(s.fuelKg)} kg on board.`;
+      if (s.fuelAtDestinationKg !== null) {
+        line += ` At this burn we land with about ${nf(s.fuelAtDestinationKg)}`;
+        if (s.plannedLandingFuelKg !== null) {
+          const m = s.fuelAtDestinationKg - s.plannedLandingFuelKg;
+          line += m >= 0 ? `, ${nf(m)} above plan.` : `, ${nf(-m)} under plan.`;
+        } else line += ".";
       }
-      return parts.join(" ");
+      return line;
     }
     case "weather": {
       const w = s.arrivalWeather;
-      if (!w) return s.arrival ? `No weather for ${s.arrival} yet. Weather comes through the Bridge, which needs internet access.` : "I need a destination first.";
-      const wind = w.windDir === "VRB" ? `variable at ${w.windKt ?? "?"} kt` : w.windDir === null ? "calm" : `${String(w.windDir).padStart(3, "0")}° at ${w.windKt} kt${w.gustKt ? `, gusting ${w.gustKt}` : ""}`;
-      return `${w.icao}: wind ${wind}${w.visibility ? `, visibility ${w.visibility}` : ""}${w.tempC !== null ? `, ${w.tempC}°C` : ""}${w.qnhHpa !== null ? `, QNH ${w.qnhHpa}` : ""}${w.category ? ` (${w.category})` : ""}. Raw: ${w.raw}`;
+      if (!w) return s.arrival ? `No weather for ${s.arrival} yet. It comes through the Bridge, so the Bridge needs internet.` : "I need a destination first.";
+      const wind = w.windDir === "VRB" ? `variable ${w.windKt ?? "?"}` : w.windDir === null ? "calm" : `${String(w.windDir).padStart(3, "0")} at ${w.windKt}${w.gustKt ? `, gusting ${w.gustKt}` : ""}`;
+      const bits = [`wind ${wind}`, w.visibility ? `visibility ${w.visibility}` : null, w.tempC !== null ? `${w.tempC}°` : null, w.qnhHpa !== null ? `QNH ${w.qnhHpa}` : null].filter(Boolean);
+      return `${w.icao}: ${bits.join(", ")}.${w.category ? ` ${w.category}.` : ""}\n${w.raw}`;
     }
     case "runway": {
       const w = s.arrivalWeather;
-      if (!s.arrivalRunways.length) return "I don't have runway data for the destination.";
-      if (!w || typeof w.windDir !== "number" || w.windKt === null) return `${s.arrival} has runways ${s.arrivalRunways.map((e) => e.ident).join(", ")}. With no wind data I can't pick one; the ATIS will tell you the runway in use.`;
+      if (!s.arrivalRunways.length) return `I don't have runway data for ${to}.`;
+      if (!w || typeof w.windDir !== "number" || w.windKt === null) return `${to} has ${s.arrivalRunways.map((e) => e.ident).join(", ")}. No wind report yet, so I can't pick one. The ATIS will tell you.`;
       const b = runwayForWind(s.arrivalRunways, w.windDir, w.windKt, w.gustKt)!;
-      return `Runway ${b.ident} is most into wind: ${r(b.headwindKt)} kt headwind, ${r(b.crosswindKt)} kt crosswind${b.gustCrosswindKt ? ` (${r(b.gustCrosswindKt)} kt in gusts)` : ""}, ${nf(b.lengthFt)} ft long. ATC or the ATIS sets the runway in use.`;
+      return `Expect ${b.ident}. It's the one most into wind: ${r(b.headwindKt)} kt on the nose, ${r(b.crosswindKt)} kt across${b.gustCrosswindKt ? ` (${r(b.gustCrosswindKt)} in gusts)` : ""}. The ATIS has the final word.`;
     }
     case "landing": {
       const l = s.lastLanding;
-      if (!l) return "No landing recorded on this flight yet.";
-      return `${l.grade} (${l.score}/100)${l.touchdownVsFpm !== null ? `, ${nf(l.touchdownVsFpm)} fpm at touchdown` : ""}. ${l.verdict}`;
+      if (!l) return "No landing on this flight yet.";
+      return `${l.grade}, ${l.score} out of 100${l.touchdownVsFpm !== null ? `, ${nf(l.touchdownVsFpm)} fpm at touchdown` : ""}. ${l.verdict}`;
     }
   }
 }

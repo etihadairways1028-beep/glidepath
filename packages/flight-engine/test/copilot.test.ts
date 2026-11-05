@@ -41,12 +41,13 @@ describe("copilot", () => {
     expect(copilotAlerts(snap({ tod: { minutesToTod: null, pastTod: true, plannedVsFpm: -2380, requiredVsNowFpm: -3100 } }))[0]?.detail).toMatch(/3,100 fpm/);
   });
   it("answers from data, and says when data is missing", () => {
-    expect(copilotAnswer("runway", snap({ arrivalWeather: wx(240, 20) }))).toMatch(/Runway 23R is most into wind/);
+    expect(copilotAnswer("runway", snap({ arrivalWeather: wx(240, 20) }))).toMatch(/Expect 23R/);
     expect(copilotAnswer("runway", snap())).toMatch(/can't pick one/);
     expect(copilotAnswer("fuel", snap({ fuelKg: null }))).toMatch(/doesn't report/);
-    expect(copilotAnswer("descent", snap())).toMatch(/Top of descent in about 12 min/);
+    expect(copilotAnswer("descent", snap())).toMatch(/Top of descent in about 12 minutes/);
     expect(copilotAnswer("landing", snap())).toMatch(/No landing/);
-    expect(copilotAnswer("status", snap())).toMatch(/Cruising at 36,000 ft/);
+    expect(copilotAnswer("fuel", snap())).toBe("8,000 kg on board. At this burn we land with about 5,200, 200 above plan.");
+    expect(copilotAnswer("status", snap())).toBe("Cruising, FL360, 450 knots, 220 miles to run to EGCC. Nothing to flag.");
   });
   it("radio-altitude callouts fire once each on approach", () => {
     const said = new Set<string>();

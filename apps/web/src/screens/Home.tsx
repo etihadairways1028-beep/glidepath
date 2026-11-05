@@ -3,10 +3,10 @@ import type { FlightSummary } from "@glidepath/protocol";
 import { LiveCard } from "../components/LiveCard";
 import { TimingsStrip } from "../components/Timings";
 import { useCopilot } from "../data/copilot";
-import { ConnPill, Grade, Icon, Notice, Tile } from "../components/ui";
+import { ConnPill, Grade, Icon, Notice } from "../components/ui";
 import { activeBridge } from "../data/bridge";
 import { startDemo } from "../data/demo";
-import { dur, fmt, fuel, useLive } from "../data/derive";
+import { altText, dur, fmt, fuel, useLive } from "../data/derive";
 import { useApp, useSettings } from "../data/store";
 
 export function Home() {
@@ -18,102 +18,83 @@ export function Home() {
 
   return (
     <div className="stack">
-      <header className="between wrap">
-        <div>
-          <h1 className="title">{greeting()}</h1>
-          <p className="muted" style={{ margin: "4px 0 0" }}>{subtitle(mode, sim, !!flight)}</p>
-        </div>
-        <ConnPill />
-      </header>
-
+      <FlightHeading />
       {mode === "none" && <Onboarding />}
       {mode === "bridge" && conn !== "live" && msg && <Notice>{msg} <a href="#/settings">Connection settings</a></Notice>}
       {mode !== "none" && flight && <LiveCard />}
+      {mode !== "none" && flight && <Instruments />}
       {mode !== "none" && flight && <HomeTimings />}
-      {mode !== "none" && flight && <HomeCopilot />}
+      {mode !== "none" && flight && <CopilotLine />}
       {mode === "bridge" && conn === "live" && !flight && (
         <section className="glass pad empty">
-          <div className="h2">{sim === "connected" ? "Ready when you are" : "Waiting for Microsoft Flight Simulator"}</div>
-          <p className="muted">{sim === "connected" ? "Your flight starts recording when the aircraft leaves the gate." : "Start a flight in the sim. The Bridge connects by itself."}</p>
+          <div className="h2">{sim === "connected" ? "Ready when you are" : "Start the sim"}</div>
+          <p className="muted">{sim === "connected" ? "Recording starts when you push back." : "The Bridge picks it up on its own."}</p>
         </section>
       )}
-      {mode !== "none" && flight && <QuickFlight />}
-      <QuickActions />
-      <Stats />
+      <Totals />
     </div>
   );
 }
 
-function greeting() {
-  const h = new Date().getHours();
-  return h < 5 ? "Night flying" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
-}
-function subtitle(mode: string, sim: string | undefined, flying: boolean) {
-  if (mode === "demo") return "You're watching a synthetic demo flight replayed through the real flight engine.";
-  if (mode === "none") return "Connect the Bridge on your simulator PC to see your flight here.";
-  if (flying) return "Live from your simulator.";
-  return sim === "connected" ? "Simulator connected." : "Bridge connected.";
+/** The flight is the headline. */
+function FlightHeading() {
+  const L = useLive();
+  const mode = useApp((s) => s.mode);
+  const f = L.flight;
+  const from = f?.departureName ?? L.plan?.origin.name ?? f?.departureIcao ?? null;
+  const to = f?.arrivalName ?? L.plan?.destination.name ?? f?.arrivalIcao ?? null;
+  const short = (n: string | null) => (n ? n.replace(/ (International )?Airport$/i, "") : null);
+  const title = !f ? (mode === "none" ? "Glidepath" : "No flight yet") : from && to ? `${short(from)} to ${short(to)}` : from ? `From ${short(from)}` : "Flight in progress";
+  return (
+    <header className="home-head">
+      <div>
+        <h1 className="title">{title}</h1>
+      </div>
+      <ConnPill />
+    </header>
+  );
 }
 
 function Onboarding() {
   return (
-    <section className="glass strong pad" style={{ padding: 26 }}>
-      <div className="grid cols-2" style={{ gap: 28, alignItems: "center" }}>
-        <div className="stack" style={{ gap: 12 }}>
-          <h2 className="title" style={{ fontSize: 24 }}>See your sim flight here, live.</h2>
-          <p className="muted" style={{ margin: 0 }}>The Glidepath Bridge runs on your simulator PC and sends your flight to this app over your home Wi-Fi.</p>
-          <div className="row wrap">
-            <a className="btn primary" href="#/settings">Connect my Bridge</a>
-            <button className="btn" onClick={() => startDemo()}>Watch a demo flight</button>
-          </div>
+    <section className="glass strong onboard">
+      <div>
+        <h2 className="onboard-h">Your sim flight, on this screen.</h2>
+        <p className="muted" style={{ margin: "10px 0 0", maxWidth: 46 + "ch" }}>Run the Bridge on your simulator PC, then open the link it shows on this device.</p>
+        <div className="row wrap" style={{ marginTop: 20 }}>
+          <a className="btn primary" href="#/settings">Connect my Bridge</a>
+          <button className="btn" onClick={() => startDemo()}>Watch a demo flight</button>
         </div>
-        <ol className="timeline" style={{ margin: 0, paddingLeft: 18, color: "var(--mist)" }}>
-          <li style={{ padding: "6px 0" }}>Download the Bridge for Windows and double-click <b style={{ color: "var(--ink)" }}>Start Bridge</b>.</li>
-          <li style={{ padding: "6px 0" }}>It opens a page in your browser with a pairing link.</li>
-          <li style={{ padding: "6px 0" }}>Open that link on this device. That's it: no account needed.</li>
-        </ol>
       </div>
+      <ol className="onboard-steps">
+        <li><b>Start Bridge</b> on the PC you fly on.</li>
+        <li>It opens a page with your pairing link.</li>
+        <li>Open the link here. No account needed.</li>
+      </ol>
     </section>
   );
 }
 
-function QuickFlight() {
+/** One instrument strip instead of four boxes. */
+function Instruments() {
   const L = useLive();
   const { fuelUnit } = useSettings();
   const f = L.frame;
   if (!f) return null;
+  const vs = f.speed.vsFpm ?? 0;
+  const hdg = f.attitude.headingMagDeg;
   return (
-    <div className="grid cols-4">
-      <Tile k="Altitude" v={fmt(f.position.altMslFt)} unit="ft" />
-      <Tile k="Vertical speed" v={(f.speed.vsFpm ?? 0) > 0 ? `+${fmt(f.speed.vsFpm)}` : fmt(f.speed.vsFpm)} unit="fpm" />
-      <Tile k="Heading" v={f.attitude.headingMagDeg === null ? "—" : String(Math.round(f.attitude.headingMagDeg) % 360).padStart(3, "0")} unit="°M" />
-      <Tile k={L.fuelAtDestinationKg !== null ? "Fuel at destination (est.)" : "Fuel on board"} v={fuel(L.fuelAtDestinationKg ?? f.fuel.totalKg, fuelUnit)} />
-    </div>
+    <section className="glass instruments" aria-label="Instruments">
+      <div><span className="k">Altitude</span><span className="v data">{altText(f.position.altMslFt)}</span></div>
+      <div><span className="k">Ground speed</span><span className="v data">{fmt(f.speed.gsKt)}<small> kt</small></span></div>
+      <div><span className="k">Vertical speed</span><span className="v data">{Math.abs(vs) < 100 ? "Level" : <>{vs > 0 ? "↑" : "↓"} {fmt(Math.abs(vs))}<small> fpm</small></>}</span></div>
+      <div><span className="k">Heading</span><span className="v data">{hdg === null ? "—" : String(Math.round(hdg) % 360).padStart(3, "0")}<small>°</small></span></div>
+      <div><span className="k">{L.fuelAtDestinationKg !== null ? "Fuel at landing" : "Fuel"}</span><span className="v data">{fuel(L.fuelAtDestinationKg ?? f.fuel.totalKg, fuelUnit)}</span></div>
+    </section>
   );
 }
 
-function QuickActions() {
-  const items = [
-    { href: "#/map", icon: Icon.map, t: "Live map", s: "Trail, route and traffic" },
-    { href: "#/flight", icon: Icon.flight, t: "Flight monitor", s: "Systems, fuel, descent" },
-    { href: "#/glance", icon: Icon.expand, t: "Glance mode", s: "Big view for an iPad on a stand" },
-    { href: "#/airports", icon: Icon.tower, t: "Airports", s: "Runways, weather, ATC" },
-  ];
-  return (
-    <div className="grid cols-4">
-      {items.map((i) => (
-        <a key={i.href} href={i.href} className="glass pad" style={{ textDecoration: "none", color: "var(--ink)", display: "flex", gap: 14, alignItems: "center" }}>
-          <span style={{ width: 40, height: 40, borderRadius: 12, display: "grid", placeItems: "center", background: "rgba(111,182,255,.12)", color: "var(--accent)", flex: "none" }}>
-            <span style={{ width: 22, height: 22, display: "block" }}>{i.icon()}</span>
-          </span>
-          <span><span style={{ display: "block", fontWeight: 650 }}>{i.t}</span><span className="muted" style={{ fontSize: 13 }}>{i.s}</span></span>
-        </a>
-      ))}
-    </div>
-  );
-}
-
-function Stats() {
+function Totals() {
   const mode = useApp((s) => s.mode);
   const current = useApp((s) => s.lastFlight);
   const [flights, setFlights] = useState<FlightSummary[] | null>(null);
@@ -122,27 +103,24 @@ function Stats() {
     if (mode !== "bridge" || !b) { setFlights(null); return; }
     b.get<FlightSummary[]>("/api/flights?limit=500").then(setFlights).catch(() => setFlights([]));
   }, [mode, current?.id]);
+  if (mode === "none") return null;
   const list = mode === "demo" ? (current ? [current] : []) : flights ?? [];
   const done = list.filter((f) => f.status === "completed");
-  if (mode === "none") return null;
-  const hours = done.reduce((s, f) => s + ((f.onBlockAt ?? 0) - (f.offBlockAt ?? 0)), 0);
+  if (done.length === 0) return null;
+  const block = done.reduce((s, f) => s + ((f.onBlockAt ?? 0) - (f.offBlockAt ?? 0)), 0);
   const nm = done.reduce((s, f) => s + f.distanceNm, 0);
   const airports = new Set(done.flatMap((f) => [f.departureIcao, f.arrivalIcao]).filter(Boolean));
   const scores = done.flatMap((f) => f.landings.map((l) => l.score));
   const avg = scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
   return (
-    <section className="glass pad">
-      <div className="between" style={{ marginBottom: 12 }}><h2 className="h2">Your flying</h2><a href="#/logbook" className="btn small">Open logbook</a></div>
-      {done.length === 0 ? <p className="muted" style={{ margin: 0 }}>Completed flights appear here with your totals.</p> : (
-        <div className="grid cols-4">
-          <Tile k="Flights" v={fmt(done.length)} />
-          <Tile k="Block time" v={dur(hours)} />
-          <Tile k="Distance" v={fmt(nm)} unit="nm" />
-          <Tile k="Average landing" v={avg === null ? "—" : <span className="row" style={{ gap: 8 }}><Grade grade={gradeOf(avg)} /> {fmt(avg)}</span>} />
-        </div>
-      )}
-      {done.length > 0 && <p className="faint" style={{ margin: "10px 0 0", fontSize: 13 }}>{airports.size} airport{airports.size === 1 ? "" : "s"} visited</p>}
-    </section>
+    <a className="totals" href="#/logbook" aria-label="Open logbook">
+      <span><b className="data">{fmt(done.length)}</b> {done.length === 1 ? "flight" : "flights"}</span>
+      <span><b className="data">{dur(block)}</b> block</span>
+      <span><b className="data">{fmt(nm)}</b> nm</span>
+      <span><b className="data">{airports.size}</b> {airports.size === 1 ? "airport" : "airports"}</span>
+      {avg !== null && <span className="row" style={{ gap: 8 }}><Grade grade={gradeOf(avg)} /> average landing</span>}
+      <span className="go">Logbook {Icon.back()}</span>
+    </a>
   );
 }
 
@@ -155,17 +133,18 @@ function HomeTimings() {
   return L.timings ? <TimingsStrip t={L.timings} /> : null;
 }
 
-function HomeCopilot() {
+/** The copilot speaks up only when something is worth saying. */
+function CopilotLine() {
   const { alerts } = useCopilot();
   const top = alerts[0];
   return (
-    <a className="glass home-alert" href="#/copilot">
-      <span className="orb" aria-hidden="true">{Icon.spark()}</span>
+    <a className={`glass copilot-line${top ? ` ${top.level}` : ""}`} href="#/copilot">
+      <span className="ic" aria-hidden="true">{Icon.headset()}</span>
       <span className="txt">
-        <b>{top ? top.title : "Copilot: all clear"}</b>
-        <span>{top ? top.detail : "Ask about descent, fuel, weather or arrival time."}</span>
+        <b>{top ? top.title : "Copilot"}</b>
+        <span>{top ? top.detail : "Nothing to flag. Ask me about descent, fuel or the runway."}</span>
       </span>
-      {alerts.length > 1 ? <span className="pill" style={{ marginLeft: "auto" }}>+{alerts.length - 1}</span> : null}
+      {alerts.length > 1 ? <span className="pill" style={{ marginLeft: "auto" }}>{alerts.length - 1} more</span> : null}
     </a>
   );
 }

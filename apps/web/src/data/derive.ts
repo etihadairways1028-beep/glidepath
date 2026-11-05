@@ -4,7 +4,7 @@
  */
 import { useMemo } from "react";
 import type { FlightEvent, FlightPhase, FlightPlan, FlightSummary, TelemetryFrame } from "@glidepath/protocol";
-import { clockAt, computeTimings, computeTopOfDescent, distanceNm, routeProgress, type FlightTimings, type LatLon, type TodResult } from "@glidepath/flight-engine";
+import { altWords, clockAt, computeTimings, computeTopOfDescent, distanceNm, routeProgress, type FlightTimings, type LatLon, type TodResult } from "@glidepath/flight-engine";
 import { useApp } from "./store";
 
 export interface Live {
@@ -139,6 +139,11 @@ export function dur(ms: number | null | undefined): string {
   if (ms === null || ms === undefined || !Number.isFinite(ms)) return "—";
   const m = Math.max(0, Math.round(ms / 60000));
   return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`;
+}
+
+/** Altitude as pilots say it: FL240 above 18,000 ft, otherwise feet. */
+export function altText(ft: number | null | undefined): string {
+  return ft === null || ft === undefined || !Number.isFinite(ft) ? "—" : altWords(ft);
 }
 
 /** Countdown wording: "under 1 min", "12 min", "1h 05m". */

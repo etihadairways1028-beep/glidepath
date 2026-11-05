@@ -88,7 +88,7 @@ export function CopilotScreen() {
       <div className="between wrap">
         <div>
           <h1 className="title">Copilot</h1>
-          <p className="muted" style={{ margin: "4px 0 0" }}>Watches your flight, answers from real data, and calls out what matters.</p>
+          <p className="muted" style={{ margin: "4px 0 0" }}>Your right seat. Ask it anything about this flight.</p>
         </div>
         <span className={`pill ${aiReady ? "live" : ""}`}><span className="dot" />{aiReady ? `AI: ${ai!.model}` : "Built-in copilot"}</span>
       </div>
@@ -98,14 +98,13 @@ export function CopilotScreen() {
           <div className="chat-log" role="log" aria-live="polite">
             {msgs.length === 0 && (
               <div className="chat-empty">
-                <div className="chat-orb" aria-hidden="true">{Icon.spark()}</div>
-                <div className="h2">{live.flight ? "Ask about your flight" : "No flight yet"}</div>
-                <p className="muted">{live.flight ? "Pick a question below or type your own." : "Start your sim with the Bridge running, or watch the demo flight from Home."}</p>
+                                <div className="h2">{live.flight ? "What do you need?" : "Nobody to talk about yet"}</div>
+                <p className="muted">{live.flight ? "Tap a question or type one." : "Start a flight, or run the demo from Home."}</p>
               </div>
             )}
             {msgs.map((m, i) => (
               <div key={i} className={`bubble ${m.role} ${m.by}`}>
-                {m.role === "assistant" && <span className="who">{m.by === "ai" ? "AI copilot" : m.by === "error" ? "Copilot" : "Copilot"}</span>}
+                {m.role === "assistant" && <span className="who">{m.by === "ai" ? "Copilot (AI)" : "Copilot"}</span>}
                 <p>{m.content || <span className="typing" aria-label="Thinking"><i /><i /><i /></span>}</p>
               </div>
             ))}
@@ -117,16 +116,16 @@ export function CopilotScreen() {
             ))}
           </div>
           <form className="composer" onSubmit={(e) => { e.preventDefault(); void ask(input); }}>
-            <input className="input" value={input} onChange={(e) => setInput(e.target.value)} placeholder={aiReady ? "Ask anything about this flight…" : "Ask about descent, fuel, weather, runway, arrival…"} aria-label="Your question" disabled={!live.flight} />
+            <input className="input" value={input} onChange={(e) => setInput(e.target.value)} placeholder={aiReady ? "When do we start down?" : "Descent, fuel, weather, runway…"} aria-label="Your question" disabled={!live.flight} />
             <button className="btn primary send" type="submit" disabled={busy || !input.trim()} aria-label="Send">{Icon.send()}</button>
           </form>
-          {!aiReady && live.flight ? <p className="faint" style={{ fontSize: 12, margin: "8px 4px 0" }}>The built-in copilot answers the common questions from live data. Connect an AI model on the right for anything else.</p> : null}
+          {!aiReady && live.flight ? <p className="faint" style={{ fontSize: 12, margin: "8px 4px 0" }}>Answers come straight from the sim. Hook up a model on the right for free-form questions.</p> : null}
         </section>
 
         <div className="stack">
-          <Section title="Right now" right={<span className="faint" style={{ fontSize: 12.5 }}>{alerts.length ? `${alerts.length} to check` : "All clear"}</span>}>
+          <Section title="Watching" right={<span className="faint" style={{ fontSize: 12.5 }}>{alerts.length ? `${alerts.length} to check` : "Quiet"}</span>}>
             {alerts.length === 0 ? (
-              <p className="muted" style={{ margin: 0 }}>{live.flight ? "Nothing needs your attention. I'll flag sink rate, gear, speed below 10,000 ft, fuel against plan, descent timing, crosswind and low weather." : "Alerts appear once a flight is running."}</p>
+              <p className="muted" style={{ margin: 0 }}>{live.flight ? "Nothing to flag." : "Nothing running yet."}</p>
             ) : (
               <div className="alerts">{alerts.map((a) => (
                 <div key={a.id} className={`alert ${a.level}`}><b>{a.title}</b><span>{a.detail}</span></div>
@@ -139,7 +138,7 @@ export function CopilotScreen() {
               <span>Speak callouts on this device</span>
               <input className="switch" type="checkbox" checked={s.voiceCallouts} onChange={(e) => { settingsStore.set({ voiceCallouts: e.target.checked }); if (e.target.checked) speakTest(); }} />
             </label>
-            <p className="faint" style={{ fontSize: 12.5, margin: 0 }}>Phase changes, top of descent in two minutes, and approach heights: 2500, 1000, 500, 100, 50 to 10. Uses your device's own voice; nothing is sent anywhere.</p>
+            <p className="faint" style={{ fontSize: 12.5, margin: 0 }}>Phase changes, two minutes to descent, and the radio altimeter calls from 2500 down to 10. Your device's voice, nothing leaves it.</p>
           </Section>
 
           <AiSetup ai={ai} setAi={setAi} bridge={!!bridge} />
@@ -163,7 +162,7 @@ function AiSetup({ ai, setAi, bridge }: { ai: AiStatus | null; setAi: (s: AiStat
   if (!bridge) {
     return (
       <Section title="AI model (optional)">
-        <p className="muted" style={{ margin: 0 }}>Free-form questions use an AI model through your Bridge, so your key never touches a website. Connect the Bridge on your simulator PC to set one up. Options include Ollama on your PC (free, private) or your own Gemini or Groq key (free tiers).</p>
+        <p className="muted" style={{ margin: 0 }}>For open questions, plug a model into your Bridge: Ollama on your PC (free, stays local) or a free Gemini or Groq key. The key stays on your PC. Connect the Bridge first.</p>
       </Section>
     );
   }

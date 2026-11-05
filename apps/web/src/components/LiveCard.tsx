@@ -6,7 +6,7 @@
 import { useMemo } from "react";
 import type { TrailPoint } from "../data/store";
 import { useApp } from "../data/store";
-import { countdown, dur, fmt, PHASE_LABEL, useLive, zulu } from "../data/derive";
+import { altText, countdown, dur, fmt, PHASE_LABEL, useLive, zulu } from "../data/derive";
 
 const BARS = 34;
 
@@ -38,13 +38,13 @@ export function LiveCard({ big }: { big?: boolean }) {
   if (L.completed) {
     over = "Arrived";
     main = flight.wheelsUpAt && flight.wheelsDownAt ? dur(flight.wheelsDownAt - flight.wheelsUpAt) : "—";
-    under = `airborne · ${fmt(flight.distanceNm)} nm`;
+    under = `in the air, ${fmt(flight.distanceNm)} nm flown`;
   } else if (L.airborne) {
     const T = L.timings;
     over = T?.toTopOfDescentMs != null ? `Top of descent in ${countdown(T.toTopOfDescentMs)}` : T?.toTopOfClimbMs != null ? `Top of climb in ${countdown(T.toTopOfClimbMs)}` : PHASE_LABEL[phase];
     if (T?.toGateMs != null) {
       main = countdown(T.toGateMs);
-      under = `to the gate · lands ${zulu(L.etaLanding)} · ${fmt(L.toGoNm)} nm to go`;
+      under = `to the gate. Landing ${zulu(L.etaLanding)}, ${fmt(L.toGoNm)} nm out`;
     } else if (L.toGoNm !== null) {
       main = `${fmt(L.toGoNm)} nm`;
       under = "to go";
@@ -60,7 +60,7 @@ export function LiveCard({ big }: { big?: boolean }) {
     over = PHASE_LABEL[phase];
     if (L.timings?.toTakeoffMs != null && phase !== "TAKEOFF") {
       main = countdown(L.timings.toTakeoffMs);
-      under = `to take-off (est) · off block ${countdown(frame ? frame.t - flight.offBlockAt : null)} ago`;
+      under = `to take-off, roughly. Pushed ${countdown(frame ? frame.t - flight.offBlockAt : null)} ago`;
     } else {
       main = frame ? dur(frame.t - flight.offBlockAt) : "—";
       under = "since off block";
@@ -101,7 +101,7 @@ export function LiveCard({ big }: { big?: boolean }) {
         </div>
       </div>
       <div className="lc-foot">
-        <span className="data">{frame ? `${fmt(frame.position.altMslFt)} ft · ${fmt(frame.speed.gsKt)} kt` : "—"}</span>
+        <span className="data">{frame ? `${altText(frame.position.altMslFt)}, ${fmt(frame.speed.gsKt)} kt` : "—"}</span>
         <span className="row" style={{ gap: 6 }}>
           {(flight.departureRunway || plan?.origin.runway) && !flight.wheelsUpAt ? <span className="chip" title="Departure runway">↗ {flight.departureRunway ?? plan?.origin.runway}</span> : null}
           {flight.wheelsUpAt && (flight.arrivalRunway || plan?.destination.runway) ? <span className="chip" title="Arrival runway">↘ {flight.arrivalRunway ?? plan?.destination.runway}</span> : null}

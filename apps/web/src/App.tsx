@@ -37,7 +37,7 @@ const NAV: Array<{ id: string; label: string; icon: () => ReactNode; mobile: boo
   { id: "home", label: "Home", icon: Icon.home, mobile: true },
   { id: "map", label: "Live map", icon: Icon.map, mobile: true },
   { id: "flight", label: "Flight", icon: Icon.flight, mobile: true },
-  { id: "copilot", label: "Copilot", icon: Icon.spark, mobile: true },
+  { id: "copilot", label: "Copilot", icon: Icon.headset, mobile: true },
   { id: "logbook", label: "Logbook", icon: Icon.book, mobile: true },
   { id: "airports", label: "Airports", icon: Icon.tower, mobile: false },
   { id: "glance", label: "Glance mode", icon: Icon.expand, mobile: false },
