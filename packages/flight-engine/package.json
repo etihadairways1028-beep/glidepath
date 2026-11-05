@@ -1,0 +1,1 @@
+{ "name": "@glidepath/flight-engine", "version": "0.1.0", "private": true, "type": "module", "main": "src/index.ts", "types": "src/index.ts", "dependencies": { "@glidepath/protocol": "workspace:*" }, "devDependencies": { "@glidepath/testkit": "workspace:*" } }

@@ -1,0 +1,22 @@
+{
+  "name": "glidepath",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Glidepath flight simulator companion platform (monorepo)",
+  "packageManager": "pnpm@10.28.0",
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "bridge": "pnpm --filter @glidepath/bridge start",
+    "bridge:demo": "pnpm --filter @glidepath/bridge demo",
+    "bridge:probe": "pnpm --filter @glidepath/bridge probe",
+    "fixtures": "pnpm --filter @glidepath/bridge fixtures"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

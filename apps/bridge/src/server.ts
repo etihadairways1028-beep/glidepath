@@ -1,0 +1,269 @@
+/**
+ * LAN server: HTTP (status page, live page, REST) + WebSocket stream.
+ *
+ * Security model for Stage 1:
+ *  - Every API and WebSocket request needs the Bridge's pairing token,
+ *    compared in constant time. Requests from this PC (localhost) may read
+ *    the status page, which displays the token so the user can pair.
+ *  - Nothing listens on the public internet: the PC's firewall/router keeps
+ *    port 4810 on the local network. Remote access will go through an
+ *    outbound-only relay (Stage 5), never through port forwarding.
+ *  - Stage 3 replaces the shared token with per-device tokens tied to the
+ *    user's account, revocable from Settings.
+ */
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { networkInterfaces } from "node:os";
+import { timingSafeEqual } from "node:crypto";
+import { WebSocketServer, type WebSocket } from "ws";
+import { Bonjour } from "bonjour-service";
+import {
+  ClientMessage, PROTOCOL_VERSION,
+  type BridgeStatus, type FlightPhase, type ServerMessage, type TelemetryFrame,
+} from "@glidepath/protocol";
+import type { BridgeConfig, BridgeIdentity } from "./config.js";
+import type { Logger } from "./log.js";
+import type { Recorder } from "./recorder.js";
+import type { FlightSession } from "./session.js";
+import { livePage, statusPage } from "./pages.js";
+
+interface Client {
+  ws: WebSocket;
+  name: string;
+  lastFrameSent: number;
+  queued: { frame: TelemetryFrame; phase: FlightPhase } | null;
+  /** Messages per 10 s window, for rate limiting. */
+  msgCount: number;
+}
+
+export class LanServer {
+  private clients = new Set<Client>();
+  private http = createServer((req, res) => this.route(req, res));
+  private wss = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });
+  private bonjour: Bonjour | null = null;
+  private flushTimer: NodeJS.Timeout | null = null;
+  private rateTimer: NodeJS.Timeout | null = null;
+  private readonly log: Logger;
+
+  constructor(
+    private readonly cfg: BridgeConfig,
+    private readonly identity: BridgeIdentity,
+    private readonly session: FlightSession,
+    private readonly recorder: Recorder,
+    private readonly getStatus: () => BridgeStatus,
+    log: Logger,
+  ) {
+    this.log = log.child("lan");
+    this.http.on("upgrade", (req, socket, head) => {
+      const url = new URL(req.url ?? "/", "http://x");
+      if (url.pathname !== "/ws" || !this.tokenOk(url.searchParams.get("token"))) {
+        socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
+        socket.destroy();
+        return;
+      }
+      this.wss.handleUpgrade(req, socket, head, (ws) => this.onConnection(ws, url.searchParams.get("client") ?? "unknown"));
+    });
+  }
+
+  async start(): Promise<void> {
+    await new Promise<void>((resolve, reject) => {
+      this.http.once("error", reject);
+      this.http.listen(this.cfg.port, this.cfg.host, () => resolve());
+    });
+    this.log.info(`Listening on ${this.cfg.host}:${this.cfg.port}`);
+    for (const ip of lanAddresses()) this.log.info(`  LAN address: http://${ip}:${this.cfg.port}`);
+    if (this.cfg.mdns) {
+      try {
+        this.bonjour = new Bonjour();
+        this.bonjour.publish({
+          name: `Glidepath Bridge ${this.identity.bridgeId.slice(0, 6)}`,
+          type: "glidepath",
+          port: this.cfg.port,
+          txt: { id: this.identity.bridgeId, pv: String(PROTOCOL_VERSION) },
+        });
+        this.log.info("Advertising _glidepath._tcp on the local network");
+      } catch (e) {
+        this.log.warn("mDNS advertising failed; apps can still connect by address", e);
+      }
+    }
+    // Frames are throttled per client: the newest frame wins, sent at streamHz.
+    this.flushTimer = setInterval(() => this.flushFrames(), 1000 / this.cfg.streamHz);
+    this.rateTimer = setInterval(() => this.clients.forEach((c) => (c.msgCount = 0)), 10_000);
+
+    this.session.on("frame", (frame: TelemetryFrame, phase: FlightPhase) => {
+      for (const c of this.clients) c.queued = { frame, phase };
+    });
+    this.session.on("event", (event) => this.broadcast({ type: "event", event }));
+    this.session.on("landing", (landing) => this.broadcast({ type: "landing", landing }));
+    this.session.on("flight", (flight) => this.broadcast({ type: "flight", flight }));
+  }
+
+  get clientCount(): number {
+    return this.clients.size;
+  }
+
+  broadcastStatus(): void {
+    this.broadcast({ type: "status", status: this.getStatus() });
+  }
+
+  async stop(): Promise<void> {
+    if (this.flushTimer) clearInterval(this.flushTimer);
+    if (this.rateTimer) clearInterval(this.rateTimer);
+    for (const c of this.clients) c.ws.close(1001, "Bridge shutting down");
+    this.bonjour?.unpublishAll();
+    this.bonjour?.destroy();
+    await new Promise<void>((r) => this.http.close(() => r()));
+  }
+
+  /* ---------------- WebSocket ---------------- */
+
+  private onConnection(ws: WebSocket, name: string): void {
+    const client: Client = { ws, name: name.slice(0, 64), lastFrameSent: 0, queued: null, msgCount: 0 };
+    this.clients.add(client);
+    this.log.info(`Client connected: ${client.name} (${this.clients.size} total)`);
+    this.send(client, { type: "welcome", status: this.getStatus(), flight: this.session.activeFlight });
+
+    ws.on("message", (data) => {
+      if (++client.msgCount > 100) {
+        this.send(client, { type: "error", code: "rate_limited", message: "Too many messages" });
+        return;
+      }
+      let msg: ClientMessage;
+      try {
+        msg = ClientMessage.parse(JSON.parse(String(data)));
+      } catch {
+        this.send(client, { type: "error", code: "bad_message", message: "Message did not match the protocol" });
+        return;
+      }
+      this.onMessage(client, msg);
+    });
+    ws.on("close", () => {
+      this.clients.delete(client);
+      this.log.info(`Client disconnected: ${client.name} (${this.clients.size} left)`);
+    });
+    ws.on("error", (e) => this.log.warn(`Client ${client.name} error`, e.message));
+  }
+
+  private onMessage(client: Client, msg: ClientMessage): void {
+    switch (msg.type) {
+      case "hello":
+        if (msg.protocolVersion !== PROTOCOL_VERSION) {
+          this.send(client, { type: "error", code: "protocol_mismatch", message: `Bridge speaks protocol v${PROTOCOL_VERSION}; please update the app` });
+        }
+        if (msg.lastSeq !== null) this.backfill(client, msg.lastSeq);
+        break;
+      case "resume":
+        this.backfill(client, msg.fromSeq);
+        break;
+      case "ping":
+        this.send(client, { type: "pong", t: msg.t });
+        break;
+      case "command":
+        // Remote control is Stage 5. Say so honestly instead of pretending.
+        this.send(client, { type: "commandState", id: msg.id, state: "unsupported", detail: "Remote control is not available in this Bridge version" });
+        break;
+    }
+  }
+
+  /** Send every frame after `seq`, in chunks, from memory or disk. */
+  private backfill(client: Client, seq: number): void {
+    let from = seq;
+    for (let i = 0; i < 50; i++) {
+      const frames = this.session.framesAfter(from, 500);
+      const complete = frames.length < 500;
+      if (frames.length) this.send(client, { type: "backfill", frames, complete });
+      if (complete) {
+        if (!frames.length) this.send(client, { type: "backfill", frames: [], complete: true });
+        return;
+      }
+      from = frames[frames.length - 1]!.seq;
+    }
+  }
+
+  private flushFrames(): void {
+    for (const c of this.clients) {
+      if (!c.queued) continue;
+      // Back-pressure: skip a frame rather than queue megabytes for a slow client.
+      if (c.ws.bufferedAmount > 1_000_000) continue;
+      this.send(c, { type: "frame", frame: c.queued.frame, phase: c.queued.phase });
+      c.queued = null;
+    }
+  }
+
+  private broadcast(msg: ServerMessage): void {
+    for (const c of this.clients) this.send(c, msg);
+  }
+
+  private send(c: Client, msg: ServerMessage): void {
+    if (c.ws.readyState === c.ws.OPEN) c.ws.send(JSON.stringify(msg));
+  }
+
+  /* ---------------- HTTP ---------------- */
+
+  private route(req: IncomingMessage, res: ServerResponse): void {
+    const url = new URL(req.url ?? "/", "http://x");
+    const local = isLocal(req);
+    const authed = local || this.tokenOk(url.searchParams.get("token") ?? bearer(req));
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Referrer-Policy", "no-referrer");
+    try {
+      if (req.method !== "GET") return text(res, 405, "Method not allowed");
+      if (url.pathname === "/") {
+        return html(res, statusPage({ local, status: this.getStatus(), token: local ? this.identity.pairingToken : null, addresses: lanAddresses(), port: this.cfg.port, logs: local ? this.log.recent().slice(-60) : [] }));
+      }
+      if (url.pathname === "/live") return html(res, livePage());
+      if (url.pathname === "/favicon.ico") { res.writeHead(204); res.end(); return; }
+      if (url.pathname === "/healthz") return json(res, 200, { ok: true });
+      if (!authed) return json(res, 401, { error: "Pairing token required" });
+      if (url.pathname === "/api/status") return json(res, 200, this.getStatus());
+      if (url.pathname === "/api/flights") return json(res, 200, this.recorder.listFlights(Number(url.searchParams.get("limit") ?? 50)));
+      const m = /^\/api\/flights\/([0-9a-f-]{36})(\/frames|\/events)?$/.exec(url.pathname);
+      if (m) {
+        const flight = this.recorder.getFlight(m[1]!);
+        if (!flight) return json(res, 404, { error: "Flight not found" });
+        if (m[2] === "/frames") return json(res, 200, this.recorder.framesSince(flight.id, Number(url.searchParams.get("after") ?? 0), 5000));
+        if (m[2] === "/events") return json(res, 200, this.recorder.events(flight.id));
+        return json(res, 200, flight);
+      }
+      return json(res, 404, { error: "Not found" });
+    } catch (e) {
+      this.log.error(`HTTP ${url.pathname} failed`, e);
+      return json(res, 500, { error: "Internal error" });
+    }
+  }
+
+  private tokenOk(token: string | null | undefined): boolean {
+    if (!token) return false;
+    const a = Buffer.from(token);
+    const b = Buffer.from(this.identity.pairingToken);
+    return a.length === b.length && timingSafeEqual(a, b);
+  }
+}
+
+export function lanAddresses(): string[] {
+  const out: string[] = [];
+  for (const list of Object.values(networkInterfaces())) {
+    for (const ni of list ?? []) if (ni.family === "IPv4" && !ni.internal) out.push(ni.address);
+  }
+  return out;
+}
+
+function isLocal(req: IncomingMessage): boolean {
+  const a = req.socket.remoteAddress ?? "";
+  return a === "127.0.0.1" || a === "::1" || a === "::ffff:127.0.0.1";
+}
+function bearer(req: IncomingMessage): string | null {
+  const h = req.headers.authorization;
+  return h?.startsWith("Bearer ") ? h.slice(7) : null;
+}
+function json(res: ServerResponse, code: number, body: unknown): void {
+  res.writeHead(code, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+  res.end(JSON.stringify(body));
+}
+function html(res: ServerResponse, body: string): void {
+  res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+  res.end(body);
+}
+function text(res: ServerResponse, code: number, body: string): void {
+  res.writeHead(code, { "Content-Type": "text/plain; charset=utf-8" });
+  res.end(body);
+}
