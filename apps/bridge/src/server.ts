@@ -24,7 +24,7 @@ import type { BridgeConfig, BridgeIdentity } from "./config.js";
 import type { Logger } from "./log.js";
 import type { Recorder } from "./recorder.js";
 import type { FlightSession } from "./session.js";
-import { livePage, statusPage } from "./pages.js";
+import { livePage, liveRedirectPage, statusPage } from "./pages.js";
 import { HttpError, type AiConfig, type AiService, type ChatMessage } from "./ai.js";
 import type { ExternalData } from "./external.js";
 import type { AirportDb } from "@glidepath/aviation-data";
@@ -240,7 +240,8 @@ export class LanServer {
     if (p === "/") {
       return html(res, statusPage({ local, status: this.getStatus(), token: local ? this.identity.pairingToken : null, addresses: lanAddresses(), port: this.cfg.port, logs: local ? this.log.recent().slice(-60) : [] }));
     }
-    if (p === "/live") return html(res, livePage());
+    if (p === "/live") return html(res, liveRedirectPage());
+    if (p === "/lite") return html(res, livePage());
     if (p === "/favicon.ico") { res.writeHead(204); res.end(); return; }
     if (p === "/healthz") return json(res, 200, { ok: true, bridgeId: this.identity.bridgeId, protocolVersion: PROTOCOL_VERSION });
     if (p === "/app") { res.writeHead(302, { Location: "/app/" }); res.end(); return; }

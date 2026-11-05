@@ -8,6 +8,7 @@
 import type { FlightTimings } from "./timings.js";
 import { windComponents } from "./geo.js";
 import type { RunwayEnd } from "./landing.js";
+import { touchdownWords } from "./review.js";
 
 export interface CopilotWeather {
   icao: string;
@@ -211,7 +212,9 @@ export function copilotAnswer(q: QuickQuestion, s: CopilotSnapshot): string {
     case "landing": {
       const l = s.lastLanding;
       if (!l) return "No landing on this flight yet.";
-      return `${l.grade}, ${l.score} out of 100${l.touchdownVsFpm !== null ? `, ${nf(l.touchdownVsFpm)} fpm at touchdown` : ""}. ${l.verdict}`;
+      if (l.touchdownVsFpm === null) return `Graded ${l.grade}, ${l.score} out of 100. ${l.verdict}`;
+      const w = touchdownWords(l.touchdownVsFpm);
+      return `${w.text} Graded ${l.grade}, ${Math.round(l.score)} out of 100.${/^Smooth|^Very smooth/.test(l.verdict) ? "" : ` ${l.verdict}`}`;
     }
   }
 }

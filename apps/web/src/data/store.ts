@@ -39,10 +39,12 @@ export interface Settings {
   /** Speak phase changes, top of descent and approach altitude callouts. */
   voiceCallouts: boolean;
   reduceTransparency: boolean;
+  /** Base map: satellite imagery, or a street map that follows the light/dark theme. */
+  mapStyle: "satellite" | "map";
 }
 
 const DEFAULT_SETTINGS: Settings = {
-  bridgeUrl: "", token: "", simbriefUser: "", showVatsim: true, showIvao: false, fuelUnit: "kg", accent: "glideslope", theme: "system", voiceCallouts: false, reduceTransparency: false,
+  bridgeUrl: "", token: "", simbriefUser: "", showVatsim: true, showIvao: false, fuelUnit: "kg", accent: "glideslope", theme: "system", voiceCallouts: false, reduceTransparency: false, mapStyle: "satellite",
 };
 
 const initial: AppState = {

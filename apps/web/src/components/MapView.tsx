@@ -1,42 +1,69 @@
 /**
- * Map: MapLibre GL (open source) with a custom night style.
- *  - Base: Natural Earth land + borders (public domain), bundled, so the map
- *    works even when vector tiles can't load.
- *  - Detail: OpenFreeMap vector tiles (OpenStreetMap data, no key, attribution shown).
- *  - Own aircraft and airport labels are HTML markers: they never depend on remote fonts.
+ * Map: MapLibre GL (open source), no API keys.
+ *  - Satellite: Sentinel-2 cloudless imagery by EOX (Copernicus data), with
+ *    OpenFreeMap labels, borders and runways drawn over it.
+ *  - Map: OpenFreeMap's Dark or Positron style, following the app theme.
+ *  - Offline: bundled Natural Earth coastlines if neither can load.
+ *  Own aircraft and airport labels are HTML markers, so they never depend on remote fonts.
  */
 import { useEffect, useRef, useState } from "react";
 import maplibregl, { type GeoJSONSource, type Map as MLMap, type StyleSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { FlightPlan } from "@glidepath/protocol";
 import type { TrailPoint } from "../data/store";
+import { useSettings } from "../data/store";
 import type { NetworkPilot } from "../data/external";
 
-const STYLE: StyleSpecification = {
+const OFM = "https://tiles.openfreemap.org";
+const OFM_ATTR = '<a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/" target="_blank">OpenMapTiles</a> © <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>';
+const S2_ATTR = '<a href="https://s2maps.eu" target="_blank">Sentinel-2 cloudless</a> by EOX IT Services GmbH (contains modified Copernicus Sentinel data 2020)';
+
+function satelliteStyle(): StyleSpecification {
+  return {
+    version: 8,
+    glyphs: `${OFM}/fonts/{fontstack}/{range}.pbf`,
+    sources: {
+      s2: { type: "raster", tiles: ["https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg"], tileSize: 256, maxzoom: 14, attribution: S2_ATTR },
+      omt: { type: "vector", url: `${OFM}/planet`, attribution: OFM_ATTR },
+      land: { type: "geojson", data: "data/land.geojson" },
+    },
+    layers: [
+      { id: "bg", type: "background", paint: { "background-color": "#0a1830" } },
+      { id: "land-under", type: "fill", source: "land", paint: { "fill-color": "#22301f" } },
+      { id: "s2", type: "raster", source: "s2", paint: { "raster-saturation": -0.12, "raster-contrast": 0.08, "raster-brightness-max": 0.88, "raster-fade-duration": 250 } },
+      { id: "boundary", type: "line", source: "omt", "source-layer": "boundary", filter: ["all", ["<=", ["get", "admin_level"], 2], ["!=", ["get", "maritime"], 1]], paint: { "line-color": "rgba(255,255,255,0.35)", "line-width": 0.9 } },
+      { id: "aeroway-area", type: "fill", source: "omt", "source-layer": "aeroway", minzoom: 11, filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "rgba(255,255,255,0.06)" } },
+      { id: "runway", type: "line", source: "omt", "source-layer": "aeroway", minzoom: 9, filter: ["==", ["get", "class"], "runway"], paint: { "line-color": "rgba(235,240,250,0.85)", "line-width": ["interpolate", ["exponential", 1.7], ["zoom"], 9, 1.2, 15, 30] } },
+      { id: "taxiway", type: "line", source: "omt", "source-layer": "aeroway", minzoom: 12, filter: ["==", ["get", "class"], "taxiway"], paint: { "line-color": "rgba(255,214,102,0.7)", "line-width": ["interpolate", ["linear"], ["zoom"], 12, 0.6, 16, 5] } },
+      { id: "place-city", type: "symbol", source: "omt", "source-layer": "place", minzoom: 3, filter: ["in", ["get", "class"], ["literal", ["city", "town"]]],
+        layout: { "text-field": ["coalesce", ["get", "name:en"], ["get", "name"]], "text-font": ["Noto Sans Regular"], "text-size": ["interpolate", ["linear"], ["zoom"], 4, 10.5, 10, 14], "text-letter-spacing": 0.02 },
+        paint: { "text-color": "rgba(255,255,255,0.92)", "text-halo-color": "rgba(0,0,0,0.65)", "text-halo-width": 1.4, "text-halo-blur": 0.6 } },
+      { id: "place-country", type: "symbol", source: "omt", "source-layer": "place", maxzoom: 6, filter: ["==", ["get", "class"], "country"],
+        layout: { "text-field": ["coalesce", ["get", "name:en"], ["get", "name"]], "text-font": ["Noto Sans Bold"], "text-size": 12, "text-transform": "uppercase", "text-letter-spacing": 0.15 },
+        paint: { "text-color": "rgba(255,255,255,0.7)", "text-halo-color": "rgba(0,0,0,0.6)", "text-halo-width": 1.2 } },
+    ],
+  };
+}
+
+/** Bundled coastlines only: used when nothing remote can load. */
+const OFFLINE: StyleSpecification = {
   version: 8,
-  glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
-  sources: {
-    land: { type: "geojson", data: "data/land.geojson" },
-    borders: { type: "geojson", data: "data/borders.geojson" },
-    omt: { type: "vector", url: "https://tiles.openfreemap.org/planet", attribution: '<a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> © <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> · Natural Earth' },
-  },
+  sources: { land: { type: "geojson", data: "data/land.geojson" }, borders: { type: "geojson", data: "data/borders.geojson", attribution: "Natural Earth" } },
   layers: [
-    { id: "bg", type: "background", paint: { "background-color": "#050b19" } },
-    { id: "land", type: "fill", source: "land", paint: { "fill-color": "#0c1631" } },
-    { id: "land-edge", type: "line", source: "land", paint: { "line-color": "#1b2a52", "line-width": 0.8 } },
-    { id: "omt-water", type: "fill", source: "omt", "source-layer": "water", paint: { "fill-color": "#060d1f" } },
-    { id: "omt-landuse-urban", type: "fill", source: "omt", "source-layer": "landuse", filter: ["in", ["get", "class"], ["literal", ["residential", "commercial", "industrial"]]], paint: { "fill-color": "#101d3d", "fill-opacity": 0.6 } },
-    { id: "omt-aerodrome", type: "fill", source: "omt", "source-layer": "aeroway", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#13224a", "fill-opacity": 0.8 } },
-    { id: "omt-roads", type: "line", source: "omt", "source-layer": "transportation", filter: ["in", ["get", "class"], ["literal", ["motorway", "trunk", "primary"]]], minzoom: 6, paint: { "line-color": "#16264d", "line-width": ["interpolate", ["linear"], ["zoom"], 6, 0.5, 12, 2] } },
-    { id: "omt-runway", type: "line", source: "omt", "source-layer": "aeroway", filter: ["in", ["get", "class"], ["literal", ["runway"]]], paint: { "line-color": "#3b5291", "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 9, 1, 14, 22] } },
-    { id: "omt-taxiway", type: "line", source: "omt", "source-layer": "aeroway", filter: ["in", ["get", "class"], ["literal", ["taxiway"]]], minzoom: 12, paint: { "line-color": "#2a3d70", "line-width": ["interpolate", ["linear"], ["zoom"], 12, 1, 16, 6] } },
-    { id: "borders", type: "line", source: "borders", paint: { "line-color": "#2a3a66", "line-width": 0.8, "line-dasharray": [3, 2] } },
-    { id: "omt-boundary", type: "line", source: "omt", "source-layer": "boundary", filter: ["<=", ["get", "admin_level"], 2], paint: { "line-color": "#2c3d6c", "line-width": 0.8 } },
-    { id: "omt-place", type: "symbol", source: "omt", "source-layer": "place", filter: ["in", ["get", "class"], ["literal", ["city", "town"]]], minzoom: 4,
-      layout: { "text-field": ["coalesce", ["get", "name:en"], ["get", "name"]], "text-font": ["Noto Sans Regular"], "text-size": ["interpolate", ["linear"], ["zoom"], 4, 10, 10, 13] },
-      paint: { "text-color": "#6c7a9c", "text-halo-color": "#050b19", "text-halo-width": 1.2 } },
+    { id: "bg", type: "background", paint: { "background-color": "#071226" } },
+    { id: "land", type: "fill", source: "land", paint: { "fill-color": "#132244" } },
+    { id: "land-edge", type: "line", source: "land", paint: { "line-color": "#2a3d6e", "line-width": 0.8 } },
+    { id: "borders", type: "line", source: "borders", paint: { "line-color": "#2f4478", "line-width": 0.7, "line-dasharray": [3, 2] } },
   ],
 };
+
+type Kind = "satellite" | "dark" | "light" | "offline";
+function styleFor(k: Kind): StyleSpecification | string {
+  return k === "satellite" ? satelliteStyle() : k === "dark" ? `${OFM}/styles/dark` : k === "light" ? `${OFM}/styles/positron` : OFFLINE;
+}
+function themeNow(): "dark" | "light" {
+  return document.documentElement.dataset.theme === "light" ? "light" : "dark";
+}
 
 export interface MapViewProps {
   trail: TrailPoint[];
@@ -58,51 +85,92 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], fo
   const aptMarkers = useRef<maplibregl.Marker[]>([]);
   const fitted = useRef(false);
   const [tilesOk, setTilesOk] = useState(true);
+  const { mapStyle } = useSettings();
+  const [theme, setTheme] = useState(themeNow);
+  const kindRef = useRef<Kind>("satellite");
+  const data = useRef<{ route: number[][]; trail: number[][]; traffic: unknown }>({ route: [], trail: [], traffic: empty() });
+  const handlers = useRef({ onSelectTraffic, onUserMove });
+  handlers.current = { onSelectTraffic, onUserMove };
+
+  // Follow the app's light/dark theme.
+  useEffect(() => {
+    const mo = new MutationObserver(() => setTheme(themeNow()));
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => mo.disconnect();
+  }, []);
+
+  const wanted: Kind = !tilesOk ? "offline" : mapStyle === "map" ? theme : "satellite";
+
+  const addOverlays = (m: MLMap) => {
+    if (!m.hasImage("traffic")) m.addImage("traffic", trafficIcon(), { pixelRatio: 2 });
+    if (m.getSource("trail")) return;
+    m.addSource("route", { type: "geojson", data: line(data.current.route) });
+    m.addSource("trail", { type: "geojson", data: line(data.current.trail), lineMetrics: true });
+    m.addSource("traffic", { type: "geojson", data: data.current.traffic as ReturnType<typeof empty> });
+    const light = kindRef.current === "light";
+    m.addLayer({ id: "route-casing", type: "line", source: "route", layout: { "line-cap": "round" }, paint: { "line-color": light ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.35)", "line-width": 4.5 } });
+    m.addLayer({ id: "route", type: "line", source: "route", layout: { "line-cap": "round" }, paint: { "line-color": "#E05CFF", "line-width": 2, "line-dasharray": [2.2, 1.6], "line-opacity": 0.95 } });
+    m.addLayer({ id: "trail-glow", type: "line", source: "trail", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#5AC8FA", "line-width": 12, "line-opacity": light ? 0.25 : 0.35, "line-blur": 6 } });
+    m.addLayer({ id: "trail", type: "line", source: "trail", layout: { "line-cap": "round", "line-join": "round" },
+      paint: { "line-width": 3.4, "line-gradient": ["interpolate", ["linear"], ["line-progress"], 0, "#64D2FF", 0.6, "#0A84FF", 1, "#BF5AF2"] } });
+    m.addLayer({ id: "traffic", type: "symbol", source: "traffic", layout: { "icon-image": "traffic", "icon-rotate": ["get", "hdg"], "icon-rotation-alignment": "map", "icon-allow-overlap": true, "icon-size": ["interpolate", ["linear"], ["zoom"], 2, 0.55, 9, 1] }, paint: { "icon-opacity": 0.95 } });
+  };
 
   useEffect(() => {
     if (!el.current) return;
+    kindRef.current = wanted;
     const m = new maplibregl.Map({
-      container: el.current, style: STYLE, center: aircraft ? [aircraft.lon, aircraft.lat] : [0, 30], zoom: aircraft ? 7 : 1.6,
-      attributionControl: { compact: true }, interactive, dragRotate: false, pitchWithRotate: false, fadeDuration: 0,
+      container: el.current, style: styleFor(wanted), center: aircraft ? [aircraft.lon, aircraft.lat] : [0, 30], zoom: aircraft ? 7 : 1.6,
+      attributionControl: { compact: true }, interactive, dragRotate: false, pitchWithRotate: false, fadeDuration: 150,
     });
     map.current = m;
+    let failures = 0;
     m.on("error", (e) => {
-      const msg = String((e as { error?: { message?: string } }).error?.message ?? "");
-      if (/openfreemap|Failed to fetch|NetworkError|AJAXError/i.test(msg)) setTilesOk(false);
+      const msg = String((e as { error?: { message?: string; status?: number } }).error?.message ?? "");
+      // A whole style that can't load means we're offline: fall back to coastlines.
+      // Only the style or the tile index failing counts; a few missing tiles are normal.
+      const k = kindRef.current;
+      if (k === "offline") return;
+      if (k === "satellite") {
+        // Labels missing is fine; imagery failing over and over means no connection.
+        if (/tiles\.maps\.eox\.at/i.test(msg) && ++failures >= 8) setTilesOk(false);
+      } else if (/openfreemap\.org\/(styles\/[a-z]+|planet)(?=[\s"')]|$)/i.test(msg)) {
+        setTilesOk(false);
+      }
     });
-    m.on("load", () => {
-      m.addImage("traffic", trafficIcon(), { pixelRatio: 2 });
-      m.addSource("route", { type: "geojson", data: empty() });
-      m.addSource("trail", { type: "geojson", data: empty() });
-      m.addSource("traffic", { type: "geojson", data: empty() });
-      m.addLayer({ id: "route", type: "line", source: "route", paint: { "line-color": "#E05CFF", "line-width": 2, "line-dasharray": [2, 2], "line-opacity": 0.85 } });
-      m.addLayer({ id: "trail-glow", type: "line", source: "trail", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#6FB6FF", "line-width": 9, "line-opacity": 0.18, "line-blur": 4 } });
-      m.addLayer({ id: "trail", type: "line", source: "trail", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#8CC6FF", "line-width": 2.6 } });
-      m.addLayer({ id: "traffic", type: "symbol", source: "traffic", layout: { "icon-image": "traffic", "icon-rotate": ["get", "hdg"], "icon-rotation-alignment": "map", "icon-allow-overlap": true, "icon-size": ["interpolate", ["linear"], ["zoom"], 2, 0.55, 9, 1] },
-        paint: { "icon-opacity": 0.9 } });
-      m.on("click", "traffic", (e) => {
-        const f = e.features?.[0];
-        if (f) onSelectTraffic?.(JSON.parse(String(f.properties?.raw ?? "null")));
-      });
-      m.on("click", (e) => {
-        if (!m.queryRenderedFeatures(e.point, { layers: ["traffic"] }).length) onSelectTraffic?.(null);
-      });
-      m.on("mouseenter", "traffic", () => (m.getCanvas().style.cursor = "pointer"));
-      m.on("mouseleave", "traffic", () => (m.getCanvas().style.cursor = ""));
-      setReady(true);
+    m.on("style.load", () => { addOverlays(m); setReady(true); });
+    m.on("click", "traffic", (e) => {
+      const f = e.features?.[0];
+      if (f) handlers.current.onSelectTraffic?.(JSON.parse(String(f.properties?.raw ?? "null")));
     });
-    m.on("dragstart", () => onUserMove?.());
+    m.on("click", (e) => {
+      if (m.getLayer("traffic") && !m.queryRenderedFeatures(e.point, { layers: ["traffic"] }).length) handlers.current.onSelectTraffic?.(null);
+    });
+    m.on("mouseenter", "traffic", () => (m.getCanvas().style.cursor = "pointer"));
+    m.on("mouseleave", "traffic", () => (m.getCanvas().style.cursor = ""));
+    m.on("dragstart", () => handlers.current.onUserMove?.());
     return () => { m.remove(); map.current = null; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Switch base map when the setting, theme or connectivity changes.
+  useEffect(() => {
+    const m = map.current;
+    if (!m || kindRef.current === wanted) return;
+    kindRef.current = wanted;
+    setReady(false);
+    m.setStyle(styleFor(wanted));
+  }, [wanted]);
 
   // Route (plan) and trail
   useEffect(() => {
     const m = map.current;
     if (!m || !ready) return;
     const route = plan ? [[plan.origin.lon, plan.origin.lat], ...plan.fixes.map((f) => [f.lon, f.lat]), [plan.destination.lon, plan.destination.lat]] : [];
-    (m.getSource("route") as GeoJSONSource).setData(line(route));
-    (m.getSource("trail") as GeoJSONSource).setData(line(trail.map((p) => [p.lon, p.lat])));
+    data.current.route = route;
+    data.current.trail = trail.map((p) => [p.lon, p.lat]);
+    (m.getSource("route") as GeoJSONSource | undefined)?.setData(line(route));
+    (m.getSource("trail") as GeoJSONSource | undefined)?.setData(line(data.current.trail));
     if (!fitted.current && (route.length > 1 || trail.length > 1) && !aircraft) {
       fitted.current = true;
       const pts = (route.length > 1 ? route : trail.map((p) => [p.lon, p.lat])) as Array<[number, number]>;
@@ -115,10 +183,12 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], fo
   useEffect(() => {
     const m = map.current;
     if (!m || !ready) return;
-    (m.getSource("traffic") as GeoJSONSource).setData({
-      type: "FeatureCollection",
-      features: traffic.map((p) => ({ type: "Feature", properties: { hdg: p.hdg, raw: JSON.stringify(p) }, geometry: { type: "Point", coordinates: [p.lon, p.lat] } })),
-    });
+    const fc = {
+      type: "FeatureCollection" as const,
+      features: traffic.map((p) => ({ type: "Feature" as const, properties: { hdg: p.hdg, raw: JSON.stringify(p) }, geometry: { type: "Point" as const, coordinates: [p.lon, p.lat] } })),
+    };
+    data.current.traffic = fc;
+    (m.getSource("traffic") as GeoJSONSource | undefined)?.setData(fc);
   }, [ready, traffic]);
 
   // Airports (HTML markers)
@@ -146,7 +216,7 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], fo
     if (!acMarker.current) {
       const d = document.createElement("div");
       d.className = "own-ac";
-      d.innerHTML = `<svg viewBox="0 0 48 48" width="40" height="40"><path d="M24 3c1.6 0 2.6 1.6 2.6 3.8v11.4l15.4 9v4.3l-15.4-4.6v9.6l4.6 3.6V43L24 41.2 16.8 43v-2.9l4.6-3.6v-9.6L6 31.5v-4.3l15.4-9V6.8C21.4 4.6 22.4 3 24 3z" fill="#EEF3FC" stroke="#6FB6FF" stroke-width="1.6"/></svg>`;
+      d.innerHTML = `<span class="own-ac-pulse"></span><svg viewBox="0 0 48 48" width="44" height="44"><path d="M24 2.5c1.7 0 2.8 1.7 2.8 4v11.2l15.7 9.1v4.4l-15.7-4.7v9.4l4.7 3.6v3L24 41.6 16.5 43.5v-3l4.7-3.6v-9.4L5.5 32.2v-4.4l15.7-9.1V6.5c0-2.3 1.1-4 2.8-4z" fill="#FFFFFF" stroke="#0A84FF" stroke-width="1.8" stroke-linejoin="round"/></svg>`;
       acMarker.current = new maplibregl.Marker({ element: d, rotationAlignment: "map" }).setLngLat([aircraft.lon, aircraft.lat]).addTo(m);
     }
     acMarker.current.setLngLat([aircraft.lon, aircraft.lat]).setRotation(aircraft.hdg);
@@ -156,7 +226,7 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], fo
   return (
     <>
       <div ref={el} className="map" />
-      {!tilesOk && <div className="map-note"><div className="notice info">Detailed map tiles couldn't load, so you're seeing coastlines only. Your flight, trail and traffic are still live.</div></div>}
+      {!tilesOk && <div className="map-note"><div className="notice info">The map couldn't load, so you're seeing coastlines only. Your flight, trail and traffic are still live. <button className="linklike" onClick={() => setTilesOk(true)}>Try again</button></div></div>}
     </>
   );
 }

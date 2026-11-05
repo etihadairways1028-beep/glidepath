@@ -39,7 +39,7 @@ export function MapScreen() {
               <Mini k="V/S" v={fmt(f?.speed.vsFpm)} />
               <Mini k="HDG" v={f?.attitude.headingMagDeg === null || !f ? "—" : String(Math.round(f.attitude.headingMagDeg) % 360).padStart(3, "0")} />
             </div>
-            {L.toGoNm !== null && <div className="muted" style={{ fontSize: 13, marginTop: 10 }}>{fmt(L.toGoNm)} nm to go{L.tod && !L.tod.pastTod && L.tod.minutesToTod !== null ? ` · top of descent in ${Math.max(1, Math.round(L.tod.minutesToTod))} min (est.)` : ""}</div>}
+            {L.toGoNm !== null && <div className="muted" style={{ fontSize: 13, marginTop: 10 }}>{fmt(L.toGoNm)} nm to go{L.tod && !L.tod.pastTod && L.tod.minutesToTod !== null ? `, top of descent in about ${Math.max(1, Math.round(L.tod.minutesToTod))} min` : ""}</div>}
           </>
         ) : (
           <div className="muted">{mode === "none" ? "Connect your Bridge or start the demo to see your aircraft." : "No flight yet."}</div>
@@ -51,6 +51,10 @@ export function MapScreen() {
         <button className={`btn glass${layers ? " on" : ""}`} aria-expanded={layers} aria-label="Map layers" title="Map layers" onClick={() => setLayers(!layers)}><span style={{ width: 22, height: 22 }}>{Icon.layers()}</span></button>
         {layers && (
           <div className="glass strong pad" style={{ width: 230, position: "absolute", right: 54, top: 52 }}>
+            <div className="seg" role="group" aria-label="Base map" style={{ width: "100%", marginBottom: 12 }}>
+              <button className={s.mapStyle !== "map" ? "on" : ""} onClick={() => settingsStore.set({ mapStyle: "satellite" })}>Satellite</button>
+              <button className={s.mapStyle === "map" ? "on" : ""} onClick={() => settingsStore.set({ mapStyle: "map" })}>Map</button>
+            </div>
             <Toggle label="VATSIM traffic" on={s.showVatsim} set={(v) => settingsStore.set({ showVatsim: v })} />
             <Toggle label="IVAO traffic" on={s.showIvao} set={(v) => settingsStore.set({ showIvao: v })} />
             <p className="faint" style={{ fontSize: 12, margin: "8px 0 0" }}>{bridge ? `${traffic.length.toLocaleString()} aircraft online` : "Traffic needs your Bridge."}{vatsim.error ? ` VATSIM: ${vatsim.error}` : ""}</p>
@@ -60,11 +64,11 @@ export function MapScreen() {
       {sel && (
         <div className="map-sheet glass strong pad">
           <div className="between"><span className="data" style={{ fontWeight: 700, fontSize: 18 }}>{sel.callsign}</span><button className="btn small" aria-label="Close" onClick={() => setSel(null)}><span style={{ width: 16, height: 16 }}>{Icon.close()}</span></button></div>
-          <div className="muted" style={{ marginTop: 2 }}>{sel.type ?? "Unknown type"} · {sel.network.toUpperCase()}</div>
+          <div className="muted" style={{ marginTop: 2 }}>{sel.type ?? "Unknown type"} on {sel.network.toUpperCase()}</div>
           <div className="grid cols-3" style={{ gap: 8, marginTop: 12 }}>
             <Mini k="FROM" v={sel.dep ?? "—"} /><Mini k="TO" v={sel.arr ?? "—"} /><Mini k="ALT" v={fmt(sel.altFt)} />
           </div>
-          <div className="muted data" style={{ fontSize: 13, marginTop: 10 }}>{fmt(sel.gsKt)} kt · heading {fmt(sel.hdg)}°</div>
+          <div className="muted data" style={{ fontSize: 13, marginTop: 10 }}>{fmt(sel.gsKt)} kt, heading {fmt(sel.hdg)}°</div>
         </div>
       )}
     </div>

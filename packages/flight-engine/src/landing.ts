@@ -341,13 +341,13 @@ function comp(id: LandingComponent["id"], label: string, value: number | null, u
 function verdictFor(comps: LandingComponent[], vs: number | null, p: LandingProfile): string {
   if (vs !== null && vs >= p.hardVsFpm) return "Hard landing — an inspection would be required in real operations.";
   const worst = comps.filter((c) => c.score !== null).sort((a, b) => (a.score as number) - (b.score as number))[0];
-  if (!worst || (worst.score as number) >= 90) return vs !== null && vs < p.idealVsFpm[0] ? "Very smooth — watch for floating long." : "Smooth, well-controlled landing.";
+  if (!worst || (worst.score as number) >= 80) return vs !== null && vs < p.idealVsFpm[0] ? "Very smooth — watch for floating long." : "Smooth, well-controlled landing.";
   const tips: Record<LandingComponent["id"], string> = {
     sinkRate: vs !== null && vs < p.idealVsFpm[0] ? "Very soft touchdown; check you are not floating long." : "Firm touchdown; start the flare a little earlier.",
     gLoad: "High touchdown load; aim for a steadier sink rate into the flare.",
     bounce: "The aircraft bounced; hold the flare attitude after first contact.",
     bank: "Wings not level at touchdown; correct drift with rudder earlier.",
-    pitch: "Pitch attitude out of the safe band at touchdown.",
+    pitch: comps.find((c) => c.id === "pitch")?.value !== null && (comps.find((c) => c.id === "pitch")!.value as number) < 2 ? "Flat touchdown, nearly nose-first; hold a little more flare." : "Nose high at touchdown, close to the tail; fly it onto the runway.",
     centreline: "Touched down off the centreline.",
     touchdownZone: "Touched down outside the target zone.",
   };

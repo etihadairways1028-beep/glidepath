@@ -4,7 +4,7 @@ import { computeTopOfDescent } from "@glidepath/flight-engine";
 import { LiveCard } from "../components/LiveCard";
 import { DebriefPanel, HandlingCard, TakeoffCard } from "../components/Debrief";
 import { touchdownWords } from "@glidepath/flight-engine";
-import { AircraftArt, artKindFor } from "../components/Imagery";
+import { AircraftHero } from "../components/Imagery";
 import { TimingsTable } from "../components/Timings";
 import { ProfileChart } from "../components/ProfileChart";
 import { Grade, Kv, Notice, onOff, Section, Tile } from "../components/ui";
@@ -37,14 +37,11 @@ export function FlightScreen() {
   return (
     <div className="stack">
       <div className="between wrap"><h1 className="title">Flight</h1>{mode === "demo" && <span className="pill demo"><span className="dot" />Demo flight: synthetic data</span>}</div>
-      <section className="glass flight-hero">
-        <div>
+      <AircraftHero icaoType={L.flight.aircraft?.icaoType ?? L.plan?.aircraftIcao} title={L.flight.aircraft?.title} tilt={Math.max(-5, Math.min(6, -(f.speed.vsFpm ?? 0) / 450))}>
           <p className="fh-type">{L.flight.aircraft?.icaoType ?? L.plan?.aircraftIcao ?? "Your aircraft"}</p>
           <p className="fh-meta">{[L.plan?.callsign ?? L.flight.callsign, L.flight.aircraft?.registration ?? L.plan?.registration, L.flight.aircraft?.title].filter(Boolean).join(", ") || "Waiting on aircraft details from the sim"}</p>
           <p className="fh-meta data" style={{ fontSize: 15, color: "var(--ink)", marginTop: 10 }}>{(L.flight.departureIcao ?? L.plan?.origin.icao ?? "····") + "  →  " + (L.flight.arrivalIcao ?? L.plan?.destination.icao ?? "····")}</p>
-        </div>
-        <AircraftArt kind={artKindFor(L.flight.aircraft?.icaoType ?? L.plan?.aircraftIcao, L.flight.aircraft?.title)} tilt={Math.max(-5, Math.min(6, -(f.speed.vsFpm ?? 0) / 450))} />
-      </section>
+      </AircraftHero>
       {L.completed && <DebriefPanel flight={L.flight} />}
       <LiveCard />
 
@@ -125,10 +122,10 @@ export function FlightScreen() {
               <Kv k="Flight director" v={onOff(f.autopilot.flightDirector)} />
               <Kv k="Autothrottle" v={onOff(f.autopilot.autothrottle)} />
               <Kv k="Selected altitude" v={`${fmt(f.autopilot.selectedAltitudeFt)} ft`} />
-              <Kv k="Selected heading" v={`${fmt(f.autopilot.selectedHeadingDeg)}° ${f.autopilot.headingHold ? "· HDG" : ""}`} />
+              <Kv k="Selected heading" v={`${fmt(f.autopilot.selectedHeadingDeg)}° ${f.autopilot.headingHold ? "(HDG hold)" : ""}`} />
               <Kv k="Selected speed" v={`${fmt(f.autopilot.selectedSpeedKt)} kt`} />
               <Kv k="Selected V/S" v={`${fmt(f.autopilot.selectedVsFpm)} fpm`} />
-              <Kv k="Modes" v={[f.autopilot.navHold ? "NAV" : null, f.autopilot.approachHold ? "APPR" : null].filter(Boolean).join(" · ") || "—"} />
+              <Kv k="Modes" v={[f.autopilot.navHold ? "NAV" : null, f.autopilot.approachHold ? "APPR" : null].filter(Boolean).join(", ") || "—"} />
             </>
           )}
         </Section>

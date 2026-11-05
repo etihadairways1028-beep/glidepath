@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { FlightSummary } from "@glidepath/protocol";
 import { LiveCard } from "../components/LiveCard";
+import { AircraftHero } from "../components/Imagery";
 import { buildDebrief } from "@glidepath/flight-engine";
 import { TimingsStrip } from "../components/Timings";
 import { useCopilot } from "../data/copilot";
@@ -24,6 +25,7 @@ export function Home() {
       {mode === "bridge" && conn !== "live" && msg && <Notice>{msg} <a href="#/settings">Connection settings</a></Notice>}
       {mode !== "none" && flight?.status === "completed" && <DebriefTeaser />}
       {mode !== "none" && flight && <LiveCard />}
+      {mode !== "none" && flight && <HomeAircraft />}
       {mode !== "none" && flight && flight.status !== "completed" && <Instruments />}
       {mode !== "none" && flight && flight.status !== "completed" && <SoFar />}
       {mode !== "none" && flight && <HomeTimings />}
@@ -75,6 +77,20 @@ function Onboarding() {
         <li>Open the link here. No account needed.</li>
       </ol>
     </section>
+  );
+}
+
+function HomeAircraft() {
+  const L = useLive();
+  const f = L.flight;
+  if (!f) return null;
+  const type = f.aircraft?.icaoType ?? L.plan?.aircraftIcao ?? null;
+  const reg = f.aircraft?.registration ?? L.plan?.registration ?? null;
+  return (
+    <AircraftHero icaoType={type} title={f.aircraft?.title} compact>
+      <p className="fh-type">{type ?? "Your aircraft"}</p>
+      <p className="fh-meta">{[L.plan?.callsign ?? f.callsign, reg].filter(Boolean).join(", ") || f.aircraft?.title}</p>
+    </AircraftHero>
   );
 }
 

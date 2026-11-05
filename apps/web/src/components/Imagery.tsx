@@ -72,7 +72,7 @@ export function RunwayDiagram({ runways, windDir, windKt, label }: { runways: Ru
         return (
           <g className="rwy-wind">
             <line x1={x1} y1={y1} x2={x2} y2={y2} markerEnd="url(#rwy-arrow)" />
-            <text x={20} y={384}>Wind {String(Math.round(windDir)).padStart(3, "0")}° {Math.round(windKt)} kt{best ? ` · best ${best}` : ""}</text>
+            <text x={20} y={384}>Wind {String(Math.round(windDir)).padStart(3, "0")}° {Math.round(windKt)} kt{best ? `, best ${best}` : ""}</text>
           </g>
         );
       })() : <text x={20} y={384} className="rwy-note">No wind report</text>}
@@ -234,5 +234,178 @@ function Light({ id }: { id: string }) {
       <path d="M110 122 L104 146" stroke="#8E9AB0" strokeWidth="4" strokeLinecap="round" />
       <circle cx="104" cy="150" r="8" fill="#1A2234" />
     </g>
+  );
+}
+
+/* ---------------- aircraft photo (Wikimedia Commons) ---------------- */
+
+/** ICAO type designator → the English Wikipedia article whose lead photo shows that type. */
+const TYPE_ARTICLE: Array<[RegExp, string]> = [
+  [/^A(19|20|21)N$/, "Airbus A320neo family"],
+  [/^A31[89]$|^A32[01]$/, "Airbus A320 family"],
+  [/^BCS[13]$/, "Airbus A220"],
+  [/^A33[89]$/, "Airbus A330neo"],
+  [/^A33[0-9]$/, "Airbus A330"],
+  [/^A34[0-9]$/, "Airbus A340"],
+  [/^A35[09K]$/, "Airbus A350"],
+  [/^A38[0-9]$/, "Airbus A380"],
+  [/^A30[0-9]$|^A310$/, "Airbus A300"],
+  [/^B3[789]M$|^B3XM$/, "Boeing 737 MAX"],
+  [/^B73[6789]$/, "Boeing 737 Next Generation"],
+  [/^B73[345]$/, "Boeing 737 Classic"],
+  [/^B74[8]$/, "Boeing 747-8"],
+  [/^B74[0-7]$|^B74[SR]$/, "Boeing 747-400"],
+  [/^B75[23]$/, "Boeing 757"],
+  [/^B76[234]$/, "Boeing 767"],
+  [/^B77[89]$/, "Boeing 777X"],
+  [/^B77[0-7WL]$/, "Boeing 777"],
+  [/^B78[89X]$/, "Boeing 787 Dreamliner"],
+  [/^B712$/, "Boeing 717"],
+  [/^E2[79]\d$/, "Embraer E-Jet E2 family"],
+  [/^E1[79]\d$/, "Embraer E-Jet family"],
+  [/^CRJ[79X]$/, "Bombardier CRJ700 series"],
+  [/^CRJ[12]$/, "Bombardier CRJ100/200"],
+  [/^AT7\d$/, "ATR 72"],
+  [/^AT4\d$/, "ATR 42"],
+  [/^DH8[A-D]$/, "De Havilland Canada Dash 8"],
+  [/^MD11$/, "McDonnell Douglas MD-11"],
+  [/^MD8\d$/, "McDonnell Douglas MD-80"],
+  [/^CONC$/, "Concorde"],
+  [/^DC3$/, "Douglas DC-3"],
+  [/^C172$/, "Cessna 172"],
+  [/^C152$/, "Cessna 152"],
+  [/^C208$/, "Cessna 208 Caravan"],
+  [/^C700$/, "Cessna Citation Longitude"],
+  [/^C68A$/, "Cessna Citation Latitude"],
+  [/^C25[ABC]$/, "Cessna CitationJet/M2"],
+  [/^SR2[02]$/, "Cirrus SR22"],
+  [/^SF50$/, "Cirrus Vision SF50"],
+  [/^DA40$/, "Diamond DA40 Diamond Star"],
+  [/^DA62$/, "Diamond DA62"],
+  [/^PA28$|^P28[ABRT]$/, "Piper PA-28 Cherokee"],
+  [/^BE3[56]$/, "Beechcraft Bonanza"],
+  [/^BE58$/, "Beechcraft Baron"],
+  [/^TBM[789]$/, "SOCATA TBM"],
+  [/^PC12$/, "Pilatus PC-12"],
+  [/^PC6T?$/, "Pilatus PC-6 Porter"],
+  [/^HDJT$/, "Honda HA-420 HondaJet"],
+];
+
+/** Fallback when the sim gives no ICAO type: match the aircraft title. */
+const TITLE_ARTICLE: Array<[RegExp, string]> = [
+  [/A3(19|20|21) ?NEO|A20N|A21N/i, "Airbus A320neo family"],
+  [/A3(18|19|20|21)\b|A32NX|FENIXA320|FENIX A3/i, "Airbus A320 family"],
+  [/A220|CS300|CS100/i, "Airbus A220"],
+  [/A330-?900|A339/i, "Airbus A330neo"],
+  [/A330/i, "Airbus A330"],
+  [/A340/i, "Airbus A340"],
+  [/A350/i, "Airbus A350"],
+  [/A380/i, "Airbus A380"],
+  [/737 ?MAX|737-?[89] ?MAX|B38M|B39M/i, "Boeing 737 MAX"],
+  [/737/i, "Boeing 737 Next Generation"],
+  [/747-?8/i, "Boeing 747-8"],
+  [/747/i, "Boeing 747-400"],
+  [/757/i, "Boeing 757"],
+  [/767/i, "Boeing 767"],
+  [/777X|777-?9/i, "Boeing 777X"],
+  [/777/i, "Boeing 777"],
+  [/787/i, "Boeing 787 Dreamliner"],
+  [/E-?2\b|E195-?E2|E190-?E2/i, "Embraer E-Jet E2 family"],
+  [/E1[79]5|E1[79]0|E-?JET/i, "Embraer E-Jet family"],
+  [/CRJ/i, "Bombardier CRJ700 series"],
+  [/ATR ?72/i, "ATR 72"],
+  [/ATR ?42/i, "ATR 42"],
+  [/Q400|DASH ?8|DHC-?8/i, "De Havilland Canada Dash 8"],
+  [/MD-?11/i, "McDonnell Douglas MD-11"],
+  [/MD-?8\d/i, "McDonnell Douglas MD-80"],
+  [/CONCORDE/i, "Concorde"],
+  [/DC-?3/i, "Douglas DC-3"],
+  [/CARAVAN|C208/i, "Cessna 208 Caravan"],
+  [/LONGITUDE/i, "Cessna Citation Longitude"],
+  [/\b172\b|SKYHAWK/i, "Cessna 172"],
+  [/\b152\b/i, "Cessna 152"],
+  [/SR22|SR20/i, "Cirrus SR22"],
+  [/VISION JET|SF50/i, "Cirrus Vision SF50"],
+  [/DA40/i, "Diamond DA40 Diamond Star"],
+  [/DA62/i, "Diamond DA62"],
+  [/BONANZA/i, "Beechcraft Bonanza"],
+  [/BARON/i, "Beechcraft Baron"],
+  [/TBM/i, "SOCATA TBM"],
+  [/PC-?12/i, "Pilatus PC-12"],
+  [/HONDAJET/i, "Honda HA-420 HondaJet"],
+];
+
+export function aircraftArticleFor(icaoType: string | null | undefined, title = ""): string | null {
+  const t = (icaoType ?? "").toUpperCase().trim();
+  if (t) for (const [re, a] of TYPE_ARTICLE) if (re.test(t)) return a;
+  if (title) for (const [re, a] of TITLE_ARTICLE) if (re.test(title)) return a;
+  return null;
+}
+
+export interface Photo { src: string; page: string; credit: string; license: string | null; fileUrl: string }
+const photoCache = new Map<string, Promise<Photo | null>>();
+const strip = (html: string) => { const d = document.createElement("div"); d.innerHTML = html; return (d.textContent ?? "").replace(/\s+/g, " ").trim(); };
+
+/** Lead photo of a Wikipedia article, with the Commons author and licence for the credit line. */
+export function photoFor(article: string): Promise<Photo | null> {
+  if (!photoCache.has(article)) {
+    photoCache.set(article, (async () => {
+      try {
+        const j = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(article.replace(/ /g, "_"))}`).then((r) => (r.ok ? r.json() : null));
+        const orig: string | undefined = j?.originalimage?.source;
+        if (!orig) return null;
+        const file = decodeURIComponent(orig.split("/").pop()!);
+        const page = j.content_urls?.desktop?.page ?? `https://en.wikipedia.org/wiki/${encodeURIComponent(article)}`;
+        let src = orig;
+        let credit = "Wikimedia Commons";
+        let license: string | null = null;
+        let fileUrl = `https://commons.wikimedia.org/wiki/File:${encodeURIComponent(file)}`;
+        try {
+          const m = await fetch(`https://commons.wikimedia.org/w/api.php?action=query&titles=File:${encodeURIComponent(file)}&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=1600&format=json&origin=*`).then((r) => r.json());
+          const info = Object.values(m?.query?.pages ?? {})[0] as { imageinfo?: Array<{ thumburl?: string; descriptionurl?: string; extmetadata?: Record<string, { value: string }> }> } | undefined;
+          const ii = info?.imageinfo?.[0];
+          if (ii?.thumburl) src = ii.thumburl;
+          if (ii?.descriptionurl) fileUrl = ii.descriptionurl;
+          const em = ii?.extmetadata ?? {};
+          if (em.Artist?.value) credit = strip(em.Artist.value).slice(0, 80);
+          if (em.LicenseShortName?.value) license = strip(em.LicenseShortName.value);
+        } catch { /* credit stays generic, still linked to the file page */ }
+        return { src, page, credit, license, fileUrl };
+      } catch {
+        return null;
+      }
+    })());
+  }
+  return photoCache.get(article)!;
+}
+
+/**
+ * The flight hero: a real photo of the aircraft type when one is available,
+ * otherwise the illustration. Always credited.
+ */
+export function AircraftHero({ icaoType, title, compact = false, children }: { icaoType: string | null | undefined; title?: string; tilt?: number; compact?: boolean; children: React.ReactNode }) {
+  const article = aircraftArticleFor(icaoType, title ?? "");
+  const [photo, setPhoto] = useState<Photo | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    setPhoto(null); setLoaded(false); setFailed(false);
+    if (article) void photoFor(article).then(setPhoto);
+  }, [article]);
+  const [resolved, setResolved] = useState(false);
+  useEffect(() => { setResolved(false); if (!article) { setResolved(true); return; } void photoFor(article).then(() => setResolved(true)); }, [article]);
+  const showPhoto = !!photo && !failed;
+  if (compact && (resolved && !showPhoto)) return null;
+  return (
+    <section className={`glass flight-hero${compact ? " compact" : ""}${showPhoto ? " has-photo" : ""}${loaded ? " photo-in" : ""}`}>
+      {showPhoto && <img className="fh-photo" src={photo!.src} alt={article ? `${article}, photo from Wikimedia Commons` : ""} onLoad={() => setLoaded(true)} onError={() => setFailed(true)} referrerPolicy="no-referrer" />}
+      <div className="fh-body">{children}</div>
+      {showPhoto && !loaded ? <div className="fh-skel" aria-hidden="true" /> : null}
+      {showPhoto && loaded && (
+        <a className="fh-credit" href={photo!.fileUrl} target="_blank" rel="noreferrer">
+          {article} photo: {photo!.credit}{photo!.license ? `, ${photo!.license}` : ""}, Wikimedia Commons
+        </a>
+      )}
+    </section>
   );
 }

@@ -17,7 +17,7 @@ export function LiveCard({ big }: { big?: boolean }) {
   const bars = useBars(L.plan, trail, L.progress, L.completed);
 
   if (!flight) return null;
-  const callsign = plan?.callsign ?? flight.callsign ?? flight.aircraft?.registration ?? "—";
+  const callsign = plan?.callsign ?? flight.callsign ?? flight.aircraft?.registration ?? null;
   const type = plan?.aircraftIcao ?? flight.aircraft?.icaoType ?? flight.aircraft?.title ?? "";
   const dep = flight.departureIcao ?? plan?.origin.icao ?? "····";
   const arr = flight.arrivalIcao ?? plan?.destination.icao ?? "····";
@@ -75,7 +75,7 @@ export function LiveCard({ big }: { big?: boolean }) {
   return (
     <article className={`glass strong live-card${big ? " big" : ""}`} aria-label="Live flight">
       <div className="lc-top">
-        <div className="lc-id"><span>{callsign}</span><span className="faint">{type}</span></div>
+        <div className="lc-id">{callsign ? <span>{callsign}</span> : null}<span className={callsign ? "faint" : ""}>{type}</span></div>
         <span className="pill phase">{PHASE_LABEL[phase]}</span>
       </div>
       <div className="lc-route">

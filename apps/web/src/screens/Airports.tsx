@@ -66,7 +66,7 @@ export function AirportPage({ code }: { code: string }) {
   return (
     <div className="stack">
       <a className="btn small" href="#/airports" style={{ alignSelf: "flex-start" }}><span style={{ width: 16, height: 16 }}>{Icon.back()}</span>Airports</a>
-      <AirportHero code={apt.iata ? `${apt.code} · ${apt.iata}` : apt.code} name={apt.name} city={apt.city} country={apt.country} />
+      <AirportHero code={apt.iata ? `${apt.code} / ${apt.iata}` : apt.code} name={apt.name} city={apt.city} country={apt.country} />
       <div className="grid cols-3">
         <Section title="Airport">
           <Kv k="Elevation" v={`${fmt(apt.elevationFt)} ft`} />
@@ -105,7 +105,7 @@ export function AirportPage({ code }: { code: string }) {
         <Section title={`Arrivals (${arrs.length})`} right={<span className="faint" style={{ fontSize: 12 }}>VATSIM, filed flight plans</span>}><Board rows={arrs} other="dep" bridge={bridge} /></Section>
       </div>
       {apt.frequencies.length > 0 && (
-        <Section title="Frequencies"><div className="grid cols-3" style={{ gap: 0, columnGap: 24 }}>{apt.frequencies.map((f, i) => <Kv key={i} k={`${f.type} ${f.description && f.description !== f.type ? `· ${f.description}` : ""}`} v={f.mhz.toFixed(3)} />)}</div></Section>
+        <Section title="Frequencies"><div className="grid cols-3" style={{ gap: 0, columnGap: 24 }}>{apt.frequencies.map((f, i) => <Kv key={i} k={`${f.type} ${f.description && f.description !== f.type ? `(${f.description})` : ""}`} v={f.mhz.toFixed(3)} />)}</div></Section>
       )}
     </div>
   );

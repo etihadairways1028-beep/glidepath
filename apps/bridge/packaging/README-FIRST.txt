@@ -1,4 +1,4 @@
-GLIDEPATH BRIDGE 0.4.0 (EARLY TEST BUILD) - WINDOWS
+GLIDEPATH BRIDGE 0.4.1 (EARLY TEST BUILD) - WINDOWS
 ====================================================
 
 The Bridge runs on the PC where you fly Microsoft Flight Simulator. It reads
@@ -25,7 +25,8 @@ STEP 1 - TRY THE DEMO (no simulator needed)
 
 STEP 2 - CONNECT YOUR iPAD
   The Bridge opens  http://localhost:4810  in your browser by itself.
-  That page shows a link (and its address) for your iPad.
+  That page shows a QR code and a link for your iPad: scan it with the
+  iPad camera. There is also an "Open Glidepath" button for this PC.
   Open that link on your iPad (same Wi-Fi). It opens the Glidepath app.
   In Safari, tap Share -> "Add to Home Screen" to get a Glidepath icon
   that opens straight to your live flight.

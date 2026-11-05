@@ -48,6 +48,7 @@ export function App() {
   const route = useRoute();
   const s = useSettings();
   const mode = useApp((st) => st.mode);
+  const status = useApp((st) => st.status);
   useCallouts();
 
   useEffect(() => {
@@ -116,7 +117,7 @@ export function App() {
             {NAV.map((n) => (
               <a key={n.id} className={`nav-a${screen === n.id || (!screen && n.id === "home") ? " on" : ""}`} href={`#/${n.id}`}>{n.icon()}{n.label}</a>
             ))}
-            <div className="side-foot faint">{mode === "demo" ? "Demo flight: synthetic data" : "Early test build 0.3"}</div>
+            <div className="side-foot faint">{mode === "demo" ? "Demo flight: synthetic data" : `Early test build${status?.bridgeVersion && status.bridgeVersion !== "demo" ? ` ${status.bridgeVersion}` : ""}`}</div>
           </nav>
         )}
         <main className="main" id="main">

@@ -10,6 +10,7 @@
  *
  * Client code avoids template-literal syntax so it can live inside these strings.
  */
+import qrcode from "qrcode-generator";
 import type { BridgeStatus } from "@glidepath/protocol";
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -31,19 +32,34 @@ a{color:var(--accent)}
 
 const LOGO = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 5 L15 15" stroke="#5AA9FF" stroke-width="2" stroke-linecap="round"/><path d="M11 19 H21" stroke="#E8EEF9" stroke-width="2" stroke-linecap="round"/></svg>`;
 
+/** QR code as inline SVG (generated locally, nothing leaves the PC). */
+function qrSvg(text: string): string {
+  const qr = qrcode(0, "M");
+  qr.addData(text);
+  qr.make();
+  return qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+}
+
+/** /live used to be a lite page; pairing links now open the full app. Keeps old links working. */
+export function liveRedirectPage(): string {
+  return `<!doctype html><meta charset="utf-8"><title>Glidepath</title><script>var t=new URLSearchParams(location.search).get("token");location.replace("/app/"+(t?"#token="+encodeURIComponent(t):""));</script><a href="/app/">Open Glidepath</a>`;
+}
+
 export function statusPage(p: { local: boolean; status: BridgeStatus; token: string | null; addresses: string[]; port: number; logs: string[] }): string {
   const s = p.status;
   const stateDot = s.simState === "connected" ? "live" : s.simState === "error" ? "err" : "warn";
   const links = p.token
     ? p.addresses.map((ip) => {
-        const u = `http://${ip}:${p.port}/live?token=${encodeURIComponent(p.token!)}`;
-        return `<li><a class="mono" href="${esc(u)}">${esc(u)}</a></li>`;
+        const u = `http://${ip}:${p.port}/app/#token=${encodeURIComponent(p.token!)}`;
+        return `<div class="pairrow"><div class="qr">${qrSvg(u)}</div><div><div class="label">Scan with your iPad or phone camera, or open:</div><a class="mono" href="${esc(u)}">${esc(u)}</a></div></div>`;
       }).join("")
     : "";
+  const here = p.token ? `http://localhost:${p.port}/app/#token=${encodeURIComponent(p.token)}` : null;
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Glidepath Bridge</title><meta http-equiv="refresh" content="5"><style>${BASE_CSS}
 main{max-width:860px;margin:0 auto;padding:32px 20px}h1{font-size:20px;font-weight:600;margin:0 0 4px;display:flex;gap:10px;align-items:center}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:20px 0}.panel{padding:16px}.v{font-size:17px;margin-top:4px}
+a.btnp{display:inline-block;padding:10px 16px;border-radius:12px;background:var(--accent);color:#05080F;font-weight:600;text-decoration:none}.pairrow{display:flex;gap:16px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}.pairrow:first-of-type{border-top:0}.qr{width:132px;height:132px;flex:none;background:#fff;border-radius:12px;padding:6px}.qr svg{width:100%;height:100%;display:block}.pairrow a{word-break:break-all}
 pre{white-space:pre-wrap;font-size:12px;color:var(--quiet);max-height:320px;overflow:auto;padding:16px;margin:0}ul{padding-left:18px}</style></head><body><main>
 <h1>${LOGO} Glidepath Bridge <span class="badge mono">v${esc(s.bridgeVersion)}</span></h1>
 <div class="label">${esc(s.hostname)} · Bridge ${esc(s.bridgeId.slice(0, 8))}</div>
@@ -53,9 +69,10 @@ pre{white-space:pre-wrap;font-size:12px;color:var(--quiet);max-height:320px;over
   <div class="panel"><div class="label">Telemetry</div><div class="v mono">${s.framesPerSecond.toFixed(1)} fps</div><div class="label" style="margin-top:6px">${s.lastFrameAt ? "last frame " + new Date(s.lastFrameAt).toLocaleTimeString() : "no frames yet"}</div></div>
   <div class="panel"><div class="label">Connected devices</div><div class="v mono">${s.clients}</div><div class="label" style="margin-top:6px">${s.activeFlightId ? "Recording flight " + esc(s.activeFlightId.slice(0, 8)) : "No active flight"}</div></div>
 </div>
-${p.local ? `<div class="panel" style="padding:16px"><div class="label">Open on your iPad or phone (same Wi-Fi)</div>
-<ul>${links || "<li>No network address found. Is this PC connected to Wi-Fi or Ethernet?</li>"}</ul>
-<div class="label">This link contains your pairing key. Only open it on your own devices. If Windows asks, allow Glidepath Bridge on <b>private</b> networks.</div></div>
+${p.local ? `${here ? `<div class="panel" style="padding:16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><div class="label">On this PC</div><div class="v">Open the Glidepath app here</div></div><a class="btnp" href="${esc(here)}" target="_blank" rel="noreferrer">Open Glidepath</a></div>` : ""}
+<div class="panel" style="padding:16px;margin-top:12px"><div class="label" style="margin-bottom:10px">Open on your iPad or phone (same Wi-Fi)</div>
+${links || "<p>No network address found. Is this PC connected to Wi-Fi or Ethernet?</p>"}
+<div class="label" style="margin-top:10px">This link contains your pairing key. Only open it on your own devices. If Windows asks, allow Glidepath Bridge on <b>private</b> networks. On iPad, tap Share then Add to Home Screen to keep it as an app.</div></div>
 <h2 class="label" style="margin:24px 0 8px">Recent log</h2><div class="panel"><pre class="mono">${esc(p.logs.join("\n")) || "—"}</pre></div>` : `<p class="label">Pairing details are only shown on the simulator PC itself.</p>`}
 </main></body></html>`;
 }

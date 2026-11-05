@@ -553,3 +553,47 @@ a.li:hover { background: rgba(255,255,255,.05); border-radius: 16px; }
 .li-land { display: flex; flex-direction: column; align-items: flex-end; font-size: 12.5px; line-height: 1.25; }
 .li-land b { font-size: 13.5px; }
 .li-land .data { color: var(--mist); }
+
+/* ---------- Aircraft photo hero ---------- */
+.flight-hero { position: relative; isolation: isolate; }
+.flight-hero .fh-body { position: relative; z-index: 2; min-width: 0; }
+.fh-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 55%; z-index: 0; opacity: 0; transform: scale(1.04); transition: opacity .8s ease, transform 1.6s cubic-bezier(.2,.7,.2,1); border-radius: inherit; }
+.flight-hero.photo-in .fh-photo { opacity: 1; transform: scale(1); }
+.flight-hero.has-photo.photo-in { grid-template-columns: 1fr; min-height: 300px; align-items: end; padding: 26px 28px; }
+.flight-hero.has-photo.photo-in::after { content: ""; position: absolute; inset: 0; z-index: 1; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(90deg, rgba(4,10,24,.78) 0%, rgba(4,10,24,.42) 38%, rgba(4,10,24,0) 65%), linear-gradient(0deg, rgba(4,10,24,.55) 0%, rgba(4,10,24,0) 45%); }
+.flight-hero.has-photo.photo-in .fh-type, .flight-hero.has-photo.photo-in .fh-meta, .flight-hero.has-photo.photo-in .fh-meta b { color: #fff !important; text-shadow: 0 1px 12px rgba(0,0,0,.35); }
+.flight-hero.has-photo.photo-in .fh-meta { color: rgba(255,255,255,.82) !important; }
+.fh-credit { position: absolute; right: 16px; bottom: 12px; z-index: 2; font-size: 11px; color: rgba(255,255,255,.75); text-decoration: none; max-width: 60%; text-align: right; text-shadow: 0 1px 6px rgba(0,0,0,.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fh-credit:hover { color: #fff; text-decoration: underline; }
+.flight-hero.compact.has-photo.photo-in { min-height: 220px; }
+.flight-hero.compact:not(.photo-in) { padding: 14px 22px; }
+.flight-hero.compact:not(.photo-in) .ac-art { max-height: 150px; }
+@media (max-width: 760px) {
+  .flight-hero.has-photo.photo-in { min-height: 230px; padding: 20px; }
+  .flight-hero.compact.has-photo.photo-in { min-height: 190px; }
+  .fh-credit { left: 16px; right: 16px; max-width: none; bottom: 8px; text-align: left; font-size: 10px; }
+  .flight-hero.has-photo.photo-in .fh-body { padding-bottom: 14px; }
+}
+
+/* Map overlays sit on a dark map in both themes. */
+.apt-label { color: #fff !important; }
+.map-note .notice { color: rgba(255,255,255,.88) !important; background: rgba(8,14,30,.72) !important; border-color: rgba(255,255,255,.14) !important; backdrop-filter: blur(20px) saturate(1.4); -webkit-backdrop-filter: blur(20px) saturate(1.4); }
+
+/* Map: own aircraft marker */
+.own-ac { position: relative; width: 44px; height: 44px; filter: drop-shadow(0 2px 6px rgba(0,0,0,.45)) drop-shadow(0 0 10px rgba(10,132,255,.55)); }
+.own-ac svg { position: relative; z-index: 1; display: block; }
+.own-ac-pulse { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; background: rgba(10,132,255,.35); animation: acpulse 2.4s ease-out infinite; }
+@keyframes acpulse { 0% { transform: scale(.4); opacity: .9; } 100% { transform: scale(2.2); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .own-ac-pulse { animation: none; opacity: 0; } }
+.apt-marker { display: flex; align-items: center; gap: 6px; }
+.apt-dot { width: 12px; height: 12px; border-radius: 50%; border: 2.5px solid #fff; box-shadow: 0 0 0 3px rgba(0,0,0,.25), 0 2px 8px rgba(0,0,0,.4); }
+.apt-dot.dep { background: #30D158; } .apt-dot.arr { background: #FF9F0A; }
+.apt-label { font-size: 12.5px !important; padding: 3px 8px !important; border-radius: 8px !important; background: rgba(10,14,26,.72) !important; border: 1px solid rgba(255,255,255,.18) !important; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); letter-spacing: .02em; }
+.linklike { background: none; border: 0; padding: 0; color: #64D2FF; font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; }
+.maplibregl-ctrl-attrib { font-size: 10.5px; }
+.flight-hero:not(.has-photo) { min-height: 0; grid-template-columns: 1fr; }
+.flight-hero.has-photo:not(.photo-in) { min-height: 300px; grid-template-columns: 1fr; }
+.flight-hero.compact.has-photo:not(.photo-in) { min-height: 220px; }
+.fh-skel { position: absolute; inset: 0; border-radius: inherit; z-index: 0; background: linear-gradient(100deg, rgba(255,255,255,.03) 20%, rgba(255,255,255,.09) 40%, rgba(255,255,255,.03) 60%); background-size: 200% 100%; animation: skel 1.4s linear infinite; }
+@keyframes skel { from { background-position: 200% 0; } to { background-position: -200% 0; } }

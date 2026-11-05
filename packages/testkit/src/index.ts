@@ -227,8 +227,9 @@ export function generateSyntheticFlight(opts: SyntheticOptions = {}): TelemetryF
   }
   s.tdVs = tdVs;
   // 10. Rollout and taxi in.
-  s.vs = 0; s.pitch = 0.5; s.ffKgH = 2 * 300;
-  while (s.gs > 18) step(dt, () => { s.gs -= 3 * dt; s.ias = s.gs; move(dt, s.gs); });
+  s.vs = 0; s.ffKgH = 2 * 300;
+  // Lower the nose gently onto the runway, then brake.
+  while (s.gs > 18) step(dt, () => { s.pitch = Math.max(0.5, s.pitch - 1.2 * dt); s.gs -= 3 * dt; s.ias = s.gs; move(dt, s.gs); });
   s.spoilers = 0; s.flaps = 0;
   step(120, () => { s.gs = 15; s.ias = 12; s.n1 = 28; move(dt, 15); });
   s.gs = 0; s.ias = 0;

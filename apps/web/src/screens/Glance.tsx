@@ -34,7 +34,7 @@ export function Glance() {
       <div style={{ width: "min(980px, 100%)" }}>
         <div className="between" style={{ marginBottom: 14 }}>
           <a className="btn small glass" href="#/home"><span style={{ width: 16, height: 16 }}>{Icon.back()}</span>Exit</a>
-          <span className="faint" style={{ fontSize: 12.5 }}>{awake === "on" ? "Screen kept awake" : awake === "unsupported" ? "Tip: set Auto-Lock to Never while flying" : ""}{mode === "demo" ? " · Demo flight" : ""}</span>
+          <span className="faint" style={{ fontSize: 12.5 }}>{awake === "on" ? "Screen kept awake" : awake === "unsupported" ? "Tip: set Auto-Lock to Never while flying" : ""}{mode === "demo" ? (awake === "on" || awake === "unsupported" ? ". Demo flight" : "Demo flight") : ""}</span>
         </div>
         {L.flight ? <LiveCard big /> : <div className="glass pad empty"><div className="h2">No live flight</div><p className="muted">Start your sim, or the demo from Home.</p></div>}
         {L.timings && (

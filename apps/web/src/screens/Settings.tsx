@@ -42,7 +42,7 @@ export function SettingsScreen() {
               </div>
               {status && mode === "bridge" && (
                 <div>
-                  <Kv k="Bridge" v={`${status.hostname} · v${status.bridgeVersion}`} />
+                  <Kv k="Bridge" v={`${status.hostname}, version ${status.bridgeVersion}`} />
                   <Kv k="Simulator" v={status.simulator?.name ?? status.message ?? status.simState} />
                   <Kv k="Aircraft" v={status.aircraft?.title ?? "—"} />
                   <Kv k="Telemetry" v={`${fmt(status.framesPerSecond, 1)} frames/s`} />
