@@ -260,6 +260,79 @@ export const LandingReport = z.object({
 });
 export type LandingReport = z.infer<typeof LandingReport>;
 
+
+/* ------------------------------------------------------------------ */
+/* Takeoff report and whole-flight stats (for the debrief)             */
+/* ------------------------------------------------------------------ */
+
+export const ReviewNote = z.object({
+  level: z.enum(["good", "ok", "improve"]),
+  text: z.string(),
+});
+export type ReviewNote = z.infer<typeof ReviewNote>;
+
+export const TakeoffReport = z.object({
+  t: z.number().int(),
+  profileId: z.string(),
+  /** IAS when the nose started coming up. */
+  rotateIasKt: num,
+  liftoffIasKt: num,
+  liftoffPitchDeg: num,
+  /** Average pitch rate from rotation to lift-off (deg/s). */
+  rotationRateDegS: num,
+  /** Highest pitch between lift-off and 1,500 ft above the runway. */
+  maxPitchDeg: num,
+  avgClimbPitchDeg: num,
+  /** Average climb rate from 35 ft to 1,000 ft above the runway. */
+  initialClimbFpm: num,
+  maxBankDeg: num,
+  groundRollFt: num,
+  /** Seconds from lift-off to gear up, when the aircraft reports gear. */
+  gearUpS: num,
+  peakG: num,
+  tailStrikePitchDeg: z.number(),
+  score: z.number().min(0).max(100),
+  grade: z.enum(["A+", "A", "B", "C", "D", "F"]),
+  verdict: z.string(),
+  notes: z.array(ReviewNote),
+});
+export type TakeoffReport = z.infer<typeof TakeoffReport>;
+
+export const ApproachGate = z.object({
+  heightFt: z.number(),
+  iasKt: num,
+  vsFpm: num,
+  gearDown: bool,
+  flapsPct: num,
+  bankDeg: num,
+});
+export type ApproachGate = z.infer<typeof ApproachGate>;
+
+export const FlightStats = z.object({
+  /** Seconds above 250 kt IAS below 10,000 ft MSL while airborne. */
+  overspeedBelow10kS: z.number(),
+  maxIasBelow10kKt: num,
+  maxBankDeg: num,
+  /** Seconds banked beyond 30°. */
+  steepBankS: z.number(),
+  maxG: num,
+  minG: num,
+  maxTaxiKt: num,
+  /** Seconds above 30 kt while taxiing. */
+  fastTaxiS: z.number(),
+  climbAvgFpm: num,
+  descentAvgFpm: num,
+  maxDescentFpm: num,
+  gate1000: ApproachGate.nullable(),
+  gate500: ApproachGate.nullable(),
+  maxSinkBelow1000Fpm: num,
+  iasSpreadBelow1000Kt: num,
+  maxBankBelow500Deg: num,
+  goArounds: z.number().int(),
+  pausedS: z.number(),
+});
+export type FlightStats = z.infer<typeof FlightStats>;
+
 /* ------------------------------------------------------------------ */
 /* Flight plan (from SimBrief, via the Bridge)                         */
 /* ------------------------------------------------------------------ */
@@ -333,6 +406,8 @@ export const FlightSummary = z.object({
   fuelStartKg: z.number().nullable(),
   fuelEndKg: z.number().nullable(),
   landings: z.array(LandingReport),
+  takeoff: TakeoffReport.nullable().default(null),
+  stats: FlightStats.nullable().default(null),
   lastSeq: z.number().int().nonnegative(),
 });
 export type FlightSummary = z.infer<typeof FlightSummary>;

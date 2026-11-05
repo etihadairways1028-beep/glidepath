@@ -15,9 +15,10 @@ const here = dirname(fileURLToPath(import.meta.url));
 const out = join(here, "..", "public", "data");
 const frames = generateSyntheticFlight({ dtS: 0.5 });
 const td = frames.find((f, i) => i > 0 && f.position.onGround && !frames[i - 1]!.position.onGround && (frames[i - 1]!.position.altMslFt ?? 0) > 200 + 0)!;
+const lift = frames.find((f, i) => i > 0 && !f.position.onGround && frames[i - 1]!.position.onGround)!;
 let last = -1e12;
 const kept = frames.filter((f) => {
-  const near = Math.abs(f.t - td.t) < 60_000;
+  const near = Math.abs(f.t - td.t) < 60_000 || Math.abs(f.t - lift.t) < 45_000;
   const low = (f.position.altAglFt ?? 0) < 1500;
   const step = near ? 500 : low ? 1000 : 3000;
   if (f.t - last >= step) { last = f.t; return true; }

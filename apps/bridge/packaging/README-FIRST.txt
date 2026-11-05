@@ -1,4 +1,4 @@
-GLIDEPATH BRIDGE 0.3.1 (EARLY TEST BUILD) - WINDOWS
+GLIDEPATH BRIDGE 0.4.0 (EARLY TEST BUILD) - WINDOWS
 ====================================================
 
 The Bridge runs on the PC where you fly Microsoft Flight Simulator. It reads
@@ -37,6 +37,12 @@ STEP 3 - FLY FOR REAL
   2. Double-click "Start Bridge.bat".
   3. The Bridge connects by itself once the sim is running.
   Nothing is installed in your Community folder.
+
+DEBRIEF
+  When you park, the app writes a debrief of the flight: how the rotation
+  and climb-out went, speed and bank, whether the approach was stable at
+  1,000 ft, and the landing in plain words with the sink rate. Find it on
+  Home, on the Flight page, and in the Logbook.
 
 COPILOT (NEW IN 0.3)
   In the app, open Copilot. It works straight away with no AI service: it

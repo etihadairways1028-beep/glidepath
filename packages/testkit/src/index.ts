@@ -32,6 +32,10 @@ export interface SyntheticOptions {
   touchdownOffsetFt?: number;
   /** Insert a sim pause of this many seconds in cruise. */
   pauseInCruiseS?: number;
+  /** Rotation rate on takeoff, deg/s (default 3). */
+  rotationDegS?: number;
+  /** Pitch held in the initial climb up to 1,500 ft (default 15). */
+  climbPitchDeg?: number;
 }
 
 interface State {
@@ -110,17 +114,24 @@ export function generateSyntheticFlight(opts: SyntheticOptions = {}): TelemetryF
   step(20, () => {});
   // 4. Takeoff roll and rotation.
   s.ffKgH = 2 * 1600; s.n1 = 90;
-  while (s.gs < 150) step(dt, () => { s.gs += 4 * dt; s.ias = s.gs - 5; move(dt, s.gs); if (s.gs > 140) s.pitch = Math.min(15, s.pitch + 5 * dt); });
+  const rotRate = opts.rotationDegS ?? 3;
+  const climbPitch = opts.climbPitchDeg ?? 15;
+  const liftoffPitch = Math.min(8.5, climbPitch);
+  while (s.pitch < liftoffPitch) step(dt, () => { s.gs += 4 * dt; s.ias = s.gs - 5; move(dt, s.gs); if (s.gs > 143) s.pitch = Math.min(liftoffPitch, s.pitch + rotRate * dt); });
   s.onGround = false;
   // 5. Climb.
-  const navigate = () => {
+  const navigate = (elev = EGLL_ELEV) => {
+    const agl = s.alt - elev;
+    // Airliners fly the runway heading until well clear of the ground.
+    if (!s.onGround && agl < 800 && elev === EGLL_ELEV) { s.bank = 0; return; }
     const target = route[wp]!;
     if (wp < route.length - 1 && distanceNm(s.pos, target) < 2) wp++;
     const want = bearingDeg(s.pos, route[wp]!);
     let diff = ((want - s.hdg + 540) % 360) - 180;
     diff = Math.max(-3 * dt, Math.min(3 * dt, diff));
     s.hdg = (s.hdg + diff + 360) % 360;
-    s.bank = diff / dt * 8;
+    const lim = agl < 1000 ? 5 : 25;
+    s.bank = Math.max(-lim, Math.min(lim, diff / dt * 8));
   };
   const tasFor = (ias: number, alt: number) => ias * (1 + (alt / 1000) * 0.02);
   const remaining = () => {
@@ -137,7 +148,9 @@ export function generateSyntheticFlight(opts: SyntheticOptions = {}): TelemetryF
       s.alt = Math.min(cruiseFt, s.alt + (s.vs / 60) * dt);
       s.ias = s.alt < 10000 ? Math.min(250, s.ias + 2 * dt) : Math.min(290, s.ias + 1 * dt);
       s.gs = tasFor(s.ias, s.alt) - 15;
-      s.pitch = 4 + s.vs / 1000;
+      const cruisePitch = 4 + s.vs / 1000;
+      if (s.alt - EGLL_ELEV < 1500) s.pitch = Math.min(climbPitch, s.pitch + rotRate * dt);
+      else s.pitch += Math.max(-1 * dt, Math.min(1 * dt, cruisePitch - s.pitch));
       s.ffKgH = 2 * 1300;
       s.n1 = 88;
       move(dt, s.gs);
@@ -165,7 +178,7 @@ export function generateSyntheticFlight(opts: SyntheticOptions = {}): TelemetryF
       navigate();
       s.vs += Math.max(-150 * dt, Math.min(150 * dt, -2000 - s.vs));
       s.alt += (s.vs / 60) * dt;
-      s.ias = s.alt > 10000 ? 290 : Math.max(220, s.ias - 1 * dt);
+      s.ias = s.alt > 11000 ? 290 : Math.max(220, s.ias - 2 * dt);
       s.gs = tasFor(s.ias, s.alt) - 10; s.pitch = 0; s.ffKgH = 2 * 350; s.n1 = 35;
       move(dt, s.gs);
     });
@@ -179,7 +192,7 @@ export function generateSyntheticFlight(opts: SyntheticOptions = {}): TelemetryF
     const pathAlt = EGCC_ELEV + 50 + d * 318; // 3° ≈ 318 ft/nm, crossing the threshold at 50 ft
     if (s.alt - EGCC_ELEV <= 30) break;
     step(dt, () => {
-      navigate();
+      navigate(EGCC_ELEV);
       s.ias = Math.max(140, s.ias - 1 * dt); s.gs = s.ias - 8;
       // Hold altitude until the 3° path is intercepted from below, then track it.
       s.vs = s.alt < pathAlt - 20 ? 0 : Math.max(-1500, Math.min(0, -s.gs * 5.3 + (pathAlt - s.alt) * 2));

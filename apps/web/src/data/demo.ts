@@ -4,7 +4,7 @@
  * is badged DEMO.
  */
 import type { FlightEvent, FlightSummary, TelemetryFrame } from "@glidepath/protocol";
-import { distanceNm, LandingAnalyzer, landingProfileFor, matchRunway, PhaseDetector } from "@glidepath/flight-engine";
+import { distanceNm, FlightReviewer, LandingAnalyzer, landingProfileFor, matchRunway, PhaseDetector } from "@glidepath/flight-engine";
 import { loadAirportDb } from "./airports";
 import { pushTrail, store } from "./store";
 
@@ -15,6 +15,7 @@ export class DemoClient {
   private simT = 0;
   private detector = new PhaseDetector();
   private analyzer = new LandingAnalyzer({ profile: landingProfileFor("A320") });
+  private reviewer = new FlightReviewer(landingProfileFor("A320").id);
   private flight!: FlightSummary;
   private prev: TelemetryFrame | null = null;
   private wallBase = 0;
@@ -35,7 +36,7 @@ export class DemoClient {
       departureRunway: null, arrivalRunway: null, departureStand: null, arrivalStand: null,
       plan: demoPlan(this.frames, db),
       phase: "PREFLIGHT", startedAt: this.frames[0]!.t, offBlockAt: null, wheelsUpAt: null, wheelsDownAt: null, onBlockAt: null, endedAt: null,
-      distanceNm: 0, maxAltitudeFt: null, maxGsKt: null, fuelStartKg: null, fuelEndKg: null, landings: [], lastSeq: 0,
+      distanceNm: 0, maxAltitudeFt: null, maxGsKt: null, fuelStartKg: null, fuelEndKg: null, landings: [], takeoff: null, stats: null, lastSeq: 0,
     };
     this.flight.arrivalIcao = this.flight.plan!.destination.icao;
     this.flight.arrivalName = this.flight.plan!.destination.name;
@@ -68,10 +69,14 @@ export class DemoClient {
     while (this.idx < this.frames.length && this.frames[this.idx]!.t <= this.simT) {
       const f = this.frames[this.idx++]!;
       last = f;
-      for (const e of this.detector.update(f)) {
+      const evs = this.detector.update(f);
+      for (const e of evs) {
         newEvents.push(e);
         this.applyEvent(e, f, db);
       }
+      this.reviewer.push(f, this.detector.phase, evs);
+      this.flight.stats = { ...this.reviewer.stats };
+      if (this.reviewer.takeoff) this.flight.takeoff = this.reviewer.takeoff;
       if (this.prev && this.detector.phase !== "PREFLIGHT") this.flight.distanceNm += distanceNm(this.prev.position, f.position);
       if (!f.position.onGround && f.position.altMslFt !== null) this.flight.maxAltitudeFt = Math.max(this.flight.maxAltitudeFt ?? 0, Math.round(f.position.altMslFt));
       this.flight.maxGsKt = Math.max(this.flight.maxGsKt ?? 0, Math.round(f.speed.gsKt ?? 0));

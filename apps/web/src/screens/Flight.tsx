@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import type { LandingReport } from "@glidepath/protocol";
 import { computeTopOfDescent } from "@glidepath/flight-engine";
 import { LiveCard } from "../components/LiveCard";
+import { DebriefPanel, HandlingCard, TakeoffCard } from "../components/Debrief";
+import { touchdownWords } from "@glidepath/flight-engine";
 import { AircraftArt, artKindFor } from "../components/Imagery";
 import { TimingsTable } from "../components/Timings";
 import { ProfileChart } from "../components/ProfileChart";
@@ -43,6 +45,7 @@ export function FlightScreen() {
         </div>
         <AircraftArt kind={artKindFor(L.flight.aircraft?.icaoType ?? L.plan?.aircraftIcao, L.flight.aircraft?.title)} tilt={Math.max(-5, Math.min(6, -(f.speed.vsFpm ?? 0) / 450))} />
       </section>
+      {L.completed && <DebriefPanel flight={L.flight} />}
       <LiveCard />
 
       <div className="grid cols-4">
@@ -153,12 +156,19 @@ export function FlightScreen() {
         </Section>
       </div>
 
+      {(L.flight.takeoff || L.flight.stats) && (
+        <div className="grid cols-2">
+          {L.flight.takeoff ? <TakeoffCard t={L.flight.takeoff} runway={L.flight.departureRunway} /> : <Section title="Takeoff"><p className="muted" style={{ margin: 0 }}>Measured from the roll to 1,500 ft: rotation rate, lift-off attitude, climb pitch and tail clearance.</p></Section>}
+          {L.flight.stats && <HandlingCard s={L.flight.stats} />}
+        </div>
+      )}
+
       <div className="grid cols-2">
         <Section title="Events">
           {events.length === 0 ? <p className="muted">Events appear as the flight progresses.</p> : (
             <div className="timeline">
               {events.filter((e) => e.type !== "SIM_RESUMED").map((e, i) => (
-                <div className="tl" key={i}><span className="t">{zulu(e.t)}</span><span className="d" /><span>{EVENT_LABEL[e.type] ?? e.type}{e.altMslFt !== null && !["OFF_BLOCK", "PUSHBACK_START", "TAXI_START", "ON_BLOCK", "ENGINES_OFF"].includes(e.type) ? <span className="faint data" style={{ fontSize: 12.5 }}> · {fmt(e.altMslFt)} ft</span> : null}</span></div>
+                <div className="tl" key={i}><span className="t">{zulu(e.t)}</span><span className="d" /><span>{EVENT_LABEL[e.type] ?? e.type}{e.altMslFt !== null && !["OFF_BLOCK", "PUSHBACK_START", "TAXI_START", "ON_BLOCK", "ENGINES_OFF"].includes(e.type) ? <span className="faint data" style={{ fontSize: 12.5 }}>, {fmt(e.altMslFt)} ft</span> : null}</span></div>
               ))}
             </div>
           )}
@@ -193,9 +203,9 @@ export function LandingSummary({ l }: { l: LandingReport }) {
         <span style={{ transform: "scale(1.4)", transformOrigin: "left center", marginRight: 14 }}><Grade grade={l.grade} score={l.score} /></span>
         <div><div className="data">{fmt(l.score, 1)} / 100</div><div className="muted" style={{ fontSize: 13 }}>{l.verdict}</div></div>
       </div>
-      <Kv k="Touchdown" v={`${fmt(l.touchdownVsFpm)} fpm${l.touchdownVsSource === "derived" ? " (derived)" : ""}`} />
+      <Kv k="Touchdown" v={l.touchdownVsFpm === null ? "—" : `${touchdownWords(l.touchdownVsFpm, l.profileId).word}, ${fmt(Math.abs(l.touchdownVsFpm))} fpm${l.touchdownVsSource === "derived" ? " (estimated)" : ""}`} />
       <Kv k="Peak load" v={`${fmt(l.peakG, 2)} g`} />
-      <Kv k="Runway" v={l.runway ? `${l.runway.ident} · ${fmt(l.runway.distanceFromThresholdFt)} ft in · ${fmt(Math.abs(l.runway.centrelineOffsetFt))} ft ${l.runway.centrelineOffsetFt >= 0 ? "R" : "L"}` : "not identified"} />
+      <Kv k="Runway" v={l.runway ? `${l.runway.ident}, ${fmt(l.runway.distanceFromThresholdFt)} ft in, ${fmt(Math.abs(l.runway.centrelineOffsetFt))} ft ${l.runway.centrelineOffsetFt >= 0 ? "right" : "left"}` : "not identified"} />
       <Kv k="Speed" v={`${fmt(l.iasKt)} kt IAS`} />
       <Kv k="Pitch / bank" v={`${fmt(l.pitchDeg, 1)}° / ${fmt(l.bankDeg, 1)}°`} />
       <Kv k="Crosswind" v={l.crosswindKt === null ? "—" : `${fmt(Math.abs(l.crosswindKt), 1)} kt`} />

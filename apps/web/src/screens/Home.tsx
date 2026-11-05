@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { FlightSummary } from "@glidepath/protocol";
 import { LiveCard } from "../components/LiveCard";
+import { buildDebrief } from "@glidepath/flight-engine";
 import { TimingsStrip } from "../components/Timings";
 import { useCopilot } from "../data/copilot";
 import { ConnPill, Grade, Icon, Notice } from "../components/ui";
@@ -21,8 +22,10 @@ export function Home() {
       <FlightHeading />
       {mode === "none" && <Onboarding />}
       {mode === "bridge" && conn !== "live" && msg && <Notice>{msg} <a href="#/settings">Connection settings</a></Notice>}
+      {mode !== "none" && flight?.status === "completed" && <DebriefTeaser />}
       {mode !== "none" && flight && <LiveCard />}
-      {mode !== "none" && flight && <Instruments />}
+      {mode !== "none" && flight && flight.status !== "completed" && <Instruments />}
+      {mode !== "none" && flight && flight.status !== "completed" && <SoFar />}
       {mode !== "none" && flight && <HomeTimings />}
       {mode !== "none" && flight && <CopilotLine />}
       {mode === "bridge" && conn === "live" && !flight && (
@@ -91,6 +94,48 @@ function Instruments() {
       <div><span className="k">Heading</span><span className="v data">{hdg === null ? "—" : String(Math.round(hdg) % 360).padStart(3, "0")}<small>°</small></span></div>
       <div><span className="k">{L.fuelAtDestinationKg !== null ? "Fuel at landing" : "Fuel"}</span><span className="v data">{fuel(L.fuelAtDestinationKg ?? f.fuel.totalKg, fuelUnit)}</span></div>
     </section>
+  );
+}
+
+/** A single line of plain facts about the flight so far. */
+function SoFar() {
+  const L = useLive();
+  const { fuelUnit } = useSettings();
+  const f = L.flight;
+  if (!f || !L.frame) return null;
+  const bits: string[] = [];
+  if (L.flownNm > 1) bits.push(`${fmt(L.flownNm)} nm flown`);
+  if (f.wheelsUpAt) bits.push(`${dur(L.frame.t - f.wheelsUpAt)} in the air`);
+  else if (f.offBlockAt) bits.push(`${dur(L.frame.t - f.offBlockAt)} since pushback`);
+  if (f.fuelStartKg !== null && L.frame.fuel.totalKg !== null && f.fuelStartKg - L.frame.fuel.totalKg > 10) bits.push(`${fuel(f.fuelStartKg - L.frame.fuel.totalKg, fuelUnit)} burned`);
+  const to = f.takeoff;
+  return (
+    <div className="sofar">
+      {bits.length > 0 && <p>{bits.join(", ")}.</p>}
+      {to && (
+        <a href="#/flight" className="sofar-to">
+          <b>{/takeoff/i.test(to.verdict) ? to.verdict : `Takeoff: ${to.verdict.charAt(0).toLowerCase()}${to.verdict.slice(1)}`}.</b>
+          <span>{[to.rotationRateDegS !== null ? `${to.rotationRateDegS}°/s rotation` : null, to.maxPitchDeg !== null ? `${to.maxPitchDeg}° climb pitch` : null, to.liftoffIasKt !== null ? `airborne at ${to.liftoffIasKt} kt` : null].filter(Boolean).join(", ")}</span>
+          <Grade grade={to.grade} />
+        </a>
+      )}
+    </div>
+  );
+}
+
+/** After the flight: the debrief in two lines, with the full thing a tap away. */
+function DebriefTeaser() {
+  const flight = useApp((s) => s.lastFlight ?? s.flight)!;
+  const d = buildDebrief({ ...flight, takeoff: flight.takeoff ?? null, stats: flight.stats ?? null });
+  if (!d.sections.length) return null;
+  return (
+    <a className="glass strong teaser" href={`#/logbook/${flight.id}`}>
+      <p className="eyebrow">Debrief</p>
+      <h2 className="debrief-h">{d.headline}</h2>
+      <p className="debrief-sum">{d.summary}</p>
+      {d.toImprove[0] ? <p className="teaser-next"><b>For next time:</b> {d.toImprove[0]}</p> : d.wentWell[0] ? <p className="teaser-next"><b>Best bit:</b> {d.wentWell[0]}</p> : null}
+      <span className="go">Read the full debrief {Icon.back()}</span>
+    </a>
   );
 }
 

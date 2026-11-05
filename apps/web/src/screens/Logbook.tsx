@@ -1,3 +1,4 @@
+import { DebriefPanel, HandlingCard, TakeoffCard } from "../components/Debrief";
 import { useEffect, useMemo, useState } from "react";
 import type { FlightEvent, FlightSummary, TelemetryFrame } from "@glidepath/protocol";
 import { MapView } from "../components/MapView";
@@ -9,6 +10,7 @@ import { TimingsTable } from "../components/Timings";
 import { AircraftArt, artKindFor } from "../components/Imagery";
 import { framesToTrail, useApp, useSettings, type TrailPoint } from "../data/store";
 import { LandingSummary } from "./Flight";
+import { touchdownWords } from "@glidepath/flight-engine";
 import { gradeOf } from "./Home";
 
 function useFlights(): { flights: FlightSummary[] | null; error: string | null } {
@@ -57,7 +59,7 @@ export function Logbook() {
           <Tile k="Flights" v={fmt(done.length)} />
           <Tile k="Block time" v={dur(done.reduce((s, f) => s + ((f.onBlockAt ?? 0) - (f.offBlockAt ?? 0)), 0))} />
           <Tile k="Distance" v={fmt(done.reduce((s, f) => s + f.distanceNm, 0))} unit="nm" />
-          <Tile k="Best landing" v={(() => { const b = done.flatMap((f) => f.landings).sort((a, b) => b.score - a.score)[0]; return b ? `${b.grade} · ${fmt(b.touchdownVsFpm)} fpm` : "—"; })()} />
+          <Tile k="Best landing" v={(() => { const b = done.flatMap((f) => f.landings).sort((a, b) => b.score - a.score)[0]; return b ? `${fmt(Math.abs(b.touchdownVsFpm ?? 0))} fpm` : "—"; })()} />
         </div>
       )}
       <section className="glass pad">
@@ -77,11 +79,13 @@ export function Logbook() {
                   <span>
                     <span className="data" style={{ fontWeight: 700, fontSize: 16 }}>{f.departureIcao ?? "····"} → {f.arrivalIcao ?? "····"}</span>
                     <span className="muted" style={{ display: "block", fontSize: 13 }}>
-                      {new Date(f.startedAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })} · {f.aircraft?.icaoType ?? f.aircraft?.title ?? "Aircraft"} · {fmt(f.distanceNm)} nm · {dur((f.onBlockAt ?? f.endedAt ?? f.startedAt) - (f.offBlockAt ?? f.startedAt))}
-                      {f.status === "incomplete" ? " · incomplete" : ""}{f.simulator.source === "replay" ? " · demo" : ""}
+                      {[new Date(f.startedAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }), f.aircraft?.icaoType ?? f.aircraft?.title ?? "Aircraft", `${fmt(f.distanceNm)} nm`, dur((f.onBlockAt ?? f.endedAt ?? f.startedAt) - (f.offBlockAt ?? f.startedAt)), f.status === "incomplete" ? "incomplete" : null, f.simulator.source === "replay" ? "demo" : null].filter(Boolean).join(", ")}
                     </span>
                   </span>
-                  {l ? <Grade grade={l.grade} score={l.score} /> : <span className="faint" style={{ fontSize: 12 }}>no landing</span>}
+                  <span className="row" style={{ gap: 12 }}>
+                    {l && l.touchdownVsFpm !== null ? <span className="li-land"><b>{touchdownWords(l.touchdownVsFpm, l.profileId).word}</b><span className="data">{fmt(Math.abs(l.touchdownVsFpm))} fpm</span></span> : null}
+                    {l ? <Grade grade={l.grade} score={l.score} /> : <span className="faint" style={{ fontSize: 12 }}>no landing</span>}
+                  </span>
                 </a>
               );
             })}
@@ -126,7 +130,7 @@ export function FlightDetail({ id }: { id: string }) {
       <div className="between wrap">
         <div>
           <h1 className="title data">{flight.departureIcao ?? "····"} → {flight.arrivalIcao ?? "····"}</h1>
-          <p className="muted" style={{ margin: "4px 0 0" }}>{flight.departureName ?? ""}{flight.arrivalName ? ` to ${flight.arrivalName}` : ""} · {new Date(flight.startedAt).toLocaleString()}</p>
+          <p className="muted" style={{ margin: "4px 0 0" }}>{flight.departureName ?? ""}{flight.arrivalName ? ` to ${flight.arrivalName}` : ""}, {new Date(flight.startedAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</p>
         </div>
         <div className="row">
           {flight.simulator.source === "replay" && <span className="pill demo"><span className="dot" />Demo</span>}
@@ -136,11 +140,12 @@ export function FlightDetail({ id }: { id: string }) {
       <section className="glass flight-hero">
         <div>
           <p className="fh-type">{flight.aircraft?.icaoType ?? flight.plan?.aircraftIcao ?? "Aircraft"}</p>
-          <p className="fh-meta">{[flight.plan?.callsign ?? flight.callsign, flight.aircraft?.registration, flight.aircraft?.title].filter(Boolean).join(" · ")}</p>
-          {flight.landings.at(-1) ? <p className="fh-meta" style={{ marginTop: 10 }}>Landing <b style={{ color: "var(--ink)" }}>{flight.landings.at(-1)!.grade}</b> · {fmt(flight.landings.at(-1)!.touchdownVsFpm)} fpm</p> : null}
+          <p className="fh-meta">{[flight.plan?.callsign ?? flight.callsign, flight.aircraft?.registration, flight.aircraft?.title].filter(Boolean).join(", ")}</p>
+          {flight.landings.at(-1) ? <p className="fh-meta" style={{ marginTop: 10 }}>Landed at <b style={{ color: "var(--ink)" }}>{fmt(Math.abs(flight.landings.at(-1)!.touchdownVsFpm ?? 0))} fpm</b>, graded {flight.landings.at(-1)!.grade}</p> : null}
         </div>
         <AircraftArt kind={artKindFor(flight.aircraft?.icaoType ?? flight.plan?.aircraftIcao, flight.aircraft?.title)} />
       </section>
+      <DebriefPanel flight={flight} />
       <section className="glass" style={{ height: 380, overflow: "hidden", position: "relative" }}>
         <MapView trail={trail} plan={flight.plan} airports={airports} interactive />
       </section>
@@ -160,13 +165,15 @@ export function FlightDetail({ id }: { id: string }) {
       </Section>
       <div className="grid cols-2">
         <Section title="Gates and runways">
-          <Kv k="Off block" v={`${zulu(flight.offBlockAt)}${flight.departureStand ? ` · stand ${flight.departureStand}` : ""}`} />
-          <Kv k="Wheels up" v={`${zulu(flight.wheelsUpAt)}${flight.departureRunway ? ` · runway ${flight.departureRunway}` : ""}`} />
-          <Kv k="Wheels down" v={`${zulu(flight.wheelsDownAt)}${flight.arrivalRunway ? ` · runway ${flight.arrivalRunway}` : ""}`} />
-          <Kv k="On block" v={`${zulu(flight.onBlockAt)}${flight.arrivalStand ? ` · stand ${flight.arrivalStand}` : ""}`} />
+          <Kv k="Off block" v={`${zulu(flight.offBlockAt)}${flight.departureStand ? `, stand ${flight.departureStand}` : ""}`} />
+          <Kv k="Wheels up" v={`${zulu(flight.wheelsUpAt)}${flight.departureRunway ? `, runway ${flight.departureRunway}` : ""}`} />
+          <Kv k="Wheels down" v={`${zulu(flight.wheelsDownAt)}${flight.arrivalRunway ? `, runway ${flight.arrivalRunway}` : ""}`} />
+          <Kv k="On block" v={`${zulu(flight.onBlockAt)}${flight.arrivalStand ? `, stand ${flight.arrivalStand}` : ""}`} />
           {flight.plan && <Kv k="Planned block" v={dur((flight.plan.blockTimeS ?? 0) * 1000)} />}
           <p className="faint" style={{ fontSize: 12, margin: "8px 0 0" }}>Times in UTC, recorded by the Bridge. Stands come from OpenStreetMap when one is mapped there.</p>
         </Section>
+        {flight.takeoff && <TakeoffCard t={flight.takeoff} runway={flight.departureRunway} />}
+        {flight.stats && <HandlingCard s={flight.stats} />}
         <Section title="Landing" right={flight.landings.length ? <Grade grade={flight.landings.at(-1)!.grade} /> : undefined}>
           {flight.landings.length ? <LandingSummary l={flight.landings.at(-1)!} /> : <p className="muted">No landing was recorded on this flight.</p>}
         </Section>

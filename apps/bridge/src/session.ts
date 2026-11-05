@@ -15,7 +15,7 @@ import { randomUUID } from "node:crypto";
 import type { AircraftInfo, FlightEvent, FlightPhase, FlightPlan, FlightSummary, LandingReport, SimulatorInfo, TelemetryFrame } from "@glidepath/protocol";
 import type { AirportDb } from "@glidepath/aviation-data";
 import type { ExternalData } from "./external.js";
-import { distanceNm, LandingAnalyzer, landingProfileFor, matchRunway, PhaseDetector } from "@glidepath/flight-engine";
+import { distanceNm, FlightReviewer, LandingAnalyzer, landingProfileFor, matchRunway, PhaseDetector } from "@glidepath/flight-engine";
 import type { RawFrame } from "./adapters/types.js";
 import type { Logger } from "./log.js";
 import { applyProfile, profileForTitle } from "./profiles.js";
@@ -37,6 +37,7 @@ export class FlightSession extends EventEmitter {
   private flight: FlightSummary | null = null;
   private detector = new PhaseDetector();
   private analyzer = new LandingAnalyzer({ profile: landingProfileFor(null) });
+  private reviewer = new FlightReviewer();
   private simulator: SimulatorInfo | null = null;
   private aircraft: AircraftInfo | null = null;
   private lastFrame: TelemetryFrame | null = null;
@@ -76,6 +77,7 @@ export class FlightSession extends EventEmitter {
   setAircraft(info: AircraftInfo): void {
     this.aircraft = info;
     this.analyzer.setProfile(landingProfileFor(info.icaoType, info.title));
+    this.reviewer.setProfile(landingProfileFor(info.icaoType, info.title).id);
     if (this.flight && this.flight.phase === "PREFLIGHT") {
       this.flight.aircraft = info;
       this.flight.callsign = info.registration;
@@ -142,6 +144,13 @@ export class FlightSession extends EventEmitter {
     flight.phase = this.detector.phase;
     flight.lastSeq = frame.seq;
 
+    this.reviewer.push(frame, this.detector.phase, events);
+    flight.stats = this.reviewer.stats;
+    if (this.reviewer.takeoff && !flight.takeoff) {
+      flight.takeoff = this.reviewer.takeoff;
+      this.log.info(`Takeoff: ${flight.takeoff.verdict} (${flight.takeoff.rotationRateDegS ?? "?"}°/s rotation, ${flight.takeoff.maxPitchDeg ?? "?"}° max pitch)`);
+    }
+
     const report = this.analyzer.push(frame);
     if (report) this.onLanding(flight, report);
 
@@ -206,10 +215,13 @@ export class FlightSession extends EventEmitter {
       offBlockAt: null, wheelsUpAt: null, wheelsDownAt: null, onBlockAt: null, endedAt: null,
       distanceNm: 0, maxAltitudeFt: null, maxGsKt: null, fuelStartKg: null, fuelEndKg: null,
       landings: [],
+      takeoff: null,
+      stats: null,
       lastSeq: frame.seq,
     };
     this.detector = new PhaseDetector();
     this.analyzer = new LandingAnalyzer({ profile: landingProfileFor(this.aircraft?.icaoType ?? null, this.aircraft?.title ?? "") });
+    this.reviewer = new FlightReviewer(landingProfileFor(this.aircraft?.icaoType ?? null, this.aircraft?.title ?? "").id);
     if (frame.position.onGround && this.airports) {
       const apt = this.airports.nearest(frame.position, { maxNm: 5 });
       if (apt) {
@@ -234,6 +246,9 @@ export class FlightSession extends EventEmitter {
     if (recent && near) {
       this.log.info(`Resuming flight ${f.id}`);
       this.detector = new PhaseDetector(); // re-joins mid-flight from the live frame
+      this.reviewer = new FlightReviewer(landingProfileFor(this.aircraft?.icaoType ?? null, this.aircraft?.title ?? "").id);
+      if (f.stats) this.reviewer.stats = { ...f.stats };
+      if (f.takeoff) this.reviewer.takeoff = f.takeoff;
       this.applyPlan();
       return;
     }
