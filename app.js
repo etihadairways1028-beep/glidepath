@@ -15,6 +15,52 @@
     if (cfg.downloadUrl) a.setAttribute("download", "");
   });
   if (cfg.sha256) $("sha").textContent = cfg.sha256;
+  if (cfg.version) {
+    $("build-line").textContent = "Early test build " + cfg.version + ". Not code-signed yet, so Windows asks you to confirm before it opens.";
+    $("download-title").textContent = "Glidepath Bridge " + cfg.version + " for Windows";
+  }
+
+  /* ---------- reveal on scroll ---------- */
+  const reveals = document.querySelectorAll(".reveal");
+  if (reduced || !("IntersectionObserver" in window)) reveals.forEach((n) => n.classList.add("in"));
+  else {
+    const ro = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); ro.unobserve(e.target); } }), { threshold: 0.12, rootMargin: "0px 0px -6% 0px" });
+    reveals.forEach((n) => ro.observe(n));
+  }
+
+  /* ---------- the real app, live, inside the iPad ---------- */
+  const frame = $("ipad-frame");
+  const fit = () => { const sc = frame.parentElement.clientWidth / 1180; frame.style.transform = "scale(" + sc + ")"; };
+  if (frame && window.matchMedia("(min-width: 721px)").matches) {
+    frame.addEventListener("load", () => setTimeout(() => $("ipad-cover").classList.add("gone"), 900));
+    frame.src = frame.dataset.src;
+    fit();
+    window.addEventListener("resize", fit);
+  }
+
+  /* ---------- lock screen clock ---------- */
+  const tick = () => {
+    const d = new Date();
+    $("lock-time").textContent = d.getHours() + ":" + String(d.getMinutes()).padStart(2, "0");
+    $("lock-date").textContent = d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
+  };
+  tick(); setInterval(tick, 15000);
+
+  /* ---------- callout chips light up in order ---------- */
+  document.querySelectorAll(".callouts span").forEach((n, i) => (n.style.animationDelay = (i * 0.45) + "s"));
+
+  /* ---------- touchdown meter: same wording as the flight engine (touchdownWords) ---------- */
+  const words = (v) => {
+    if (v < 60) return ["Very soft", "#64D2FF", v + " fpm, barely felt. Almost too soft: on a wet or short runway you want it on firmly, so make sure you didn't float."];
+    if (v < 150) return ["Smooth", "#30D158", "Smooth touchdown at " + v + " fpm. Exactly what you want."];
+    if (v < 240) return ["Normal", "#30D158", "A normal, positive touchdown at " + v + " fpm. That's what line pilots aim for."];
+    if (v < 360) return ["Firm", "#FFD60A", "Firm at " + v + " fpm. You'd feel it in the cabin, but it's well inside limits."];
+    if (v < 600) return ["Heavy", "#FF9F0A", "Heavy at " + v + " fpm. Start the flare a touch earlier, around 20–30 ft, and keep the power on until it's settled."];
+    return ["Hard", "#FF453A", "Hard landing at " + v + " fpm. Beyond about 600 fpm (10 ft/s) most airliners need a hard-landing inspection."];
+  };
+  const mr = $("m-range");
+  const setM = () => { const v = Number(mr.value); const [w, c, t] = words(v); $("m-fpm").textContent = v; $("m-word").textContent = w; $("m-word").style.color = c; $("m-text").textContent = t; };
+  mr.addEventListener("input", setM); setM();
 
   /* ---------- demo ---------- */
   const NS = "http://www.w3.org/2000/svg";
@@ -31,7 +77,7 @@
   const MARKS = { TOP_OF_CLIMB: "TOC", TOP_OF_DESCENT: "TOD", TOUCHDOWN: "TD" };
 
   fetch("demo-flight.json").then((r) => r.json()).then(start).catch(() => {
-    $("demo").querySelector(".demo-head p").textContent = "The demo flight could not be loaded. Reload the page to try again.";
+    $("demo").querySelector(".demo-head .section-lede").textContent = "The demo flight could not be loaded. Reload the page to try again.";
   });
 
   function start(D) {
@@ -53,8 +99,8 @@
     el("stop", { offset: "0", "stop-color": "#6FB6FF", "stop-opacity": "0.28" }, grad);
     el("stop", { offset: "1", "stop-color": "#6FB6FF", "stop-opacity": "0" }, grad);
     for (let a = 0; a <= yTop; a += 10000) {
-      el("line", { x1: PADL, x2: W - PADR, y1: y(a), y2: y(a), stroke: "#1E2B4A", "stroke-width": 1 });
-      const t = el("text", { x: PADL - 10, y: y(a) + 4, "text-anchor": "end", fill: "#93A0BA", "font-size": 17, "font-family": "B612 Mono, monospace" });
+      el("line", { x1: PADL, x2: W - PADR, y1: y(a), y2: y(a), stroke: "rgba(255,255,255,0.09)", "stroke-width": 1 });
+      const t = el("text", { x: PADL - 10, y: y(a) + 4, "text-anchor": "end", fill: "#93A0BA", "font-size": 17, "font-family": "ui-rounded, -apple-system, Segoe UI, sans-serif" });
       t.textContent = a === 0 ? "0 ft" : (a / 1000) + "k ft";
     }
     // The planned vertical path, ahead of the aircraft, in route magenta.
@@ -111,7 +157,7 @@
           if (MARKS[e.type]) {
             const mx = x(e.d), my = y(e.alt || 0);
             el("line", { x1: mx, x2: mx, y1: my - 6, y2: my - 22, stroke: "#93A0BA", "stroke-width": 1 }, markLayer);
-            const lbl = el("text", { x: mx, y: my - 28, "text-anchor": "middle", fill: "#EAF0FB", "font-size": 17, "font-family": "B612 Mono, monospace" }, markLayer);
+            const lbl = el("text", { x: mx, y: my - 28, "text-anchor": "middle", fill: "#EAF0FB", "font-size": 17, "font-family": "ui-rounded, -apple-system, Segoe UI, sans-serif" }, markLayer);
             lbl.textContent = MARKS[e.type];
           }
           if (!EVT[e.type]) continue;
@@ -144,7 +190,7 @@
       }
       $("r-alt").textContent = num(a) + " ft";
       $("r-gs").textContent = num(f.gs) + " kt";
-      $("r-vs").textContent = (f.vs > 0 ? "+" : "") + num(f.vs) + " fpm";
+      $("r-vs").textContent = Math.abs(f.vs) < 100 ? "Level" : (f.vs > 0 ? "+" : "") + num(f.vs);
       $("r-fuel").textContent = num(f.fuel) + " kg";
       const tod = $("tod");
       if (f.tod !== null && f.tod > 0) {
@@ -191,7 +237,7 @@
       const io = new IntersectionObserver((entries) => {
         if (entries.some((e) => e.isIntersecting)) { io.disconnect(); setPlaying(true); }
       }, { threshold: 0.45 });
-      io.observe($("profile"));
+      io.observe($("phase"));
     }
   }
 
