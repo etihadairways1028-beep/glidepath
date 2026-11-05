@@ -18,14 +18,22 @@ NODE_VERSION="$(node -p 'process.versions.node')"
 echo "Building Glidepath Bridge for Windows x64 with Node $NODE_VERSION"
 
 cd "$HERE"
-npx esbuild src/index.ts --bundle --platform=node --format=cjs --target=node22 --outfile="$WORK/glidepath-bridge.cjs" --log-level=warning
+npx esbuild src/index.ts --bundle --platform=node --format=cjs --target=node22 --inject:scripts/suppress-warnings.js --outfile="$WORK/glidepath-bridge.cjs" --log-level=warning
 
 mkdir -p "$WORK/node" && (cd "$WORK/node" && npm pack "node-win-x64@$NODE_VERSION" --silent >/dev/null && tar xzf node-win-x64-*.tgz)
 python3 -I "$HERE/scripts/verify-authenticode.py" "$WORK/node/package/bin/node.exe"
 
-cat > "$WORK/sea-config.json" <<EOF
-{ "main": "$WORK/glidepath-bridge.cjs", "output": "$WORK/sea-prep.blob", "disableExperimentalSEAWarning": true, "useCodeCache": false, "useSnapshot": false }
-EOF
+# Build the web app and embed every file as a SEA asset named "app/<path>".
+(cd "$HERE/../web" && npx vite build --logLevel warn)
+WORK="$WORK" APP_DIR="$HERE/../web/dist" node -e '
+const fs = require("fs"), path = require("path");
+const dir = process.env.APP_DIR, work = process.env.WORK, assets = {};
+const walk = (d) => { for (const f of fs.readdirSync(d)) { const p = path.join(d, f); if (fs.statSync(p).isDirectory()) walk(p); else assets["app/" + path.relative(dir, p).split(path.sep).join("/")] = p; } };
+walk(dir);
+fs.writeFileSync(path.join(work, "sea-config.json"), JSON.stringify({ main: path.join(work, "glidepath-bridge.cjs"), output: path.join(work, "sea-prep.blob"),
+  disableExperimentalSEAWarning: true, useCodeCache: false, useSnapshot: false, assets }, null, 1));
+console.log("Embedding " + Object.keys(assets).length + " web app files");
+'
 node --experimental-sea-config "$WORK/sea-config.json"
 python3 -I "$HERE/scripts/strip-signature.py" "$WORK/node/package/bin/node.exe" "$WORK/GlidepathBridge.exe"
 (cd "$WORK" && npm i --no-save --silent postject@1.0.0-alpha.6 >/dev/null && npx --no-install postject GlidepathBridge.exe NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2)
@@ -42,5 +50,5 @@ mkdir -p "$OUT"
 rm -f "$OUT/GlidepathBridge-windows-x64.zip"
 (cd "$WORK" && zip -qr -9 "$OUT/GlidepathBridge-windows-x64.zip" "Glidepath Bridge")
 sha256sum "$OUT/GlidepathBridge-windows-x64.zip" | tee "$OUT/GlidepathBridge-windows-x64.zip.sha256"
-rm -rf "$WORK"
+if [ "${KEEP_WORK:-}" = "1" ]; then echo "Kept build dir: $WORK"; else rm -rf "$WORK"; fi
 echo "Done: $OUT/GlidepathBridge-windows-x64.zip"

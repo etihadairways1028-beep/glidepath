@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir, hostname, platform } from "node:os";
 import { join } from "node:path";
 
-export const BRIDGE_VERSION = "0.1.0";
+export const BRIDGE_VERSION = "0.2.0";
 
 export type AdapterChoice = "auto" | "msfs" | "replay";
 
@@ -19,6 +19,8 @@ export interface BridgeConfig {
   /** SimConnect: deliver data every N sim frames. */
   simconnectInterval: number;
   mdns: boolean;
+  /** Open the status page in the default browser on start. */
+  openBrowser: boolean;
   logLevel: "debug" | "info" | "warn" | "error";
 }
 
@@ -48,6 +50,7 @@ export function loadConfig(argv = process.argv.slice(2)): BridgeConfig {
     streamHz: 5,
     simconnectInterval: 3,
     mdns: true,
+    openBrowser: true,
     logLevel: "info",
   };
   for (let i = 0; i < argv.length; i++) {
@@ -73,6 +76,7 @@ export function loadConfig(argv = process.argv.slice(2)): BridgeConfig {
       case "--stream-hz": cfg.streamHz = Math.min(20, Math.max(1, Number(need()))); break;
       case "--simconnect-interval": cfg.simconnectInterval = Math.max(1, Number(need())); break;
       case "--no-mdns": cfg.mdns = false; break;
+      case "--no-open": cfg.openBrowser = false; break;
       case "--debug": cfg.logLevel = "debug"; break;
       case "--help":
         console.log(HELP);

@@ -261,6 +261,43 @@ export const LandingReport = z.object({
 export type LandingReport = z.infer<typeof LandingReport>;
 
 /* ------------------------------------------------------------------ */
+/* Flight plan (from SimBrief, via the Bridge)                         */
+/* ------------------------------------------------------------------ */
+
+export const PlanFix = z.object({ ident: z.string(), lat: z.number(), lon: z.number(), altitudeFt: z.number().nullable() });
+
+export const FlightPlan = z.object({
+  source: z.literal("simbrief"),
+  ofpId: z.string().nullable(),
+  callsign: z.string().nullable(),
+  flightNumber: z.string().nullable(),
+  airline: z.string().nullable(),
+  aircraftIcao: z.string().nullable(),
+  registration: z.string().nullable(),
+  origin: z.object({ icao: z.string(), name: z.string().nullable(), runway: z.string().nullable(), lat: z.number(), lon: z.number(), elevationFt: z.number().nullable() }),
+  destination: z.object({ icao: z.string(), name: z.string().nullable(), runway: z.string().nullable(), lat: z.number(), lon: z.number(), elevationFt: z.number().nullable() }),
+  alternate: z.string().nullable(),
+  route: z.string(),
+  fixes: z.array(PlanFix),
+  cruiseAltitudeFt: z.number().nullable(),
+  distanceNm: z.number().nullable(),
+  /** Unix seconds. */
+  scheduledOut: z.number().nullable(),
+  scheduledOff: z.number().nullable(),
+  scheduledOn: z.number().nullable(),
+  scheduledIn: z.number().nullable(),
+  blockTimeS: z.number().nullable(),
+  airTimeS: z.number().nullable(),
+  fuelUnits: z.enum(["kg", "lb"]),
+  /** Values in kg regardless of the plan's units. */
+  fuelRampKg: z.number().nullable(),
+  fuelBurnKg: z.number().nullable(),
+  fuelLandingKg: z.number().nullable(),
+  fetchedAt: z.number().int(),
+});
+export type FlightPlan = z.infer<typeof FlightPlan>;
+
+/* ------------------------------------------------------------------ */
 /* Flight summary                                                      */
 /* ------------------------------------------------------------------ */
 
@@ -272,6 +309,14 @@ export const FlightSummary = z.object({
   callsign: z.string().nullable(),
   departureIcao: z.string().nullable(),
   arrivalIcao: z.string().nullable(),
+  departureName: z.string().nullable().default(null),
+  arrivalName: z.string().nullable().default(null),
+  departureRunway: z.string().nullable().default(null),
+  arrivalRunway: z.string().nullable().default(null),
+  /** Parking stand / gate from OpenStreetMap, when one is mapped there. */
+  departureStand: z.string().nullable().default(null),
+  arrivalStand: z.string().nullable().default(null),
+  plan: FlightPlan.nullable().default(null),
   phase: FlightPhase,
   startedAt: z.number().int(),
   offBlockAt: z.number().int().nullable(),

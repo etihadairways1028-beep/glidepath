@@ -1,0 +1,26 @@
+{
+  "name": "@glidepath/web",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit -p . && vite build",
+    "demo-data": "tsx scripts/build-demo-data.ts"
+  },
+  "dependencies": {
+    "@glidepath/flight-engine": "workspace:*",
+    "@glidepath/protocol": "workspace:*",
+    "maplibre-gl": "^5.6.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "@glidepath/aviation-data": "workspace:*"
+  },
+  "devDependencies": {
+    "@glidepath/testkit": "workspace:*",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^4.5.0",
+    "vite": "^6.3.0"
+  }
+}

@@ -1,4 +1,4 @@
-GLIDEPATH BRIDGE 0.1.0 (EARLY TEST BUILD) - WINDOWS
+GLIDEPATH BRIDGE 0.2.0 (EARLY TEST BUILD) - WINDOWS
 ====================================================
 
 The Bridge runs on the PC where you fly Microsoft Flight Simulator. It reads
@@ -10,7 +10,13 @@ THIS IS AN EARLY TEST BUILD
 - It is not code-signed yet, so Windows SmartScreen will warn you.
   Click "More info" -> "Run anyway". (Signed builds come before public release.)
 - The native iPad/iPhone app with Lock Screen Live Activities is not built yet.
-  For now, your iPad shows the live flight in Safari.
+  Your iPad gets the full Glidepath web app from the Bridge instead (live map,
+  flight trail, flight monitor, logbook, airports). Add it to your Home Screen.
+
+WHAT YOU SEE IN THE WINDOW
+  A black window with log lines is normal: that IS the Bridge. Keep it open
+  while you fly; close it to stop the Bridge. It says "Waiting for Microsoft
+  Flight Simulator" until you start the sim, then connects by itself.
 
 STEP 1 - TRY THE DEMO (no simulator needed)
   Double-click "Run demo flight.bat".
@@ -18,10 +24,11 @@ STEP 1 - TRY THE DEMO (no simulator needed)
   to Manchester at 20x speed. Everything shows a REPLAY badge.
 
 STEP 2 - CONNECT YOUR iPAD
-  On this PC, open  http://localhost:4810  in a browser.
-  It shows a link for each network address of this PC.
-  Open that link on your iPad (same Wi-Fi). Tip: in Safari, tap Share ->
-  "Add to Home Screen" to open it like an app.
+  The Bridge opens  http://localhost:4810  in your browser by itself.
+  That page shows a link (and its address) for your iPad.
+  Open that link on your iPad (same Wi-Fi). It opens the Glidepath app.
+  In Safari, tap Share -> "Add to Home Screen" to get a Glidepath icon
+  that opens straight to your live flight.
   If Windows Firewall asks, allow Glidepath Bridge on PRIVATE networks only.
   The link contains your private pairing key: only open it on your own devices.
 
@@ -43,8 +50,10 @@ WHERE YOUR DATA IS
   (all paired devices then need the new link).
 
 KNOWN LIMITS OF THIS BUILD
-  - Departure/arrival airports are not filled in yet (needs SimBrief, next stage).
+  - Live traffic (VATSIM/IVAO), weather, gates and SimBrief plans are fetched
+    by the Bridge from the internet; they have not been tested end to end yet.
   - Add-on aircraft (PMDG, Fenix, FBW, iniBuilds, FSLabs): position, speeds,
     engines and fuel are shown; their autopilot/lights/radios show "-" until
     each aircraft profile is verified.
-  - No remote control yet. No X-Plane yet.
+  - No remote control yet. No X-Plane yet. No Lock Screen card yet (needs the
+    native iPad app).

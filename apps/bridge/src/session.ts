@@ -12,8 +12,10 @@
  */
 import { EventEmitter } from "node:events";
 import { randomUUID } from "node:crypto";
-import type { AircraftInfo, FlightEvent, FlightPhase, FlightSummary, LandingReport, SimulatorInfo, TelemetryFrame } from "@glidepath/protocol";
-import { distanceNm, LandingAnalyzer, landingProfileFor, PhaseDetector } from "@glidepath/flight-engine";
+import type { AircraftInfo, FlightEvent, FlightPhase, FlightPlan, FlightSummary, LandingReport, SimulatorInfo, TelemetryFrame } from "@glidepath/protocol";
+import type { AirportDb } from "@glidepath/aviation-data";
+import type { ExternalData } from "./external.js";
+import { distanceNm, LandingAnalyzer, landingProfileFor, matchRunway, PhaseDetector } from "@glidepath/flight-engine";
 import type { RawFrame } from "./adapters/types.js";
 import type { Logger } from "./log.js";
 import { applyProfile, profileForTitle } from "./profiles.js";
@@ -43,7 +45,9 @@ export class FlightSession extends EventEmitter {
   private live: TelemetryFrame[] = [];
   private readonly log: Logger;
 
-  constructor(private readonly recorder: Recorder, log: Logger) {
+  private plan: FlightPlan | null = null;
+
+  constructor(private readonly recorder: Recorder, log: Logger, private readonly airports: AirportDb | null = null, private readonly external: ExternalData | null = null) {
     super();
     this.log = log.child("session");
     this.seq = recorder.maxSeq();
@@ -76,6 +80,31 @@ export class FlightSession extends EventEmitter {
       this.flight.aircraft = info;
       this.flight.callsign = info.registration;
     }
+  }
+
+  /** Attach a SimBrief plan to the current (or next) flight. */
+  setPlan(plan: FlightPlan | null): void {
+    this.plan = plan;
+    this.applyPlan();
+    if (this.flight) {
+      this.recorder.saveFlight(this.flight);
+      this.emit("flight", this.flight);
+    }
+  }
+
+  private applyPlan(): void {
+    const p = this.plan;
+    this.detector.setOptions({
+      plannedCruiseFt: p?.cruiseAltitudeFt ?? null,
+      destination: p ? { lat: p.destination.lat, lon: p.destination.lon } : null,
+    });
+    if (!this.flight || !p) return;
+    this.flight.plan = p;
+    this.flight.callsign = p.callsign ?? this.flight.callsign;
+    this.flight.departureIcao ??= p.origin.icao;
+    this.flight.departureName ??= p.origin.name;
+    this.flight.arrivalIcao ??= p.destination.icao;
+    this.flight.arrivalName ??= p.destination.name;
   }
 
   /** Frames still in memory after `seq` (for quick back-fill), else from disk. */
@@ -170,6 +199,8 @@ export class FlightSession extends EventEmitter {
       callsign: this.aircraft?.registration ?? null,
       departureIcao: null,
       arrivalIcao: null,
+      departureName: null, arrivalName: null, departureRunway: null, arrivalRunway: null,
+      departureStand: null, arrivalStand: null, plan: null,
       phase: "PREFLIGHT",
       startedAt: frame.t,
       offBlockAt: null, wheelsUpAt: null, wheelsDownAt: null, onBlockAt: null, endedAt: null,
@@ -179,6 +210,16 @@ export class FlightSession extends EventEmitter {
     };
     this.detector = new PhaseDetector();
     this.analyzer = new LandingAnalyzer({ profile: landingProfileFor(this.aircraft?.icaoType ?? null, this.aircraft?.title ?? "") });
+    if (frame.position.onGround && this.airports) {
+      const apt = this.airports.nearest(frame.position, { maxNm: 5 });
+      if (apt) {
+        this.flight.departureIcao = apt.code;
+        this.flight.departureName = apt.name;
+        this.analyzer.setRunways(this.airports.runwayEnds(apt.code));
+      }
+      this.lookupStand(this.flight, frame, "departureStand");
+    }
+    this.applyPlan();
     this.recorder.saveFlight(this.flight);
     this.lastSavedT = frame.t;
     this.log.info(`New flight ${this.flight.id} (${sim.name}${sim.source === "replay" ? ", REPLAY" : ""})`);
@@ -193,6 +234,7 @@ export class FlightSession extends EventEmitter {
     if (recent && near) {
       this.log.info(`Resuming flight ${f.id}`);
       this.detector = new PhaseDetector(); // re-joins mid-flight from the live frame
+      this.applyPlan();
       return;
     }
     this.log.info(`Not resuming flight ${f.id} (${recent ? "moved too far" : "too long ago"}); marking it incomplete`);
@@ -213,16 +255,51 @@ export class FlightSession extends EventEmitter {
     this.log.info(`${e.type} (${e.phaseBefore} → ${e.phaseAfter})`);
     switch (e.type) {
       case "OFF_BLOCK": flight.offBlockAt ??= e.t; break;
-      case "WHEELS_UP": flight.wheelsUpAt ??= e.t; break;
+      case "WHEELS_UP": {
+        flight.wheelsUpAt ??= e.t;
+        if (this.airports && flight.departureIcao && !flight.departureRunway) {
+          const rwy = matchRunway(this.airports.runwayEnds(flight.departureIcao), { lat: e.lat, lon: e.lon }, frame.attitude.headingTrueDeg);
+          flight.departureRunway = rwy?.ident ?? null;
+        }
+        break;
+      }
       case "TOUCHDOWN": {
         flight.wheelsDownAt = e.t;
         const td = this.live.find((f) => f.seq === e.seq) ?? frame;
+        if (this.airports) {
+          const apt = this.airports.nearest(td.position, { maxNm: 6 });
+          if (apt) {
+            flight.arrivalIcao = apt.code;
+            flight.arrivalName = apt.name;
+            const ends = this.airports.runwayEnds(apt.code);
+            this.analyzer.setRunways(ends);
+            flight.arrivalRunway = matchRunway(ends, td.position, td.attitude.headingTrueDeg)?.ident ?? null;
+          }
+        }
         this.analyzer.touchdown(td);
         break;
       }
-      case "ON_BLOCK": flight.onBlockAt = e.t; break;
+      case "ON_BLOCK": {
+        flight.onBlockAt = e.t;
+        this.lookupStand(flight, frame, "arrivalStand");
+        break;
+      }
     }
     this.emit("event", e);
+  }
+
+  /** Ask OpenStreetMap which stand/gate the aircraft is parked on. Only a mapped stand within 60 m counts. */
+  private lookupStand(flight: FlightSummary, frame: TelemetryFrame, field: "departureStand" | "arrivalStand"): void {
+    if (!this.external || this.simulator?.source === "replay") return;
+    const { lat, lon } = frame.position;
+    this.external.stands(lat, lon).then((stands) => {
+      const s = stands[0];
+      if (!s || s.distanceM > 60) return;
+      flight[field] = s.ref;
+      this.log.info(`${field === "departureStand" ? "Departure" : "Arrival"} stand ${s.ref} (${s.distanceM} m, OpenStreetMap)`);
+      this.recorder.saveFlight(flight);
+      this.emit("flight", flight);
+    }).catch(() => undefined);
   }
 
   private onLanding(flight: FlightSummary, report: LandingReport): void {
@@ -244,6 +321,7 @@ export class FlightSession extends EventEmitter {
     this.emit("flight", f);
     this.flight = null;
     this.lastFrame = null;
+    this.plan = null; // a plan belongs to one flight
   }
 
   private shouldRecord(f: TelemetryFrame): boolean {

@@ -5,21 +5,31 @@
  */
 import { PROTOCOL_VERSION, type AircraftInfo, type BridgeStatus, type SimConnectionState, type SimulatorInfo } from "@glidepath/protocol";
 import { BRIDGE_VERSION, HOSTNAME, loadConfig, loadIdentity } from "./config.js";
+import { exec } from "node:child_process";
+import { platform } from "node:os";
+import { lanAddresses } from "./server.js";
 import { createLogger } from "./log.js";
 import { Recorder } from "./recorder.js";
 import { FlightSession } from "./session.js";
 import { LanServer } from "./server.js";
+import { ExternalData } from "./external.js";
+import { AirportDb, type AirportRow, type FrequencyRow, type RunwayRow } from "@glidepath/aviation-data";
+import airportsJson from "../../../packages/aviation-data/data/airports.json";
+import runwaysJson from "../../../packages/aviation-data/data/runways.json";
+import frequenciesJson from "../../../packages/aviation-data/data/frequencies.json";
 import { MsfsAdapter } from "./adapters/msfs.js";
 import { ReplayAdapter } from "./adapters/replay.js";
 import type { SimAdapter } from "./adapters/types.js";
 import { runProbeCli } from "../scripts/probe-msfs.js";
 
-// node:sqlite prints an "experimental" warning on every start; it is expected, so hide just that one.
-const emitWarning = process.emitWarning.bind(process);
-process.emitWarning = ((w: string | Error, ...rest: unknown[]) => {
-  if (String(w instanceof Error ? w.message : w).includes("SQLite is an experimental feature")) return;
-  return (emitWarning as (...a: unknown[]) => void)(w, ...rest);
-}) as typeof process.emitWarning;
+// node:sqlite emits an "experimental" warning when it loads. In the bundled exe that
+// happens before any code here runs, but warnings are printed on the next tick, so
+// replacing the default printer now still catches it. Every other warning is kept.
+process.removeAllListeners("warning");
+process.on("warning", (w) => {
+  if (/SQLite is an experimental feature/.test(w.message)) return;
+  console.warn(`${w.name}: ${w.message}`);
+});
 
 async function main(): Promise<void> {
   if (process.argv.includes("--probe")) {
@@ -38,7 +48,10 @@ async function main(): Promise<void> {
   log.info(`Glidepath Bridge ${BRIDGE_VERSION} (protocol v${PROTOCOL_VERSION}) starting`, { dataDir: cfg.dataDir, adapter: cfg.adapter });
 
   const recorder = new Recorder(cfg.dataDir);
-  const session = new FlightSession(recorder, log);
+  const airports = new AirportDb(airportsJson as unknown as AirportRow[], runwaysJson as unknown as Record<string, RunwayRow[]>, frequenciesJson as unknown as Record<string, FrequencyRow[]>);
+  const external = new ExternalData(log);
+  log.info(`Airport database: ${airports.size.toLocaleString("en-US")} airports (OurAirports)`);
+  const session = new FlightSession(recorder, log, airports, external);
 
   let simState: SimConnectionState = "searching";
   let simMessage: string | null = null;
@@ -70,9 +83,13 @@ async function main(): Promise<void> {
     };
   };
 
-  const server = new LanServer(cfg, identity, session, recorder, status, log);
+  const server = new LanServer(cfg, identity, session, recorder, status, log, external, airports);
 
   adapter.on("state", (s, m) => {
+    if (s !== simState || m !== simMessage) {
+      const text = s === "connected" ? `Connected${simulator ? " to " + simulator.name : ""}` : s === "searching" ? "Waiting for Microsoft Flight Simulator… (start a flight in the sim; the Bridge connects by itself)" : (m ?? s);
+      log.info(`Simulator: ${text}`);
+    }
     simState = s;
     simMessage = m;
     server.broadcastStatus();
@@ -119,7 +136,23 @@ async function main(): Promise<void> {
   process.on("uncaughtException", (e) => log.error("Uncaught exception (Bridge keeps running)", e));
   process.on("unhandledRejection", (e) => log.error("Unhandled rejection (Bridge keeps running)", e));
 
-  log.info(`Open http://localhost:${cfg.port} on this PC to pair your iPad or phone`);
+  const lan = lanAddresses();
+  console.log([
+    "",
+    "  ============================================================",
+    "    Glidepath Bridge is running. Keep this window open.",
+    "  ============================================================",
+    `  On this PC:      http://localhost:${cfg.port}`,
+    ...lan.map((ip) => `  On your iPad:    http://${ip}:${cfg.port}  (same Wi-Fi; pairing link is on the page above)`),
+    "  To stop:         close this window or press Ctrl+C",
+    "",
+  ].join("\n"));
+  if (cfg.openBrowser) openInBrowser(`http://localhost:${cfg.port}`);
+}
+
+function openInBrowser(url: string): void {
+  const cmd = platform() === "win32" ? `start "" "${url}"` : platform() === "darwin" ? `open "${url}"` : null;
+  if (cmd) exec(cmd, { windowsHide: true }, () => undefined);
 }
 
 void main();

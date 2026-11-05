@@ -25,6 +25,12 @@ import type { Logger } from "./log.js";
 import type { Recorder } from "./recorder.js";
 import type { FlightSession } from "./session.js";
 import { livePage, statusPage } from "./pages.js";
+import type { ExternalData } from "./external.js";
+import type { AirportDb } from "@glidepath/aviation-data";
+import { appAsset } from "./assets.js";
+
+/** Websites allowed to call this Bridge from a browser (the hosted Glidepath app). */
+const ALLOWED_ORIGINS = [/^https:\/\/etihadairways1028-beep\.github\.io$/, /^http:\/\/localhost(:\d+)?$/, /^http:\/\/127\.0\.0\.1(:\d+)?$/];
 
 interface Client {
   ws: WebSocket;
@@ -51,6 +57,8 @@ export class LanServer {
     private readonly recorder: Recorder,
     private readonly getStatus: () => BridgeStatus,
     log: Logger,
+    private readonly external: ExternalData | null = null,
+    private readonly airports: AirportDb | null = null,
   ) {
     this.log = log.child("lan");
     this.http.on("upgrade", (req, socket, head) => {
@@ -202,33 +210,102 @@ export class LanServer {
   private route(req: IncomingMessage, res: ServerResponse): void {
     const url = new URL(req.url ?? "/", "http://x");
     const local = isLocal(req);
-    const authed = local || this.tokenOk(url.searchParams.get("token") ?? bearer(req));
+    const origin = req.headers.origin;
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Referrer-Policy", "no-referrer");
-    try {
-      if (req.method !== "GET") return text(res, 405, "Method not allowed");
-      if (url.pathname === "/") {
-        return html(res, statusPage({ local, status: this.getStatus(), token: local ? this.identity.pairingToken : null, addresses: lanAddresses(), port: this.cfg.port, logs: local ? this.log.recent().slice(-60) : [] }));
+    if (origin && ALLOWED_ORIGINS.some((r) => r.test(origin))) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Vary", "Origin");
+      res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+      // Chrome's Private Network Access: lets the hosted app reach this Bridge on localhost.
+      res.setHeader("Access-Control-Allow-Private-Network", "true");
+    }
+    if (req.method === "OPTIONS") { res.writeHead(204); res.end(); return; }
+    // A request from the hosted app on this PC must still carry the token: being "local" is not enough when a website made the request.
+    const fromWebsite = !!origin && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) && origin !== `http://${req.headers.host}`;
+    const authed = (local && !fromWebsite) || this.tokenOk(url.searchParams.get("token") ?? bearer(req));
+    void this.handle(req, res, url, local, authed).catch((e) => {
+      this.log.error(`HTTP ${url.pathname} failed`, e);
+      if (!res.headersSent) json(res, 500, { error: "Internal error" });
+    });
+  }
+
+  private async handle(req: IncomingMessage, res: ServerResponse, url: URL, local: boolean, authed: boolean): Promise<void> {
+    const p = url.pathname;
+    if (req.method !== "GET" && !(req.method === "POST" && p === "/api/plan")) return text(res, 405, "Method not allowed");
+    if (p === "/") {
+      return html(res, statusPage({ local, status: this.getStatus(), token: local ? this.identity.pairingToken : null, addresses: lanAddresses(), port: this.cfg.port, logs: local ? this.log.recent().slice(-60) : [] }));
+    }
+    if (p === "/live") return html(res, livePage());
+    if (p === "/favicon.ico") { res.writeHead(204); res.end(); return; }
+    if (p === "/healthz") return json(res, 200, { ok: true, bridgeId: this.identity.bridgeId, protocolVersion: PROTOCOL_VERSION });
+    if (p === "/app") { res.writeHead(302, { Location: "/app/" }); res.end(); return; }
+    if (p.startsWith("/app/")) return this.serveApp(res, p.slice(5) || "index.html");
+    if (!authed) return json(res, 401, { error: "Pairing token required" });
+
+    if (p === "/api/status") return json(res, 200, this.getStatus());
+    if (p === "/api/flight") return json(res, 200, this.session.activeFlight);
+    if (p === "/api/flights") return json(res, 200, this.recorder.listFlights(Number(url.searchParams.get("limit") ?? 50)));
+    const m = /^\/api\/flights\/([0-9a-f-]{36})(\/frames|\/events)?$/.exec(p);
+    if (m) {
+      const flight = this.recorder.getFlight(m[1]!);
+      if (!flight) return json(res, 404, { error: "Flight not found" });
+      if (m[2] === "/frames") return json(res, 200, this.recorder.framesSince(flight.id, Number(url.searchParams.get("after") ?? 0), 20000));
+      if (m[2] === "/events") return json(res, 200, this.recorder.events(flight.id));
+      return json(res, 200, flight);
+    }
+
+    if (p === "/api/plan" && req.method === "POST") {
+      if (!this.external) return json(res, 503, { error: "External data is disabled" });
+      const body = await readBody(req);
+      const user = String((body as { user?: unknown }).user ?? "");
+      try {
+        const plan = await this.external.simbrief(user);
+        this.session.setPlan(plan);
+        return json(res, 200, plan);
+      } catch (e) {
+        return json(res, 502, { error: (e as Error).message });
       }
-      if (url.pathname === "/live") return html(res, livePage());
-      if (url.pathname === "/favicon.ico") { res.writeHead(204); res.end(); return; }
-      if (url.pathname === "/healthz") return json(res, 200, { ok: true });
-      if (!authed) return json(res, 401, { error: "Pairing token required" });
-      if (url.pathname === "/api/status") return json(res, 200, this.getStatus());
-      if (url.pathname === "/api/flights") return json(res, 200, this.recorder.listFlights(Number(url.searchParams.get("limit") ?? 50)));
-      const m = /^\/api\/flights\/([0-9a-f-]{36})(\/frames|\/events)?$/.exec(url.pathname);
-      if (m) {
-        const flight = this.recorder.getFlight(m[1]!);
-        if (!flight) return json(res, 404, { error: "Flight not found" });
-        if (m[2] === "/frames") return json(res, 200, this.recorder.framesSince(flight.id, Number(url.searchParams.get("after") ?? 0), 5000));
-        if (m[2] === "/events") return json(res, 200, this.recorder.events(flight.id));
-        return json(res, 200, flight);
+    }
+    if (p.startsWith("/api/ext/")) {
+      if (!this.external) return json(res, 503, { error: "External data is disabled" });
+      const ids = (url.searchParams.get("ids") ?? "").split(",");
+      try {
+        switch (p) {
+          case "/api/ext/vatsim": return json(res, 200, await this.external.vatsim());
+          case "/api/ext/ivao": return json(res, 200, await this.external.ivao());
+          case "/api/ext/metar": return json(res, 200, await this.external.metar(ids));
+          case "/api/ext/taf": return json(res, 200, await this.external.taf(ids));
+          case "/api/ext/simbrief": return json(res, 200, await this.external.simbrief(url.searchParams.get("user") ?? ""));
+        }
+      } catch (e) {
+        return json(res, 502, { error: (e as Error).message });
       }
       return json(res, 404, { error: "Not found" });
-    } catch (e) {
-      this.log.error(`HTTP ${url.pathname} failed`, e);
-      return json(res, 500, { error: "Internal error" });
     }
+    if (p === "/api/airports/search" && this.airports) return json(res, 200, this.airports.search(url.searchParams.get("q") ?? "", 25));
+    const a = /^\/api\/airports\/([A-Za-z0-9]{2,7})$/.exec(p);
+    if (a && this.airports) {
+      const apt = this.airports.get(a[1]!);
+      if (!apt) return json(res, 404, { error: "Airport not found" });
+      return json(res, 200, { ...apt, runways: this.airports.runwaysAt(apt.code), frequencies: this.airports.frequencies(apt.code) });
+    }
+    return json(res, 404, { error: "Not found" });
+  }
+
+  private serveApp(res: ServerResponse, path: string): void {
+    const clean = path.split("?")[0]!.replace(/\.\.+/g, "").replace(/^\/+/, "");
+    let file = appAsset(clean);
+    let name = clean;
+    if (!file && !/\.[a-z0-9]+$/i.test(clean)) { file = appAsset("index.html"); name = "index.html"; } // SPA fallback
+    if (!file) return text(res, 404, "Not found");
+    const ext = name.split(".").pop()!.toLowerCase();
+    res.writeHead(200, {
+      "Content-Type": MIME[ext] ?? "application/octet-stream",
+      "Cache-Control": name === "index.html" || name.endsWith(".webmanifest") ? "no-cache" : "public, max-age=31536000, immutable",
+    });
+    res.end(file);
   }
 
   private tokenOk(token: string | null | undefined): boolean {
@@ -262,6 +339,17 @@ function json(res: ServerResponse, code: number, body: unknown): void {
 function html(res: ServerResponse, body: string): void {
   res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
   res.end(body);
+}
+const MIME: Record<string, string> = {
+  html: "text/html; charset=utf-8", js: "text/javascript; charset=utf-8", css: "text/css; charset=utf-8", json: "application/json; charset=utf-8",
+  svg: "image/svg+xml", png: "image/png", webmanifest: "application/manifest+json", woff2: "font/woff2", ico: "image/x-icon", txt: "text/plain; charset=utf-8",
+};
+function readBody(req: IncomingMessage): Promise<unknown> {
+  return new Promise((resolve) => {
+    let data = "";
+    req.on("data", (c) => { data += c; if (data.length > 10_000) req.destroy(); });
+    req.on("end", () => { try { resolve(JSON.parse(data || "{}")); } catch { resolve({}); } });
+  });
 }
 function text(res: ServerResponse, code: number, body: string): void {
   res.writeHead(code, { "Content-Type": "text/plain; charset=utf-8" });
