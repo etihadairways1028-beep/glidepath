@@ -1,4 +1,4 @@
-GLIDEPATH BRIDGE 0.2.1 (EARLY TEST BUILD) - WINDOWS
+GLIDEPATH BRIDGE 0.3.0 (EARLY TEST BUILD) - WINDOWS
 ====================================================
 
 The Bridge runs on the PC where you fly Microsoft Flight Simulator. It reads
@@ -37,6 +37,16 @@ STEP 3 - FLY FOR REAL
   2. Double-click "Start Bridge.bat".
   3. The Bridge connects by itself once the sim is running.
   Nothing is installed in your Community folder.
+
+COPILOT (NEW IN 0.3)
+  In the app, open Copilot. It works straight away with no AI service: it
+  answers common questions from your live flight, flags problems (sink rate,
+  gear, speed, fuel, crosswind, descent timing) and can speak callouts.
+  Optional: connect an AI model for any question. Free options:
+    - Ollama on this PC (free, private): install from ollama.com, then run
+      "ollama pull llama3.2" and pick "Ollama on this PC" in Copilot.
+    - Google Gemini or Groq: paste your own free-tier key in Copilot.
+  Keys are saved only on this PC (in the Bridge data folder).
 
 STEP 4 - PLEASE RUN THE PROBE ONCE AND SEND ME THE REPORT
   With MSFS running and an aircraft loaded, double-click "Test MSFS connection.bat".

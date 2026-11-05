@@ -70,6 +70,35 @@ export class BridgeClient {
     return body as T;
   }
 
+  /** POST and read a server-sent-event stream of {"t": text} chunks. */
+  async stream(path: string, data: unknown, onText: (t: string) => void, signal?: AbortSignal): Promise<void> {
+    const res = await fetch(this.base + path, {
+      method: "POST", headers: { Authorization: `Bearer ${this.token}`, "Content-Type": "application/json" }, body: JSON.stringify(data), signal,
+    });
+    if (!res.ok || !res.body) {
+      let msg = `Bridge answered ${res.status}`;
+      try { msg = ((await res.json()) as { error?: string }).error ?? msg; } catch { /* not JSON */ }
+      throw new Error(msg);
+    }
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i: number;
+      while ((i = buf.indexOf("\n\n")) >= 0) {
+        const ev = buf.slice(0, i).trim();
+        buf = buf.slice(i + 2);
+        if (!ev.startsWith("data:")) continue;
+        const payload = ev.slice(5).trim();
+        if (payload === "[DONE]") return;
+        try { onText((JSON.parse(payload) as { t: string }).t); } catch { /* ignore */ }
+      }
+    }
+  }
+
   async post<T>(path: string, data: unknown): Promise<T> {
     const res = await fetch(this.base + path, {
       method: "POST", headers: { Authorization: `Bearer ${this.token}`, "Content-Type": "application/json" }, body: JSON.stringify(data),

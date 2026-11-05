@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Airport } from "@glidepath/aviation-data";
+import { AirportHero, RunwayDiagram } from "../components/Imagery";
 import { Icon, Kv, Notice, Section } from "../components/ui";
 import { airportDetail, searchAirports, type AirportDetail } from "../data/airports";
 import { getMetar, getNetwork, getTaf, NeedsBridge, usePoll, type Metar } from "../data/external";
@@ -65,10 +66,7 @@ export function AirportPage({ code }: { code: string }) {
   return (
     <div className="stack">
       <a className="btn small" href="#/airports" style={{ alignSelf: "flex-start" }}><span style={{ width: 16, height: 16 }}>{Icon.back()}</span>Airports</a>
-      <div>
-        <h1 className="title"><span className="data">{apt.code}</span>{apt.iata ? <span className="faint data" style={{ fontSize: 18 }}> {apt.iata}</span> : null}</h1>
-        <p className="muted" style={{ margin: "4px 0 0" }}>{apt.name} · {[apt.city, apt.country].filter(Boolean).join(", ")}</p>
-      </div>
+      <AirportHero code={apt.iata ? `${apt.code} · ${apt.iata}` : apt.code} name={apt.name} city={apt.city} country={apt.country} />
       <div className="grid cols-3">
         <Section title="Airport">
           <Kv k="Elevation" v={`${fmt(apt.elevationFt)} ft`} />
@@ -85,8 +83,10 @@ export function AirportPage({ code }: { code: string }) {
         </Section>
       </div>
       {taf.data?.[0] && <Section title="TAF"><pre className="data" style={{ whiteSpace: "pre-wrap", margin: 0, fontSize: 13, color: "var(--mist)" }}>{taf.data[0].raw}</pre></Section>}
-      <Section title={`Runways (${apt.runways.length})`}>
+      <Section title={`Runways (${apt.runways.length})`} right={apt.runways.length ? <span className="faint" style={{ fontSize: 12 }}>drawn to scale from OurAirports</span> : undefined}>
         {apt.runways.length === 0 ? <p className="muted">No runway data for this airport.</p> : (
+          <div className="rwy-layout">
+          <div className="rwy-pic"><RunwayDiagram runways={apt.runways} windDir={m && typeof m.windDir === "number" ? m.windDir : null} windKt={m?.windKt ?? null} label={apt.code} /></div>
           <div className="scroll-x"><table className="t">
             <thead><tr><th>Runway</th><th>Length</th><th>Width</th><th>Heading (true)</th><th>Surface</th><th>Lights</th></tr></thead>
             <tbody>{apt.runways.map((r) => (
@@ -96,6 +96,7 @@ export function AirportPage({ code }: { code: string }) {
               </tr>
             ))}</tbody>
           </table></div>
+          </div>
         )}
         {m && m.windDir !== null && m.windDir !== "VRB" && apt.runways.length > 0 && <BestRunway apt={apt} m={m} />}
       </Section>

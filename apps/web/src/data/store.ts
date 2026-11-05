@@ -36,11 +36,13 @@ export interface Settings {
   fuelUnit: "kg" | "lb";
   accent: "glideslope" | "aurora" | "ice";
   theme: "system" | "dark" | "light";
+  /** Speak phase changes, top of descent and approach altitude callouts. */
+  voiceCallouts: boolean;
   reduceTransparency: boolean;
 }
 
 const DEFAULT_SETTINGS: Settings = {
-  bridgeUrl: "", token: "", simbriefUser: "", showVatsim: true, showIvao: false, fuelUnit: "kg", accent: "glideslope", theme: "system", reduceTransparency: false,
+  bridgeUrl: "", token: "", simbriefUser: "", showVatsim: true, showIvao: false, fuelUnit: "kg", accent: "glideslope", theme: "system", voiceCallouts: false, reduceTransparency: false,
 };
 
 const initial: AppState = {

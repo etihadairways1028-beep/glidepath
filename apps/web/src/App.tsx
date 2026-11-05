@@ -3,6 +3,8 @@ import { Icon, Mark } from "./components/ui";
 import { BridgeClient, consumePairingLink, detectBridgeUrl, setActiveBridge } from "./data/bridge";
 import { startDemo } from "./data/demo";
 import { settingsStore, store, useApp, useSettings } from "./data/store";
+import { CopilotScreen } from "./screens/Copilot";
+import { useCallouts } from "./data/copilot";
 import { Home } from "./screens/Home";
 import { MapScreen } from "./screens/MapScreen";
 import { FlightScreen } from "./screens/Flight";
@@ -35,6 +37,7 @@ const NAV: Array<{ id: string; label: string; icon: () => ReactNode; mobile: boo
   { id: "home", label: "Home", icon: Icon.home, mobile: true },
   { id: "map", label: "Live map", icon: Icon.map, mobile: true },
   { id: "flight", label: "Flight", icon: Icon.flight, mobile: true },
+  { id: "copilot", label: "Copilot", icon: Icon.spark, mobile: true },
   { id: "logbook", label: "Logbook", icon: Icon.book, mobile: true },
   { id: "airports", label: "Airports", icon: Icon.tower, mobile: false },
   { id: "glance", label: "Glance mode", icon: Icon.expand, mobile: false },
@@ -45,6 +48,7 @@ export function App() {
   const route = useRoute();
   const s = useSettings();
   const mode = useApp((st) => st.mode);
+  useCallouts();
 
   useEffect(() => {
     consumePairingLink();
@@ -98,6 +102,7 @@ export function App() {
     case "airports": body = rest[0] ? <AirportPage code={rest[0]} /> : <Airports />; break;
     case "settings": body = <SettingsScreen />; break;
     case "glance": body = <Glance />; break;
+    case "copilot": body = <CopilotScreen />; break;
     default: body = <Home />;
   }
 
@@ -111,7 +116,7 @@ export function App() {
             {NAV.map((n) => (
               <a key={n.id} className={`nav-a${screen === n.id || (!screen && n.id === "home") ? " on" : ""}`} href={`#/${n.id}`}>{n.icon()}{n.label}</a>
             ))}
-            <div className="side-foot faint">{mode === "demo" ? "Demo flight: synthetic data" : "Early test build 0.2"}</div>
+            <div className="side-foot faint">{mode === "demo" ? "Demo flight: synthetic data" : "Early test build 0.3"}</div>
           </nav>
         )}
         <main className="main" id="main">

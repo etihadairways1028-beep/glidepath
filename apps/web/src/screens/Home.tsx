@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { FlightSummary } from "@glidepath/protocol";
 import { LiveCard } from "../components/LiveCard";
 import { TimingsStrip } from "../components/Timings";
+import { useCopilot } from "../data/copilot";
 import { ConnPill, Grade, Icon, Notice, Tile } from "../components/ui";
 import { activeBridge } from "../data/bridge";
 import { startDemo } from "../data/demo";
@@ -29,6 +30,7 @@ export function Home() {
       {mode === "bridge" && conn !== "live" && msg && <Notice>{msg} <a href="#/settings">Connection settings</a></Notice>}
       {mode !== "none" && flight && <LiveCard />}
       {mode !== "none" && flight && <HomeTimings />}
+      {mode !== "none" && flight && <HomeCopilot />}
       {mode === "bridge" && conn === "live" && !flight && (
         <section className="glass pad empty">
           <div className="h2">{sim === "connected" ? "Ready when you are" : "Waiting for Microsoft Flight Simulator"}</div>
@@ -151,4 +153,19 @@ export function gradeOf(score: number): string {
 function HomeTimings() {
   const L = useLive();
   return L.timings ? <TimingsStrip t={L.timings} /> : null;
+}
+
+function HomeCopilot() {
+  const { alerts } = useCopilot();
+  const top = alerts[0];
+  return (
+    <a className="glass home-alert" href="#/copilot">
+      <span className="orb" aria-hidden="true">{Icon.spark()}</span>
+      <span className="txt">
+        <b>{top ? top.title : "Copilot: all clear"}</b>
+        <span>{top ? top.detail : "Ask about descent, fuel, weather or arrival time."}</span>
+      </span>
+      {alerts.length > 1 ? <span className="pill" style={{ marginLeft: "auto" }}>+{alerts.length - 1}</span> : null}
+    </a>
+  );
 }

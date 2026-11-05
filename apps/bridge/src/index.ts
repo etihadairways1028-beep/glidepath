@@ -13,6 +13,7 @@ import { Recorder } from "./recorder.js";
 import { FlightSession } from "./session.js";
 import { LanServer } from "./server.js";
 import { ExternalData } from "./external.js";
+import { AiService } from "./ai.js";
 import { AirportDb, type AirportRow, type FrequencyRow, type RunwayRow } from "@glidepath/aviation-data";
 import airportsJson from "../../../packages/aviation-data/data/airports.json";
 import runwaysJson from "../../../packages/aviation-data/data/runways.json";
@@ -83,7 +84,8 @@ async function main(): Promise<void> {
     };
   };
 
-  const server = new LanServer(cfg, identity, session, recorder, status, log, external, airports);
+  const ai = new AiService(cfg.dataDir, log);
+  const server = new LanServer(cfg, identity, session, recorder, status, log, external, airports, ai);
 
   adapter.on("state", (s, m) => {
     if (s !== simState || m !== simMessage) {

@@ -25,6 +25,7 @@ import type { Logger } from "./log.js";
 import type { Recorder } from "./recorder.js";
 import type { FlightSession } from "./session.js";
 import { livePage, statusPage } from "./pages.js";
+import { HttpError, type AiConfig, type AiService, type ChatMessage } from "./ai.js";
 import type { ExternalData } from "./external.js";
 import type { AirportDb } from "@glidepath/aviation-data";
 import { appAsset } from "./assets.js";
@@ -59,6 +60,7 @@ export class LanServer {
     log: Logger,
     private readonly external: ExternalData | null = null,
     private readonly airports: AirportDb | null = null,
+    private readonly ai: AiService | null = null,
   ) {
     this.log = log.child("lan");
     this.http.on("upgrade", (req, socket, head) => {
@@ -233,7 +235,8 @@ export class LanServer {
 
   private async handle(req: IncomingMessage, res: ServerResponse, url: URL, local: boolean, authed: boolean): Promise<void> {
     const p = url.pathname;
-    if (req.method !== "GET" && !(req.method === "POST" && p === "/api/plan")) return text(res, 405, "Method not allowed");
+    const POSTS = ["/api/plan", "/api/ai/config", "/api/ai/chat"];
+    if (req.method !== "GET" && !(req.method === "POST" && POSTS.includes(p))) return text(res, 405, "Method not allowed");
     if (p === "/") {
       return html(res, statusPage({ local, status: this.getStatus(), token: local ? this.identity.pairingToken : null, addresses: lanAddresses(), port: this.cfg.port, logs: local ? this.log.recent().slice(-60) : [] }));
     }
@@ -267,6 +270,24 @@ export class LanServer {
       } catch (e) {
         return json(res, 502, { error: (e as Error).message });
       }
+    }
+    if (p.startsWith("/api/ai/")) {
+      if (!this.ai) return json(res, 503, { error: "AI is disabled" });
+      try {
+        if (p === "/api/ai/status") return json(res, 200, await this.ai.status());
+        if (p === "/api/ai/config" && req.method === "POST") {
+          this.ai.setConfig((await readBody(req, 4_000)) as Partial<AiConfig>);
+          return json(res, 200, await this.ai.status());
+        }
+        if (p === "/api/ai/chat" && req.method === "POST") {
+          const body = (await readBody(req, 64_000)) as { messages?: ChatMessage[]; facts?: unknown };
+          return await this.ai.chat(Array.isArray(body.messages) ? body.messages : [], body.facts, res);
+        }
+      } catch (e) {
+        if (res.headersSent) { res.end(); return; }
+        return json(res, e instanceof HttpError ? e.status : 400, { error: (e as Error).message });
+      }
+      return json(res, 404, { error: "Not found" });
     }
     if (p.startsWith("/api/ext/")) {
       if (!this.external) return json(res, 503, { error: "External data is disabled" });
@@ -344,10 +365,10 @@ const MIME: Record<string, string> = {
   html: "text/html; charset=utf-8", js: "text/javascript; charset=utf-8", css: "text/css; charset=utf-8", json: "application/json; charset=utf-8",
   svg: "image/svg+xml", png: "image/png", webmanifest: "application/manifest+json", woff2: "font/woff2", ico: "image/x-icon", txt: "text/plain; charset=utf-8",
 };
-function readBody(req: IncomingMessage): Promise<unknown> {
+function readBody(req: IncomingMessage, limit = 10_000): Promise<unknown> {
   return new Promise((resolve) => {
     let data = "";
-    req.on("data", (c) => { data += c; if (data.length > 10_000) req.destroy(); });
+    req.on("data", (c) => { data += c; if (data.length > limit) req.destroy(); });
     req.on("end", () => { try { resolve(JSON.parse(data || "{}")); } catch { resolve({}); } });
   });
 }

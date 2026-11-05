@@ -6,6 +6,7 @@ import { Grade, Icon, Kv, Notice, Section, Tile } from "../components/ui";
 import { activeBridge } from "../data/bridge";
 import { dur, EVENT_LABEL, fmt, fuel, timingsFor, zulu } from "../data/derive";
 import { TimingsTable } from "../components/Timings";
+import { AircraftArt, artKindFor } from "../components/Imagery";
 import { framesToTrail, useApp, useSettings, type TrailPoint } from "../data/store";
 import { LandingSummary } from "./Flight";
 import { gradeOf } from "./Home";
@@ -132,6 +133,14 @@ export function FlightDetail({ id }: { id: string }) {
           <span className="pill">{flight.status === "completed" ? "Completed" : flight.status === "incomplete" ? "Incomplete" : "In progress"}</span>
         </div>
       </div>
+      <section className="glass flight-hero">
+        <div>
+          <p className="fh-type">{flight.aircraft?.icaoType ?? flight.plan?.aircraftIcao ?? "Aircraft"}</p>
+          <p className="fh-meta">{[flight.plan?.callsign ?? flight.callsign, flight.aircraft?.registration, flight.aircraft?.title].filter(Boolean).join(" · ")}</p>
+          {flight.landings.at(-1) ? <p className="fh-meta" style={{ marginTop: 10 }}>Landing <b style={{ color: "var(--ink)" }}>{flight.landings.at(-1)!.grade}</b> · {fmt(flight.landings.at(-1)!.touchdownVsFpm)} fpm</p> : null}
+        </div>
+        <AircraftArt kind={artKindFor(flight.aircraft?.icaoType ?? flight.plan?.aircraftIcao, flight.aircraft?.title)} />
+      </section>
       <section className="glass" style={{ height: 380, overflow: "hidden", position: "relative" }}>
         <MapView trail={trail} plan={flight.plan} airports={airports} interactive />
       </section>
