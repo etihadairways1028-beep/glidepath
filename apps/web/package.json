@@ -9,12 +9,13 @@
     "demo-data": "tsx scripts/build-demo-data.ts"
   },
   "dependencies": {
+    "@glidepath/aviation-data": "workspace:*",
     "@glidepath/flight-engine": "workspace:*",
     "@glidepath/protocol": "workspace:*",
+    "@supabase/supabase-js": "^2.119.0",
     "maplibre-gl": "^5.6.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "@glidepath/aviation-data": "workspace:*"
+    "react-dom": "^19.1.0"
   },
   "devDependencies": {
     "@glidepath/testkit": "workspace:*",

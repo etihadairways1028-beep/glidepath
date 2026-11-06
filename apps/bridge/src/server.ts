@@ -249,6 +249,7 @@ export class LanServer {
     if (!authed) return json(res, 401, { error: "Pairing token required" });
 
     if (p === "/api/status") return json(res, 200, this.getStatus());
+    if (p === "/api/lan") return json(res, 200, { bridgeId: this.identity.bridgeId, addresses: lanAddresses(), port: this.cfg.port });
     if (p === "/api/flight") return json(res, 200, this.session.activeFlight);
     if (p === "/api/flights") return json(res, 200, this.recorder.listFlights(Number(url.searchParams.get("limit") ?? 50)));
     const m = /^\/api\/flights\/([0-9a-f-]{36})(\/frames|\/events)?$/.exec(p);
@@ -297,6 +298,7 @@ export class LanServer {
         switch (p) {
           case "/api/ext/vatsim": return json(res, 200, await this.external.vatsim());
           case "/api/ext/ivao": return json(res, 200, await this.external.ivao());
+          case "/api/ext/sayintentions": return json(res, 200, await this.external.sayintentions());
           case "/api/ext/metar": return json(res, 200, await this.external.metar(ids));
           case "/api/ext/taf": return json(res, 200, await this.external.taf(ids));
           case "/api/ext/simbrief": return json(res, 200, await this.external.simbrief(url.searchParams.get("user") ?? ""));

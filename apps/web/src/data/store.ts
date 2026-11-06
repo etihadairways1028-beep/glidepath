@@ -27,12 +27,25 @@ export interface AppState {
   demoSpeed: number;
 }
 
+/** Base maps. "map" (kept for older saved settings) means: follow the light/dark theme. */
+export type MapStyle = "satellite" | "map" | "dark" | "light" | "fiord" | "liberty" | "bright";
+export const MAP_STYLES: Array<{ id: MapStyle; label: string; hint: string }> = [
+  { id: "satellite", label: "Satellite", hint: "Sentinel-2 imagery with labels" },
+  { id: "map", label: "Automatic", hint: "Dark or light, following the app" },
+  { id: "dark", label: "Dark", hint: "Night-friendly street map" },
+  { id: "fiord", label: "Navy", hint: "Deep blue, calm" },
+  { id: "light", label: "Light", hint: "Clean and minimal" },
+  { id: "liberty", label: "Colour", hint: "Full-colour street map" },
+  { id: "bright", label: "Bright", hint: "Classic OpenStreetMap look" },
+];
+
 export interface Settings {
   bridgeUrl: string;
   token: string;
   simbriefUser: string;
   showVatsim: boolean;
   showIvao: boolean;
+  showSayIntentions: boolean;
   fuelUnit: "kg" | "lb";
   accent: "glideslope" | "aurora" | "ice";
   theme: "system" | "dark" | "light";
@@ -40,11 +53,11 @@ export interface Settings {
   voiceCallouts: boolean;
   reduceTransparency: boolean;
   /** Base map: satellite imagery, or a street map that follows the light/dark theme. */
-  mapStyle: "satellite" | "map";
+  mapStyle: MapStyle;
 }
 
 const DEFAULT_SETTINGS: Settings = {
-  bridgeUrl: "", token: "", simbriefUser: "", showVatsim: true, showIvao: false, fuelUnit: "kg", accent: "glideslope", theme: "system", voiceCallouts: false, reduceTransparency: false, mapStyle: "satellite",
+  bridgeUrl: "", token: "", simbriefUser: "", showVatsim: true, showIvao: false, showSayIntentions: false, fuelUnit: "kg", accent: "glideslope", theme: "system", voiceCallouts: false, reduceTransparency: false, mapStyle: "satellite",
 };
 
 const initial: AppState = {

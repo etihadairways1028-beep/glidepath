@@ -1,0 +1,169 @@
+/** Account: sign in (several accounts per device), monthly brief, saved PCs, flight sync. */
+import { useEffect, useState } from "react";
+import { Icon, Notice, Section } from "../components/ui";
+import { forgetBridge, savedBridges, sendBriefPreview, setMonthlyEmail, signIn, signOut, signUp, switchAccount, useCloud, type SavedBridge } from "../data/cloud";
+
+export function Account() {
+  const c = useCloud();
+  const [adding, setAdding] = useState(false);
+  const active = c.accounts.find((a) => a.slot === c.active) ?? null;
+
+  if (c.status === "loading") return <div className="stack"><h1 className="title">Account</h1><div className="skeleton" style={{ height: 160 }} /></div>;
+  if (c.status === "off") {
+    return (
+      <div className="stack">
+        <h1 className="title">Account</h1>
+        <section className="glass pad">
+          <div className="h2" style={{ margin: 0 }}>Accounts aren't switched on yet</div>
+          <p className="muted" style={{ margin: "8px 0 0", maxWidth: "60ch" }}>Once they are, you'll sign in here to keep your logbook on every device, find your PC automatically, and get a monthly email about your flying. Until then, every flight is still saved on your PC by the Bridge.</p>
+        </section>
+      </div>
+    );
+  }
+
+  return (
+    <div className="stack">
+      <div className="between wrap">
+        <h1 className="title">Account</h1>
+        {c.accounts.length > 0 && !adding && <button className="btn small" onClick={() => setAdding(true)}><span style={{ width: 16, height: 16 }}>{Icon.plus()}</span>Add account</button>}
+      </div>
+
+      {(c.accounts.length === 0 || adding) && <SignInCard onDone={() => setAdding(false)} canCancel={c.accounts.length > 0} />}
+
+      {c.accounts.length > 0 && (
+        <div className="grid cols-2">
+          <Section title="Signed in on this device">
+            <div className="acct-list">
+              {c.accounts.map((a) => (
+                <div key={a.slot} className={`acct${a.slot === c.active ? " on" : ""}`}>
+                  <span className="av" aria-hidden="true">{(a.name ?? a.email).slice(0, 1).toUpperCase()}</span>
+                  <span className="acct-t"><b>{a.name ?? a.email.split("@")[0]}</b><span>{a.email}</span></span>
+                  {a.slot === c.active ? <span className="pill">In use</span> : <button className="btn small" onClick={() => switchAccount(a.slot)}>Switch</button>}
+                  <button className="btn small ghost" onClick={() => void signOut(a.slot)} aria-label={`Sign out ${a.email}`}>Sign out</button>
+                </div>
+              ))}
+            </div>
+            <p className="faint" style={{ fontSize: 12.5, margin: "10px 0 0" }}>Flights sync to the account in use. {c.lastSync ? `Last synced ${new Date(c.lastSync).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.` : "Connect your Bridge to sync."}</p>
+            {c.syncError && <Notice>{c.syncError}</Notice>}
+          </Section>
+          {active && <MonthlyBrief monthly={c.profile?.monthly_email ?? true} email={active.email} />}
+          {active && <SavedPcs key={active.slot} />}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SignInCard({ onDone, canCancel }: { onDone: () => void; canCancel: boolean }) {
+  const [mode, setMode] = useState<"in" | "up">("in");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [pw, setPw] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ kind: "err" | "ok"; text: string } | null>(null);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true); setMsg(null);
+    if (mode === "in") {
+      const err = await signIn(email, pw);
+      setBusy(false);
+      if (err) setMsg({ kind: "err", text: err }); else onDone();
+    } else {
+      if (pw.length < 8) { setBusy(false); setMsg({ kind: "err", text: "Use a password of at least 8 characters." }); return; }
+      const r = await signUp(name, email, pw);
+      setBusy(false);
+      if (r.error) setMsg({ kind: "err", text: r.error });
+      else if (r.confirm) { setMsg({ kind: "ok", text: `Nearly there. We've emailed ${email.trim()} a link: tap it, then sign in here.` }); setMode("in"); }
+      else onDone();
+    }
+  };
+
+  return (
+    <section className="glass strong signin">
+      <div className="signin-copy">
+        <h2 className="onboard-h">{mode === "in" ? "Sign in to Glidepath" : "Create your account"}</h2>
+        <p className="muted" style={{ margin: "10px 0 0" }}>Your logbook on every device, your PC found on its own, and a monthly email about your flying. You can sign in to as many accounts as you like.</p>
+      </div>
+      <form className="signin-form" onSubmit={(e) => void submit(e)}>
+        <div className="seg" role="tablist" aria-label="Sign in or create account">
+          <button type="button" role="tab" aria-selected={mode === "in"} className={mode === "in" ? "on" : ""} onClick={() => { setMode("in"); setMsg(null); }}>Sign in</button>
+          <button type="button" role="tab" aria-selected={mode === "up"} className={mode === "up" ? "on" : ""} onClick={() => { setMode("up"); setMsg(null); }}>Create account</button>
+        </div>
+        {mode === "up" && <label className="field"><span>Your name</span><input className="input" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="So the monthly email can say hi" /></label>}
+        <label className="field"><span>Email</span><input className="input" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
+        <label className="field"><span>Password</span><input className="input" type="password" required minLength={mode === "up" ? 8 : undefined} autoComplete={mode === "in" ? "current-password" : "new-password"} value={pw} onChange={(e) => setPw(e.target.value)} /></label>
+        {msg && <p className={msg.kind === "err" ? "form-err" : "form-ok"} role="status">{msg.text}</p>}
+        <div className="row wrap">
+          <button className="btn primary" type="submit" disabled={busy}>{busy ? "One moment…" : mode === "in" ? "Sign in" : "Create account"}</button>
+          {canCancel && <button className="btn" type="button" onClick={onDone}>Cancel</button>}
+        </div>
+      </form>
+    </section>
+  );
+}
+
+function MonthlyBrief({ monthly, email }: { monthly: boolean; email: string }) {
+  const [note, setNote] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  return (
+    <Section title="Monthly brief">
+      <label className="between" style={{ padding: "4px 0" }}>
+        <span>Email me on the 1st of each month</span>
+        <input className="switch" type="checkbox" checked={monthly} onChange={(e) => { void setMonthlyEmail(e.target.checked).then((err) => setNote(err)); }} />
+      </label>
+      <p className="muted" style={{ fontSize: 14, margin: "8px 0 0" }}>A short summary sent to {email}: hours flown, your landings, your best flight, and one thing to work on.</p>
+      <div className="row wrap" style={{ marginTop: 12 }}>
+        <button className="btn" disabled={busy} onClick={() => { setBusy(true); void sendBriefPreview().then((m) => { setNote(m); setBusy(false); }); }}>{busy ? "Sending…" : "Email me this month so far"}</button>
+      </div>
+      {note && <p className="faint" style={{ fontSize: 13, margin: "10px 0 0" }}>{note}</p>}
+    </Section>
+  );
+}
+
+function SavedPcs() {
+  const [list, setList] = useState<SavedBridge[] | null>(null);
+  useEffect(() => { void savedBridges().then(setList); }, []);
+  return (
+    <Section title="Your PCs">
+      {list === null ? <div className="skeleton" style={{ height: 60 }} /> : list.length === 0 ? (
+        <p className="muted" style={{ margin: 0, fontSize: 14 }}>Pair with your Bridge once (scan its QR code) while signed in, and it's saved here. After that, any device signed in to this account finds it on your Wi-Fi.</p>
+      ) : (
+        <div className="cg-rows" style={{ marginTop: 0 }}>
+          {list.map((b) => (
+            <div key={b.bridge_id}>
+              <span><b style={{ color: "var(--ink)" }}>{b.name ?? "Bridge"}</b><br /><small className="data">{b.addresses.join(", ") || "no address yet"}, port {b.port}</small></span>
+              <span className="row" style={{ gap: 6 }}>
+                {b.addresses[0] && <a className="btn small" href={`http://${b.addresses[0]}:${b.port}/app/#token=${encodeURIComponent(b.token)}`}>Open</a>}
+                <button className="btn small ghost" onClick={() => void forgetBridge(b.bridge_id).then(() => savedBridges().then(setList))}>Forget</button>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </Section>
+  );
+}
+
+/** On Home before connecting: the account's PCs, one tap to open the app on your Wi-Fi. */
+export function YourPcs() {
+  const c = useCloud();
+  const [list, setList] = useState<SavedBridge[]>([]);
+  useEffect(() => { if (c.status === "ready" && c.active) void savedBridges().then(setList); else setList([]); }, [c.status, c.active]);
+  if (!list.length) return null;
+  return (
+    <section className="glass pad">
+      <div className="h2" style={{ margin: 0 }}>Your PCs</div>
+      <p className="muted" style={{ margin: "6px 0 12px", fontSize: 14 }}>Start the Bridge on your PC, then open it here. On iPad, add that page to your Home Screen once.</p>
+      <div className="cg-rows" style={{ marginTop: 0 }}>
+        {list.map((b) => (
+          <div key={b.bridge_id}>
+            <span><b style={{ color: "var(--ink)" }}>{b.name ?? "Bridge"}</b><br /><small className="data">{b.addresses[0] ?? "address unknown"}</small></span>
+            {b.addresses[0] && <a className="btn small primary" href={`http://${b.addresses[0]}:${b.port}/app/#token=${encodeURIComponent(b.token)}`}>Open</a>}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}

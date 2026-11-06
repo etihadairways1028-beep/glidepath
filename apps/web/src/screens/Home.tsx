@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import type { FlightSummary } from "@glidepath/protocol";
 import { LiveCard } from "../components/LiveCard";
+import { YourPcs } from "./Account";
+import { useCloud } from "../data/cloud";
 import { AircraftHero } from "../components/Imagery";
 import { buildDebrief } from "@glidepath/flight-engine";
 import { TimingsStrip } from "../components/Timings";
@@ -21,6 +23,7 @@ export function Home() {
   return (
     <div className="stack">
       <FlightHeading />
+      {mode === "none" && <YourPcs />}
       {mode === "none" && <Onboarding />}
       {mode === "bridge" && conn !== "live" && msg && <Notice>{msg} <a href="#/settings">Connection settings</a></Notice>}
       {mode !== "none" && flight?.status === "completed" && <DebriefTeaser />}
@@ -61,6 +64,7 @@ function FlightHeading() {
 }
 
 function Onboarding() {
+  const cloud = useCloud();
   return (
     <section className="glass strong onboard">
       <div>
@@ -69,6 +73,7 @@ function Onboarding() {
         <div className="row wrap" style={{ marginTop: 20 }}>
           <a className="btn primary" href="#/settings">Connect my Bridge</a>
           <button className="btn" onClick={() => startDemo()}>Watch a demo flight</button>
+          {cloud.status === "ready" && !cloud.active && <a className="btn" href="#/account">Sign in</a>}
         </div>
       </div>
       <ol className="onboard-steps">

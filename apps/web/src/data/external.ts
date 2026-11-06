@@ -7,9 +7,11 @@ import { useEffect, useState } from "react";
 import type { FlightPlan } from "@glidepath/protocol";
 import { activeBridge } from "./bridge";
 
-export interface NetworkPilot { callsign: string; lat: number; lon: number; altFt: number; gsKt: number; hdg: number; type: string | null; dep: string | null; arr: string | null; network: "vatsim" | "ivao" }
-export interface NetworkController { callsign: string; frequency: string | null; facility: string; atis: string[]; network: "vatsim" | "ivao" }
-export interface NetworkSnapshot { network: "vatsim" | "ivao"; updatedAt: string; pilots: NetworkPilot[]; controllers: NetworkController[] }
+export interface NetworkPilot { callsign: string; lat: number; lon: number; altFt: number; gsKt: number; hdg: number; type: string | null; dep: string | null; arr: string | null; network: Network }
+export type Network = "vatsim" | "ivao" | "sayintentions";
+export const NETWORK_LABEL: Record<Network, string> = { vatsim: "VATSIM", ivao: "IVAO", sayintentions: "SayIntentions" };
+export interface NetworkController { callsign: string; frequency: string | null; facility: string; atis: string[]; network: Network }
+export interface NetworkSnapshot { network: Network; updatedAt: string; pilots: NetworkPilot[]; controllers: NetworkController[] }
 export interface Metar { icao: string; raw: string; observed: string | null; windDir: number | "VRB" | null; windKt: number | null; gustKt: number | null; visibility: string | null; tempC: number | null; dewC: number | null; qnhHpa: number | null; category: string | null; clouds: Array<{ cover: string; baseFt: number | null }> }
 export interface Taf { icao: string; raw: string; issued: string | null }
 
@@ -25,7 +27,7 @@ function bridge() {
   return b;
 }
 
-export const getNetwork = (n: "vatsim" | "ivao") => bridge().get<NetworkSnapshot>(`/api/ext/${n}`);
+export const getNetwork = (n: Network) => bridge().get<NetworkSnapshot>(`/api/ext/${n}`);
 export const getMetar = (ids: string[]) => bridge().get<Metar[]>(`/api/ext/metar?ids=${ids.join(",")}`);
 export const getTaf = (ids: string[]) => bridge().get<Taf[]>(`/api/ext/taf?ids=${ids.join(",")}`);
 export const loadPlan = (user: string) => bridge().post<FlightPlan>("/api/plan", { user });

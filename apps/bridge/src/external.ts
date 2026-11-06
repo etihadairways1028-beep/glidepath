@@ -7,6 +7,7 @@
  * Sources and refresh limits:
  *  - VATSIM data feed v3      https://data.vatsim.net/v3/vatsim-data.json   ≥15 s (the feed's own refresh)
  *  - IVAO Whazzup v2          https://api.ivao.aero/v2/tracker/whazzup       ≥30 s
+ *  - SayIntentions tracker    https://tracker.sayintentions.ai/api/map        ≥30 s (public live map feed)
  *  - METAR / TAF              https://aviationweather.gov/api/data/…         5 min per station
  *  - SimBrief latest OFP      https://www.simbrief.com/api/xml.fetcher.php   60 s per user
  *  - Stands / gates           OpenStreetMap via Overpass API                 cached per location for the session
@@ -21,9 +22,10 @@ import type { Logger } from "./log.js";
 const UA = "GlidepathBridge/0.1 (+https://github.com/etihadairways1028-beep/glidepath)";
 const LB_TO_KG = 0.45359237;
 
-export interface NetworkPilot { callsign: string; lat: number; lon: number; altFt: number; gsKt: number; hdg: number; type: string | null; dep: string | null; arr: string | null; network: "vatsim" | "ivao" }
-export interface NetworkController { callsign: string; frequency: string | null; facility: string; atis: string[]; network: "vatsim" | "ivao" }
-export interface NetworkSnapshot { network: "vatsim" | "ivao"; updatedAt: string; pilots: NetworkPilot[]; controllers: NetworkController[] }
+export interface NetworkPilot { callsign: string; lat: number; lon: number; altFt: number; gsKt: number; hdg: number; type: string | null; dep: string | null; arr: string | null; network: Network }
+export type Network = "vatsim" | "ivao" | "sayintentions";
+export interface NetworkController { callsign: string; frequency: string | null; facility: string; atis: string[]; network: Network }
+export interface NetworkSnapshot { network: Network; updatedAt: string; pilots: NetworkPilot[]; controllers: NetworkController[] }
 export interface Metar { icao: string; raw: string; observed: string | null; windDir: number | "VRB" | null; windKt: number | null; gustKt: number | null; visibility: string | null; tempC: number | null; dewC: number | null; qnhHpa: number | null; category: string | null; clouds: Array<{ cover: string; baseFt: number | null }> }
 export interface Taf { icao: string; raw: string; issued: string | null }
 export interface Stand { ref: string; kind: "gate" | "stand"; lat: number; lon: number; distanceM: number }
@@ -56,6 +58,27 @@ export function parseIvao(j: any): NetworkSnapshot {
     facility: /_ATIS$/.test(c.callsign) ? "ATIS" : String(c.atcSession?.position ?? "ATC"), atis: Array.isArray(c.atis?.lines) ? c.atis.lines.map(String) : [], network: "ivao" as const,
   }));
   return { network: "ivao", updatedAt: j?.updatedAt ?? new Date().toISOString(), pilots, controllers };
+}
+
+/** SayIntentions.AI public tracker: a top-level array of active flights. ATC is AI, so no controllers. */
+export function parseSayIntentions(j: any): NetworkSnapshot {
+  const list: any[] = Array.isArray(j) ? j : Array.isArray(j?.flights) ? j.flights : [];
+  const num = (v: unknown) => (typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : NaN);
+  const pilots: NetworkPilot[] = list
+    .map((p) => ({ p, lat: num(p?.lat), lon: num(p?.lon ?? p?.lng ?? p?.longitude) }))
+    .filter(({ lat, lon }) => Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180)
+    .map(({ p, lat, lon }) => ({
+      callsign: String(p.flight_icao || p.tail_number || p.displayname || p.flight_id || "SI"),
+      lat, lon,
+      altFt: Number.isFinite(num(p.altitude)) ? Math.round(num(p.altitude)) : 0,
+      gsKt: Number.isFinite(num(p.airspeed)) ? Math.round(num(p.airspeed)) : 0,
+      hdg: Number.isFinite(num(p.heading)) ? num(p.heading) : 0,
+      type: p.aircraft_icao ? String(p.aircraft_icao) : null,
+      dep: p.origin ? String(p.origin) : null,
+      arr: p.final_destination ? String(p.final_destination) : null,
+      network: "sayintentions" as const,
+    }));
+  return { network: "sayintentions", updatedAt: new Date().toISOString(), pilots, controllers: [] };
 }
 
 export function parseMetars(j: any): Metar[] {
@@ -144,6 +167,9 @@ export class ExternalData {
 
   vatsim(): Promise<NetworkSnapshot> {
     return this.cached("vatsim", 15_000, async () => parseVatsim(await this.json("https://data.vatsim.net/v3/vatsim-data.json")));
+  }
+  sayintentions(): Promise<NetworkSnapshot> {
+    return this.cached("sayintentions", 30_000, async () => parseSayIntentions(await this.json("https://tracker.sayintentions.ai/api/map")));
   }
   ivao(): Promise<NetworkSnapshot> {
     return this.cached("ivao", 30_000, async () => parseIvao(await this.json("https://api.ivao.aero/v2/tracker/whazzup")));

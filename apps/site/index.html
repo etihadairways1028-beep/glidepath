@@ -28,9 +28,11 @@
         <a href="#features">Features</a>
         <a href="#debrief">Debrief</a>
         <a href="#demo">Demo</a>
+        <a href="#brief">Monthly brief</a>
         <a href="#today">What works</a>
         <a href="app/">App</a>
       </div>
+      <button class="btn glass small" id="acct-btn" type="button" hidden>Sign in</button>
       <a class="btn primary small" data-download href="#download">Download</a>
     </nav>
   </header>
@@ -144,7 +146,7 @@
           </div>
           <div class="tile-over">
             <h3>Satellite map with your trail</h3>
-            <p>Sentinel-2 imagery or a clean street map. Your route, your trail, and VATSIM and IVAO traffic around you.</p>
+            <p>Sentinel-2 imagery or six street styles. Your route, your trail, and VATSIM, IVAO and SayIntentions traffic around you.</p>
           </div>
         </article>
 
@@ -165,15 +167,32 @@
           <div class="callouts" aria-hidden="true"><span>2500</span><span>1000</span><span>500</span><span>100</span><span>50</span><span>40</span><span>30</span><span>20</span><span>10</span></div>
         </article>
 
+        <article class="tile glass t-traffic reveal">
+          <h3>Everyone else in the sky</h3>
+          <p>Switch on the networks you fly with. Each gets its own colour on the map.</p>
+          <ul class="nets">
+            <li><i style="background:#30D158"></i><b>VATSIM</b><span>Human ATC and pilots</span></li>
+            <li><i style="background:#64D2FF"></i><b>IVAO</b><span>Human ATC and pilots</span></li>
+            <li><i style="background:#FF9F0A"></i><b>SayIntentions</b><span>Pilots on AI ATC</span></li>
+          </ul>
+        </article>
+
         <article class="tile glass t-log reveal">
           <h3>A logbook that keeps itself</h3>
-          <p>Every flight is saved on your own PC as you fly, so a dropped Wi-Fi connection loses nothing.</p>
+          <p>Every flight saves itself when you park. Your hours, your average landing, your records, and a year of flying at a glance, on every device you sign in to.</p>
+          <div class="career-mini" aria-label="Example of the logbook totals">
+            <div class="cm-big"><span>Hours flown</span><b class="data">41h 20m</b></div>
+            <div><span>Flights</span><b class="data">23</b></div>
+            <div><span>Average landing</span><b class="data">168 <small>fpm</small></b></div>
+            <div><span>Airports</span><b class="data">17</b></div>
+            <div class="cm-months" aria-hidden="true"><i style="height:20%"></i><i style="height:35%"></i><i style="height:15%"></i><i style="height:50%"></i><i style="height:42%"></i><i style="height:70%"></i><i style="height:55%"></i><i style="height:90%"></i><i style="height:64%"></i><i style="height:80%"></i><i style="height:38%"></i><i style="height:100%"></i></div>
+          </div>
           <ul class="logrows" aria-label="Example logbook entries">
             <li><span class="data r">EGLL → EGCC</span><span class="m">A320, 168 nm, 0h 45m</span><span class="w"><b>Smooth</b><span class="data">140 fpm</span></span><span class="gr">A+</span></li>
             <li class="ex"><span class="data r">OMDB → OOMS</span><span class="m">B738, 182 nm, 1h 05m</span><span class="w"><b>Firm</b><span class="data">310 fpm</span></span><span class="gr b">B</span></li>
             <li class="ex"><span class="data r">EGKK → LPFR</span><span class="m">A20N, 1,040 nm, 2h 51m</span><span class="w"><b>Normal</b><span class="data">205 fpm</span></span><span class="gr">A</span></li>
           </ul>
-          <p class="tile-foot">First row from the demo flight. The other two are examples of the layout.</p>
+          <p class="tile-foot">Example numbers to show the layout. First logbook row is the demo flight; the other two are examples.</p>
         </article>
       </div>
     </section>
@@ -255,6 +274,36 @@
       <ol class="timeline reveal" id="timeline" aria-label="Flight events detected so far"></ol>
     </section>
 
+    <!-- MONTHLY BRIEF -->
+    <section id="brief" class="brief" aria-labelledby="brief-title">
+      <div class="brief-grid">
+        <div class="brief-copy reveal">
+          <p class="kicker">Your month, in your inbox</p>
+          <h2 id="brief-title">A short email on the 1st about how you flew.</h2>
+          <p class="section-lede" style="margin-left:0">Hours, landings, your best flight, how it compares with last month, and the one thing worth working on. Written from your own flights, sent to the email you signed up with. Turn it off any time.</p>
+          <ul class="ticks">
+            <li>Sign in on as many devices, and as many accounts, as you like.</li>
+            <li>Signed-in devices find your PC on your Wi-Fi by themselves.</li>
+            <li>Only flight summaries go to your account. Live telemetry stays on your PC.</li>
+          </ul>
+        </div>
+        <div class="mail glass strong reveal" aria-label="Example monthly email">
+          <div class="mail-head">
+            <span class="mail-from"><img src="assets/mark.svg" alt="" width="28" height="28"><span><b>Glidepath</b><small>Your October in the air: 1h 30m, 2 flights</small></span></span>
+          </div>
+          <div class="mail-card">
+            <div class="mail-hero"><small>GLIDEPATH · OCTOBER 2026</small><b>1h 30m</b><span>2 flights, 336 nm</span></div>
+            <div class="mail-body">
+              <p>You flew 2 flights in October, 1h 30m block to block over 336 nm.</p>
+              <p>Your landings averaged 140 fpm, which is smooth. The best was 140 fpm into EGCC, graded A+.</p>
+              <div class="mail-rows"><div><span>Longest flight</span><b>0h 45m, EGLL to EGCC</b></div><div><span>Most flown</span><b>A320, 1h 30m</b></div><div><span>Landings by feel</span><b>Smooth 2</b></div></div>
+            </div>
+          </div>
+          <p class="tile-foot">Written by the real email code from two test flights.</p>
+        </div>
+      </div>
+    </section>
+
     <!-- HOW -->
     <section class="how" aria-labelledby="how-title">
       <div class="section-head reveal">
@@ -300,7 +349,7 @@
             <li><b>Landing grades</b> from seven factors, aircraft-aware, all thresholds published above.</li>
             <li><b>Every timing</b>, scheduled against estimated against actual.</li>
             <li><b>Copilot</b> answers, alerts and spoken callouts.</li>
-            <li><b>Recording and logbook</b> on your PC, resumed after a sim restart.</li>
+            <li><b>Recording and logbook</b> on your PC, resumed after a sim restart, with career totals.</li>
             <li><b>The app</b> on iPad, iPhone, Android, Mac and PC, in dark and light mode.</li>
           </ul>
         </div>
@@ -309,7 +358,8 @@
           <ul>
             <li><b>Microsoft Flight Simulator 2020 and 2024.</b> Written against Microsoft's documentation; first real test flights are happening now.</li>
             <li><b>The Windows app.</b> Packaged and checked, not yet run on many PCs.</li>
-            <li><b>SimBrief, weather, VATSIM and IVAO, satellite map, aircraft photos.</b> Built against each service's published format.</li>
+            <li><b>SimBrief, weather, VATSIM, IVAO and SayIntentions traffic, satellite map, aircraft photos.</b> Built against each service's published format.</li>
+            <li><b>Accounts and the monthly email.</b> Built and tested against a stand-in server; switching on once the account service is connected.</li>
           </ul>
           <h3><span class="dot next" aria-hidden="true"></span>Not built yet</h3>
           <ul>
@@ -346,6 +396,28 @@
     </section>
   </main>
 
+  <dialog class="sheet glass strong" id="signin" aria-labelledby="si-title">
+    <form method="dialog" class="sheet-x"><button class="x" aria-label="Close">×</button></form>
+    <img src="assets/mark.svg" alt="" width="48" height="48" class="sheet-mark">
+    <h2 id="si-title">Sign in to download</h2>
+    <p class="sub" id="si-sub">One account for the download, your logbook on every device, and the monthly email.</p>
+    <div class="seg" role="tablist">
+      <button type="button" role="tab" class="on" data-mode="in" aria-selected="true">Sign in</button>
+      <button type="button" role="tab" data-mode="up" aria-selected="false">Create account</button>
+    </div>
+    <form id="si-form" class="si-form">
+      <label class="fld" id="si-name-row" hidden><span>Your name</span><input id="si-name" autocomplete="name"></label>
+      <label class="fld"><span>Email</span><input id="si-email" type="email" required autocomplete="email"></label>
+      <label class="fld"><span>Password</span><input id="si-pw" type="password" required autocomplete="current-password"></label>
+      <p class="si-msg" id="si-msg" role="status"></p>
+      <button class="btn primary" id="si-go" type="submit">Sign in</button>
+    </form>
+    <div id="si-done" hidden>
+      <p class="sub" id="si-who"></p>
+      <div class="cta" style="margin-top:16px"><button class="btn primary" id="si-dl" type="button">Download for Windows</button><button class="btn glass" id="si-out" type="button">Sign out</button></div>
+    </div>
+  </dialog>
+
   <footer class="foot">
     <div class="foot-brand"><img src="assets/mark.svg" alt="" width="24" height="24"><b>Glidepath</b></div>
     <p>An independent project, not affiliated with Microsoft, Laminar Research, VATSIM, IVAO, Navigraph, SimBrief, or any airline or aircraft maker. Not for real-world navigation.</p>
@@ -353,5 +425,6 @@
   </footer>
 
   <script src="app.js" defer></script>
+  <script src="account.js" defer></script>
 </body>
 </html>

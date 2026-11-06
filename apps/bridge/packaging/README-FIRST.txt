@@ -1,4 +1,4 @@
-GLIDEPATH BRIDGE 0.4.2 (EARLY TEST BUILD) - WINDOWS
+GLIDEPATH BRIDGE 0.5.0 (EARLY TEST BUILD) - WINDOWS
 ====================================================
 
 The Bridge runs on the PC where you fly Microsoft Flight Simulator. It reads
@@ -38,6 +38,13 @@ STEP 3 - FLY FOR REAL
   2. Double-click "Start Bridge.bat".
   3. The Bridge connects by itself once the sim is running.
   Nothing is installed in your Community folder.
+
+LOGBOOK, TRAFFIC AND ACCOUNTS
+  Every flight saves itself when you park. The Logbook shows your hours,
+  average landing, records and a year of flying. On the map, the layers
+  button picks satellite or one of six map styles, and switches VATSIM,
+  IVAO and SayIntentions traffic on or off. Once accounts are switched on,
+  sign in under Account to keep your logbook on every device.
 
 DEBRIEF
   When you park, the app writes a debrief of the flight: how the rotation

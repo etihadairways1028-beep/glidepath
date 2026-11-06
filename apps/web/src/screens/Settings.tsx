@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { BaseMapPicker, TrafficSources } from "../components/MapLayers";
 import { connectFromSettings } from "../App";
 import { ConnPill, Kv, Notice, Section } from "../components/ui";
 import { activeBridge, setActiveBridge } from "../data/bridge";
@@ -91,9 +92,11 @@ export function SettingsScreen() {
 
         <div className="stack">
           <Section title="Map and networks">
-            <label className="between" style={{ padding: "8px 0" }}><span>Show VATSIM traffic</span><input className="switch" type="checkbox" checked={s.showVatsim} onChange={(e) => settingsStore.set({ showVatsim: e.target.checked })} /></label>
-            <label className="between" style={{ padding: "8px 0" }}><span>Show IVAO traffic</span><input className="switch" type="checkbox" checked={s.showIvao} onChange={(e) => settingsStore.set({ showIvao: e.target.checked })} /></label>
-            <p className="faint" style={{ fontSize: 12.5, margin: "6px 0 0" }}>Live network data is fetched once by your Bridge and shared with every device, within each network's refresh limits.</p>
+            <p className="lp-h">Base map</p>
+            <BaseMapPicker />
+            <p className="lp-h" style={{ marginTop: 18 }}>Traffic on the map</p>
+            <TrafficSources />
+            <p className="faint" style={{ fontSize: 12.5, margin: "10px 0 0" }}>Your Bridge fetches each network once and shares it with every device, within each network's refresh limits. SayIntentions shows its public tracker: people flying with its AI ATC.</p>
           </Section>
           <Section title="Units">
             <div className="between"><span>Fuel</span><div className="seg">{(["kg", "lb"] as const).map((u) => <button key={u} className={s.fuelUnit === u ? "on" : ""} onClick={() => settingsStore.set({ fuelUnit: u })}>{u}</button>)}</div></div>

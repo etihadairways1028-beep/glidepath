@@ -57,9 +57,12 @@ const OFFLINE: StyleSpecification = {
   ],
 };
 
-type Kind = "satellite" | "dark" | "light" | "offline";
+type Kind = "satellite" | "dark" | "light" | "fiord" | "liberty" | "bright" | "offline";
+const LIGHT_KINDS: Kind[] = ["light", "liberty", "bright"];
 function styleFor(k: Kind): StyleSpecification | string {
-  return k === "satellite" ? satelliteStyle() : k === "dark" ? `${OFM}/styles/dark` : k === "light" ? `${OFM}/styles/positron` : OFFLINE;
+  if (k === "satellite") return satelliteStyle();
+  if (k === "offline") return OFFLINE;
+  return `${OFM}/styles/${k === "light" ? "positron" : k}`;
 }
 function themeNow(): "dark" | "light" {
   return document.documentElement.dataset.theme === "light" ? "light" : "dark";
@@ -99,21 +102,21 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], fo
     return () => mo.disconnect();
   }, []);
 
-  const wanted: Kind = !tilesOk ? "offline" : mapStyle === "map" ? theme : "satellite";
+  const wanted: Kind = !tilesOk ? "offline" : mapStyle === "map" ? theme : (mapStyle as Kind);
 
   const addOverlays = (m: MLMap) => {
-    if (!m.hasImage("traffic")) m.addImage("traffic", trafficIcon(), { pixelRatio: 2 });
+    for (const [net, col] of Object.entries(NET_COLOR)) if (!m.hasImage(`traffic-${net}`)) m.addImage(`traffic-${net}`, trafficIcon(col), { pixelRatio: 2 });
     if (m.getSource("trail")) return;
     m.addSource("route", { type: "geojson", data: line(data.current.route) });
     m.addSource("trail", { type: "geojson", data: line(data.current.trail), lineMetrics: true });
     m.addSource("traffic", { type: "geojson", data: data.current.traffic as ReturnType<typeof empty> });
-    const light = kindRef.current === "light";
+    const light = LIGHT_KINDS.includes(kindRef.current);
     m.addLayer({ id: "route-casing", type: "line", source: "route", layout: { "line-cap": "round" }, paint: { "line-color": light ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.35)", "line-width": 4.5 } });
     m.addLayer({ id: "route", type: "line", source: "route", layout: { "line-cap": "round" }, paint: { "line-color": "#E05CFF", "line-width": 2, "line-dasharray": [2.2, 1.6], "line-opacity": 0.95 } });
     m.addLayer({ id: "trail-glow", type: "line", source: "trail", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#5AC8FA", "line-width": 12, "line-opacity": light ? 0.25 : 0.35, "line-blur": 6 } });
     m.addLayer({ id: "trail", type: "line", source: "trail", layout: { "line-cap": "round", "line-join": "round" },
       paint: { "line-width": 3.4, "line-gradient": ["interpolate", ["linear"], ["line-progress"], 0, "#64D2FF", 0.6, "#0A84FF", 1, "#BF5AF2"] } });
-    m.addLayer({ id: "traffic", type: "symbol", source: "traffic", layout: { "icon-image": "traffic", "icon-rotate": ["get", "hdg"], "icon-rotation-alignment": "map", "icon-allow-overlap": true, "icon-size": ["interpolate", ["linear"], ["zoom"], 2, 0.55, 9, 1] }, paint: { "icon-opacity": 0.95 } });
+    m.addLayer({ id: "traffic", type: "symbol", source: "traffic", layout: { "icon-image": ["concat", "traffic-", ["get", "net"]], "icon-rotate": ["get", "hdg"], "icon-rotation-alignment": "map", "icon-allow-overlap": true, "icon-size": ["interpolate", ["linear"], ["zoom"], 2, 0.55, 9, 1] }, paint: { "icon-opacity": 0.95 } });
   };
 
   useEffect(() => {
@@ -185,7 +188,7 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], fo
     if (!m || !ready) return;
     const fc = {
       type: "FeatureCollection" as const,
-      features: traffic.map((p) => ({ type: "Feature" as const, properties: { hdg: p.hdg, raw: JSON.stringify(p) }, geometry: { type: "Point" as const, coordinates: [p.lon, p.lat] } })),
+      features: traffic.map((p) => ({ type: "Feature" as const, properties: { hdg: p.hdg, net: p.network, raw: JSON.stringify(p) }, geometry: { type: "Point" as const, coordinates: [p.lon, p.lat] } })),
     };
     data.current.traffic = fc;
     (m.getSource("traffic") as GeoJSONSource | undefined)?.setData(fc);
@@ -237,12 +240,15 @@ function empty() {
 function line(coords: number[][]) {
   return { type: "FeatureCollection" as const, features: coords.length > 1 ? [{ type: "Feature" as const, properties: {}, geometry: { type: "LineString" as const, coordinates: coords } }] : [] };
 }
-function trafficIcon(): ImageData {
+/** One colour per network so you can tell them apart at a glance. */
+export const NET_COLOR: Record<string, string> = { vatsim: "#30D158", ivao: "#64D2FF", sayintentions: "#FF9F0A" };
+
+function trafficIcon(fill: string): ImageData {
   const c = document.createElement("canvas");
   c.width = c.height = 48;
   const g = c.getContext("2d")!;
   g.translate(24, 24);
-  g.fillStyle = "#F5B54A";
+  g.fillStyle = fill;
   g.strokeStyle = "rgba(5,11,25,0.9)";
   g.lineWidth = 2;
   g.beginPath();

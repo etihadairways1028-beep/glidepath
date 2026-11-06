@@ -1,4 +1,6 @@
 import { DebriefPanel, HandlingCard, TakeoffCard } from "../components/Debrief";
+import { Career } from "../components/Career";
+import { cloudFlights, useCloud } from "../data/cloud";
 import { useEffect, useMemo, useState } from "react";
 import type { FlightEvent, FlightSummary, TelemetryFrame } from "@glidepath/protocol";
 import { MapView } from "../components/MapView";
@@ -13,22 +15,29 @@ import { LandingSummary } from "./Flight";
 import { touchdownWords } from "@glidepath/flight-engine";
 import { gradeOf } from "./Home";
 
-function useFlights(): { flights: FlightSummary[] | null; error: string | null } {
+function useFlights(): { flights: FlightSummary[] | null; error: string | null; fromCloud: boolean } {
   const mode = useApp((s) => s.mode);
+  const cloud = useCloud();
+  const [fromCloud, setFromCloud] = useState(false);
   const current = useApp((s) => s.lastFlight ?? s.flight);
   const [flights, setFlights] = useState<FlightSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     if (mode === "demo") { setFlights(current ? [current] : []); return; }
     const b = activeBridge();
-    if (!b) { setFlights(null); return; }
+    setFromCloud(false);
+    if (!b) {
+      if (cloud.status === "ready" && cloud.active) void cloudFlights().then((f) => { setFlights(f); setFromCloud(!!f); });
+      else setFlights(null);
+      return;
+    }
     b.get<FlightSummary[]>("/api/flights?limit=500").then((f) => { setFlights(f); setError(null); }).catch((e) => setError(e.message));
-  }, [mode, current?.id, current?.status]);
-  return { flights, error };
+  }, [mode, current?.id, current?.status, cloud.status, cloud.active]);
+  return { flights, error, fromCloud };
 }
 
 export function Logbook() {
-  const { flights, error } = useFlights();
+  const { flights, error, fromCloud } = useFlights();
   const mode = useApp((s) => s.mode);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<"all" | "completed" | "incomplete">("all");
@@ -52,16 +61,10 @@ export function Logbook() {
         <h1 className="title">Logbook</h1>
         <button className="btn small" disabled={!list.length} onClick={() => exportCsv(list)}><span style={{ width: 16, height: 16 }}>{Icon.download()}</span>Export CSV</button>
       </div>
-      {mode === "none" && <Notice info>Your logbook lives on your Bridge, so it keeps every flight even when this device is off. <a href="#/settings">Connect your Bridge</a> to see it.</Notice>}
+      {mode === "none" && !fromCloud && <Notice info>Your logbook lives on your Bridge, so it keeps every flight even when this device is off. <a href="#/settings">Connect your Bridge</a> or <a href="#/account">sign in</a> to see it.</Notice>}
+      {fromCloud && <Notice info>Showing the flights saved to your account. Connect your Bridge for full replays and maps of each flight.</Notice>}
       {error && <Notice>{error}</Notice>}
-      {mode !== "none" && (
-        <div className="grid cols-4">
-          <Tile k="Flights" v={fmt(done.length)} />
-          <Tile k="Block time" v={dur(done.reduce((s, f) => s + ((f.onBlockAt ?? 0) - (f.offBlockAt ?? 0)), 0))} />
-          <Tile k="Distance" v={fmt(done.reduce((s, f) => s + f.distanceNm, 0))} unit="nm" />
-          <Tile k="Best landing" v={(() => { const b = done.flatMap((f) => f.landings).sort((a, b) => b.score - a.score)[0]; return b ? `${fmt(Math.abs(b.touchdownVsFpm ?? 0))} fpm` : "—"; })()} />
-        </div>
-      )}
+      {(mode !== "none" || fromCloud) && flights && <Career flights={flights} />}
       <section className="glass pad">
         <div className="row wrap" style={{ marginBottom: 10 }}>
           <input className="input" style={{ flex: "1 1 220px", maxWidth: 360 }} placeholder="Search airport, aircraft or callsign" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search flights" />
@@ -109,7 +112,11 @@ export function FlightDetail({ id }: { id: string }) {
   useEffect(() => {
     if (mode === "demo" && liveFlight?.id === id) { setFlight(liveFlight); setTrail(liveTrail); setEvents(liveEvents); return; }
     const b = activeBridge();
-    if (!b) return;
+    if (!b) {
+      // Away from the PC: the account has the summary (debrief, timings, landing), not the track.
+      void cloudFlights().then((all) => { const f = all?.find((x) => x.id === id); if (f) setFlight(f); else setError("This flight isn't on this device. Connect your Bridge or sign in to the account that flew it."); });
+      return;
+    }
     Promise.all([b.get<FlightSummary>(`/api/flights/${id}`), b.get<TelemetryFrame[]>(`/api/flights/${id}/frames`), b.get<FlightEvent[]>(`/api/flights/${id}/events`)])
       .then(([f, fr, ev]) => { setFlight(f); setTrail(framesToTrail(fr)); setEvents(ev); })
       .catch((e) => setError(e.message));

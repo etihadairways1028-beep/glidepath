@@ -1,6 +1,9 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Icon, Mark } from "./components/ui";
-import { BridgeClient, consumePairingLink, detectBridgeUrl, setActiveBridge } from "./data/bridge";
+import { activeBridge, BridgeClient, consumePairingLink, detectBridgeUrl, setActiveBridge } from "./data/bridge";
+import { findBridgeOnNetwork, initCloud, saveBridge, syncFlights, useCloud } from "./data/cloud";
+import { Account } from "./screens/Account";
+import type { FlightSummary } from "@glidepath/protocol";
 import { startDemo } from "./data/demo";
 import { settingsStore, store, useApp, useSettings } from "./data/store";
 import { CopilotScreen } from "./screens/Copilot";
@@ -41,6 +44,7 @@ const NAV: Array<{ id: string; label: string; icon: () => ReactNode; mobile: boo
   { id: "logbook", label: "Logbook", icon: Icon.book, mobile: true },
   { id: "airports", label: "Airports", icon: Icon.tower, mobile: false },
   { id: "glance", label: "Glance mode", icon: Icon.expand, mobile: false },
+  { id: "account", label: "Account", icon: Icon.person, mobile: false },
   { id: "settings", label: "Settings", icon: Icon.gear, mobile: false },
 ];
 
@@ -55,7 +59,33 @@ export function App() {
     consumePairingLink();
     connectFromSettings();
     if (!settingsStore.get().token && new URLSearchParams(location.search).get("demo") === "1") startDemo();
+    void initCloud();
   }, []);
+
+  // Signed in but not paired on this device: look for one of the account's PCs on this Wi-Fi.
+  const cloud = useCloud();
+  useEffect(() => {
+    if (cloud.status !== "ready" || !cloud.active || activeBridge() || store.get().mode === "demo") return;
+    let gone = false;
+    void findBridgeOnNetwork().then((b) => {
+      if (gone || !b || activeBridge()) return;
+      settingsStore.set({ bridgeUrl: b.url, token: b.token });
+      connectFromSettings();
+    });
+    return () => { gone = true; };
+  }, [cloud.status, cloud.active]);
+
+  // Connected and signed in: remember this PC on the account, and copy finished flights.
+  const lastDone = useApp((st) => (st.lastFlight?.status === "completed" ? st.lastFlight.id : null));
+  useEffect(() => {
+    const b = activeBridge();
+    if (mode !== "bridge" || !b || cloud.status !== "ready" || !cloud.active || !status) return;
+    const { token } = settingsStore.get();
+    void b.get<{ bridgeId: string; addresses: string[]; port: number }>("/api/lan")
+      .then((lan) => saveBridge({ bridgeId: lan.bridgeId, name: status.hostname, addresses: lan.addresses, port: lan.port, token }))
+      .catch(() => undefined);
+    void b.get<FlightSummary[]>("/api/flights?limit=500").then(syncFlights).catch(() => undefined);
+  }, [mode, cloud.status, cloud.active, status?.bridgeId, lastDone]);
 
   useEffect(() => {
     document.documentElement.dataset.accent = s.accent;
@@ -104,6 +134,7 @@ export function App() {
     case "logbook": body = rest[0] ? <FlightDetail id={rest[0]} /> : <Logbook />; break;
     case "airports": body = rest[0] ? <AirportPage code={rest[0]} /> : <Airports />; break;
     case "settings": body = <SettingsScreen />; break;
+    case "account": body = <Account />; break;
     case "glance": body = <Glance />; break;
     case "copilot": body = <CopilotScreen />; break;
     default: body = <Home />;
@@ -131,7 +162,7 @@ export function App() {
           {NAV.filter((n) => n.mobile).map((n) => (
             <a key={n.id} className={`tab${screen === n.id ? " on" : ""}`} href={`#/${n.id}`}>{n.icon()}{n.label === "Live map" ? "Map" : n.label}</a>
           ))}
-          <a className={`tab${["airports", "settings", "glance"].includes(screen ?? "") ? " on" : ""}`} href="#/settings">{Icon.more()}More</a>
+          <a className={`tab${["airports", "settings", "glance", "account"].includes(screen ?? "") ? " on" : ""}`} href="#/settings">{Icon.more()}More</a>
         </nav>
       )}
     </>

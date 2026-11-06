@@ -61,3 +61,19 @@ describe("external data parsers (documented response shapes)", () => {
     expect(calls).toBe(1);
   });
 });
+
+describe("SayIntentions tracker", () => {
+  it("parses the public map feed (top-level array)", async () => {
+    const { parseSayIntentions } = await import("../src/external.js");
+    const s = parseSayIntentions([
+      { flight_id: 813308, displayname: "Jon174", flight_icao: "AAL2502", callsign: "American-two-five-zero-two", lat: 41.04, lon: -73.7, altitude: 34000, altitude_agl: 33800, heading: 271, airspeed: 450, aircraft_icao: "B738", origin: "KJFK", final_destination: "KORD" },
+      { flight_id: 2, displayname: "Pilot2", lat: "51.47", lon: "-0.45", altitude: "0", heading: "90" },
+      { flight_id: 3, lat: null, lon: 10 },
+    ]);
+    expect(s.network).toBe("sayintentions");
+    expect(s.pilots).toHaveLength(2);
+    expect(s.pilots[0]).toMatchObject({ callsign: "AAL2502", altFt: 34000, gsKt: 450, hdg: 271, type: "B738", dep: "KJFK", arr: "KORD" });
+    expect(s.pilots[1]).toMatchObject({ callsign: "Pilot2", lat: 51.47, lon: -0.45 });
+    expect(s.controllers).toEqual([]);
+  });
+});

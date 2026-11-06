@@ -2,7 +2,8 @@ import { useState } from "react";
 import { MapView } from "../components/MapView";
 import { Icon } from "../components/ui";
 import { fmt, PHASE_LABEL, useLive } from "../data/derive";
-import { getNetwork, usePoll, type NetworkPilot } from "../data/external";
+import { getNetwork, NETWORK_LABEL, usePoll, type NetworkPilot } from "../data/external";
+import { BaseMapPicker, TrafficSources } from "../components/MapLayers";
 import { settingsStore, useApp, useSettings } from "../data/store";
 
 export function MapScreen() {
@@ -16,7 +17,8 @@ export function MapScreen() {
   const bridge = mode === "bridge";
   const vatsim = usePoll(bridge && s.showVatsim ? () => getNetwork("vatsim") : null, 20_000, [bridge, s.showVatsim]);
   const ivao = usePoll(bridge && s.showIvao ? () => getNetwork("ivao") : null, 30_000, [bridge, s.showIvao]);
-  const traffic = [...(vatsim.data?.pilots ?? []), ...(ivao.data?.pilots ?? [])].filter((p) => p.callsign !== (L.plan?.callsign ?? L.flight?.callsign));
+  const si = usePoll(bridge && s.showSayIntentions ? () => getNetwork("sayintentions") : null, 30_000, [bridge, s.showSayIntentions]);
+  const traffic = [...(vatsim.data?.pilots ?? []), ...(ivao.data?.pilots ?? []), ...(si.data?.pilots ?? [])].filter((p) => p.callsign !== (L.plan?.callsign ?? L.flight?.callsign));
   const f = L.frame;
   const aircraft = f && f.attitude.headingTrueDeg !== null ? { lat: f.position.lat, lon: f.position.lon, hdg: f.attitude.headingTrueDeg } : null;
   const airports = [
@@ -50,21 +52,19 @@ export function MapScreen() {
         <button className={`btn glass${follow ? " on" : ""}`} aria-pressed={follow} aria-label="Follow my aircraft" title="Follow my aircraft" onClick={() => setFollow(!follow)}><span style={{ width: 22, height: 22 }}>{Icon.target()}</span></button>
         <button className={`btn glass${layers ? " on" : ""}`} aria-expanded={layers} aria-label="Map layers" title="Map layers" onClick={() => setLayers(!layers)}><span style={{ width: 22, height: 22 }}>{Icon.layers()}</span></button>
         {layers && (
-          <div className="glass strong pad" style={{ width: 230, position: "absolute", right: 54, top: 52 }}>
-            <div className="seg" role="group" aria-label="Base map" style={{ width: "100%", marginBottom: 12 }}>
-              <button className={s.mapStyle !== "map" ? "on" : ""} onClick={() => settingsStore.set({ mapStyle: "satellite" })}>Satellite</button>
-              <button className={s.mapStyle === "map" ? "on" : ""} onClick={() => settingsStore.set({ mapStyle: "map" })}>Map</button>
-            </div>
-            <Toggle label="VATSIM traffic" on={s.showVatsim} set={(v) => settingsStore.set({ showVatsim: v })} />
-            <Toggle label="IVAO traffic" on={s.showIvao} set={(v) => settingsStore.set({ showIvao: v })} />
-            <p className="faint" style={{ fontSize: 12, margin: "8px 0 0" }}>{bridge ? `${traffic.length.toLocaleString()} aircraft online` : "Traffic needs your Bridge."}{vatsim.error ? ` VATSIM: ${vatsim.error}` : ""}</p>
+          <div className="glass strong layers-pop">
+            <p className="lp-h">Map</p>
+            <BaseMapPicker />
+            <p className="lp-h" style={{ marginTop: 16 }}>Traffic</p>
+            <TrafficSources counts={{ vatsim: vatsim.data?.pilots.length, ivao: ivao.data?.pilots.length, sayintentions: si.data?.pilots.length }} errors={{ vatsim: vatsim.error, ivao: ivao.error, sayintentions: si.error }} />
+            {!bridge && <p className="faint" style={{ fontSize: 12, margin: "8px 0 0" }}>Live traffic comes through your Bridge.</p>}
           </div>
         )}
       </div>
       {sel && (
         <div className="map-sheet glass strong pad">
           <div className="between"><span className="data" style={{ fontWeight: 700, fontSize: 18 }}>{sel.callsign}</span><button className="btn small" aria-label="Close" onClick={() => setSel(null)}><span style={{ width: 16, height: 16 }}>{Icon.close()}</span></button></div>
-          <div className="muted" style={{ marginTop: 2 }}>{sel.type ?? "Unknown type"} on {sel.network.toUpperCase()}</div>
+          <div className="muted" style={{ marginTop: 2 }}>{sel.type ?? "Unknown type"} on {NETWORK_LABEL[sel.network]}</div>
           <div className="grid cols-3" style={{ gap: 8, marginTop: 12 }}>
             <Mini k="FROM" v={sel.dep ?? "—"} /><Mini k="TO" v={sel.arr ?? "—"} /><Mini k="ALT" v={fmt(sel.altFt)} />
           </div>
