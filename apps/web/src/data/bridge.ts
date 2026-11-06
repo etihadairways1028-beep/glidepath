@@ -23,6 +23,7 @@ export function detectBridgeUrl(): string | null {
 
 /** Read `#bridge=…&token=…` pairing parameters, save them, and clean the URL. */
 export function consumePairingLink(): boolean {
+  keepPairingForHomeScreen();
   const h = location.hash;
   const q = h.includes("?") ? h.slice(h.indexOf("?") + 1) : h.startsWith("#bridge=") || h.startsWith("#token=") ? h.slice(1) : "";
   if (!q) return false;
@@ -36,7 +37,27 @@ export function consumePairingLink(): boolean {
   else if (location.protocol === "http:" && location.pathname.startsWith("/app")) patch.bridgeUrl = location.origin;
   settingsStore.set(patch);
   history.replaceState(null, "", location.pathname + "#/home");
+  keepPairingForHomeScreen();
   return true;
+}
+
+/**
+ * A Home Screen web app on iPad/iPhone gets its own storage and starts from the
+ * address it was added from. On the Bridge-served app we keep the pairing key in
+ * the address (?pair=…) and drop the manifest's fixed start page, so an app added
+ * to the Home Screen opens already paired with this PC.
+ */
+function keepPairingForHomeScreen(): void {
+  if (!(location.protocol === "http:" && location.pathname.startsWith("/app"))) return;
+  const sp = new URLSearchParams(location.search);
+  const fromUrl = sp.get("pair");
+  if (fromUrl && settingsStore.get().token !== fromUrl) settingsStore.set({ token: fromUrl, bridgeUrl: location.origin });
+  const token = settingsStore.get().token;
+  if (token && fromUrl !== token) {
+    sp.set("pair", token);
+    history.replaceState(null, "", `${location.pathname}?${sp.toString()}${location.hash || "#/home"}`);
+  }
+  document.querySelector('link[rel="manifest"]')?.remove();
 }
 
 export class BridgeClient {

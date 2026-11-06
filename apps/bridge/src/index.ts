@@ -41,7 +41,8 @@ async function main(): Promise<void> {
   try {
     cfg = loadConfig();
   } catch (e) {
-    console.error((e as Error).message);
+    console.error(`\n  Settings problem: ${(e as Error).message}\n  Press Enter to close.\n`);
+    await holdWindow(10 * 60 * 1000);
     process.exit(2);
   }
   const log = createLogger(cfg.dataDir, cfg.logLevel);
@@ -117,7 +118,18 @@ async function main(): Promise<void> {
   });
   adapter.on("sessionEnd", () => session.endSession());
 
-  await server.start();
+  try {
+    await server.start();
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "EADDRINUSE") {
+      // Most likely the Bridge is already open in another window.
+      console.log(`\n  Glidepath Bridge is already running on this PC (port ${cfg.port} is in use).\n  Opening it in your browser. You can close this window.\n`);
+      if (cfg.openBrowser) openInBrowser(`http://localhost:${cfg.port}`);
+      await holdWindow(8000);
+      process.exit(0);
+    }
+    throw e;
+  }
   await adapter.start();
 
   const statusTimer = setInterval(() => server.broadcastStatus(), 5000);
@@ -157,4 +169,27 @@ function openInBrowser(url: string): void {
   if (cmd) exec(cmd, { windowsHide: true }, () => undefined);
 }
 
-void main();
+/** When the Bridge was double-clicked, keep its window open long enough to read why it stopped. */
+function holdWindow(ms: number): Promise<void> {
+  if (platform() !== "win32" || !process.stdin.isTTY) return Promise.resolve();
+  return new Promise((resolve) => {
+    const t = setTimeout(resolve, ms);
+    process.stdin.once("data", () => { clearTimeout(t); resolve(); });
+    process.stdin.resume();
+  });
+}
+
+main().catch(async (e) => {
+  const err = e as Error;
+  console.error([
+    "",
+    "  The Glidepath Bridge couldn't start.",
+    `  Reason: ${err?.message ?? String(e)}`,
+    "",
+    "  Send a photo of this window to whoever gave you Glidepath, or open",
+    "  README-FIRST.txt for help. Press Enter to close.",
+    "",
+  ].join("\n"));
+  await holdWindow(10 * 60 * 1000);
+  process.exit(1);
+});

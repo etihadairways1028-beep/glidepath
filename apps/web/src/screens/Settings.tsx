@@ -118,14 +118,14 @@ export function SettingsScreen() {
           </Section>
           <Section title="On your Home Screen">
             <ol style={{ margin: 0, paddingLeft: 18, color: "var(--mist)", lineHeight: 1.7 }}>
-              <li>Open Glidepath in Safari on your iPad or iPhone.</li>
-              <li>Tap Share, then <b style={{ color: "var(--ink)" }}>Add to Home Screen</b>.</li>
+              <li>Open your Bridge's link in Safari on your iPad or iPhone (scan the QR code on your PC).</li>
+              <li>Tap Share, then <b style={{ color: "var(--ink)" }}>Add to Home Screen</b>. On Android, use Chrome's menu, then <b style={{ color: "var(--ink)" }}>Install app</b>.</li>
               <li>Open it from the icon. It launches full screen, straight to your flight.</li>
             </ol>
             <p className="faint" style={{ fontSize: 12.5, margin: "10px 0 0" }}>For an iPad on a stand, use <a href="#/glance">Glance mode</a>. Lock Screen and widget cards need the native iPad app, which is planned.</p>
           </Section>
           <Section title="About">
-            <Kv k="Version" v="Glidepath 0.2 (early test build)" />
+            <Kv k="Version" v="Glidepath 0.6.2 (early test build)" />
             <Kv k="Airports" v="OurAirports, public domain" />
             <Kv k="Map" v="OpenFreeMap / OpenStreetMap, Natural Earth" />
             <Kv k="Weather" v="aviationweather.gov, via your Bridge" />

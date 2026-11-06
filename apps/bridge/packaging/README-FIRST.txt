@@ -1,4 +1,4 @@
-GLIDEPATH BRIDGE 0.6.1 (EARLY TEST BUILD) - WINDOWS
+GLIDEPATH BRIDGE 0.6.2 (EARLY TEST BUILD) - WINDOWS
 ====================================================
 
 The Bridge runs on the PC where you fly Microsoft Flight Simulator. It reads
@@ -9,6 +9,15 @@ THIS IS AN EARLY TEST BUILD
 - It has not been tested on Windows yet: you are the first tester.
 - It is not code-signed yet, so Windows SmartScreen will warn you.
   Click "More info" -> "Run anyway". (Signed builds come before public release.)
+- If your antivirus removes GlidepathBridge.exe, restore it from the
+  antivirus quarantine and allow it. Unsigned new programs get flagged.
+
+INSTALLING
+  Easiest: run GlidepathBridge-Setup.exe from the website. It installs for
+  you only (no admin password), adds Glidepath to the Start menu and the
+  desktop, and can be removed in Settings > Apps.
+  Or use this zip: right-click it, Extract All, then open the extracted
+  folder. Don't run the Bridge from inside the zip without extracting.
 - The native iPad/iPhone app with Lock Screen Live Activities is not built yet.
   Your iPad gets the full Glidepath web app from the Bridge instead (live map,
   flight trail, flight monitor, logbook, airports). Add it to your Home Screen.
@@ -19,7 +28,8 @@ WHAT YOU SEE IN THE WINDOW
   Flight Simulator" until you start the sim, then connects by itself.
 
 STEP 1 - TRY THE DEMO (no simulator needed)
-  Double-click "Run demo flight.bat".
+  Start menu > Glidepath > Glidepath demo flight
+  (or double-click "Run demo flight.bat" in the extracted zip).
   It replays a SYNTHETIC test flight (generated, not real) from London Heathrow
   to Manchester at 20x speed. Everything shows a REPLAY badge.
 
@@ -28,6 +38,9 @@ STEP 2 - CONNECT YOUR iPAD
   That page shows a QR code and a link for your iPad: scan it with the
   iPad camera. There is also an "Open Glidepath" button for this PC.
   Open that link on your iPad (same Wi-Fi). It opens the Glidepath app.
+  To install it: in Safari tap Share, then Add to Home Screen. Do this from
+  the Bridge link (the address with your PC's numbers), not from the
+  website, so the Home Screen app can reach your PC.
   In Safari, tap Share -> "Add to Home Screen" to get a Glidepath icon
   that opens straight to your live flight.
   If Windows Firewall asks, allow Glidepath Bridge on PRIVATE networks only.

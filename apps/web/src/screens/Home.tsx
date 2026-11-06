@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { FlightSummary } from "@glidepath/protocol";
 import { LiveCard } from "../components/LiveCard";
 import { YourPcs } from "./Account";
+import { InstallCard } from "../components/InstallCard";
 import { useCloud } from "../data/cloud";
 import { AircraftHero } from "../components/Imagery";
 import { buildDebrief } from "@glidepath/flight-engine";
@@ -24,6 +25,7 @@ export function Home() {
     <div className="stack">
       <FlightHeading />
       {mode === "none" && <YourPcs />}
+      <InstallCard />
       {mode === "none" && <Onboarding />}
       {mode === "bridge" && conn !== "live" && msg && <Notice>{msg} <a href="#/settings">Connection settings</a></Notice>}
       {mode !== "none" && flight?.status === "completed" && <DebriefTeaser />}

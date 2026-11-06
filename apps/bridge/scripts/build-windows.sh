@@ -50,5 +50,15 @@ mkdir -p "$OUT"
 rm -f "$OUT/GlidepathBridge-windows-x64.zip"
 (cd "$WORK" && zip -qr -9 "$OUT/GlidepathBridge-windows-x64.zip" "Glidepath Bridge")
 sha256sum "$OUT/GlidepathBridge-windows-x64.zip" | tee "$OUT/GlidepathBridge-windows-x64.zip.sha256"
+# Installer (needs makensis: apt-get install nsis).
+if command -v makensis >/dev/null; then
+  VER=$(grep -o 'BRIDGE_VERSION = "[^"]*"' "$HERE/src/config.ts" | cut -d'"' -f2)
+  cp "$HERE/packaging/installer.nsi" "$HERE/packaging/glidepath.ico" "$WORK/"
+  rm -f "$OUT/GlidepathBridge-Setup.exe"
+  (cd "$WORK" && makensis -V2 -DVERSION="$VER" -DSRC="Glidepath Bridge" -DOUTFILE="$OUT/GlidepathBridge-Setup.exe" installer.nsi)
+  sha256sum "$OUT/GlidepathBridge-Setup.exe" | tee "$OUT/GlidepathBridge-Setup.exe.sha256"
+else
+  echo "makensis not found: skipping the installer"
+fi
 if [ "${KEEP_WORK:-}" = "1" ]; then echo "Kept build dir: $WORK"; else rm -rf "$WORK"; fi
 echo "Done: $OUT/GlidepathBridge-windows-x64.zip"
