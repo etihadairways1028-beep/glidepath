@@ -5,7 +5,7 @@ import { NET_COLOR } from "./MapView";
 
 const SWATCH: Record<MapStyle, string> = {
   satellite: "linear-gradient(135deg, #2f4a2a 0%, #5d6b3c 35%, #2a4f6b 60%, #183650 100%)",
-  map: "linear-gradient(135deg, #0e1424 0 50%, #e7ecf3 50% 100%)",
+  map: "linear-gradient(120deg, #CFE8C0 0 22%, #F4F2EC 22% 44%, #FBD583 44% 50%, #F4F2EC 50% 70%, #A9D3F5 70% 100%)",
   dark: "linear-gradient(135deg, #0b0f17, #1c2230 60%, #2a3142)",
   fiord: "linear-gradient(135deg, #1f3a52, #2d5070 55%, #45698a)",
   light: "linear-gradient(135deg, #f4f6f9, #e1e6ee 60%, #cfd8e3)",
@@ -15,7 +15,7 @@ const SWATCH: Record<MapStyle, string> = {
 
 export function BaseMapPicker() {
   const s = useSettings();
-  const current = s.mapStyle ?? "satellite";
+  const current = s.mapStyle ?? "map";
   return (
     <div className="basemaps" role="radiogroup" aria-label="Base map">
       {MAP_STYLES.map((m) => (

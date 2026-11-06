@@ -714,3 +714,63 @@ a.li:hover { background: rgba(255,255,255,.05); border-radius: 16px; }
 .grid > *, .stack > * { min-width: 0; }
 .pill { max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 900px) { .glass > .between { flex-wrap: wrap; } }
+
+.apt-map { position: relative; height: min(56vh, 520px); padding: 0; overflow: hidden; border-radius: 28px; }
+.apt-map .map, .apt-map .maplibregl-map { position: absolute; inset: 0; }
+.apt-map-tag { position: absolute; left: 14px; top: 12px; max-width: calc(100% - 28px); z-index: 2; font-size: 12px; padding: 6px 10px; border-radius: 999px; background: rgba(0,10,30,.55); color: #EAF2FF; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); pointer-events: none; }
+@media (max-width: 900px) { table.t { display: block; overflow-x: auto; max-width: 100%; } }
+.home-head > div { min-width: 0; flex: 1; }
+.home-head .pill { flex: none; max-width: 46%; }
+@media (max-width: 600px) { .home-head { align-items: flex-start; } .title { font-size: 28px; } }
+/* Map credits: a small (i) until tapped, then a readable pill. */
+.maplibregl-ctrl-attrib.maplibregl-compact { border-radius: 14px; min-height: 24px; box-sizing: border-box; }
+.maplibregl-ctrl-attrib.maplibregl-compact:not(.maplibregl-compact-show) { width: 24px; height: 24px; padding: 0 !important; background: rgba(5,9,20,.45) !important; overflow: hidden; }
+.maplibregl-ctrl-attrib.maplibregl-compact:not(.maplibregl-compact-show) .maplibregl-ctrl-attrib-inner { display: none; }
+.maplibregl-ctrl-attrib.maplibregl-compact-show { max-width: min(560px, calc(100vw - 32px)); padding: 4px 28px 4px 10px !important; }
+.maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-inner { color: #DDE6F5; line-height: 1.35; }
+.maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-inner a { color: #DDE6F5 !important; }
+
+/* ==========================================================================
+   Calm pass (0.6.1). Less decoration, more native: plain system backgrounds
+   like iOS Settings or Apple Maps, neutral glass with no coloured rims, no
+   drifting colour blobs or stars, and one accent colour.
+   ========================================================================== */
+:root {
+  --night: #0B0C0E;
+  --tint-regular: rgba(36, 38, 43, 0.62);
+  --tint-thick: rgba(40, 42, 48, 0.72);
+  --rim: linear-gradient(160deg, rgba(255,255,255,.22) 0%, rgba(255,255,255,.06) 30%, rgba(255,255,255,0) 60%, rgba(255,255,255,.05) 100%);
+  --lift: 0 1px 1px rgba(0,0,0,.25), 0 10px 30px -14px rgba(0,0,0,.55);
+  --route: #BF5AF2;
+}
+.sky, .sky[data-sky] { background: linear-gradient(180deg, #131417 0%, #0B0C0E 55%, #0B0C0E 100%) !important; }
+.sky .light, .sky .stars { display: none; }
+.sky .grain { opacity: 0.025; }
+.glass {
+  background: var(--tint-regular);
+  box-shadow: inset 0 0.5px 0 rgba(255,255,255,.18), inset 0 0 0 0.5px rgba(255,255,255,.07), var(--lift);
+}
+.glass::after { background: radial-gradient(420px circle at var(--mx, 12%) var(--my, -18%), rgba(255,255,255,.05), transparent 60%); }
+.glass.strong {
+  background: var(--tint-thick);
+  box-shadow: inset 0 0.5px 0 rgba(255,255,255,.22), inset 0 0 0 0.5px rgba(255,255,255,.08), 0 1px 1px rgba(0,0,0,.25), 0 18px 44px -18px rgba(0,0,0,.6);
+}
+.tile, .tm-dur { background: rgba(255,255,255,.045); box-shadow: inset 0 0 0 0.5px rgba(255,255,255,.06); }
+
+:root[data-theme="light"] {
+  --night: #F2F2F7;
+  --tint-regular: rgba(255, 255, 255, 0.78);
+  --tint-thick: rgba(255, 255, 255, 0.86);
+  --rim: linear-gradient(160deg, rgba(255,255,255,1) 0%, rgba(255,255,255,.4) 30%, rgba(255,255,255,0) 60%);
+  --lift: 0 1px 1px rgba(0,0,0,.04), 0 8px 24px -14px rgba(0,0,0,.18);
+}
+:root[data-theme="light"] .sky, :root[data-theme="light"] .sky[data-sky] { background: #F2F2F7 !important; }
+:root[data-theme="light"] .glass, :root[data-theme="light"] .glass.strong {
+  background: var(--tint-regular);
+  box-shadow: inset 0 0 0 0.5px rgba(0,0,0,.05), var(--lift);
+}
+:root[data-theme="light"] .glass.strong { background: var(--tint-thick); }
+:root[data-theme="light"] .glass::after { background: none; }
+:root[data-theme="light"] .tile, :root[data-theme="light"] .tm-dur { background: rgba(118,118,128,.08); box-shadow: none; }
+:root[data-theme="light"] .page > .grid > .tile, :root[data-theme="light"] .stack > .grid > .tile, :root[data-theme="light"] .glance-strip > .tile, :root[data-theme="light"] .tm-strip { background: var(--tint-regular); box-shadow: inset 0 0 0 0.5px rgba(0,0,0,.05), var(--lift); }
+.page > .grid > .tile, .stack > .grid > .tile, .glance-strip > .tile, .tm-strip { background: var(--tint-regular); }

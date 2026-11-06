@@ -1,4 +1,4 @@
-GLIDEPATH BRIDGE 0.6.0 (EARLY TEST BUILD) - WINDOWS
+GLIDEPATH BRIDGE 0.6.1 (EARLY TEST BUILD) - WINDOWS
 ====================================================
 
 The Bridge runs on the PC where you fly Microsoft Flight Simulator. It reads
@@ -51,8 +51,11 @@ COCKPIT TOOLS (NEW IN 0.6)
   CDU mirroring through the PMDG SDK is planned.
 
 MAP (NEW IN 0.6)
-  Runways, taxiways with their letters, aprons, gates and stand numbers
-  show when you zoom in on an airport, on every map style. The 3D button
+  The map is now a clean street map in light or dark, like the maps on
+  your phone. Runways, taxiways with their letters, aprons, gates and
+  stand numbers show when you zoom in on an airport, on every map style.
+  On the ground the map zooms in by itself; after take-off it steps back.
+  Each airport page in the app has its own airport map. The 3D button
   tilts the map over real terrain and flies a chase camera behind you.
 
 LOGBOOK, TRAFFIC AND ACCOUNTS

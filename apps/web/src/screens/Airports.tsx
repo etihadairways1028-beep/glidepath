@@ -3,7 +3,8 @@ import type { Airport } from "@glidepath/aviation-data";
 import { AirportHero, RunwayDiagram } from "../components/Imagery";
 import { Icon, Kv, Notice, Section } from "../components/ui";
 import { airportDetail, searchAirports, type AirportDetail } from "../data/airports";
-import { getMetar, getNetwork, getTaf, NeedsBridge, usePoll, type Metar } from "../data/external";
+import { getMetar, getNetwork, getStands, getTaf, NeedsBridge, usePoll, type Metar } from "../data/external";
+import { MapView } from "../components/MapView";
 import { fmt, useLive } from "../data/derive";
 import { useApp } from "../data/store";
 
@@ -53,6 +54,7 @@ export function AirportPage({ code }: { code: string }) {
   const metar = usePoll(bridge ? () => getMetar([code]) : null, 300_000, [code, bridge]);
   const taf = usePoll(bridge ? () => getTaf([code]) : null, 600_000, [code, bridge]);
   const net = usePoll(bridge ? () => getNetwork("vatsim") : null, 30_000, [bridge]);
+  const stands = usePoll(bridge && apt ? () => getStands(apt.lat, apt.lon) : null, 3_600_000, [bridge, apt?.code]);
 
   if (apt === undefined) return <div className="skeleton" style={{ height: 300 }} />;
   if (apt === null) return <div className="stack"><a className="btn small" href="#/airports" style={{ alignSelf: "flex-start" }}>Back</a><Notice>No airport with the code {code}.</Notice></div>;
@@ -67,6 +69,10 @@ export function AirportPage({ code }: { code: string }) {
     <div className="stack">
       <a className="btn small" href="#/airports" style={{ alignSelf: "flex-start" }}><span style={{ width: 16, height: 16 }}>{Icon.back()}</span>Airports</a>
       <AirportHero code={apt.iata ? `${apt.code} / ${apt.iata}` : apt.code} name={apt.name} city={apt.city} country={apt.country} />
+      <section className="glass apt-map" aria-label="Airport map">
+        <MapView key={apt.code} trail={[]} center={[apt.lon, apt.lat]} zoom={apt.size === "small" ? 14.6 : apt.size === "medium" ? 14 : 13.4} stands={stands.data ?? []} interactive />
+        <span className="apt-map-tag">Runways, taxiways and gates from OpenStreetMap{bridge ? "" : ". Connect your Bridge for stand numbers"}</span>
+      </section>
       <div className="grid cols-3">
         <Section title="Airport">
           <Kv k="Elevation" v={`${fmt(apt.elevationFt)} ft`} />
