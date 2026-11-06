@@ -366,3 +366,22 @@ h2 { font-size: clamp(32px, 4.4vw, 52px); font-weight: 750; letter-spacing: -0.0
 .si-msg { margin: 0; min-height: 1.2em; font-size: 14px; }
 .si-msg.err { color: #FF8A84; } .si-msg.ok { color: #5BE584; }
 .sheet .btn.primary { justify-content: center; }
+
+/* ---------- calm pass (0.6.1): neutral and native, fewer effects ---------- */
+.sky { background: radial-gradient(90% 50% at 50% -10%, #1B1D22 0%, rgba(27,29,34,0) 70%), #0B0C0E !important; }
+.sky i, .stars { display: none !important; }
+.grain { opacity: .025; }
+.hero h1 { background: none; color: #F5F5F7; -webkit-background-clip: border-box; background-clip: border-box; }
+.glass { background: rgba(36,38,43,.62) !important; }
+.glass::before { background: linear-gradient(160deg, rgba(255,255,255,.2), rgba(255,255,255,.04) 35%, rgba(255,255,255,0) 60%, rgba(255,255,255,.05)) !important; }
+.glass.strong { background: rgba(40,42,48,.74) !important; }
+.nav { background: rgba(28,30,34,.72) !important; }
+.btn.primary, .play, .steps .n { background: #0A84FF !important; box-shadow: none !important; }
+.chat .me { background: #0A84FF; }
+.screen-cover { background: #0B0C0E; }
+.screen-cover img { box-shadow: none; }
+.ipad .screen { background: #0B0C0E; }
+.phone-screen { background: #0B0C0E !important; }
+.mail-hero { background: #0A84FF; }
+.sheet { background: rgba(30,32,36,.96); }
+.bars i.on, .cm-months i { background: #0A84FF; }
