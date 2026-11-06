@@ -54,10 +54,11 @@ export interface Settings {
   reduceTransparency: boolean;
   /** Base map: satellite imagery, or a street map that follows the light/dark theme. */
   mapStyle: MapStyle;
+  map3d: boolean;
 }
 
 const DEFAULT_SETTINGS: Settings = {
-  bridgeUrl: "", token: "", simbriefUser: "", showVatsim: true, showIvao: false, showSayIntentions: false, fuelUnit: "kg", accent: "glideslope", theme: "system", voiceCallouts: false, reduceTransparency: false, mapStyle: "satellite",
+  bridgeUrl: "", token: "", simbriefUser: "", showVatsim: true, showIvao: false, showSayIntentions: false, fuelUnit: "kg", accent: "glideslope", theme: "system", voiceCallouts: false, reduceTransparency: false, mapStyle: "satellite", map3d: false,
 };
 
 const initial: AppState = {

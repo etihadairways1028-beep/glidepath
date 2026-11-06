@@ -12,6 +12,7 @@
  *    user's account, revocable from Settings.
  */
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { addonStatus } from "./addons.js";
 import { networkInterfaces } from "node:os";
 import { timingSafeEqual } from "node:crypto";
 import { WebSocketServer, type WebSocket } from "ws";
@@ -249,6 +250,10 @@ export class LanServer {
     if (!authed) return json(res, 401, { error: "Pairing token required" });
 
     if (p === "/api/status") return json(res, 200, this.getStatus());
+    if (p === "/api/addons") {
+      const extra = (url.searchParams.get("extra") ?? "").split(",").map(Number).filter(Boolean).slice(0, 6);
+      return json(res, 200, await addonStatus(lanAddresses(), extra));
+    }
     if (p === "/api/lan") return json(res, 200, { bridgeId: this.identity.bridgeId, addresses: lanAddresses(), port: this.cfg.port });
     if (p === "/api/flight") return json(res, 200, this.session.activeFlight);
     if (p === "/api/flights") return json(res, 200, this.recorder.listFlights(Number(url.searchParams.get("limit") ?? 50)));
@@ -298,6 +303,11 @@ export class LanServer {
         switch (p) {
           case "/api/ext/vatsim": return json(res, 200, await this.external.vatsim());
           case "/api/ext/ivao": return json(res, 200, await this.external.ivao());
+          case "/api/ext/stands": {
+            const lat = Number(url.searchParams.get("lat")), lon = Number(url.searchParams.get("lon"));
+            if (!Number.isFinite(lat) || !Number.isFinite(lon)) return json(res, 400, { error: "lat and lon required" });
+            return json(res, 200, await this.external.stands(lat, lon));
+          }
           case "/api/ext/sayintentions": return json(res, 200, await this.external.sayintentions());
           case "/api/ext/metar": return json(res, 200, await this.external.metar(ids));
           case "/api/ext/taf": return json(res, 200, await this.external.taf(ids));

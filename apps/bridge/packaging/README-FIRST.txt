@@ -1,4 +1,4 @@
-GLIDEPATH BRIDGE 0.5.0 (EARLY TEST BUILD) - WINDOWS
+GLIDEPATH BRIDGE 0.6.0 (EARLY TEST BUILD) - WINDOWS
 ====================================================
 
 The Bridge runs on the PC where you fly Microsoft Flight Simulator. It reads
@@ -38,6 +38,22 @@ STEP 3 - FLY FOR REAL
   2. Double-click "Start Bridge.bat".
   3. The Bridge connects by itself once the sim is running.
   Nothing is installed in your Community folder.
+
+COCKPIT TOOLS (NEW IN 0.6)
+  In the app, open Cockpit tools (on a phone: More, then Cockpit tools).
+  The Bridge checks which add-on web pages are running on this PC and lets
+  you open them on your iPad or phone:
+    Fenix EFB and MCDU (port 8083), FSLabs EFB (23032), GSX Pro remote
+    (8744, GSX 4.0.6 or newer) and FlyByWire SimBridge (8380).
+  Add any other port yourself. If Windows asks whether the add-on may use
+  the network, allow it on private networks, or the iPad can't reach it.
+  PMDG 737 and 777: their EFB isn't a web page, so it can't be opened.
+  CDU mirroring through the PMDG SDK is planned.
+
+MAP (NEW IN 0.6)
+  Runways, taxiways with their letters, aprons, gates and stand numbers
+  show when you zoom in on an airport, on every map style. The 3D button
+  tilts the map over real terrain and flies a chase camera behind you.
 
 LOGBOOK, TRAFFIC AND ACCOUNTS
   Every flight saves itself when you park. The Logbook shows your hours,

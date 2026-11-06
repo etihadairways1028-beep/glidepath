@@ -679,3 +679,38 @@ a.li:hover { background: rgba(255,255,255,.05); border-radius: 16px; }
 .btn.ghost:hover { color: var(--ink); }
 @media (max-width: 520px) { .acct { grid-template-columns: 36px 1fr auto; } .acct .btn.ghost { grid-column: 2 / -1; justify-self: start; padding-left: 0; } }
 :root[data-theme="light"] .switch:checked, .switch:checked { background: #34C759; }
+
+/* Map polish */
+.map-vignette { position: absolute; inset: 0; pointer-events: none; z-index: 1;
+  background: radial-gradient(120% 90% at 50% 45%, transparent 55%, rgba(2,8,24,.38) 100%), linear-gradient(180deg, rgba(2,8,24,.25), transparent 18%, transparent 82%, rgba(2,8,24,.3)); }
+:root[data-theme="light"] .map-vignette { background: radial-gradient(120% 90% at 50% 45%, transparent 60%, rgba(30,50,90,.18) 100%); }
+.map-tools .map3d { font: 750 14px/1 var(--data, inherit); letter-spacing: .02em; }
+.map-tools .btn.on { background: rgba(10,132,255,.55); color: #fff; box-shadow: inset 0 1px 0.5px rgba(255,255,255,.5), 0 8px 20px -8px rgba(10,132,255,.8); }
+
+/* ---------- cockpit tools ---------- */
+.addon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.addon { padding: 18px; border-radius: 24px; display: flex; flex-direction: column; gap: 10px; }
+.addon h3 { margin: 0; font-size: 17px; letter-spacing: -0.01em; }
+.addon p { margin: 0; }
+.addon-top { display: flex; gap: 12px; align-items: flex-start; }
+.addon-top .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 6px; background: rgba(255,255,255,.25); flex: none; }
+.addon-top .dot.on { background: #30D158; box-shadow: 0 0 0 4px rgba(48,209,88,.18), 0 0 14px rgba(48,209,88,.6); }
+.addon.up { box-shadow: inset 0 0 0 1px rgba(48,209,88,.28); }
+.addon-act { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; }
+.addon-add { display: flex; gap: 10px; align-items: center; }
+.addon-add input { flex: 1; max-width: 220px; height: 38px; border-radius: 12px; padding: 0 12px; border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.06); color: inherit; font: inherit; }
+.cockpit-frame { padding: 12px; border-radius: 26px; display: flex; flex-direction: column; gap: 10px; }
+.cockpit-frame-h { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 2px 4px; }
+.cockpit-frame-h .muted { flex: 1; }
+.cockpit-frame iframe { width: 100%; height: min(72vh, 900px); border: 0; border-radius: 18px; background: #000; }
+.cockpit-frame p { margin: 0 4px; }
+.btn.round { width: 34px; padding: 0; justify-content: center; }
+.btn.round svg { width: 16px; height: 16px; }
+.cockpit pre.code { white-space: pre; overflow-x: auto; }
+.more-links { display: none; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 900px) { .more-links { display: flex; } }
+:root[data-theme="light"] .addon-top .dot:not(.on) { background: rgba(20,40,80,.22); }
+:root[data-theme="light"] .addon-add input { border-color: rgba(20,40,80,.18); background: rgba(255,255,255,.7); }
+.grid > *, .stack > * { min-width: 0; }
+.pill { max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 900px) { .glass > .between { flex-wrap: wrap; } }

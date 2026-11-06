@@ -30,6 +30,12 @@ export function SettingsScreen() {
   return (
     <div className="stack">
       <h1 className="title">Settings</h1>
+      <nav className="more-links" aria-label="More screens">
+        <a className="btn small" href="#/cockpit">Cockpit tools</a>
+        <a className="btn small" href="#/airports">Airports</a>
+        <a className="btn small" href="#/account">Account</a>
+        <a className="btn small" href="#/glance">Glance mode</a>
+      </nav>
       <div className="grid cols-2" style={{ alignItems: "start" }}>
         <div className="stack">
           <Section title="Bridge connection" right={<ConnPill />}>

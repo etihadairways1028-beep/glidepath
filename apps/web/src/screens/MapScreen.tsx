@@ -2,7 +2,8 @@ import { useState } from "react";
 import { MapView } from "../components/MapView";
 import { Icon } from "../components/ui";
 import { fmt, PHASE_LABEL, useLive } from "../data/derive";
-import { getNetwork, NETWORK_LABEL, usePoll, type NetworkPilot } from "../data/external";
+import { getNetwork, getStands, NETWORK_LABEL, usePoll, type NetworkPilot, type Stand } from "../data/external";
+import { useEffect, useRef } from "react";
 import { BaseMapPicker, TrafficSources } from "../components/MapLayers";
 import { settingsStore, useApp, useSettings } from "../data/store";
 
@@ -20,6 +21,18 @@ export function MapScreen() {
   const si = usePoll(bridge && s.showSayIntentions ? () => getNetwork("sayintentions") : null, 30_000, [bridge, s.showSayIntentions]);
   const traffic = [...(vatsim.data?.pilots ?? []), ...(ivao.data?.pilots ?? []), ...(si.data?.pilots ?? [])].filter((p) => p.callsign !== (L.plan?.callsign ?? L.flight?.callsign));
   const f = L.frame;
+  // Gates and stands from OpenStreetMap when you're at (or near) an airport.
+  const [stands, setStands] = useState<Stand[]>([]);
+  const standsAt = useRef<{ lat: number; lon: number } | null>(null);
+  const nearGround = !!f && (f.position.onGround || (f.position.altAglFt ?? 99999) < 3000);
+  useEffect(() => {
+    if (!bridge || !f || !nearGround) return;
+    const here = { lat: f.position.lat, lon: f.position.lon };
+    const prev = standsAt.current;
+    if (prev && Math.hypot(prev.lat - here.lat, (prev.lon - here.lon) * Math.cos((here.lat * Math.PI) / 180)) < 0.03) return; // ~3 km
+    standsAt.current = here;
+    getStands(here.lat, here.lon).then(setStands).catch(() => undefined);
+  }, [bridge, nearGround, f ? Math.round(f.position.lat * 50) : 0, f ? Math.round(f.position.lon * 50) : 0]);
   const aircraft = f && f.attitude.headingTrueDeg !== null ? { lat: f.position.lat, lon: f.position.lon, hdg: f.attitude.headingTrueDeg } : null;
   const airports = [
     ...(L.plan ? [{ code: L.plan.origin.icao, lat: L.plan.origin.lat, lon: L.plan.origin.lon, role: "dep" as const }, { code: L.plan.destination.icao, lat: L.plan.destination.lat, lon: L.plan.destination.lon, role: "arr" as const }] : []),
@@ -27,7 +40,7 @@ export function MapScreen() {
 
   return (
     <div className="map-wrap">
-      <MapView trail={trail} plan={L.plan} aircraft={aircraft} airports={airports} traffic={traffic} follow={follow} onSelectTraffic={setSel} onUserMove={() => setFollow(false)} />
+      <MapView trail={trail} plan={L.plan} aircraft={aircraft} airports={airports} traffic={traffic} follow={follow} threeD={s.map3d} stands={stands} agl={f?.position.altAglFt ?? null} onGround={!!f?.position.onGround} onSelectTraffic={setSel} onUserMove={() => setFollow(false)} />
       <div className="map-hud glass strong pad" style={{ padding: "14px 16px" }}>
         {L.flight ? (
           <>
@@ -50,6 +63,7 @@ export function MapScreen() {
       </div>
       <div className="map-tools">
         <button className={`btn glass${follow ? " on" : ""}`} aria-pressed={follow} aria-label="Follow my aircraft" title="Follow my aircraft" onClick={() => setFollow(!follow)}><span style={{ width: 22, height: 22 }}>{Icon.target()}</span></button>
+        <button className={`btn glass map3d${s.map3d ? " on" : ""}`} aria-pressed={s.map3d} aria-label="3D chase view" title="3D chase view" onClick={() => { settingsStore.set({ map3d: !s.map3d }); if (!s.map3d) setFollow(true); }}>3D</button>
         <button className={`btn glass${layers ? " on" : ""}`} aria-expanded={layers} aria-label="Map layers" title="Map layers" onClick={() => setLayers(!layers)}><span style={{ width: 22, height: 22 }}>{Icon.layers()}</span></button>
         {layers && (
           <div className="glass strong layers-pop">

@@ -28,6 +28,8 @@ function bridge() {
 }
 
 export const getNetwork = (n: Network) => bridge().get<NetworkSnapshot>(`/api/ext/${n}`);
+export interface Stand { ref: string; kind: "gate" | "stand"; lat: number; lon: number; distanceM: number }
+export const getStands = (lat: number, lon: number) => bridge().get<Stand[]>(`/api/ext/stands?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`);
 export const getMetar = (ids: string[]) => bridge().get<Metar[]>(`/api/ext/metar?ids=${ids.join(",")}`);
 export const getTaf = (ids: string[]) => bridge().get<Taf[]>(`/api/ext/taf?ids=${ids.join(",")}`);
 export const loadPlan = (user: string) => bridge().post<FlightPlan>("/api/plan", { user });

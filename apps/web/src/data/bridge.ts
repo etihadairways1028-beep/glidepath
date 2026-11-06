@@ -49,6 +49,9 @@ export class BridgeClient {
 
   constructor(private readonly base: string, private readonly token: string) {}
 
+  /** The address this device reaches the Bridge on. */
+  get baseUrl(): string { return this.base; }
+
   start(): void {
     store.reset("bridge");
     this.stopped = false;
