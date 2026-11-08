@@ -157,7 +157,7 @@ export function App() {
           </nav>
         )}
         <main className="main" id="main">
-          <div className={`page${full ? " full" : ""}`}>{body}</div>
+          <div key={screen || "home"} className={`page page-enter${full ? " full" : ""}`}>{body}</div>
         </main>
       </div>
       {screen !== "glance" && (

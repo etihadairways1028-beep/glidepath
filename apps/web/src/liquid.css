@@ -777,3 +777,70 @@ a.li:hover { background: rgba(255,255,255,.05); border-radius: 16px; }
 .install-card { padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
 .install-card ol { margin: 0; padding-left: 20px; line-height: 1.75; color: var(--mist); }
 .install-card ol b { color: var(--ink); }
+
+/* ==========================================================================
+   Liquid Glass 2 (0.6.3): real glass needs something to bend, so a quiet,
+   slowly moving light sits behind everything; glass gets a bright specular
+   edge, edge lensing and depth. Pages glide in; controls respond to touch.
+   ========================================================================== */
+.sky::before, .sky::after {
+  content: ""; position: absolute; border-radius: 50%; filter: blur(80px); pointer-events: none;
+  will-change: transform; animation: gp-drift 38s ease-in-out infinite alternate;
+}
+.sky::before { width: 70vmax; height: 70vmax; left: -20vmax; top: -30vmax; background: radial-gradient(circle, rgba(10,132,255,.20), transparent 62%); }
+.sky::after { width: 60vmax; height: 60vmax; right: -22vmax; bottom: -26vmax; background: radial-gradient(circle, rgba(94,92,230,.14), transparent 62%); animation-duration: 46s; animation-direction: alternate-reverse; }
+:root[data-theme="light"] .sky::before { background: radial-gradient(circle, rgba(10,132,255,.13), transparent 62%); }
+:root[data-theme="light"] .sky::after { background: radial-gradient(circle, rgba(255,159,10,.10), transparent 62%); }
+@keyframes gp-drift { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(6vmax, 5vmax, 0) scale(1.12); } }
+
+:root { --blur-regular: blur(34px) saturate(190%) brightness(1.05); --blur-thick: blur(48px) saturate(210%) brightness(1.07); }
+.glass {
+  border-radius: 26px;
+  background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.02) 40%, rgba(255,255,255,.03)), var(--tint-regular);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.28),          /* specular top edge */
+    inset 0 -1px 0 rgba(255,255,255,.05),
+    inset 0 0 0 0.5px rgba(255,255,255,.10),
+    inset 0 0 22px rgba(255,255,255,.035),        /* edge lensing */
+    0 1px 1px rgba(0,0,0,.25), 0 16px 40px -18px rgba(0,0,0,.6);
+}
+.glass.strong {
+  background: linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.02) 45%, rgba(255,255,255,.04)), var(--tint-thick);
+}
+:root[data-theme="light"] .glass, :root[data-theme="light"] .glass.strong {
+  background: linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.55) 45%, rgba(255,255,255,.7));
+  box-shadow: inset 0 1px 0 #fff, inset 0 0 0 0.5px rgba(0,0,0,.06), inset 0 0 20px rgba(255,255,255,.6), 0 1px 2px rgba(0,0,0,.05), 0 14px 36px -18px rgba(30,40,70,.28);
+}
+:root[data-theme="light"] .glass::after { background: radial-gradient(420px circle at var(--mx, 12%) var(--my, -18%), rgba(255,255,255,.55), transparent 60%); }
+
+/* Page change: glide up out of a soft blur. */
+.page-enter { animation: gp-page-in .42s cubic-bezier(.2,.8,.2,1) both; }
+.page-enter > * > .glass, .page-enter > .stack > *, .page-enter > .grid > * { animation: gp-rise .5s cubic-bezier(.2,.8,.2,1) both; }
+.page-enter > .stack > *:nth-child(2) { animation-delay: .04s; }
+.page-enter > .stack > *:nth-child(3) { animation-delay: .08s; }
+.page-enter > .stack > *:nth-child(4) { animation-delay: .12s; }
+.page-enter > .stack > *:nth-child(n+5) { animation-delay: .16s; }
+.page.full.page-enter { animation-name: gp-fade; }
+@keyframes gp-page-in { from { opacity: 0; transform: translateY(14px) scale(.985); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes gp-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes gp-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* Touch response, like iOS: glass gently squeezes when pressed. */
+.btn, .nav-a, .tab, .seg button, .basemap, .tile { transition: transform .25s cubic-bezier(.3,1.4,.5,1), background-color .2s, box-shadow .25s, color .2s; }
+.btn:active, .nav-a:active, .tab:active, .seg button:active, .basemap:active { transform: scale(.95); }
+a.tile:hover, .tile[role="button"]:hover { transform: translateY(-2px); }
+
+/* Active tab and sidebar item float as a lit glass pill. */
+.tab.on, .nav-a.on {
+  background: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,.08));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.35), inset 0 0 0 0.5px rgba(255,255,255,.15), 0 6px 16px -8px rgba(0,0,0,.5);
+  animation: gp-pop .35s cubic-bezier(.3,1.5,.5,1);
+}
+:root[data-theme="light"] .tab.on, :root[data-theme="light"] .nav-a.on { background: linear-gradient(180deg, #fff, rgba(255,255,255,.75)); box-shadow: inset 0 0 0 0.5px rgba(0,0,0,.06), 0 6px 16px -8px rgba(30,40,70,.35); }
+@keyframes gp-pop { from { transform: scale(.9); } to { transform: none; } }
+.tabbar { border-radius: 30px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter, .page-enter *, .sky::before, .sky::after, .tab.on, .nav-a.on { animation: none !important; }
+}
+.sky { overflow: hidden; }
