@@ -168,7 +168,7 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     m.addLayer({ id: "metars", type: "circle", source: "metars", paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 3, 3, 9, 7], "circle-color": ["match", ["get", "cat"], "VFR", "#30D158", "MVFR", "#0A84FF", "IFR", "#FF453A", "LIFR", "#BF5AF2", "#8E8E93"], "circle-stroke-color": light ? "#fff" : "rgba(0,0,0,.65)", "circle-stroke-width": 1.2, "circle-opacity": 0.95 } });
     m.addLayer({ id: "metars-label", type: "symbol", source: "metars", minzoom: 6.5, layout: { "text-field": ["get", "icao"], "text-font": ["Noto Sans Bold"], "text-size": 10.5, "text-offset": [0, 1.15], "text-anchor": "top" }, paint: { "text-color": light ? "#1C1C1E" : "#F2F2F7", "text-halo-color": light ? "rgba(255,255,255,.9)" : "rgba(0,0,0,.75)", "text-halo-width": 1.3 } });
     m.addSource("atc", { type: "geojson", data: data.current.atc as ReturnType<typeof empty> });
-    m.addLayer({ id: "atc-halo", type: "circle", source: "atc", paint: { "circle-radius": ["match", ["get", "kind"], "ctr", ["interpolate", ["linear"], ["zoom"], 2, 14, 7, 46], "app", ["interpolate", ["linear"], ["zoom"], 2, 8, 9, 34], ["interpolate", ["linear"], ["zoom"], 2, 4, 10, 18]], "circle-color": ["get", "col"], "circle-opacity": 0.12, "circle-stroke-color": ["get", "col"], "circle-stroke-width": 1.2, "circle-stroke-opacity": 0.55 } });
+    m.addLayer({ id: "atc-halo", type: "circle", source: "atc", paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 2, ["match", ["get", "kind"], "ctr", 14, "app", 8, 4], 9, ["match", ["get", "kind"], "ctr", 46, "app", 34, 18]], "circle-color": ["get", "col"], "circle-opacity": 0.12, "circle-stroke-color": ["get", "col"], "circle-stroke-width": 1.2, "circle-stroke-opacity": 0.55 } });
     m.addLayer({ id: "atc", type: "circle", source: "atc", paint: { "circle-radius": 4, "circle-color": ["get", "col"], "circle-stroke-color": "#fff", "circle-stroke-width": 1.4 } });
     m.addLayer({ id: "atc-label", type: "symbol", source: "atc", minzoom: 4, layout: { "text-field": ["concat", ["get", "callsign"], "\n", ["get", "freq"]], "text-font": ["Noto Sans Bold"], "text-size": 10.5, "text-offset": [0, 1.3], "text-anchor": "top", "text-optional": true }, paint: { "text-color": ["get", "col"], "text-halo-color": light ? "rgba(255,255,255,.92)" : "rgba(0,0,0,.8)", "text-halo-width": 1.4 } });
     m.addLayer({ id: "traffic", type: "symbol", source: "traffic", layout: { "icon-image": ["concat", "traffic-", ["get", "net"]], "icon-rotate": ["get", "hdg"], "icon-rotation-alignment": "map", "icon-allow-overlap": true, "icon-size": ["interpolate", ["linear"], ["zoom"], 2, 0.55, 9, 1] }, paint: { "icon-opacity": 0.95 } });
@@ -181,7 +181,7 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
       container: el.current, style: styleFor(wanted), center: aircraft ? [aircraft.lon, aircraft.lat] : center ?? [0, 30], zoom: aircraft ? 7 : startZoom ?? (center ? 14 : 1.6),
       attributionControl: { compact: true }, interactive, dragRotate: false, pitchWithRotate: false, fadeDuration: 150,
     });
-    map.current = m;
+    map.current = m; if (location.search.includes("gpdebug")) (window as unknown as { __gpMap?: unknown }).__gpMap = m;
     let failures = 0;
     m.on("error", (e) => {
       const msg = String((e as { error?: { message?: string; status?: number } }).error?.message ?? "");
