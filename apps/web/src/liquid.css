@@ -844,3 +844,7 @@ a.tile:hover, .tile[role="button"]:hover { transform: translateY(-2px); }
   .page-enter, .page-enter *, .sky::before, .sky::after, .tab.on, .nav-a.on { animation: none !important; }
 }
 .sky { overflow: hidden; }
+.welcome { position: relative; z-index: 1; min-height: 100dvh; display: grid; place-items: center; padding: 40px 20px calc(40px + env(safe-area-inset-bottom)); }
+.welcome-in { width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 12px; animation: gp-page-in .55s cubic-bezier(.2,.8,.2,1) both; }
+.welcome-logo { align-self: center; border-radius: 18px; box-shadow: 0 12px 30px -10px rgba(10,132,255,.5); }
+.welcome-skip { align-self: center; margin-top: 4px; }

@@ -14,7 +14,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { addonStatus } from "./addons.js";
 import { networkInterfaces } from "node:os";
-import { timingSafeEqual } from "node:crypto";
+import { randomInt, timingSafeEqual } from "node:crypto";
 import { WebSocketServer, type WebSocket } from "ws";
 import { Bonjour } from "bonjour-service";
 import {
@@ -25,7 +25,7 @@ import type { BridgeConfig, BridgeIdentity } from "./config.js";
 import type { Logger } from "./log.js";
 import type { Recorder } from "./recorder.js";
 import type { FlightSession } from "./session.js";
-import { livePage, liveRedirectPage, statusPage } from "./pages.js";
+import { livePage, liveRedirectPage, pairPage, statusPage } from "./pages.js";
 import { HttpError, type AiConfig, type AiService, type ChatMessage } from "./ai.js";
 import type { ExternalData } from "./external.js";
 import type { AirportDb } from "@glidepath/aviation-data";
@@ -48,6 +48,9 @@ export class LanServer {
   private http = createServer((req, res) => this.route(req, res));
   private wss = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });
   private bonjour: Bonjour | null = null;
+  /** Six-digit code shown on the PC; typing it on an iPad hands over the pairing key. */
+  readonly pairCode = newPairCode();
+  private pairFails = 0;
   private flushTimer: NodeJS.Timeout | null = null;
   private rateTimer: NodeJS.Timeout | null = null;
   private readonly log: Logger;
@@ -91,6 +94,8 @@ export class LanServer {
           port: this.cfg.port,
           txt: { id: this.identity.bridgeId, pv: String(PROTOCOL_VERSION) },
         });
+        // Lets an iPad on the same Wi-Fi open http://glidepath.local:4810 instead of the PC's numbers.
+        this.bonjour.publish({ name: "Glidepath", type: "http", port: this.cfg.port, host: "glidepath.local" });
         this.log.info("Advertising _glidepath._tcp on the local network");
       } catch (e) {
         this.log.warn("mDNS advertising failed; apps can still connect by address", e);
@@ -236,10 +241,23 @@ export class LanServer {
 
   private async handle(req: IncomingMessage, res: ServerResponse, url: URL, local: boolean, authed: boolean): Promise<void> {
     const p = url.pathname;
-    const POSTS = ["/api/plan", "/api/ai/config", "/api/ai/chat"];
+    const POSTS = ["/api/plan", "/api/ai/config", "/api/ai/chat", "/api/pair"];
     if (req.method !== "GET" && !(req.method === "POST" && POSTS.includes(p))) return text(res, 405, "Method not allowed");
     if (p === "/") {
-      return html(res, statusPage({ local, status: this.getStatus(), token: local ? this.identity.pairingToken : null, addresses: lanAddresses(), port: this.cfg.port, logs: local ? this.log.recent().slice(-60) : [] }));
+      if (!local) return html(res, pairPage());
+      return html(res, statusPage({ local, pairCode: this.pairCode, status: this.getStatus(), token: local ? this.identity.pairingToken : null, addresses: lanAddresses(), port: this.cfg.port, logs: local ? this.log.recent().slice(-60) : [] }));
+    }
+    if (p === "/api/pair" && req.method === "POST") {
+      if (this.pairFails >= 10) return json(res, 429, { error: "Too many wrong codes. Restart the Bridge on your PC for a new code." });
+      const body = (await readBody(req, 500)) as { code?: unknown };
+      const code = String(body?.code ?? "").replace(/\D/g, "");
+      if (code.length === 6 && code === this.pairCode) {
+        this.log.info(`Paired a device by code (${req.socket.remoteAddress ?? "?"})`);
+        return json(res, 200, { token: this.identity.pairingToken });
+      }
+      this.pairFails++;
+      this.log.warn(`Wrong pairing code from ${req.socket.remoteAddress ?? "?"}`);
+      return json(res, 403, { error: "That code doesn't match. Check the code on your PC." });
     }
     if (p === "/live") return html(res, liveRedirectPage());
     if (p === "/lite") return html(res, livePage());
@@ -356,6 +374,10 @@ export function lanAddresses(): string[] {
     for (const ni of list ?? []) if (ni.family === "IPv4" && !ni.internal) out.push(ni.address);
   }
   return out;
+}
+
+function newPairCode(): string {
+  return String(randomInt(0, 1_000_000)).padStart(6, "0");
 }
 
 function isLocal(req: IncomingMessage): boolean {

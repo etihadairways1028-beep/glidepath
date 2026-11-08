@@ -167,3 +167,31 @@ export function YourPcs() {
     </section>
   );
 }
+
+const WELCOME_KEY = "glidepath.welcomed";
+export const hasBeenWelcomed = (): boolean => { try { return localStorage.getItem(WELCOME_KEY) === "1"; } catch { return true; } };
+
+/** First open on a device: sign in or create an account, or carry on without one. */
+export function Welcome({ onDone }: { onDone: () => void }) {
+  const c = useCloud();
+  const finish = () => { try { localStorage.setItem(WELCOME_KEY, "1"); } catch { /* ignore */ } onDone(); };
+  useEffect(() => { if (c.accounts.length > 0) finish(); }, [c.accounts.length]);
+  return (
+    <div className="welcome">
+      <div className="welcome-in">
+        <img className="welcome-logo" src="icons/icon-192.png" alt="" width={72} height={72} />
+        <h1 className="title" style={{ textAlign: "center" }}>Welcome to Glidepath</h1>
+        <p className="muted" style={{ textAlign: "center", margin: "0 0 18px" }}>Your sim flight, live on your iPad, phone and PC.</p>
+        {c.status === "loading" && <div className="skeleton" style={{ height: 220 }} />}
+        {c.status === "off" && (
+          <section className="glass pad">
+            <div className="h2" style={{ margin: 0 }}>Sign-in opens soon</div>
+            <p className="muted" style={{ margin: "8px 0 0" }}>Accounts aren't switched on yet. You can use everything now: your flights are saved on your PC by the Bridge, and you can sign in later from Account.</p>
+          </section>
+        )}
+        {c.status !== "loading" && c.status !== "off" && <SignInCard onDone={finish} canCancel={false} />}
+        <button className="btn welcome-skip" onClick={finish}>{c.status === "off" ? "Continue" : "Continue without an account"}</button>
+      </div>
+    </div>
+  );
+}

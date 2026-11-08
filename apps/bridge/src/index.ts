@@ -157,7 +157,12 @@ async function main(): Promise<void> {
     "    Glidepath Bridge is running. Keep this window open.",
     "  ============================================================",
     `  On this PC:      http://localhost:${cfg.port}`,
-    ...lan.map((ip) => `  On your iPad:    http://${ip}:${cfg.port}  (same Wi-Fi; pairing link is on the page above)`),
+    "",
+    "  CONNECT YOUR iPAD (same Wi-Fi):",
+    `    1. In Safari on the iPad, go to:   glidepath.local:${cfg.port}`,
+    `    2. Type this code:                 ${server.pairCode.slice(0, 3)} ${server.pairCode.slice(3)}`,
+    ...lan.map((ip) => `    (If that address doesn't open, use http://${ip}:${cfg.port} instead.)`),
+    "",
     "  To stop:         close this window or press Ctrl+C",
     "",
   ].join("\n"));

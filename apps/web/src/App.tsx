@@ -2,11 +2,11 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Icon, Mark } from "./components/ui";
 import { activeBridge, BridgeClient, consumePairingLink, detectBridgeUrl, setActiveBridge } from "./data/bridge";
 import { findBridgeOnNetwork, initCloud, saveBridge, syncFlights, useCloud } from "./data/cloud";
-import { Account } from "./screens/Account";
 import type { FlightSummary } from "@glidepath/protocol";
 import { startDemo } from "./data/demo";
 import { settingsStore, store, useApp, useSettings } from "./data/store";
 import { CockpitScreen } from "./screens/Cockpit";
+import { Account, hasBeenWelcomed, Welcome } from "./screens/Account";
 import { CopilotScreen } from "./screens/Copilot";
 import { useCallouts } from "./data/copilot";
 import { Home } from "./screens/Home";
@@ -127,6 +127,7 @@ export function App() {
     return () => window.removeEventListener("pointermove", on);
   }, []);
 
+  const [welcomed, setWelcomed] = useState(hasBeenWelcomed);
   const [screen, ...rest] = route;
   const full = screen === "map" || screen === "glance";
   let body: ReactNode;
@@ -142,6 +143,8 @@ export function App() {
     case "cockpit": body = <CockpitScreen />; break;
     default: body = <Home />;
   }
+
+  if (!welcomed) return (<><Sky /><Welcome onDone={() => setWelcomed(true)} /></>);
 
   return (
     <>

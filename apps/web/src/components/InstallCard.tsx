@@ -43,7 +43,7 @@ export function InstallCard() {
           <li>Open Glidepath from its new icon.</li>
         </ol>
       )}
-      {fromWebsite && <p className="small muted" style={{ margin: 0 }}>Do this from your Bridge's link (scan the QR code on your PC) rather than from this website, so the Home Screen app can reach your PC over Wi-Fi.</p>}
+      {fromWebsite && <p className="small muted" style={{ margin: 0 }}>Do this from your PC's Bridge, not this website: in Safari go to glidepath.local:4810 and type the code shown on your PC. Then the Home Screen app can reach your PC over Wi-Fi.</p>}
     </section>
   );
 }

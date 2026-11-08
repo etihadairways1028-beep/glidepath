@@ -45,7 +45,28 @@ export function liveRedirectPage(): string {
   return `<!doctype html><meta charset="utf-8"><title>Glidepath</title><script>var t=new URLSearchParams(location.search).get("token");location.replace("/app/"+(t?"#token="+encodeURIComponent(t):""));</script><a href="/app/">Open Glidepath</a>`;
 }
 
-export function statusPage(p: { local: boolean; status: BridgeStatus; token: string | null; addresses: string[]; port: number; logs: string[] }): string {
+/** What an iPad sees at http://glidepath.local:4810 : type the code from the PC, get paired. */
+export function pairPage(): string {
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Connect to Glidepath</title><style>${BASE_CSS}
+main{max-width:460px;margin:0 auto;padding:56px 22px;text-align:center}h1{font-size:26px;margin:18px 0 6px}p{color:var(--quiet);line-height:1.5}
+.code{display:flex;gap:8px;justify-content:center;margin:26px 0 14px}
+#c{width:100%;max-width:300px;font-size:38px;letter-spacing:.35em;text-align:center;padding:14px 10px 14px 24px;border-radius:18px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:inherit;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+button{margin-top:6px;width:100%;max-width:300px;padding:15px;border:0;border-radius:16px;background:#0A84FF;color:#fff;font-size:17px;font-weight:600}
+#m{min-height:22px;margin-top:14px;color:#FF9F0A}</style></head><body><main>
+<div style="display:flex;justify-content:center">${LOGO}</div>
+<h1>Connect this iPad</h1>
+<p>Type the 6-digit code shown on your PC, in the Glidepath Bridge window.</p>
+<form id="f"><div class="code"><input id="c" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="000000" autofocus></div>
+<button type="submit">Connect</button></form><div id="m"></div>
+<script>
+document.getElementById("f").onsubmit=async function(e){e.preventDefault();var m=document.getElementById("m");m.textContent="Connecting…";
+try{var r=await fetch("/api/pair",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code:document.getElementById("c").value})});var j=await r.json();
+if(r.ok&&j.token){location.replace("/app/#token="+encodeURIComponent(j.token));}else{m.textContent=j.error||"That didn't work. Try again.";}}catch(_){m.textContent="Can't reach your PC. Is the Bridge still open?";}};
+</script></main></body></html>`;
+}
+
+export function statusPage(p: { local: boolean; pairCode: string; status: BridgeStatus; token: string | null; addresses: string[]; port: number; logs: string[] }): string {
   const s = p.status;
   const stateDot = s.simState === "connected" ? "live" : s.simState === "error" ? "err" : "warn";
   const links = p.token
@@ -60,6 +81,7 @@ export function statusPage(p: { local: boolean; status: BridgeStatus; token: str
 main{max-width:860px;margin:0 auto;padding:32px 20px}h1{font-size:20px;font-weight:600;margin:0 0 4px;display:flex;gap:10px;align-items:center}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:20px 0}.panel{padding:16px}.v{font-size:17px;margin-top:4px}
 a.btnp{display:inline-block;padding:10px 16px;border-radius:12px;background:var(--accent);color:#05080F;font-weight:600;text-decoration:none}.pairrow{display:flex;gap:16px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}.pairrow:first-of-type{border-top:0}.qr{width:132px;height:132px;flex:none;background:#fff;border-radius:12px;padding:6px}.qr svg{width:100%;height:100%;display:block}.pairrow a{word-break:break-all}
+.easy .steps{margin:12px 0 14px;padding-left:22px;font-size:17px;line-height:1.6}.easy .steps li{margin:8px 0}.easy .big{display:inline-block;margin-top:4px;font-size:28px;font-weight:700;color:var(--ink,#fff)}.easy .code{letter-spacing:.12em;color:#0A84FF}
 pre{white-space:pre-wrap;font-size:12px;color:var(--quiet);max-height:320px;overflow:auto;padding:16px;margin:0}ul{padding-left:18px}</style></head><body><main>
 <h1>${LOGO} Glidepath Bridge <span class="badge mono">v${esc(s.bridgeVersion)}</span></h1>
 <div class="label">${esc(s.hostname)} · Bridge ${esc(s.bridgeId.slice(0, 8))}</div>
@@ -70,7 +92,13 @@ pre{white-space:pre-wrap;font-size:12px;color:var(--quiet);max-height:320px;over
   <div class="panel"><div class="label">Connected devices</div><div class="v mono">${s.clients}</div><div class="label" style="margin-top:6px">${s.activeFlightId ? "Recording flight " + esc(s.activeFlightId.slice(0, 8)) : "No active flight"}</div></div>
 </div>
 ${p.local ? `${here ? `<div class="panel" style="padding:16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><div class="label">On this PC</div><div class="v">Open the Glidepath app here</div></div><a class="btnp" href="${esc(here)}" target="_blank" rel="noreferrer">Open Glidepath</a></div>` : ""}
-<div class="panel" style="padding:16px;margin-top:12px"><div class="label" style="margin-bottom:10px">Open on your iPad or phone (same Wi-Fi)</div>
+<div class="panel easy" style="padding:22px;margin-top:12px">
+  <div class="label">Connect your iPad: 2 steps</div>
+  <ol class="steps"><li>On the iPad, open <b>Safari</b> and go to<br><span class="big mono">glidepath.local:${p.port}</span></li>
+  <li>Type this code:<br><span class="big mono code">${esc(p.pairCode.slice(0, 3))} ${esc(p.pairCode.slice(3))}</span></li></ol>
+  <div class="label">Then tap Share, then Add to Home Screen, to keep Glidepath as an app.</div>
+</div>
+<div class="panel" style="padding:16px;margin-top:12px"><div class="label" style="margin-bottom:10px">Or scan with your iPad camera (same Wi-Fi)</div>
 ${links || "<p>No network address found. Is this PC connected to Wi-Fi or Ethernet?</p>"}
 <div class="label" style="margin-top:10px">This link contains your pairing key. Only open it on your own devices. If Windows asks, allow Glidepath Bridge on <b>private</b> networks. On iPad, tap Share then Add to Home Screen to keep it as an app.</div></div>
 <h2 class="label" style="margin:24px 0 8px">Recent log</h2><div class="panel"><pre class="mono">${esc(p.logs.join("\n")) || "—"}</pre></div>` : `<p class="label">Pairing details are only shown on the simulator PC itself.</p>`}
