@@ -2,7 +2,8 @@ import { useState } from "react";
 import { MapView } from "../components/MapView";
 import { Icon } from "../components/ui";
 import { fmt, PHASE_LABEL, useLive } from "../data/derive";
-import { getNetwork, getStands, NETWORK_LABEL, usePoll, type NetworkPilot, type Stand } from "../data/external";
+import { getStands, NETWORK_LABEL, usePoll, type NetworkPilot, type Stand } from "../data/external";
+import { getLiveNetwork, getMetarsInView, type MetarDot, type PlacedController } from "../data/networks";
 import { useEffect, useRef } from "react";
 import { BaseMapPicker, TrafficSources } from "../components/MapLayers";
 import { settingsStore, useApp, useSettings } from "../data/store";
@@ -16,10 +17,33 @@ export function MapScreen() {
   const [sel, setSel] = useState<NetworkPilot | null>(null);
   const [layers, setLayers] = useState(false);
   const bridge = mode === "bridge";
-  const vatsim = usePoll(bridge && s.showVatsim ? () => getNetwork("vatsim") : null, 20_000, [bridge, s.showVatsim]);
-  const ivao = usePoll(bridge && s.showIvao ? () => getNetwork("ivao") : null, 30_000, [bridge, s.showIvao]);
-  const si = usePoll(bridge && s.showSayIntentions ? () => getNetwork("sayintentions") : null, 30_000, [bridge, s.showSayIntentions]);
+  // Traffic and ATC: through the Bridge when connected, otherwise straight from each network's public feed.
+  const vatsim = usePoll(s.showVatsim ? () => getLiveNetwork("vatsim") : null, 20_000, [bridge, s.showVatsim]);
+  const ivao = usePoll(s.showIvao ? () => getLiveNetwork("ivao") : null, 30_000, [bridge, s.showIvao]);
+  const si = usePoll(s.showSayIntentions ? () => getLiveNetwork("sayintentions") : null, 30_000, [bridge, s.showSayIntentions]);
   const traffic = [...(vatsim.data?.pilots ?? []), ...(ivao.data?.pilots ?? []), ...(si.data?.pilots ?? [])].filter((p) => p.callsign !== (L.plan?.callsign ?? L.flight?.callsign));
+  const atc = s.showAtc ? [...(vatsim.data?.atc ?? []), ...(ivao.data?.atc ?? [])] : [];
+  const [atcSel, setAtcSel] = useState<PlacedController | null>(null);
+  const [wxSel, setWxSel] = useState<MetarDot | null>(null);
+  // Weather stations in view.
+  const [view, setView] = useState<{ bbox: [number, number, number, number]; zoom: number } | null>(null);
+  const [metars, setMetars] = useState<MetarDot[]>([]);
+  const [wxErr, setWxErr] = useState<string | null>(null);
+  useEffect(() => {
+    if (!s.showMetars || !view) { setMetars([]); return; }
+    if (view.zoom < 4.5) { setMetars([]); setWxErr("Zoom in to see weather stations."); return; }
+    const t = window.setTimeout(() => {
+      getMetarsInView(view.bbox).then((m) => { setMetars(m); setWxErr(null); }).catch(() => setWxErr(bridge ? "Couldn't load weather right now." : "Weather stations come through your Bridge. Connect it to see them."));
+    }, 600);
+    return () => clearTimeout(t);
+  }, [s.showMetars, view?.bbox.map((v) => v.toFixed(1)).join(","), bridge]);
+  // Rain radar from RainViewer (free, no key): newest frame.
+  const radar = usePoll(s.showRadar ? async () => {
+    const r = await fetch("https://api.rainviewer.com/public/weather-maps.json", { cache: "no-store" });
+    const j = await r.json() as { host: string; radar: { past: Array<{ path: string }> } };
+    const last = j.radar.past.at(-1);
+    return last ? `${j.host}${last.path}/256/{z}/{x}/{y}/2/1_1.png` : null;
+  } : null, 10 * 60_000, [s.showRadar]);
   const f = L.frame;
   // Gates and stands from OpenStreetMap when you're at (or near) an airport.
   const [stands, setStands] = useState<Stand[]>([]);
@@ -40,7 +64,7 @@ export function MapScreen() {
 
   return (
     <div className="map-wrap">
-      <MapView trail={trail} plan={L.plan} aircraft={aircraft} airports={airports} traffic={traffic} follow={follow} threeD={s.map3d} stands={stands} agl={f?.position.altAglFt ?? null} onGround={!!f?.position.onGround} onSelectTraffic={setSel} onUserMove={() => setFollow(false)} />
+      <MapView trail={trail} plan={L.plan} aircraft={aircraft} airports={airports} traffic={traffic} atc={atc} metars={metars} radarTiles={s.showRadar ? radar.data ?? null : null} onSelectAtc={(c) => { setAtcSel(c); setSel(null); setWxSel(null); }} onSelectMetar={(w) => { setWxSel(w); setSel(null); setAtcSel(null); }} onView={(bbox, zoom) => setView({ bbox, zoom })} follow={follow} threeD={s.map3d} stands={stands} agl={f?.position.altAglFt ?? null} onGround={!!f?.position.onGround} onSelectTraffic={(p) => { setSel(p); if (p) { setAtcSel(null); setWxSel(null); } }} onUserMove={() => setFollow(false)} />
       <div className="map-hud glass strong pad" style={{ padding: "14px 16px" }}>
         {L.flight ? (
           <>
@@ -71,10 +95,31 @@ export function MapScreen() {
             <BaseMapPicker />
             <p className="lp-h" style={{ marginTop: 16 }}>Traffic</p>
             <TrafficSources counts={{ vatsim: vatsim.data?.pilots.length, ivao: ivao.data?.pilots.length, sayintentions: si.data?.pilots.length }} errors={{ vatsim: vatsim.error, ivao: ivao.error, sayintentions: si.error }} />
-            {!bridge && <p className="faint" style={{ fontSize: 12, margin: "8px 0 0" }}>Live traffic comes through your Bridge.</p>}
+            <p className="lp-h" style={{ marginTop: 16 }}>Overlays</p>
+            <Toggle label={`Air traffic control${atc.length ? ` (${atc.length})` : ""}`} on={s.showAtc} set={(v) => settingsStore.set({ showAtc: v })} />
+            <Toggle label="Rain radar" on={s.showRadar} set={(v) => settingsStore.set({ showRadar: v })} />
+            <Toggle label="Weather stations (METAR)" on={s.showMetars} set={(v) => settingsStore.set({ showMetars: v })} />
+            {s.showMetars && wxErr && <p className="faint" style={{ fontSize: 12, margin: "4px 0 0" }}>{wxErr}</p>}
+            {s.showRadar && radar.error && <p className="faint" style={{ fontSize: 12, margin: "4px 0 0" }}>Couldn't load the radar right now.</p>}
           </div>
         )}
       </div>
+      {atcSel && (
+        <div className="map-sheet glass strong pad">
+          <div className="between"><span className="data" style={{ fontWeight: 700, fontSize: 18 }}>{atcSel.callsign}</span><button className="btn small" aria-label="Close" onClick={() => setAtcSel(null)}><span style={{ width: 16, height: 16 }}>{Icon.close()}</span></button></div>
+          <div className="muted" style={{ marginTop: 2 }}>{atcSel.facility} on {NETWORK_LABEL[atcSel.network]}</div>
+          {atcSel.frequency && <div className="data" style={{ fontSize: 26, fontWeight: 700, marginTop: 10 }}>{atcSel.frequency}</div>}
+          {atcSel.atis.length > 0 && <p className="muted" style={{ fontSize: 13, marginTop: 8, maxHeight: 120, overflow: "auto" }}>{atcSel.atis.join(" ")}</p>}
+        </div>
+      )}
+      {wxSel && (
+        <div className="map-sheet glass strong pad">
+          <div className="between"><span className="data" style={{ fontWeight: 700, fontSize: 18 }}>{wxSel.icao} <span className={`pill wx-${wxSel.category || "na"}`} style={{ fontSize: 12, marginLeft: 6 }}>{wxSel.category || "No category"}</span></span><button className="btn small" aria-label="Close" onClick={() => setWxSel(null)}><span style={{ width: 16, height: 16 }}>{Icon.close()}</span></button></div>
+          <div className="grid cols-2" style={{ gap: 8, marginTop: 12 }}><Mini k="WIND" v={wxSel.wind || "—"} /><Mini k="TEMP" v={wxSel.temp || "—"} /></div>
+          <p className="data" style={{ fontSize: 13, marginTop: 10, lineHeight: 1.45 }}>{wxSel.raw}</p>
+          <a className="btn small" href={`#/airports/${wxSel.icao}`}>Airport page</a>
+        </div>
+      )}
       {sel && (
         <div className="map-sheet glass strong pad">
           <div className="between"><span className="data" style={{ fontWeight: 700, fontSize: 18 }}>{sel.callsign}</span><button className="btn small" aria-label="Close" onClick={() => setSel(null)}><span style={{ width: 16, height: 16 }}>{Icon.close()}</span></button></div>

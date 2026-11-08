@@ -107,6 +107,10 @@ export function SettingsScreen() {
           <Section title="Units">
             <div className="between"><span>Fuel</span><div className="seg">{(["kg", "lb"] as const).map((u) => <button key={u} className={s.fuelUnit === u ? "on" : ""} onClick={() => settingsStore.set({ fuelUnit: u })}>{u}</button>)}</div></div>
           </Section>
+          <Section title="Glideslope messages">
+            <label className="between" style={{ padding: "8px 0" }}><span>Messages at each stage of the flight<br /><span className="faint" style={{ fontSize: 12.5 }}>Taxi, take-off, cruise reached, top of descent, approach, touchdown</span></span><input className="switch" type="checkbox" checked={s.flightMessages} onChange={(e) => settingsStore.set({ flightMessages: e.target.checked })} /></label>
+            <label className="between" style={{ padding: "8px 0" }}><span>Read them out loud</span><input className="switch" type="checkbox" checked={s.voiceCallouts} onChange={(e) => settingsStore.set({ voiceCallouts: e.target.checked })} /></label>
+          </Section>
           <Section title="Appearance">
             <div className="between" style={{ padding: "6px 0" }}><span>Theme</span>
               <div className="seg">{([["system", "Automatic"], ["dark", "Dark"], ["light", "Light"]] as const).map(([k, l]) => <button key={k} className={(s.theme ?? "system") === k ? "on" : ""} onClick={() => settingsStore.set({ theme: k })}>{l}</button>)}</div>
@@ -125,7 +129,7 @@ export function SettingsScreen() {
             <p className="faint" style={{ fontSize: 12.5, margin: "10px 0 0" }}>For an iPad on a stand, use <a href="#/glance">Glance mode</a>. Lock Screen and widget cards need the native iPad app, which is planned.</p>
           </Section>
           <Section title="About">
-            <Kv k="Version" v="Glidepath 0.6.4 (early test build)" />
+            <Kv k="Version" v="Glidepath 0.7.0 (early test build)" />
             <Kv k="Airports" v="OurAirports, public domain" />
             <Kv k="Map" v="OpenFreeMap / OpenStreetMap, Natural Earth" />
             <Kv k="Weather" v="aviationweather.gov, via your Bridge" />

@@ -328,6 +328,7 @@ export class LanServer {
           }
           case "/api/ext/sayintentions": return json(res, 200, await this.external.sayintentions());
           case "/api/ext/metar": return json(res, 200, await this.external.metar(ids));
+          case "/api/ext/metarbox": return json(res, 200, await this.external.metarBox(url.searchParams.get("bbox") ?? ""));
           case "/api/ext/taf": return json(res, 200, await this.external.taf(ids));
           case "/api/ext/simbrief": return json(res, 200, await this.external.simbrief(url.searchParams.get("user") ?? ""));
         }
@@ -368,12 +369,23 @@ export class LanServer {
   }
 }
 
+/**
+ * Addresses an iPad on the same Wi-Fi can reach, best first. Virtual adapters
+ * (Hyper-V, WSL, VirtualBox, VPNs) and self-assigned 169.254 addresses are
+ * left out: showing those is the usual reason "the link doesn't open".
+ */
 export function lanAddresses(): string[] {
-  const out: string[] = [];
-  for (const list of Object.values(networkInterfaces())) {
-    for (const ni of list ?? []) if (ni.family === "IPv4" && !ni.internal) out.push(ni.address);
+  const skip = /vethernet|virtualbox|vmware|hyper-v|wsl|loopback|bluetooth|tailscale|zerotier|npcap|docker|vbox|hamachi|radmin|vpn|tap-|tun/i;
+  const rank = (ip: string) => (ip.startsWith("192.168.") ? 0 : ip.startsWith("10.") ? 1 : /^172\.(1[6-9]|2\d|3[01])\./.test(ip) ? 2 : 3);
+  const good: string[] = [], other: string[] = [];
+  for (const [name, list] of Object.entries(networkInterfaces())) {
+    for (const ni of list ?? []) {
+      if (ni.family !== "IPv4" || ni.internal || ni.address.startsWith("169.254.")) continue;
+      (skip.test(name) ? other : good).push(ni.address);
+    }
   }
-  return out;
+  const pick = good.length ? good : other;
+  return [...new Set(pick)].sort((a, b) => rank(a) - rank(b));
 }
 
 function newPairCode(): string {

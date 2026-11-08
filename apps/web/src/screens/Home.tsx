@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { FlightSummary } from "@glidepath/protocol";
 import { LiveCard } from "../components/LiveCard";
+import { MapView } from "../components/MapView";
 import { YourPcs } from "./Account";
 import { InstallCard } from "../components/InstallCard";
 import { useCloud } from "../data/cloud";
@@ -30,6 +31,7 @@ export function Home() {
       {mode === "bridge" && conn !== "live" && msg && <Notice>{msg} <a href="#/settings">Connection settings</a></Notice>}
       {mode !== "none" && flight?.status === "completed" && <DebriefTeaser />}
       {mode !== "none" && flight && <LiveCard />}
+      {mode !== "none" && flight && flight.status !== "completed" && <HomeMap />}
       {mode !== "none" && flight && <HomeAircraft />}
       {mode !== "none" && flight && flight.status !== "completed" && <Instruments />}
       {mode !== "none" && flight && flight.status !== "completed" && <SoFar />}
@@ -67,23 +69,72 @@ function FlightHeading() {
 
 function Onboarding() {
   const cloud = useCloud();
+  // Served by the Bridge (http://<pc>:4810/app/): pair right here with the code on the PC.
+  const onBridge = location.protocol === "http:" && location.pathname.startsWith("/app");
   return (
     <section className="glass strong onboard">
       <div>
-        <h2 className="onboard-h">Your sim flight, on this screen.</h2>
-        <p className="muted" style={{ margin: "10px 0 0", maxWidth: 46 + "ch" }}>Run the Bridge on your simulator PC, then open the link it shows on this device.</p>
-        <div className="row wrap" style={{ marginTop: 20 }}>
-          <a className="btn primary" href="#/settings">Connect my Bridge</a>
+        <h2 className="onboard-h">Connect to your PC</h2>
+        {onBridge ? <PairWithCode /> : (
+          <>
+            <p className="muted" style={{ margin: "10px 0 0", maxWidth: "46ch" }}>Open <b>Glidepath Bridge</b> on your sim PC. Then, on this iPad or phone (same Wi-Fi), open Safari and go to:</p>
+            <a className="pair-addr" href="http://glidepath.local:4810/">glidepath.local:4810</a>
+            <p className="muted" style={{ margin: "6px 0 0" }}>Type the 6-digit code shown in the Bridge window, and you're connected.</p>
+          </>
+        )}
+        <div className="row wrap" style={{ marginTop: 18 }}>
           <button className="btn" onClick={() => startDemo()}>Watch a demo flight</button>
           {cloud.status === "ready" && !cloud.active && <a className="btn" href="#/account">Sign in</a>}
         </div>
       </div>
       <ol className="onboard-steps">
-        <li><b>Start Bridge</b> on the PC you fly on.</li>
-        <li>It opens a page with your pairing link.</li>
-        <li>Open the link here. No account needed.</li>
+        <li><b>Open Glidepath Bridge</b> on the PC you fly on.</li>
+        <li>On this device, go to <b>glidepath.local:4810</b>.</li>
+        <li>Type the <b>code</b> from the PC. Done.</li>
       </ol>
     </section>
+  );
+}
+
+function PairWithCode() {
+  const [code, setCode] = useState("");
+  const [msg, setMsg] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const go = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true); setMsg(null);
+    try {
+      const r = await fetch("/api/pair", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }) });
+      const j = await r.json() as { token?: string; error?: string };
+      if (r.ok && j.token) { location.replace(`/app/#token=${encodeURIComponent(j.token)}`); location.reload(); return; }
+      setMsg(j.error ?? "That didn't work. Try again.");
+    } catch { setMsg("Can't reach your PC. Is the Bridge still open?"); }
+    setBusy(false);
+  };
+  return (
+    <form className="pair-form" onSubmit={go}>
+      <p className="muted" style={{ margin: "10px 0 12px" }}>Type the 6-digit code shown in the Glidepath Bridge window on your PC.</p>
+      <div className="row">
+        <input className="pair-code" inputMode="numeric" autoComplete="one-time-code" maxLength={7} placeholder="000 000" value={code} onChange={(e) => setCode(e.target.value.replace(/[^\d ]/g, ""))} />
+        <button className="btn primary" disabled={busy || code.replace(/\D/g, "").length !== 6}>{busy ? "Connecting…" : "Connect"}</button>
+      </div>
+      {msg && <p className="pair-msg">{msg}</p>}
+    </form>
+  );
+}
+
+/** Your flight on a small live map; tap for the full map. */
+function HomeMap() {
+  const L = useLive();
+  const trail = useApp((s) => s.trail);
+  const f = L.frame;
+  const aircraft = f && f.attitude.headingTrueDeg !== null ? { lat: f.position.lat, lon: f.position.lon, hdg: f.attitude.headingTrueDeg } : null;
+  if (!aircraft) return null;
+  return (
+    <a className="glass home-map" href="#/map" aria-label="Open the live map">
+      <MapView trail={trail} plan={L.plan} aircraft={aircraft} follow interactive={false} agl={f?.position.altAglFt ?? null} onGround={!!f?.position.onGround} />
+      <span className="home-map-tag">Live map<span aria-hidden> ›</span></span>
+    </a>
   );
 }
 

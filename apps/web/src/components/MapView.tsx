@@ -14,6 +14,7 @@ import type { FlightPlan } from "@glidepath/protocol";
 import type { TrailPoint } from "../data/store";
 import { useSettings } from "../data/store";
 import type { NetworkPilot } from "../data/external";
+import type { MetarDot, PlacedController } from "../data/networks";
 
 import { OFM, OFM_ATTR, streetStyle } from "./streetStyle";
 const DEM_TILES = "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png";
@@ -74,6 +75,16 @@ export interface MapViewProps {
   aircraft?: { lat: number; lon: number; hdg: number } | null;
   airports?: Array<{ code: string; lat: number; lon: number; role: "dep" | "arr" }>;
   traffic?: NetworkPilot[];
+  /** Air traffic controllers with a position, per network. */
+  atc?: PlacedController[];
+  /** Weather stations, coloured by flight category. */
+  metars?: MetarDot[];
+  /** RainViewer radar tile URL template, or null for off. */
+  radarTiles?: string | null;
+  onSelectAtc?: (c: PlacedController | null) => void;
+  onSelectMetar?: (m: MetarDot | null) => void;
+  /** Visible area after each move: [west, south, east, north]. */
+  onView?: (bbox: [number, number, number, number], zoom: number) => void;
   follow?: boolean;
   /** Where to start when there's no aircraft (an airport page, say). */
   center?: [number, number];
@@ -90,7 +101,7 @@ export interface MapViewProps {
   interactive?: boolean;
 }
 
-export function MapView({ trail, plan, aircraft, airports = [], traffic = [], follow, center, zoom: startZoom, threeD = false, stands = [], agl = null, onGround = false, onSelectTraffic, onUserMove, interactive = true }: MapViewProps) {
+export function MapView({ trail, plan, aircraft, airports = [], traffic = [], atc = [], metars = [], radarTiles = null, onSelectAtc, onSelectMetar, onView, follow, center, zoom: startZoom, threeD = false, stands = [], agl = null, onGround = false, onSelectTraffic, onUserMove, interactive = true }: MapViewProps) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<MLMap | null>(null);
   const [ready, setReady] = useState(false);
@@ -101,7 +112,7 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], fo
   const { mapStyle } = useSettings();
   const [theme, setTheme] = useState(themeNow);
   const kindRef = useRef<Kind>("satellite");
-  const data = useRef<{ route: number[][]; trail: number[][]; traffic: unknown; stands: unknown }>({ route: [], trail: [], traffic: empty(), stands: empty() });
+  const data = useRef<{ route: number[][]; trail: number[][]; traffic: unknown; stands: unknown; atc: unknown; metars: unknown; radar: string | null }>({ route: [], trail: [], traffic: empty(), stands: empty(), atc: empty(), metars: empty(), radar: null });
   const threeDRef = useRef(threeD);
   threeDRef.current = threeD;
   const glideRaf = useRef(0);
@@ -123,8 +134,8 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], fo
     };
     step();
   };
-  const handlers = useRef({ onSelectTraffic, onUserMove });
-  handlers.current = { onSelectTraffic, onUserMove };
+  const handlers = useRef({ onSelectTraffic, onUserMove, onSelectAtc, onSelectMetar, onView });
+  handlers.current = { onSelectTraffic, onUserMove, onSelectAtc, onSelectMetar, onView };
 
   // Follow the app's light/dark theme.
   useEffect(() => {
@@ -151,6 +162,15 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], fo
     m.addLayer({ id: "trail-glow", type: "line", source: "trail", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": light ? "#FFFFFF" : "#0A84FF", "line-width": 7, "line-opacity": light ? 0.9 : 0.25, "line-blur": light ? 0 : 3 } });
     m.addLayer({ id: "trail", type: "line", source: "trail", layout: { "line-cap": "round", "line-join": "round" },
       paint: { "line-width": 3.4, "line-color": "#0A84FF" } });
+    // Weather radar under everything we draw.
+    if (data.current.radar) addRadar(m, data.current.radar);
+    m.addSource("metars", { type: "geojson", data: data.current.metars as ReturnType<typeof empty> });
+    m.addLayer({ id: "metars", type: "circle", source: "metars", paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 3, 3, 9, 7], "circle-color": ["match", ["get", "cat"], "VFR", "#30D158", "MVFR", "#0A84FF", "IFR", "#FF453A", "LIFR", "#BF5AF2", "#8E8E93"], "circle-stroke-color": light ? "#fff" : "rgba(0,0,0,.65)", "circle-stroke-width": 1.2, "circle-opacity": 0.95 } });
+    m.addLayer({ id: "metars-label", type: "symbol", source: "metars", minzoom: 6.5, layout: { "text-field": ["get", "icao"], "text-font": ["Noto Sans Bold"], "text-size": 10.5, "text-offset": [0, 1.15], "text-anchor": "top" }, paint: { "text-color": light ? "#1C1C1E" : "#F2F2F7", "text-halo-color": light ? "rgba(255,255,255,.9)" : "rgba(0,0,0,.75)", "text-halo-width": 1.3 } });
+    m.addSource("atc", { type: "geojson", data: data.current.atc as ReturnType<typeof empty> });
+    m.addLayer({ id: "atc-halo", type: "circle", source: "atc", paint: { "circle-radius": ["match", ["get", "kind"], "ctr", ["interpolate", ["linear"], ["zoom"], 2, 14, 7, 46], "app", ["interpolate", ["linear"], ["zoom"], 2, 8, 9, 34], ["interpolate", ["linear"], ["zoom"], 2, 4, 10, 18]], "circle-color": ["get", "col"], "circle-opacity": 0.12, "circle-stroke-color": ["get", "col"], "circle-stroke-width": 1.2, "circle-stroke-opacity": 0.55 } });
+    m.addLayer({ id: "atc", type: "circle", source: "atc", paint: { "circle-radius": 4, "circle-color": ["get", "col"], "circle-stroke-color": "#fff", "circle-stroke-width": 1.4 } });
+    m.addLayer({ id: "atc-label", type: "symbol", source: "atc", minzoom: 4, layout: { "text-field": ["concat", ["get", "callsign"], "\n", ["get", "freq"]], "text-font": ["Noto Sans Bold"], "text-size": 10.5, "text-offset": [0, 1.3], "text-anchor": "top", "text-optional": true }, paint: { "text-color": ["get", "col"], "text-halo-color": light ? "rgba(255,255,255,.92)" : "rgba(0,0,0,.8)", "text-halo-width": 1.4 } });
     m.addLayer({ id: "traffic", type: "symbol", source: "traffic", layout: { "icon-image": ["concat", "traffic-", ["get", "net"]], "icon-rotate": ["get", "hdg"], "icon-rotation-alignment": "map", "icon-allow-overlap": true, "icon-size": ["interpolate", ["linear"], ["zoom"], 2, 0.55, 9, 1] }, paint: { "icon-opacity": 0.95 } });
   };
 
@@ -184,6 +204,11 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], fo
     m.on("click", (e) => {
       if (m.getLayer("traffic") && !m.queryRenderedFeatures(e.point, { layers: ["traffic"] }).length) handlers.current.onSelectTraffic?.(null);
     });
+    m.on("click", "atc", (e) => { const f = e.features?.[0]; if (f) handlers.current.onSelectAtc?.(JSON.parse(String(f.properties?.raw ?? "null"))); });
+    m.on("click", "metars", (e) => { const f = e.features?.[0]; if (f) handlers.current.onSelectMetar?.(JSON.parse(String(f.properties?.raw ?? "null"))); });
+    for (const id of ["atc", "metars"]) { m.on("mouseenter", id, () => (m.getCanvas().style.cursor = "pointer")); m.on("mouseleave", id, () => (m.getCanvas().style.cursor = "")); }
+    const view = () => { const b = m.getBounds(); handlers.current.onView?.([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()], m.getZoom()); };
+    m.on("moveend", view); m.once("idle", view);
     m.on("mouseenter", "traffic", () => (m.getCanvas().style.cursor = "pointer"));
     m.on("mouseleave", "traffic", () => (m.getCanvas().style.cursor = ""));
     // A pinch or scroll by the user wins over the automatic ground zoom.
@@ -258,6 +283,37 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], fo
     (m.getSource("traffic") as GeoJSONSource | undefined)?.setData(fc);
   }, [ready, traffic]);
 
+  // ATC
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !ready) return;
+    const fc = { type: "FeatureCollection" as const, features: atc.map((c) => ({ type: "Feature" as const, properties: {
+      callsign: c.callsign.replace(/_/g, " "), freq: c.frequency ?? "", col: NET_COLOR[c.network], raw: JSON.stringify(c),
+      kind: /CTR|FSS|Centre|Flight service/i.test(`${c.callsign} ${c.facility}`) ? "ctr" : /APP|DEP|Approach/i.test(`${c.callsign} ${c.facility}`) ? "app" : "twr",
+    }, geometry: { type: "Point" as const, coordinates: [c.lon, c.lat] } })) };
+    data.current.atc = fc;
+    (m.getSource("atc") as GeoJSONSource | undefined)?.setData(fc);
+  }, [ready, atc]);
+
+  // METAR dots
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !ready) return;
+    const fc = { type: "FeatureCollection" as const, features: metars.map((w) => ({ type: "Feature" as const, properties: { icao: w.icao, cat: w.category, raw: JSON.stringify(w) }, geometry: { type: "Point" as const, coordinates: [w.lon, w.lat] } })) };
+    data.current.metars = fc;
+    (m.getSource("metars") as GeoJSONSource | undefined)?.setData(fc);
+  }, [ready, metars]);
+
+  // Rain radar
+  useEffect(() => {
+    const m = map.current;
+    data.current.radar = radarTiles;
+    if (!m || !ready) return;
+    if (m.getLayer("radar")) m.removeLayer("radar");
+    if (m.getSource("radar")) m.removeSource("radar");
+    if (radarTiles) addRadar(m, radarTiles);
+  }, [ready, radarTiles]);
+
   // Airports (HTML markers)
   useEffect(() => {
     const m = map.current;
@@ -319,30 +375,39 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], fo
  * runways (with numbers and centre lines), gates, and airport names.
  * From OpenStreetMap via OpenFreeMap. Plus a soft terrain shade.
  */
+function addRadar(m: MLMap, tiles: string) {
+  if (m.getSource("radar")) return;
+  m.addSource("radar", { type: "raster", tiles: [tiles], tileSize: 256, maxzoom: 7, attribution: '<a href="https://www.rainviewer.com" target="_blank">RainViewer</a>' });
+  const before = m.getLayer("route-casing") ? "route-casing" : undefined;
+  m.addLayer({ id: "radar", type: "raster", source: "radar", paint: { "raster-opacity": 0.62, "raster-fade-duration": 200 } }, before);
+}
+
 function addAirportLayers(m: MLMap, kind: Kind) {
   if (kind === "offline") return;
   const light = LIGHT_KINDS.includes(kind);
   const std = kind === "std-light" || kind === "std-dark";
-  const runwayColor = kind === "satellite" ? "#2a2f3a" : light ? "#6B6F7A" : "#565B66";
-  if (!m.getSource("gp-omt")) m.addSource("gp-omt", { type: "vector", url: `${OFM}/planet` });
+  const runwayColor = kind === "satellite" ? "#2a2f3a" : light ? "#5E626C" : "#6A6F7A";
+  // The Standard map already has these tiles; reuse them (one download, one credit line).
+  const omt = m.getSource("omt") ? "omt" : "gp-omt";
+  if (omt === "gp-omt" && !m.getSource("gp-omt")) m.addSource("gp-omt", { type: "vector", url: `${OFM}/planet` });
   if (!m.getSource("gp-dem")) m.addSource("gp-dem", { type: "raster-dem", tiles: [DEM_TILES], tileSize: 256, maxzoom: 15, encoding: "terrarium", attribution: DEM_ATTR });
   const before = m.getStyle().layers?.find((l) => l.type === "symbol")?.id;
   const add = (l: Parameters<MLMap["addLayer"]>[0], under = true) => { if (!m.getLayer(l.id)) m.addLayer(l, under ? before : undefined); };
   if (!m.getSource("gp-dem-hs")) m.addSource("gp-dem-hs", { type: "raster-dem", tiles: [DEM_TILES], tileSize: 256, maxzoom: 15, encoding: "terrarium" });
   add({ id: "gp-hillshade", type: "hillshade", source: "gp-dem-hs", maxzoom: 14, paint: { "hillshade-exaggeration": kind === "satellite" ? 0.12 : std ? (light ? 0.14 : 0.22) : light ? 0.3 : 0.45, "hillshade-shadow-color": light ? "#5a6b85" : "#000814", "hillshade-highlight-color": light ? "#ffffff" : "#4a6aa8", "hillshade-accent-color": light ? "#7a8aa5" : "#0b1430" } });
-  const src = { source: "gp-omt", "source-layer": "aeroway" } as const;
+  const src = { source: omt, "source-layer": "aeroway" } as const;
   add({ id: "gp-apron", type: "fill", ...src, minzoom: 11.5, filter: ["all", ["==", ["geometry-type"], "Polygon"], ["==", ["get", "class"], "apron"]], paint: { "fill-color": kind === "satellite" ? "rgba(30,36,48,.35)" : light ? "rgba(120,130,150,.18)" : "rgba(140,160,200,.10)" } });
   add({ id: "gp-area", type: "fill", ...src, minzoom: 11, filter: ["all", ["==", ["geometry-type"], "Polygon"], ["in", ["get", "class"], ["literal", ["runway", "taxiway"]]]], paint: { "fill-color": ["match", ["get", "class"], "runway", runwayColor, light ? "rgba(90,98,115,.35)" : "rgba(52,58,72,.75)"], "fill-opacity": ["interpolate", ["linear"], ["zoom"], 11, 0.6, 14, 1] } });
-  add({ id: "gp-taxiway-casing", type: "line", ...src, minzoom: 12, filter: ["all", ["==", ["geometry-type"], "LineString"], ["==", ["get", "class"], "taxiway"]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": light ? "rgba(60,60,60,.35)" : "rgba(0,0,0,.55)", "line-width": ["interpolate", ["exponential", 2], ["zoom"], 12, 2.2, 15, 8.5, 17, 30, 19, 110] } });
-  add({ id: "gp-taxiway", type: "line", ...src, minzoom: 12, filter: ["all", ["==", ["geometry-type"], "LineString"], ["==", ["get", "class"], "taxiway"]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": light ? "#E3AE1B" : kind === "satellite" ? "#F5C542" : "#DDB13F", "line-width": ["interpolate", ["exponential", 2], ["zoom"], 12, 1, 15, 5.5, 17, 25, 19, 100] } });
-  add({ id: "gp-runway", type: "line", ...src, minzoom: 8, filter: ["all", ["==", ["geometry-type"], "LineString"], ["==", ["get", "class"], "runway"]], layout: { "line-cap": "butt" }, paint: { "line-color": runwayColor, "line-width": ["interpolate", ["exponential", 2], ["zoom"], 8, 1.5, 12, 3, 15, 14, 17, 54, 19, 215] } });
-  add({ id: "gp-runway-cl", type: "line", ...src, minzoom: 13.5, filter: ["all", ["==", ["geometry-type"], "LineString"], ["==", ["get", "class"], "runway"]], paint: { "line-color": "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 13.5, 0.8, 17, 3, 19, 8], "line-dasharray": [6, 5] } });
+  add({ id: "gp-taxiway-casing", type: "line", ...src, minzoom: 12, filter: ["all", ["==", ["geometry-type"], "LineString"], ["==", ["get", "class"], "taxiway"]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": light ? "rgba(70,74,84,.28)" : "rgba(0,0,0,.45)", "line-width": ["interpolate", ["exponential", 2], ["zoom"], 12, 1.4, 14, 3, 15, 5, 17, 22, 19, 92] } });
+  add({ id: "gp-taxiway", type: "line", ...src, minzoom: 12, filter: ["all", ["==", ["geometry-type"], "LineString"], ["==", ["get", "class"], "taxiway"]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": light ? "#D9A21B" : kind === "satellite" ? "#F5C542" : "#C9A03A", "line-opacity": ["interpolate", ["linear"], ["zoom"], 12, 0.55, 15, 0.95], "line-width": ["interpolate", ["exponential", 2], ["zoom"], 12, 0.6, 14, 1.4, 15, 2.6, 17, 16, 19, 80] } });
+  add({ id: "gp-runway", type: "line", ...src, minzoom: 8, filter: ["all", ["==", ["geometry-type"], "LineString"], ["==", ["get", "class"], "runway"]], layout: { "line-cap": "butt" }, paint: { "line-color": runwayColor, "line-width": ["interpolate", ["exponential", 2], ["zoom"], 8, 2, 11, 3.5, 13, 7, 14, 11, 15, 18, 17, 56, 19, 215] } });
+  add({ id: "gp-runway-cl", type: "line", ...src, minzoom: 13, filter: ["all", ["==", ["geometry-type"], "LineString"], ["==", ["get", "class"], "runway"]], paint: { "line-color": "#ffffff", "line-opacity": 0.9, "line-width": ["interpolate", ["linear"], ["zoom"], 13, 0.8, 17, 2.5, 19, 7], "line-dasharray": [6, 5] } });
   add({ id: "gp-gate", type: "circle", ...src, minzoom: 15, filter: ["all", ["==", ["geometry-type"], "Point"], ["==", ["get", "class"], "gate"]], paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 15, 2.5, 18, 6], "circle-color": light ? "#34A853" : "#30D158", "circle-stroke-color": light ? "#FFFFFF" : "rgba(0,0,0,.6)", "circle-stroke-width": 1.2 } });
   // Labels on top of everything.
   add({ id: "gp-taxiway-label", type: "symbol", ...src, minzoom: 14.5, filter: ["all", ["==", ["geometry-type"], "LineString"], ["==", ["get", "class"], "taxiway"], ["has", "ref"]], layout: { "symbol-placement": "line", "symbol-spacing": 260, "text-field": ["get", "ref"], "text-font": ["Noto Sans Bold"], "text-size": ["interpolate", ["linear"], ["zoom"], 14.5, 11, 18, 17], "text-keep-upright": true }, paint: { "text-color": "#111111", "text-halo-color": "#F5C542", "text-halo-width": 3 } }, false);
   add({ id: "gp-runway-label", type: "symbol", ...src, minzoom: 12, filter: ["all", ["==", ["geometry-type"], "LineString"], ["==", ["get", "class"], "runway"], ["has", "ref"]], layout: { "symbol-placement": "line-center", "text-field": ["get", "ref"], "text-font": ["Noto Sans Bold"], "text-size": ["interpolate", ["linear"], ["zoom"], 12, 11, 16, 18], "text-letter-spacing": 0.08, "text-keep-upright": true }, paint: { "text-color": "#ffffff", "text-halo-color": "rgba(0,0,0,.85)", "text-halo-width": 2 } }, false);
   add({ id: "gp-gate-label", type: "symbol", ...src, minzoom: 16, filter: ["all", ["==", ["geometry-type"], "Point"], ["==", ["get", "class"], "gate"], ["has", "ref"]], layout: { "text-field": ["get", "ref"], "text-font": ["Noto Sans Bold"], "text-size": 12, "text-offset": [0, 1.1] }, paint: { "text-color": "#DFFBE6", "text-halo-color": "rgba(0,30,10,.85)", "text-halo-width": 1.6 } }, false);
-  add({ id: "gp-airport-name", type: "symbol", source: "gp-omt", "source-layer": "aerodrome_label", minzoom: 7, maxzoom: 14, layout: { "text-field": ["format", ["coalesce", ["get", "icao"], ["get", "iata"], ""], { "font-scale": 1.05 }, "\n", {}, ["coalesce", ["get", "name:en"], ["get", "name"]], { "font-scale": 0.8 }], "text-font": ["Noto Sans Bold"], "text-size": 12, "text-max-width": 9, "text-allow-overlap": false }, paint: { "text-color": light ? "#1b2a4a" : "#EAF2FF", "text-halo-color": light ? "rgba(255,255,255,.9)" : "rgba(0,8,24,.85)", "text-halo-width": 1.6 } }, false);
+  add({ id: "gp-airport-name", type: "symbol", source: omt, "source-layer": "aerodrome_label", minzoom: 7, maxzoom: 14, layout: { "text-field": ["format", ["coalesce", ["get", "icao"], ["get", "iata"], ""], { "font-scale": 1.05 }, "\n", {}, ["coalesce", ["get", "name:en"], ["get", "name"]], { "font-scale": 0.8 }], "text-font": ["Noto Sans Bold"], "text-size": 12, "text-max-width": 9, "text-allow-overlap": false }, paint: { "text-color": light ? "#1b2a4a" : "#EAF2FF", "text-halo-color": light ? "rgba(255,255,255,.9)" : "rgba(0,8,24,.85)", "text-halo-width": 1.6 } }, false);
 }
 
 function empty() {

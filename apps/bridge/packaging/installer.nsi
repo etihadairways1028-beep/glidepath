@@ -1,5 +1,6 @@
 ; Glidepath Bridge installer. Built on Linux with makensis (free).
-; Installs for the current user only, so it needs no admin password.
+; Installs to Program Files and opens the Windows Firewall for the Bridge,
+; so iPads and phones on your Wi-Fi can reach it. Needs one admin prompt.
 Unicode true
 !include "MUI2.nsh"
 !ifndef VERSION
@@ -11,9 +12,9 @@ Unicode true
 
 Name "Glidepath Bridge"
 OutFile "${OUTFILE}"
-InstallDir "$LOCALAPPDATA\Programs\Glidepath Bridge"
+InstallDir "$PROGRAMFILES64\Glidepath Bridge"
 InstallDirRegKey HKCU "Software\Glidepath\Bridge" "InstallDir"
-RequestExecutionLevel user
+RequestExecutionLevel admin
 SetCompressor /SOLID lzma
 BrandingText "Glidepath ${VERSION}"
 VIProductVersion "${VERSION}.0"
@@ -26,10 +27,10 @@ VIAddVersionKey "LegalCopyright" "Glidepath"
 !define MUI_ICON "glidepath.ico"
 !define MUI_UNICON "glidepath.ico"
 !define MUI_WELCOMEPAGE_TITLE "Install Glidepath Bridge ${VERSION}"
-!define MUI_WELCOMEPAGE_TEXT "The Bridge runs on the PC with Microsoft Flight Simulator and sends your flight to the Glidepath app on your iPad or phone over Wi-Fi.$\r$\n$\r$\nIt installs just for you, no admin password needed."
+!define MUI_WELCOMEPAGE_TEXT "The Bridge runs on the PC with Microsoft Flight Simulator and sends your flight to the Glidepath app on your iPad or phone over Wi-Fi.$\r$\n$\r$\nWindows will ask once for permission: the installer opens the Windows Firewall for the Bridge so your iPad can connect over Wi-Fi."
 !define MUI_FINISHPAGE_RUN "$INSTDIR\GlidepathBridge.exe"
 !define MUI_FINISHPAGE_RUN_TEXT "Start Glidepath Bridge now"
-!define MUI_FINISHPAGE_TEXT "Glidepath Bridge is installed. You'll find it in the Start menu and on your desktop.$\r$\n$\r$\nThe first time it starts, Windows may ask whether it can use the network. Tick Private networks and choose Allow, or your iPad can't reach it."
+!define MUI_FINISHPAGE_TEXT "Glidepath Bridge is installed and the firewall is open for it. You'll find it in the Start menu and on your desktop.$\r$\n$\r$\nTo connect your iPad: in Safari go to glidepath.local:4810 and type the code shown in the Bridge window."
 
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_INSTFILES
@@ -37,6 +38,13 @@ VIAddVersionKey "LegalCopyright" "Glidepath"
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
 !insertmacro MUI_LANGUAGE "English"
+
+Function .onInit
+  SetShellVarContext current
+FunctionEnd
+Function un.onInit
+  SetShellVarContext current
+FunctionEnd
 
 Section "Install"
   ; Stop a running copy so its files can be replaced.
@@ -61,6 +69,13 @@ Section "Install"
   CreateShortcut "$SMPROGRAMS\Glidepath\Uninstall Glidepath Bridge.lnk" "$INSTDIR\Uninstall.exe"
   CreateShortcut "$DESKTOP\Glidepath Bridge.lnk" "$INSTDIR\GlidepathBridge.exe" "" "$INSTDIR\glidepath.ico"
 
+  ; Firewall: let devices on your network reach the Bridge (all network types,
+  ; because Windows often marks home Wi-Fi as "Public").
+  nsExec::Exec 'netsh advfirewall firewall delete rule name="Glidepath Bridge"'
+  nsExec::Exec 'netsh advfirewall firewall add rule name="Glidepath Bridge" dir=in action=allow program="$INSTDIR\GlidepathBridge.exe" enable=yes profile=any'
+  nsExec::Exec 'netsh advfirewall firewall add rule name="Glidepath Bridge" dir=in action=allow protocol=TCP localport=4810 enable=yes profile=any'
+  nsExec::Exec 'netsh advfirewall firewall add rule name="Glidepath Bridge" dir=in action=allow protocol=UDP localport=5353 program="$INSTDIR\GlidepathBridge.exe" enable=yes profile=any'
+
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   WriteRegStr HKCU "Software\Glidepath\Bridge" "InstallDir" "$INSTDIR"
   !define UNKEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\GlidepathBridge"
@@ -76,6 +91,7 @@ SectionEnd
 
 Section "Uninstall"
   nsExec::Exec 'taskkill /F /IM GlidepathBridge.exe'
+  nsExec::Exec 'netsh advfirewall firewall delete rule name="Glidepath Bridge"'
   Sleep 800
   Delete "$DESKTOP\Glidepath Bridge.lnk"
   RMDir /r "$SMPROGRAMS\Glidepath"

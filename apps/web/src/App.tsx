@@ -6,6 +6,7 @@ import type { FlightSummary } from "@glidepath/protocol";
 import { startDemo } from "./data/demo";
 import { settingsStore, store, useApp, useSettings } from "./data/store";
 import { CockpitScreen } from "./screens/Cockpit";
+import { GlideslopeBanners, useFlightMessages } from "./components/Glideslope";
 import { Account, hasBeenWelcomed, Welcome } from "./screens/Account";
 import { CopilotScreen } from "./screens/Copilot";
 import { useCallouts } from "./data/copilot";
@@ -56,6 +57,7 @@ export function App() {
   const mode = useApp((st) => st.mode);
   const status = useApp((st) => st.status);
   useCallouts();
+  useFlightMessages();
 
   useEffect(() => {
     consumePairingLink();
@@ -149,6 +151,7 @@ export function App() {
   return (
     <>
       <Sky />
+      <GlideslopeBanners />
       <div className="shell" style={screen === "glance" ? { gridTemplateColumns: "1fr" } : undefined}>
         {screen !== "glance" && (
           <nav className="glass side" aria-label="Main">

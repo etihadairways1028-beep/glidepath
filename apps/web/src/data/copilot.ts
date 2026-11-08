@@ -87,14 +87,15 @@ export function factsFor(s: CopilotSnapshot, extra: Record<string, unknown>): Re
 
 /** Spoken callouts while flying (on-device speech; nothing leaves the device). */
 export function useCallouts() {
-  const { voiceCallouts } = useSettings();
+  const { voiceCallouts, flightMessages } = useSettings();
   const L = useLive();
   const prev = useRef<CalloutState | null>(null);
   const said = useRef(new Set<string>());
   useEffect(() => {
     if (!L.frame) return;
     const next: CalloutState = { phase: L.phase, aglFt: L.frame.position.altAglFt, airborne: L.airborne, minutesToTod: L.tod && !L.tod.pastTod ? L.tod.minutesToTod : null };
-    const lines = callouts(prev.current, next, said.current);
+    // With Glideslope messages on, they speak the stages; only height calls stay here.
+    const lines = callouts(prev.current, next, said.current).filter((l) => !flightMessages || /^(Twenty five hundred|One thousand|Five hundred|One hundred|\d+)$/.test(l));
     prev.current = next;
     if (!voiceCallouts || !lines.length || !("speechSynthesis" in window)) return;
     for (const line of lines) {

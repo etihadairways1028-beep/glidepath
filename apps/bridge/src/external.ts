@@ -174,6 +174,16 @@ export class ExternalData {
   ivao(): Promise<NetworkSnapshot> {
     return this.cached("ivao", 30_000, async () => parseIvao(await this.json("https://api.ivao.aero/v2/tracker/whazzup")));
   }
+  /** Raw aviationweather.gov METARs inside a box (south,west,north,east), for weather dots on the map. */
+  metarBox(bbox: string): Promise<unknown[]> {
+    const parts = bbox.split(",").map(Number);
+    if (parts.length !== 4 || parts.some((v) => !Number.isFinite(v))) return Promise.reject(new Error("bbox must be south,west,north,east"));
+    const b = parts.map((v) => v.toFixed(1)).join(",");
+    return this.cached(`metarbox:${b}`, 300_000, async () => {
+      const j = await this.json(`https://aviationweather.gov/api/data/metar?bbox=${b}&format=json`);
+      return Array.isArray(j) ? j.slice(0, 600) : [];
+    });
+  }
   metar(ids: string[]): Promise<Metar[]> {
     const list = clean(ids);
     return this.cached(`metar:${list.join(",")}`, 300_000, async () =>

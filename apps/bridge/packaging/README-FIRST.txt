@@ -1,4 +1,4 @@
-GLIDEPATH BRIDGE 0.6.4 (EARLY TEST BUILD) - WINDOWS
+GLIDEPATH BRIDGE 0.7.0 (EARLY TEST BUILD) - WINDOWS
 ====================================================
 
 The Bridge runs on the PC where you fly Microsoft Flight Simulator. It reads
@@ -13,9 +13,12 @@ THIS IS AN EARLY TEST BUILD
   antivirus quarantine and allow it. Unsigned new programs get flagged.
 
 INSTALLING
-  Easiest: run GlidepathBridge-Setup.exe from the website. It installs for
-  you only (no admin password), adds Glidepath to the Start menu and the
-  desktop, and can be removed in Settings > Apps.
+  Easiest: run GlidepathBridge-Setup.exe from the website. Windows asks once
+  for permission: the installer opens the Windows Firewall for the Bridge,
+  so your iPad can reach it over Wi-Fi. It adds Glidepath to the Start menu
+  and the desktop, and can be removed in Settings > Apps.
+  Using the zip instead? When Windows asks about network access, tick BOTH
+  Private and Public networks and click Allow.
   Or use this zip: right-click it, Extract All, then open the extracted
   folder. Don't run the Bridge from inside the zip without extracting.
 - The native iPad/iPhone app with Lock Screen Live Activities is not built yet.
@@ -93,7 +96,7 @@ COPILOT (NEW IN 0.3)
 STEP 4 - PLEASE RUN THE PROBE ONCE AND SEND ME THE REPORT
   With MSFS running and an aircraft loaded, double-click "Test MSFS connection.bat".
   During the 15 seconds, bank RIGHT and pitch the nose UP.
-  It writes msfs-probe-report.json in this folder. Send that file back so the
+  It writes msfs-probe-report.json on your Desktop. Send that file back so the
   simulator connection can be verified for your setup.
 
 WHERE YOUR DATA IS

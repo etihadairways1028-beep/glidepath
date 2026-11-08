@@ -1,8 +1,8 @@
 @echo off
 title Glidepath Bridge - MSFS probe
-cd /d "%~dp0"
+cd /d "%USERPROFILE%\Desktop"
 echo Make sure MSFS is running with an aircraft loaded.
-GlidepathBridge.exe --probe
+"%~dp0GlidepathBridge.exe" --probe
 echo.
-echo Send msfs-probe-report.json from this folder back to the developer.
+echo The report msfs-probe-report.json is on your Desktop. Send it back to the developer.
 pause

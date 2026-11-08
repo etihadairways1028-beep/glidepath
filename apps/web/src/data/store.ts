@@ -55,10 +55,15 @@ export interface Settings {
   /** Base map: satellite imagery, or a street map that follows the light/dark theme. */
   mapStyle: MapStyle;
   map3d: boolean;
+  /** Glideslope banners at each stage of the flight. */
+  flightMessages: boolean;
+  showAtc: boolean;
+  showRadar: boolean;
+  showMetars: boolean;
 }
 
 const DEFAULT_SETTINGS: Settings = {
-  bridgeUrl: "", token: "", simbriefUser: "", showVatsim: true, showIvao: false, showSayIntentions: false, fuelUnit: "kg", accent: "glideslope", theme: "system", voiceCallouts: false, reduceTransparency: false, mapStyle: "map", map3d: false,
+  bridgeUrl: "", token: "", simbriefUser: "", showVatsim: true, showIvao: false, showSayIntentions: false, fuelUnit: "kg", accent: "glideslope", theme: "system", voiceCallouts: false, reduceTransparency: false, mapStyle: "map", map3d: false, flightMessages: true, showAtc: true, showRadar: false, showMetars: false,
 };
 
 const initial: AppState = {
