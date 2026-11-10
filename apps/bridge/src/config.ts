@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir, hostname, platform } from "node:os";
 import { join } from "node:path";
 
-export const BRIDGE_VERSION = "0.7.1";
+export const BRIDGE_VERSION = "0.8.0";
 
 export type AdapterChoice = "auto" | "msfs" | "replay";
 
@@ -19,6 +19,8 @@ export interface BridgeConfig {
   /** SimConnect: deliver data every N sim frames. */
   simconnectInterval: number;
   mdns: boolean;
+  /** HTTPS on port+1 so the Glidepath website can reach this PC. */
+  secureLink: boolean;
   /** Open the status page in the default browser on start. */
   openBrowser: boolean;
   logLevel: "debug" | "info" | "warn" | "error";
@@ -50,6 +52,7 @@ export function loadConfig(argv = process.argv.slice(2)): BridgeConfig {
     streamHz: 5,
     simconnectInterval: 3,
     mdns: true,
+    secureLink: true,
     openBrowser: true,
     logLevel: "info",
   };
@@ -65,6 +68,7 @@ export function loadConfig(argv = process.argv.slice(2)): BridgeConfig {
       case "--port": cfg.port = Number(need()); break;
       case "--host": cfg.host = need(); break;
       case "--data-dir": cfg.dataDir = need(); break;
+      case "--no-secure-link": cfg.secureLink = false; break;
       case "--adapter": {
         const a = need();
         if (a !== "auto" && a !== "msfs" && a !== "replay") throw new Error(`--adapter must be auto, msfs or replay (got ${a})`);

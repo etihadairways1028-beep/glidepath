@@ -161,6 +161,7 @@ async function main(): Promise<void> {
     "  CONNECT YOUR iPAD (same Wi-Fi):",
     `    1. In Safari on the iPad, go to:   glidepath.local:${cfg.port}`,
     `    2. Type this code:                 ${server.pairCode.slice(0, 3)} ${server.pairCode.slice(3)}`,
+    "    Or open the Glidepath website on the iPad, tap Connect, and type the same code.",
     ...lan.map((ip) => `    (If that address doesn't open, use http://${ip}:${cfg.port} instead.)`),
     "",
     "  To stop:         close this window or press Ctrl+C",

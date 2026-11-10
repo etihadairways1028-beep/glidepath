@@ -1,4 +1,4 @@
-GLIDEPATH BRIDGE 0.7.1 (EARLY TEST BUILD) - WINDOWS
+GLIDEPATH BRIDGE 0.8.0 (EARLY TEST BUILD) - WINDOWS
 ====================================================
 
 The Bridge runs on the PC where you fly Microsoft Flight Simulator. It reads
@@ -36,10 +36,17 @@ STEP 1 - TRY THE DEMO (no simulator needed)
   It replays a SYNTHETIC test flight (generated, not real) from London Heathrow
   to Manchester at 20x speed. Everything shows a REPLAY badge.
 
+SOMETHING NOT WORKING?
+  Start menu > Glidepath > Bridge logs. Send the newest bridge-....log file,
+  plus a photo of the Bridge window.
+
 STEP 2 - CONNECT YOUR iPAD (same Wi-Fi as this PC)
   1. On the iPad, open Safari and go to:   glidepath.local:4810
   2. Type the 6-digit code shown in the Bridge window on this PC.
   That's it: Glidepath opens, connected to your PC.
+  Or: open the Glidepath website on the iPad, type the same code on the
+  Home screen and tap Connect. (Uses a secure address for your PC under
+  local-ip.sh; your flight data still goes straight across your Wi-Fi.)
   To keep it as an app: tap Share, then Add to Home Screen.
   If glidepath.local doesn't open, the Bridge window also shows your PC's
   number address (http://192.168...:4810), or scan the QR code on the

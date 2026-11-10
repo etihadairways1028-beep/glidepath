@@ -96,7 +96,7 @@ ${p.local ? `${here ? `<div class="panel" style="padding:16px;display:flex;justi
   <div class="label">Connect your iPad: 2 steps</div>
   <ol class="steps"><li>On the iPad, open <b>Safari</b> and go to<br><span class="big mono">glidepath.local:${p.port}</span></li>
   <li>Type this code:<br><span class="big mono code">${esc(p.pairCode.slice(0, 3))} ${esc(p.pairCode.slice(3))}</span></li></ol>
-  <div class="label">Then tap Share, then Add to Home Screen, to keep Glidepath as an app.</div>
+  <div class="label">Or open the Glidepath website on the iPad, tap Connect and type the same code. Then tap Share, then Add to Home Screen, to keep Glidepath as an app.</div>
 </div>
 <div class="panel" style="padding:16px;margin-top:12px"><div class="label" style="margin-bottom:10px">Or scan with your iPad camera (same Wi-Fi)</div>
 ${links || "<p>No network address found. Is this PC connected to Wi-Fi or Ethernet?</p>"}

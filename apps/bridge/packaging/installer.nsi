@@ -66,6 +66,8 @@ Section "Install"
   CreateShortcut "$SMPROGRAMS\Glidepath\Glidepath demo flight.lnk" "$INSTDIR\Run demo flight.bat" "" "$INSTDIR\glidepath.ico"
   CreateShortcut "$SMPROGRAMS\Glidepath\Test MSFS connection.lnk" "$INSTDIR\Test MSFS connection.bat" "" "$INSTDIR\glidepath.ico"
   CreateShortcut "$SMPROGRAMS\Glidepath\Read me first.lnk" "$INSTDIR\README-FIRST.txt"
+  CreateDirectory "$APPDATA\Glidepath\Bridge\logs"
+  CreateShortcut "$SMPROGRAMS\Glidepath\Bridge logs (send these if something breaks).lnk" "$APPDATA\Glidepath\Bridge\logs"
   CreateShortcut "$SMPROGRAMS\Glidepath\Uninstall Glidepath Bridge.lnk" "$INSTDIR\Uninstall.exe"
   CreateShortcut "$DESKTOP\Glidepath Bridge.lnk" "$INSTDIR\GlidepathBridge.exe" "" "$INSTDIR\glidepath.ico"
 

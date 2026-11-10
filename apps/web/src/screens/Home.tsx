@@ -12,6 +12,8 @@ import { useCopilot } from "../data/copilot";
 import { ConnPill, Grade, Icon, Notice } from "../components/ui";
 import { activeBridge } from "../data/bridge";
 import { startDemo } from "../data/demo";
+import { pairWithCode } from "../data/pair";
+import { connectFromSettings } from "../App";
 import { altText, dur, fmt, fuel, useLive } from "../data/derive";
 import { useApp, useSettings } from "../data/store";
 
@@ -69,28 +71,20 @@ function FlightHeading() {
 
 function Onboarding() {
   const cloud = useCloud();
-  // Served by the Bridge (http://<pc>:4810/app/): pair right here with the code on the PC.
-  const onBridge = location.protocol === "http:" && location.pathname.startsWith("/app");
   return (
     <section className="glass strong onboard">
       <div>
         <h2 className="onboard-h">Connect to your PC</h2>
-        {onBridge ? <PairWithCode /> : (
-          <>
-            <p className="muted" style={{ margin: "10px 0 0", maxWidth: "46ch" }}>Open <b>Glidepath Bridge</b> on your sim PC. Then, on this iPad or phone (same Wi-Fi), open Safari and go to:</p>
-            <a className="pair-addr" href="http://glidepath.local:4810/">glidepath.local:4810</a>
-            <p className="muted" style={{ margin: "6px 0 0" }}>Type the 6-digit code shown in the Bridge window, and you're connected.</p>
-          </>
-        )}
+        <PairWithCode />
         <div className="row wrap" style={{ marginTop: 18 }}>
           <button className="btn" onClick={() => startDemo()}>Watch a demo flight</button>
           {cloud.status === "ready" && !cloud.active && <a className="btn" href="#/account">Sign in</a>}
         </div>
       </div>
       <ol className="onboard-steps">
-        <li><b>Open Glidepath Bridge</b> on the PC you fly on.</li>
-        <li>On this device, go to <b>glidepath.local:4810</b>.</li>
-        <li>Type the <b>code</b> from the PC. Done.</li>
+        <li><span>Open <b>Glidepath Bridge</b> on the PC you fly on, on the same Wi-Fi as this device.</span></li>
+        <li><span>The Bridge window shows a <b>6-digit code</b>.</span></li>
+        <li><span>Type it here and tap <b>Connect</b>. Done.</span></li>
       </ol>
     </section>
   );
@@ -98,26 +92,35 @@ function Onboarding() {
 
 function PairWithCode() {
   const [code, setCode] = useState("");
+  const [addr, setAddr] = useState("");
+  const [showAddr, setShowAddr] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const go = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true); setMsg(null);
     try {
-      const r = await fetch("/api/pair", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }) });
-      const j = await r.json() as { token?: string; error?: string };
-      if (r.ok && j.token) { location.replace(`/app/#token=${encodeURIComponent(j.token)}`); location.reload(); return; }
-      setMsg(j.error ?? "That didn't work. Try again.");
-    } catch { setMsg("Can't reach your PC. Is the Bridge still open?"); }
+      await pairWithCode(code, showAddr ? addr : undefined);
+      connectFromSettings();
+      location.hash = "#/home";
+    } catch (err) {
+      setMsg((err as Error).message);
+      if (/address below/.test((err as Error).message)) setShowAddr(true);
+    }
     setBusy(false);
   };
   return (
     <form className="pair-form" onSubmit={go}>
       <p className="muted" style={{ margin: "10px 0 12px" }}>Type the 6-digit code shown in the Glidepath Bridge window on your PC.</p>
-      <div className="row">
-        <input className="pair-code" inputMode="numeric" autoComplete="one-time-code" maxLength={7} placeholder="000 000" value={code} onChange={(e) => setCode(e.target.value.replace(/[^\d ]/g, ""))} />
+      <div className="row wrap">
+        <input className="pair-code" inputMode="numeric" autoComplete="one-time-code" maxLength={7} placeholder="000 000" aria-label="Code from your PC" value={code} onChange={(e) => setCode(e.target.value.replace(/[^\d ]/g, ""))} />
         <button className="btn primary" disabled={busy || code.replace(/\D/g, "").length !== 6}>{busy ? "Connecting…" : "Connect"}</button>
       </div>
+      {showAddr ? (
+        <input className="pair-addr-in" inputMode="decimal" placeholder="PC address, e.g. 192.168.1.20" aria-label="PC address" value={addr} onChange={(e) => setAddr(e.target.value)} />
+      ) : (
+        <button type="button" className="linkish" onClick={() => setShowAddr(true)}>Type my PC's address instead</button>
+      )}
       {msg && <p className="pair-msg">{msg}</p>}
     </form>
   );

@@ -12,6 +12,7 @@
  *    user's account, revocable from Settings.
  */
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { announce, secureHost, startSecure } from "./secure.js";
 import { addonStatus } from "./addons.js";
 import { networkInterfaces } from "node:os";
 import { randomInt, timingSafeEqual } from "node:crypto";
@@ -67,7 +68,15 @@ export class LanServer {
     private readonly ai: AiService | null = null,
   ) {
     this.log = log.child("lan");
-    this.http.on("upgrade", (req, socket, head) => {
+    this.http.on("upgrade", this.onUpgrade);
+  }
+
+  /** Secure (https) address for this PC, when the secure link is running. */
+  secureUrl: string | null = null;
+  private secure: import("node:https").Server | null = null;
+  private announceTimer?: NodeJS.Timeout;
+
+  private onUpgrade = (req: IncomingMessage, socket: import("node:stream").Duplex, head: Buffer) => {
       const url = new URL(req.url ?? "/", "http://x");
       if (url.pathname !== "/ws" || !this.tokenOk(url.searchParams.get("token"))) {
         socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
@@ -75,8 +84,7 @@ export class LanServer {
         return;
       }
       this.wss.handleUpgrade(req, socket, head, (ws) => this.onConnection(ws, url.searchParams.get("client") ?? "unknown"));
-    });
-  }
+  };
 
   async start(): Promise<void> {
     await new Promise<void>((resolve, reject) => {
@@ -101,6 +109,21 @@ export class LanServer {
         this.log.warn("mDNS advertising failed; apps can still connect by address", e);
       }
     }
+    // Secure link so the Glidepath website (https) can reach this PC too.
+    const ip = lanAddresses()[0];
+    if (ip && this.cfg.secureLink !== false) {
+      const port = this.cfg.port + 1;
+      void startSecure({ dataDir: this.cfg.dataDir, host: this.cfg.host, port, log: this.log, handler: (req, res) => this.route(req, res), upgrade: this.onUpgrade }).then((srv) => {
+        if (!srv) return;
+        this.secure = srv;
+        const host = secureHost(ip);
+        this.secureUrl = `https://${host}:${port}`;
+        this.log.info(`Secure address: ${this.secureUrl}`);
+        const post = () => void announce(this.pairCode, host, port, this.log);
+        post();
+        this.announceTimer = setInterval(post, 30 * 60_000);
+      });
+    }
     // Frames are throttled per client: the newest frame wins, sent at streamHz.
     this.flushTimer = setInterval(() => this.flushFrames(), 1000 / this.cfg.streamHz);
     this.rateTimer = setInterval(() => this.clients.forEach((c) => (c.msgCount = 0)), 10_000);
@@ -123,6 +146,8 @@ export class LanServer {
 
   async stop(): Promise<void> {
     if (this.flushTimer) clearInterval(this.flushTimer);
+    if (this.announceTimer) clearInterval(this.announceTimer);
+    this.secure?.close();
     if (this.rateTimer) clearInterval(this.rateTimer);
     for (const c of this.clients) c.ws.close(1001, "Bridge shutting down");
     this.bonjour?.unpublishAll();
