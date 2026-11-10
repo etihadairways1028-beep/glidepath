@@ -34,7 +34,17 @@
       </div>
       <button class="btn glass small" id="acct-btn" type="button" hidden>Sign in</button>
       <a class="btn primary small" data-download href="#download">Download</a>
+      <button class="menu-btn" id="menu-btn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu-sheet"><span></span><span></span></button>
     </nav>
+    <div class="menu-sheet glass strong" id="menu-sheet" hidden>
+      <a href="#features">Features</a>
+      <a href="#debrief">Landing debrief</a>
+      <a href="#demo">Watch the demo</a>
+      <a href="#brief">Monthly brief</a>
+      <a href="#today">What works today</a>
+      <a href="app/">Open the app</a>
+      <a href="#download">Download for Windows</a>
+    </div>
   </header>
 
   <main id="main">
@@ -42,13 +52,15 @@
     <section class="hero" aria-labelledby="hero-title">
       <div class="hero-copy reveal">
         <p class="eyebrow glass"><span class="live-dot" aria-hidden="true"></span>Free for MSFS 2020 and 2024</p>
-        <h1 id="hero-title">Your sim flight, live on the screen beside you.</h1>
-        <p class="lede">A small Windows app reads your flight straight from Microsoft Flight Simulator. Your iPad or phone shows it live, gate to gate, and when you park you get a proper debrief: how the rotation went, whether the approach was stable, and how that landing really felt.</p>
+        <h1 id="hero-title">Your flight. Every detail. One screen.</h1>
+        <p class="lede">Glidepath reads your flight straight from Microsoft Flight Simulator and puts it live on your iPad, phone or second screen. When you park, you get a real debrief of the takeoff, the approach and the landing.</p>
         <div class="cta">
           <a class="btn primary" data-download href="#download"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Download for Windows</a>
           <a class="btn glass" href="app/?demo=1">Try the app now</a>
         </div>
-        <p class="fine" id="build-line">Early test build. Not code-signed yet, so Windows asks you to confirm before it opens.</p>
+        <ul class="trust" aria-label="At a glance">
+          <li>Free</li><li>Windows 10 and 11</li><li>MSFS 2020 and 2024</li><li>iPad, phone, PC</li>
+        </ul>
       </div>
 
       <div class="devices reveal" aria-label="The Glidepath app on an iPad and a phone">
@@ -351,6 +363,9 @@
             <li><b>Copilot</b> answers, alerts and spoken callouts.</li>
             <li><b>Recording and logbook</b> on your PC, resumed after a sim restart, with career totals.</li>
             <li><b>The app</b> on iPad, iPhone, Android, Mac and PC, in dark and light mode.</li>
+            <li><b>Glideslope messages</b> at each stage: cruise reached, top of descent, approach, touchdown.</li>
+            <li><b>Connecting by code:</b> type the 6-digit code from your PC into the app.</li>
+            <li><b>Flight replay</b> of any recorded flight, on the map and in 3D, with speed control.</li>
           </ul>
         </div>
         <div class="status-col glass reveal">
@@ -358,16 +373,16 @@
           <ul>
             <li><b>Microsoft Flight Simulator 2020 and 2024.</b> Written against Microsoft's documentation; first real test flights are happening now.</li>
             <li><b>The Windows app.</b> Packaged and checked, not yet run on many PCs.</li>
-            <li><b>SimBrief, weather, VATSIM, IVAO and SayIntentions traffic, satellite map, aircraft photos.</b> Built against each service's published format.</li>
+            <li><b>SimBrief, weather, VATSIM, IVAO and SayIntentions traffic and ATC, rain radar, METAR weather dots, aircraft photos.</b> Built against each service's published format; VATSIM, IVAO and radar checked against the live feeds.</li>
             <li><b>Cockpit tools:</b> Fenix and FSLabs EFBs, the GSX remote and FlyByWire SimBridge, opened from your PC. Built on each add-on's documented address, not yet tried with every add-on.</li>
             <li><b>Airport maps</b> with taxiways, gates and stands, and a 3D chase view over real terrain.</li>
-            <li><b>Accounts and the monthly email.</b> Built and tested against a stand-in server; switching on once the account service is connected.</li>
+            <li><b>Accounts:</b> sign up, sign in, several accounts per device, flights synced between devices. Built on Cloudflare and tested locally; live once the service is deployed. The monthly email needs an email service on top.</li>
           </ul>
           <h3><span class="dot next" aria-hidden="true"></span>Not built yet</h3>
           <ul>
             <li><b>Native iPhone and iPad app</b> with a Lock Screen Live Activity.</li>
             <li><b>PMDG 737 and 777 CDU</b> on your iPad, through PMDG's SDK.</li>
-            <li><b>Remote control</b> of your aircraft, <b>X-Plane</b>, and full flight replay.</li>
+            <li><b>Remote control</b> of your aircraft, and <b>X-Plane</b>.</li>
           </ul>
         </div>
       </div>
@@ -382,19 +397,32 @@
           <p class="sub" id="dl-sub">For 64-bit Windows 10 or 11 with Microsoft Flight Simulator 2020 or 2024. Free.</p>
           <div class="cta">
             <a class="btn primary" data-download href="#">Download the installer</a>
-            <p class="small" style="margin-top:10px">Windows may say it protected your PC: click <b>More info</b>, then <b>Run anyway</b>. If your antivirus removes it, restore it from quarantine. <a href="downloads/GlidepathBridge-windows-x64.zip">Zip version</a></p>
-            <a class="btn glass" href="app/?demo=1">Try the app first</a>
+            <a class="btn glass" href="app/?demo=1">Try the app first, no install</a>
           </div>
-          <p class="fine">SHA-256 <span class="data hash" id="sha">—</span></p>
+          <dl class="dl-facts">
+            <div><dt>Version</dt><dd id="dl-ver">—</dd></div>
+            <div><dt>Size</dt><dd>About 30 MB</dd></div>
+            <div><dt>Installs to</dt><dd>Program Files, with Start menu and desktop shortcuts. Uninstall from Settings › Apps.</dd></div>
+            <div><dt>SHA-256 (installer)</dt><dd class="data hash" id="sha">—</dd></div>
+          </dl>
+          <p class="fine">Prefer no installer? <a href="downloads/GlidepathBridge-windows-x64.zip">Download the zip</a> (<a href="downloads/GlidepathBridge-windows-x64.zip.sha256">its SHA-256</a>). Open source: <a href="https://github.com/etihadairways1028-beep/glidepath">read the code on GitHub</a>.</p>
         </div>
         <div class="dl-notes">
-          <h3>Before you open it</h3>
-          <ul>
-            <li>Windows SmartScreen will warn you because this test build isn't code-signed yet. Choose <i>More info</i>, then <i>Run anyway</i>.</li>
-            <li>When Windows Firewall asks, allow it on <i>private</i> networks only.</li>
-            <li>Try <i>Run demo flight</i> first. It doesn't need the simulator.</li>
-            <li>If the sim doesn't connect, run <i>Test MSFS connection</i> and share the report it writes.</li>
-          </ul>
+          <h3>Installing, step by step</h3>
+          <ol>
+            <li><b>Run the installer.</b> Windows asks for permission once: the installer lets your iPad reach the Bridge through Windows Firewall.</li>
+            <li><b>If Windows shows “Windows protected your PC”:</b> that's SmartScreen. It appears for new apps that aren't code-signed yet (signing is coming). You can check the file first: its SHA-256 should match the one on this page. Then choose <i>More info</i> and <i>Run</i>.</li>
+            <li><b>Open Glidepath Bridge</b> from the desktop. It shows a 6-digit code.</li>
+            <li><b>On your iPad,</b> open the Glidepath app and type the code.</li>
+          </ol>
+          <details class="trouble">
+            <summary>Something not working?</summary>
+            <ul>
+              <li><b>The iPad can't connect:</b> make sure it's on the same Wi-Fi as the PC. If the code isn't found, tap <i>Type my PC's address instead</i> and enter the numbers from the Bridge window, or open <i>glidepath.local:4810</i> in Safari.</li>
+              <li><b>The sim isn't found:</b> start MSFS and load into a flight, then run <i>Test MSFS connection</i> from the Start menu and send the report.</li>
+              <li><b>Anything else:</b> Start menu › Glidepath › Bridge logs, and send the newest log file.</li>
+            </ul>
+          </details>
         </div>
       </div>
     </section>
