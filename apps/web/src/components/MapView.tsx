@@ -112,7 +112,7 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
   const { mapStyle } = useSettings();
   const [theme, setTheme] = useState(themeNow);
   const kindRef = useRef<Kind>("satellite");
-  const data = useRef<{ route: number[][]; trail: number[][]; traffic: unknown; stands: unknown; atc: unknown; metars: unknown; radar: string | null }>({ route: [], trail: [], traffic: empty(), stands: empty(), atc: empty(), metars: empty(), radar: null });
+  const data = useRef<{ route: number[][]; trail: number[][]; traffic: unknown; stands: unknown; atc: unknown; metars: unknown; radar: string | null; fixes: unknown }>({ route: [], trail: [], traffic: empty(), stands: empty(), atc: empty(), metars: empty(), radar: null, fixes: empty() });
   const threeDRef = useRef(threeD);
   threeDRef.current = threeD;
   const glideRaf = useRef(0);
@@ -147,7 +147,7 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
   const wanted: Kind = !tilesOk ? "offline" : mapStyle === "map" ? (theme === "light" ? "std-light" : "std-dark") : (mapStyle as Kind);
 
   const addOverlays = (m: MLMap) => {
-    for (const [net, col] of Object.entries(NET_COLOR)) if (!m.hasImage(`traffic-${net}`)) m.addImage(`traffic-${net}`, trafficIcon(col), { pixelRatio: 2 });
+    for (const [net, col] of Object.entries(NET_COLOR)) if (!m.hasImage(`traffic-${net}`)) m.addImage(`traffic-${net}`, trafficIcon(col), { pixelRatio: 2.4 });
     if (m.getSource("trail")) return;
     addAirportLayers(m, kindRef.current);
     m.addSource("stands", { type: "geojson", data: data.current.stands as ReturnType<typeof empty> });
@@ -158,6 +158,9 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     m.addSource("traffic", { type: "geojson", data: data.current.traffic as ReturnType<typeof empty> });
     const light = LIGHT_KINDS.includes(kindRef.current);
     m.addLayer({ id: "route-casing", type: "line", source: "route", layout: { "line-cap": "round" }, paint: { "line-color": light ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.35)", "line-width": 4.5 } });
+    m.addSource("fixes", { type: "geojson", data: data.current.fixes as ReturnType<typeof empty> });
+    m.addLayer({ id: "fixes", type: "circle", source: "fixes", minzoom: 4.5, paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 4.5, 2.2, 9, 4], "circle-color": light ? "#fff" : "#1B1030", "circle-stroke-color": "#E05CFF", "circle-stroke-width": 1.6 } });
+    m.addLayer({ id: "fixes-label", type: "symbol", source: "fixes", minzoom: 5.5, layout: { "text-field": ["get", "ident"], "text-font": ["Noto Sans Bold"], "text-size": 10.5, "text-offset": [0, 0.95], "text-anchor": "top", "text-letter-spacing": 0.04 }, paint: { "text-color": light ? "#9B2FC2" : "#F0A6FF", "text-halo-color": light ? "rgba(255,255,255,.95)" : "rgba(10,6,20,.85)", "text-halo-width": 1.4 } });
     m.addLayer({ id: "route", type: "line", source: "route", layout: { "line-cap": "round" }, paint: { "line-color": "#E05CFF", "line-width": 2, "line-dasharray": [2.2, 1.6], "line-opacity": 0.95 } });
     m.addLayer({ id: "trail-glow", type: "line", source: "trail", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": light ? "#FFFFFF" : "#0A84FF", "line-width": 7, "line-opacity": light ? 0.9 : 0.25, "line-blur": light ? 0 : 3 } });
     m.addLayer({ id: "trail", type: "line", source: "trail", layout: { "line-cap": "round", "line-join": "round" },
@@ -262,6 +265,9 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     data.current.route = route;
     data.current.trail = trail.map((p) => [p.lon, p.lat]);
     (m.getSource("route") as GeoJSONSource | undefined)?.setData(line(route));
+    const fx = { type: "FeatureCollection" as const, features: (plan?.fixes ?? []).filter((f) => !/^T\/[CD]$|^TOC$|^TOD$/.test(f.ident)).map((f) => ({ type: "Feature" as const, properties: { ident: f.ident }, geometry: { type: "Point" as const, coordinates: [f.lon, f.lat] } })) };
+    data.current.fixes = fx;
+    (m.getSource("fixes") as GeoJSONSource | undefined)?.setData(fx);
     (m.getSource("trail") as GeoJSONSource | undefined)?.setData(line(data.current.trail));
     if (!fitted.current && (route.length > 1 || trail.length > 1) && !aircraft) {
       fitted.current = true;
@@ -339,7 +345,7 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     if (!acMarker.current) {
       const d = document.createElement("div");
       d.className = "own-ac";
-      d.innerHTML = `<span class="own-ac-pulse"></span><svg viewBox="0 0 48 48" width="44" height="44"><path d="M24 2.5c1.7 0 2.8 1.7 2.8 4v11.2l15.7 9.1v4.4l-15.7-4.7v9.4l4.7 3.6v3L24 41.6 16.5 43.5v-3l4.7-3.6v-9.4L5.5 32.2v-4.4l15.7-9.1V6.5c0-2.3 1.1-4 2.8-4z" fill="#FFFFFF" stroke="#0A84FF" stroke-width="1.8" stroke-linejoin="round"/></svg>`;
+      d.innerHTML = `<span class="own-ac-pulse"></span><svg viewBox="0 0 48 48" width="46" height="46"><defs><linearGradient id="gp-fus" x1="0" x2="1"><stop offset="0" stop-color="#D9E3EF"/><stop offset=".5" stop-color="#FFFFFF"/><stop offset="1" stop-color="#C9D5E3"/></linearGradient></defs><path d="${AIRLINER_PATH}" fill="url(#gp-fus)" stroke="#0A6CFF" stroke-width="1.4" stroke-linejoin="round"/><path d="${ENGINES}" fill="#7C8DA6"/><path d="M22.4 5.6h3.2" stroke="#2B3A55" stroke-width="1.6" stroke-linecap="round"/></svg>`;
       acMarker.current = new maplibregl.Marker({ element: d, rotationAlignment: "map" }).setLngLat([aircraft.lon, aircraft.lat]).addTo(m);
     }
     acMarker.current.setLngLat([aircraft.lon, aircraft.lat]).setRotation(aircraft.hdg);
@@ -402,7 +408,7 @@ function addAirportLayers(m: MLMap, kind: Kind) {
   add({ id: "gp-taxiway", type: "line", ...src, minzoom: 12, filter: ["all", ["==", ["geometry-type"], "LineString"], ["==", ["get", "class"], "taxiway"]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": light ? "#D9A21B" : kind === "satellite" ? "#F5C542" : "#C9A03A", "line-opacity": ["interpolate", ["linear"], ["zoom"], 12, 0.55, 15, 0.95], "line-width": ["interpolate", ["exponential", 2], ["zoom"], 12, 0.6, 14, 1.4, 15, 2.6, 17, 16, 19, 80] } });
   add({ id: "gp-runway", type: "line", ...src, minzoom: 8, filter: ["all", ["==", ["geometry-type"], "LineString"], ["==", ["get", "class"], "runway"]], layout: { "line-cap": "butt" }, paint: { "line-color": runwayColor, "line-width": ["interpolate", ["exponential", 2], ["zoom"], 8, 2, 11, 3.5, 13, 7, 14, 11, 15, 18, 17, 56, 19, 215] } });
   add({ id: "gp-runway-cl", type: "line", ...src, minzoom: 13, filter: ["all", ["==", ["geometry-type"], "LineString"], ["==", ["get", "class"], "runway"]], paint: { "line-color": "#ffffff", "line-opacity": 0.9, "line-width": ["interpolate", ["linear"], ["zoom"], 13, 0.8, 17, 2.5, 19, 7], "line-dasharray": [6, 5] } });
-  add({ id: "gp-gate", type: "circle", ...src, minzoom: 15, filter: ["all", ["==", ["geometry-type"], "Point"], ["==", ["get", "class"], "gate"]], paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 15, 2.5, 18, 6], "circle-color": light ? "#34A853" : "#30D158", "circle-stroke-color": light ? "#FFFFFF" : "rgba(0,0,0,.6)", "circle-stroke-width": 1.2 } });
+  add({ id: "gp-gate", type: "circle", ...src, minzoom: 15, filter: ["all", ["==", ["geometry-type"], "Point"], ["==", ["get", "class"], "gate"]], paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 15, 1.8, 18, 4.5], "circle-color": light ? "#8E8E93" : "#AEAEB2", "circle-stroke-color": light ? "#FFFFFF" : "rgba(0,0,0,.6)", "circle-stroke-width": 1 } });
   // Labels on top of everything.
   add({ id: "gp-taxiway-label", type: "symbol", ...src, minzoom: 14.5, filter: ["all", ["==", ["geometry-type"], "LineString"], ["==", ["get", "class"], "taxiway"], ["has", "ref"]], layout: { "symbol-placement": "line", "symbol-spacing": 260, "text-field": ["get", "ref"], "text-font": ["Noto Sans Bold"], "text-size": ["interpolate", ["linear"], ["zoom"], 14.5, 11, 18, 17], "text-keep-upright": true }, paint: { "text-color": "#111111", "text-halo-color": "#F5C542", "text-halo-width": 3 } }, false);
   add({ id: "gp-runway-label", type: "symbol", ...src, minzoom: 12, filter: ["all", ["==", ["geometry-type"], "LineString"], ["==", ["get", "class"], "runway"], ["has", "ref"]], layout: { "symbol-placement": "line-center", "text-field": ["get", "ref"], "text-font": ["Noto Sans Bold"], "text-size": ["interpolate", ["linear"], ["zoom"], 12, 11, 16, 18], "text-letter-spacing": 0.08, "text-keep-upright": true }, paint: { "text-color": "#ffffff", "text-halo-color": "rgba(0,0,0,.85)", "text-halo-width": 2 } }, false);
@@ -419,18 +425,25 @@ function line(coords: number[][]) {
 /** One colour per network so you can tell them apart at a glance. */
 export const NET_COLOR: Record<string, string> = { vatsim: "#30D158", ivao: "#64D2FF", sayintentions: "#FF9F0A" };
 
+/** Top-down narrow-body airliner, nose up, in a 48x48 box. */
+export const AIRLINER_PATH = "M24 2C26 2 26.8 4.6 26.8 8L26.8 18.2L45.5 27.6L45.5 30.4L26.8 25.8L26.6 37.4L34 42.1L34 44.2L25.3 42.3L24 46L22.7 42.3L14 44.2L14 42.1L21.4 37.4L21.2 25.8L2.5 30.4L2.5 27.6L21.2 18.2L21.2 8C21.2 4.6 22 2 24 2Z";
+const ENGINES = "M31 20.6h3.4v6.6H31zM13.6 20.6H17v6.6h-3.4z";
+
 function trafficIcon(fill: string): ImageData {
   const c = document.createElement("canvas");
-  c.width = c.height = 48;
+  c.width = c.height = 64;
   const g = c.getContext("2d")!;
-  g.translate(24, 24);
-  g.fillStyle = fill;
-  g.strokeStyle = "rgba(5,11,25,0.9)";
-  g.lineWidth = 2;
-  g.beginPath();
-  g.moveTo(0, -18); g.lineTo(3, -6); g.lineTo(16, 2); g.lineTo(16, 6); g.lineTo(3, 3); g.lineTo(3, 12); g.lineTo(7, 16); g.lineTo(7, 18);
-  g.lineTo(0, 16); g.lineTo(-7, 18); g.lineTo(-7, 16); g.lineTo(-3, 12); g.lineTo(-3, 3); g.lineTo(-16, 6); g.lineTo(-16, 2); g.lineTo(-3, -6); g.closePath();
-  g.stroke();
-  g.fill();
-  return g.getImageData(0, 0, 48, 48);
+  g.translate(32, 32); g.scale(1.25, 1.25); g.translate(-24, -24);
+  const body = new Path2D(AIRLINER_PATH), eng = new Path2D(ENGINES);
+  g.shadowColor = "rgba(0,0,0,.45)"; g.shadowBlur = 3; g.shadowOffsetY = 1;
+  g.fillStyle = fill; g.fill(body);
+  g.shadowColor = "transparent";
+  g.lineWidth = 1.2; g.strokeStyle = "rgba(5,11,25,.85)"; g.stroke(body);
+  g.fillStyle = "rgba(5,11,25,.55)"; g.fill(eng);
+  // Fuselage highlight, for a bit of depth.
+  const hl = g.createLinearGradient(21, 0, 27, 0);
+  hl.addColorStop(0, "rgba(255,255,255,0)"); hl.addColorStop(0.5, "rgba(255,255,255,.45)"); hl.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = hl; g.fillRect(22.5, 5, 3, 33);
+  return g.getImageData(0, 0, 64, 64);
 }
+

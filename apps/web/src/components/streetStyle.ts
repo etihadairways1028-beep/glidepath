@@ -30,11 +30,11 @@ const LIGHT: Palette = {
 };
 
 const DARK: Palette = {
-  land: "#1E2126", water: "#1D3147", waterLine: "#25415F", waterText: "#7FA6CC",
-  park: "#22332A", wood: "#203026", grass: "#25352C", farmland: "#22262A", sand: "#2B2A25", ice: "#2C3036",
-  residential: "#22252B", industrial: "#25242C", commercial: "#2A2528", hospital: "#2D2427", school: "#2A2823", airportArea: "#272733",
-  building: "#2A2E35", buildingEdge: "#343941",
-  motorway: "#8A6D3B", motorwayCase: "#5C4826", trunk: "#5F5545", trunkCase: "#3E382E", road: "#3F444D", roadCase: "#2A2E35", minor: "#363B43", minorCase: "#272B31", path: "#3A3F46", rail: "#4A4F57",
+  land: "#1F2227", water: "#1B3D63", waterLine: "#2A5785", waterText: "#8DB6E0",
+  park: "#1F3A2A", wood: "#1D3527", grass: "#223A2C", farmland: "#23272B", sand: "#2E2C26", ice: "#2F343B",
+  residential: "#24272D", industrial: "#28272F", commercial: "#2C272B", hospital: "#30262A", school: "#2C2A25", airportArea: "#292A36",
+  building: "#30343C", buildingEdge: "#3B4049",
+  motorway: "#9C7A3F", motorwayCase: "#5F4A27", trunk: "#6B5E48", trunkCase: "#433C31", road: "#4A505A", roadCase: "#2B2F36", minor: "#3D424B", minorCase: "#2A2E34", path: "#41464E", rail: "#555A63",
   border: "#6E6680", stateBorder: "#4A4558",
   text: "#D5D8DE", textSoft: "#9A9FA8", halo: "rgba(18,20,24,0.9)", roadText: "#AEB3BB", cityText: "#F2F3F5",
 };
@@ -73,7 +73,15 @@ export function streetStyle(mode: "light" | "dark"): StyleSpecification {
       { id: "water", type: "fill", ...src, "source-layer": "water", filter: ["!=", ["get", "brunnel"], "tunnel"], paint: { "fill-color": p.water } },
       { id: "waterway", type: "line", ...src, "source-layer": "waterway", minzoom: 8, filter: notTunnel, layout: { "line-cap": "round" }, paint: { "line-color": p.waterLine, "line-width": zoomW([[8, 0.6], [12, 1.4], [16, 4]]) } },
       // Buildings
-      { id: "building", type: "fill", ...src, "source-layer": "building", minzoom: 14, paint: { "fill-color": p.building, "fill-outline-color": p.buildingEdge, "fill-opacity": ["interpolate", ["linear"], ["zoom"], 14, 0, 15, 1] } },
+      { id: "building", type: "fill", ...src, "source-layer": "building", minzoom: 14, maxzoom: 15.5, paint: { "fill-color": p.building, "fill-outline-color": p.buildingEdge, "fill-opacity": ["interpolate", ["linear"], ["zoom"], 14, 0, 15, 1] } },
+      // Real building heights from OpenStreetMap, raised when you zoom in (and in the 3D view).
+      { id: "building-3d", type: "fill-extrusion", ...src, "source-layer": "building", minzoom: 15, paint: {
+        "fill-extrusion-color": p.building,
+        "fill-extrusion-height": ["coalesce", ["get", "render_height"], 6],
+        "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
+        "fill-extrusion-opacity": ["interpolate", ["linear"], ["zoom"], 15, 0, 15.8, 0.9],
+        "fill-extrusion-vertical-gradient": true,
+      } },
       // Roads: casings first, then fills
       { id: "road-minor-case", type: "line", ...src, "source-layer": "transportation", minzoom: 13, filter: ["all", notTunnel, cls("minor", "service")], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": p.minorCase, "line-width": zoomW([[13, 1.5], [16, 8], [18, 20]]) } },
       { id: "road-case", type: "line", ...src, "source-layer": "transportation", minzoom: 9, filter: ["all", notTunnel, cls("primary", "secondary", "tertiary")], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": p.roadCase, "line-width": zoomW([[9, 1], [12, 3], [16, 14], [18, 30]]) } },
