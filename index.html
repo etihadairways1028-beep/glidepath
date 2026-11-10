@@ -29,6 +29,7 @@
         <a href="#debrief">Debrief</a>
         <a href="#demo">Demo</a>
         <a href="#brief">Monthly brief</a>
+        <a href="#aircraft">Aircraft</a>
         <a href="#today">What works</a>
         <a href="app/">App</a>
       </div>
@@ -41,6 +42,7 @@
       <a href="#debrief">Landing debrief</a>
       <a href="#demo">Watch the demo</a>
       <a href="#brief">Monthly brief</a>
+      <a href="#aircraft">Aircraft compatibility</a>
       <a href="#today">What works today</a>
       <a href="app/">Open the app</a>
       <a href="#download">Download for Windows</a>
@@ -346,6 +348,29 @@
     </section>
 
     <!-- WHAT WORKS -->
+    <section id="aircraft" class="aircraft" aria-labelledby="aircraft-title">
+      <div class="section-head reveal">
+        <p class="kicker">Aircraft</p>
+        <h2 id="aircraft-title">Which aircraft work, honestly.</h2>
+        <p class="section-lede">Every aircraft gives Glidepath its position, altitude, speeds and attitude through the simulator's standard data, so tracking and the landing debrief work with all of them. Add-on extras are listed separately. Nothing here is marked tested until it has been flown.</p>
+      </div>
+      <div class="compat glass reveal" role="region" aria-label="Aircraft compatibility table" tabindex="0">
+        <table>
+          <thead><tr><th scope="col">Aircraft</th><th scope="col">Tracking and debrief</th><th scope="col">Add-on extras</th><th scope="col">Notes</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Default MSFS 2020 / 2024 aircraft</th><td><span class="st wait">Built, testing now</span></td><td><span class="st na">None needed</span></td><td>Uses the standard simulator data directly.</td></tr>
+            <tr><th scope="row">Fenix A319 / A320 / A321</th><td><span class="st wait">Built, testing now</span></td><td><span class="st wait">EFB and MCDU in Cockpit tools: built, not yet tried</span></td><td>Fuel is read from the standard data; Fenix may report it differently.</td></tr>
+            <tr><th scope="row">FSLabs A321</th><td><span class="st wait">Built, testing now</span></td><td><span class="st wait">EFB in Cockpit tools: built, not yet tried</span></td><td>Uses port 23032 by default; another port can be added in the app.</td></tr>
+            <tr><th scope="row">FlyByWire A32NX / A380X</th><td><span class="st wait">Built, testing now</span></td><td><span class="st wait">MCDU through SimBridge: built, not yet tried</span></td><td>Start SimBridge for the MCDU.</td></tr>
+            <tr><th scope="row">PMDG 737</th><td><span class="st wait">Built, testing now</span></td><td><span class="st next">CDU on iPad: planned</span></td><td>Needs PMDG's SDK switched on in its options file.</td></tr>
+            <tr><th scope="row">PMDG 777</th><td><span class="st wait">Built, testing now</span></td><td><span class="st next">CDU on iPad: planned</span></td><td>Same as the 737.</td></tr>
+            <tr><th scope="row">iniBuilds A350</th><td><span class="st wait">Built, testing now</span></td><td><span class="st na">None planned yet</span></td><td>Standard data only.</td></tr>
+          </tbody>
+        </table>
+        <p class="compat-key"><span class="st ok">Tested</span> flown and checked · <span class="st wait">Built, testing now</span> written against the documentation, first real flights under way · <span class="st next">Planned</span> not built yet</p>
+      </div>
+    </section>
+
     <section id="today" class="today" aria-labelledby="today-title">
       <div class="section-head reveal">
         <p class="kicker">Honest status</p>

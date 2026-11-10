@@ -422,3 +422,15 @@ section { padding: 72px 0 0; }
 .trouble summary { cursor: pointer; font-weight: 600; color: #F5F5F7; }
 .trouble ul { margin: 10px 0 0; padding-left: 18px; display: grid; gap: 8px; line-height: 1.5; }
 @media (max-width: 640px) { section { padding-top: 56px; } .hero h1 { font-size: clamp(36px, 10vw, 52px); } }
+/* Aircraft compatibility */
+.compat { border-radius: 26px; padding: 8px 8px 14px; overflow-x: auto; }
+.compat table { width: 100%; border-collapse: collapse; min-width: 720px; font-size: 14.5px; }
+.compat th, .compat td { text-align: left; padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,.07); vertical-align: top; line-height: 1.45; }
+.compat thead th { font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--mist); font-weight: 600; }
+.compat tbody th { font-weight: 650; color: #F5F5F7; white-space: nowrap; }
+.compat td { color: var(--mist); }
+.compat tbody tr:last-child th, .compat tbody tr:last-child td { border-bottom: 0; }
+.st { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: #F5F5F7; }
+.st::before { content: ""; width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.st.ok::before { background: #30D158; } .st.wait::before { background: #FF9F0A; } .st.next::before { background: #0A84FF; } .st.na::before { background: #636366; }
+.compat-key { margin: 10px 16px 0; font-size: 13px; color: var(--mist); display: flex; flex-wrap: wrap; gap: 6px 14px; }
