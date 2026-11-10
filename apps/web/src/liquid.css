@@ -895,3 +895,32 @@ a.tile:hover, .tile[role="button"]:hover { transform: translateY(-2px); }
 .replay-jumps { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 16px 16px; }
 .btn.round-lg { width: 46px; height: 46px; padding: 0; border-radius: 50%; justify-content: center; flex: none; }
 @media (max-width: 640px) { .replay-read { gap: 10px; font-size: 13px; } .replay-speed button { min-width: 36px; } .replay-bar { flex-wrap: wrap; } .replay-scrub { flex-basis: 100%; order: 3; } }
+/* Touchdown diagram */
+.td-fig { margin: 6px 0 14px; }
+.td-fig svg { width: 100%; height: auto; display: block; }
+.td-fig figcaption { font-size: 13px; line-height: 1.45; margin-top: 4px; }
+.td-fig figcaption b { color: var(--ink); }
+.td-rwy { fill: #3A3F48; }
+:root[data-theme="light"] .td-rwy { fill: #5E626C; }
+.td-zone { fill: rgba(48,209,88,.16); }
+.td-mark { fill: rgba(255,255,255,.85); }
+.td-cl { stroke: rgba(255,255,255,.75); stroke-width: 1.5; stroke-dasharray: 12 9; }
+.td-tick { stroke: var(--faint, #8e8e93); }
+.td-note, .td-lbl { font: 600 10.5px/1 Inter, system-ui, sans-serif; fill: var(--faint, #8e8e93); }
+.td-lbl { fill: var(--ink); font-size: 12px; }
+.td-dot.ok { fill: #30D158; } .td-dot.warn { fill: #FF9F0A; }
+.td-dot { stroke: #fff; stroke-width: 2; }
+.td-halo.ok { fill: rgba(48,209,88,.25); } .td-halo.warn { fill: rgba(255,159,10,.25); }
+.td-halo { animation: td-pulse 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes td-pulse { 50% { transform: scale(1.35); opacity: .5; } }
+/* Weather centre */
+.wx-add { display: flex; gap: 8px; }
+.wx-add input { width: 170px; height: 36px; border-radius: 12px; padding: 0 12px; font: inherit; color: inherit; background: rgba(127,127,127,.12); border: 1px solid rgba(127,127,127,.25); text-transform: uppercase; }
+.wx-radar { position: relative; height: clamp(240px, 38vh, 420px); padding: 0; overflow: hidden; border-radius: 28px; }
+.wx-radar .map, .wx-radar .maplibregl-map { position: absolute; inset: 0; }
+.wx-radar-tag { position: absolute; z-index: 3; left: 14px; top: 12px; padding: 6px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600; color: #fff; background: rgba(20,22,28,.55); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.wx-wind tr.best td { color: var(--ink); font-weight: 650; }
+.wx-taf { margin-top: 10px; }
+.wx-taf summary { cursor: pointer; font-weight: 600; font-size: 13.5px; }
+.wx-taf pre { white-space: pre-wrap; margin: 8px 0 0; font-size: 12.5px; color: var(--mist); }
+.wx-add input::placeholder { text-transform: none; }

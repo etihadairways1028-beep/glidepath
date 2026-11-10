@@ -69,15 +69,16 @@ export function generateSyntheticFlight(opts: SyntheticOptions = {}): TelemetryF
   const cruiseFt = opts.cruiseFt ?? 24000;
   const tdVs = opts.touchdownVsFpm ?? 140;
   const frames: TelemetryFrame[] = [];
-  const recip = (EGLL_27R.headingTrueDeg + 180) % 360;
-  const stand = destinationPoint(EGLL_27R.threshold, recip, 0.7);
+  // A stand on the airfield south-west of the 27R threshold (inside the airport,
+  // so the demo taxis over taxiways rather than the houses east of Heathrow).
+  const stand: LatLon = { lat: 51.4741, lon: -0.4428 };
   const iaf = destinationPoint(EGCC_23R.threshold, (EGCC_23R.headingTrueDeg + 180) % 360, 14);
   const route: LatLon[] = [EGLL_27R.threshold, iaf, EGCC_23R.threshold];
   const routeTotal = distanceNm(route[0]!, route[1]!) + distanceNm(route[1]!, route[2]!);
 
   const s: State = {
     t: opts.startT ?? Date.UTC(2026, 10, 1, 10, 0, 0),
-    pos: stand, alt: EGLL_ELEV, hdg: EGLL_27R.headingTrueDeg, ias: 0, gs: 0, vs: 0, pitch: 0.5, bank: 0,
+    pos: stand, alt: EGLL_ELEV, hdg: 20, ias: 0, gs: 0, vs: 0, pitch: 0.5, bank: 0,
     onGround: true, gear: true, flaps: 0, spoilers: 0, brake: true, pushback: false, engines: false,
     fuelKg: 6200, ffKgH: 0, n1: 0, g: 1, tdVs: null, paused: false,
   };
@@ -108,9 +109,10 @@ export function generateSyntheticFlight(opts: SyntheticOptions = {}): TelemetryF
   step(20, () => {});
   // 3. Taxi to the threshold.
   s.flaps = 1;
+  s.hdg = bearingDeg(s.pos, EGLL_27R.threshold);
   const taxiDist = distanceNm(s.pos, EGLL_27R.threshold);
   step(Math.round((taxiDist / 15) * 3600), () => { s.gs = 15; s.ias = 12; s.n1 = 30; move(dt, 15); });
-  s.pos = { ...EGLL_27R.threshold }; s.gs = 0; s.ias = 0;
+  s.pos = { ...EGLL_27R.threshold }; s.gs = 0; s.ias = 0; s.hdg = EGLL_27R.headingTrueDeg;
   step(20, () => {});
   // 4. Takeoff roll and rotation.
   s.ffKgH = 2 * 1600; s.n1 = 90;

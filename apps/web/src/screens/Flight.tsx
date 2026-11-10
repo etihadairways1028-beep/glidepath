@@ -1,3 +1,4 @@
+import { TouchdownDiagram } from "../components/TouchdownDiagram";
 import { useMemo, useState } from "react";
 import type { LandingReport } from "@glidepath/protocol";
 import { computeTopOfDescent } from "@glidepath/flight-engine";
@@ -200,6 +201,7 @@ export function LandingSummary({ l }: { l: LandingReport }) {
         <span style={{ transform: "scale(1.4)", transformOrigin: "left center", marginRight: 14 }}><Grade grade={l.grade} score={l.score} /></span>
         <div><div className="data">{fmt(l.score, 1)} / 100</div><div className="muted" style={{ fontSize: 13 }}>{l.verdict}</div></div>
       </div>
+      <TouchdownDiagram l={l} />
       <Kv k="Touchdown" v={l.touchdownVsFpm === null ? "—" : `${touchdownWords(l.touchdownVsFpm, l.profileId).word}, ${fmt(Math.abs(l.touchdownVsFpm))} fpm${l.touchdownVsSource === "derived" ? " (estimated)" : ""}`} />
       <Kv k="Peak load" v={`${fmt(l.peakG, 2)} g`} />
       <Kv k="Runway" v={l.runway ? `${l.runway.ident}, ${fmt(l.runway.distanceFromThresholdFt)} ft in, ${fmt(Math.abs(l.runway.centrelineOffsetFt))} ft ${l.runway.centrelineOffsetFt >= 0 ? "right" : "left"}` : "not identified"} />

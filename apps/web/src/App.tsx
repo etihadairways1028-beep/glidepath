@@ -6,6 +6,7 @@ import type { FlightSummary } from "@glidepath/protocol";
 import { startDemo } from "./data/demo";
 import { settingsStore, store, useApp, useSettings } from "./data/store";
 import { CockpitScreen } from "./screens/Cockpit";
+import { WeatherScreen } from "./screens/Weather";
 import { GlideslopeBanners, useFlightMessages } from "./components/Glideslope";
 import { Account, hasBeenWelcomed, Welcome } from "./screens/Account";
 import { CopilotScreen } from "./screens/Copilot";
@@ -45,6 +46,7 @@ const NAV: Array<{ id: string; label: string; icon: () => ReactNode; mobile: boo
   { id: "copilot", label: "Copilot", icon: Icon.headset, mobile: true },
   { id: "logbook", label: "Logbook", icon: Icon.book, mobile: true },
   { id: "cockpit", label: "Cockpit tools", icon: Icon.panel, mobile: false },
+  { id: "weather", label: "Weather", icon: Icon.cloud, mobile: false },
   { id: "airports", label: "Airports", icon: Icon.tower, mobile: false },
   { id: "glance", label: "Glance mode", icon: Icon.expand, mobile: false },
   { id: "account", label: "Account", icon: Icon.person, mobile: false },
@@ -143,6 +145,7 @@ export function App() {
     case "glance": body = <Glance />; break;
     case "copilot": body = <CopilotScreen />; break;
     case "cockpit": body = <CockpitScreen />; break;
+    case "weather": body = <WeatherScreen />; break;
     default: body = <Home />;
   }
 
@@ -171,7 +174,7 @@ export function App() {
           {NAV.filter((n) => n.mobile).map((n) => (
             <a key={n.id} className={`tab${screen === n.id ? " on" : ""}`} href={`#/${n.id}`}>{n.icon()}{n.label === "Live map" ? "Map" : n.label}</a>
           ))}
-          <a className={`tab${["airports", "settings", "glance", "account", "cockpit"].includes(screen ?? "") ? " on" : ""}`} href="#/settings">{Icon.more()}More</a>
+          <a className={`tab${["airports", "settings", "glance", "account", "cockpit", "weather"].includes(screen ?? "") ? " on" : ""}`} href="#/settings">{Icon.more()}More</a>
         </nav>
       )}
     </>

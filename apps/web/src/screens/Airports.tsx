@@ -117,7 +117,7 @@ export function AirportPage({ code }: { code: string }) {
   );
 }
 
-function MetarView({ m }: { m: Metar }) {
+export function MetarView({ m }: { m: Metar }) {
   return (
     <>
       <Kv k="Wind" v={m.windDir === null ? "—" : `${m.windDir === "VRB" ? "Variable" : `${String(m.windDir).padStart(3, "0")}°`} ${fmt(m.windKt)} kt${m.gustKt ? ` gusting ${m.gustKt}` : ""}`} />
