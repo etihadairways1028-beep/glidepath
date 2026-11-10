@@ -1,17 +1,16 @@
 /**
- * Glidepath accounts (Supabase). Optional: with no cloud config, everything
- * here reports "not set up" and the app works exactly as before.
+ * Glidepath accounts (Cloudflare Workers + D1, see cloud/cloudflare). Optional:
+ * with no cloud config, everything here reports "not set up" and the app works
+ * exactly as before.
  *
- *  - Config is public (project URL + publishable/anon key, protected by
- *    row-level security). It's read from ./cloud.json, falling back to the
- *    hosted site's copy so the app inside the Bridge picks it up too.
+ *  - Config is public (just the service address). It's read from ./cloud.json,
+ *    falling back to the hosted site's copy so the app inside the Bridge finds it too.
  *  - Several accounts can be signed in on one device; each keeps its own
- *    session under its own storage key. One is active at a time.
+ *    session token. One is active at a time.
  *  - Completed flight summaries are copied to the account (no telemetry),
  *    and paired Bridges are remembered so other signed-in devices find them.
  */
 import { useSyncExternalStore } from "react";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { FlightSummary } from "@glidepath/protocol";
 
 const HOSTED_CONFIG = "https://etihadairways1028-beep.github.io/glidepath/cloud.json";
@@ -37,44 +36,56 @@ export function useCloud(): CloudState {
   return useSyncExternalStore(cloudStore.subscribe, cloudStore.get, cloudStore.get);
 }
 
-let conf: { url: string; key: string } | null = null;
-const clients = new Map<string, SupabaseClient>();
+let api: string | null = null;
 
 const ls = {
   get<T>(k: string, d: T): T { try { const v = localStorage.getItem(k); return v ? (JSON.parse(v) as T) : d; } catch { return d; } },
   set(k: string, v: unknown) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* storage full or blocked */ } },
   del(k: string) { try { localStorage.removeItem(k); } catch { /* ignore */ } },
 };
-
-function clientFor(slot: string): SupabaseClient {
-  let c = clients.get(slot);
-  if (!c) {
-    c = createClient(conf!.url, conf!.key, { auth: { storageKey: `gp-auth-${slot}`, persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } });
-    clients.set(slot, c);
-  }
-  return c;
-}
-export function activeClient(): SupabaseClient | null {
-  return conf && state.active ? clientFor(state.active) : null;
-}
+const tokenKey = (slot: string) => `gp-auth-${slot}`;
 const activeAccount = () => state.accounts.find((a) => a.slot === state.active) ?? null;
 
-async function readConfig(): Promise<{ url: string; key: string } | null> {
+class CloudError extends Error {}
+/** Call the accounts service as the given account (or none). Throws CloudError with a message for people. */
+async function call<T>(path: string, init: { method?: string; body?: unknown; slot?: string | null } = {}): Promise<T> {
+  if (!api) throw new CloudError("Accounts aren't set up yet.");
+  const token = init.slot ? ls.get<string | null>(tokenKey(init.slot), null) : null;
+  let r: Response;
+  try {
+    r = await fetch(`${api}${path}`, {
+      method: init.method ?? "GET",
+      headers: { ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
+    });
+  } catch {
+    throw new CloudError("Couldn't reach the account service. Check your internet connection.");
+  }
+  const j = await r.json().catch(() => ({})) as T & { error?: string };
+  if (!r.ok) {
+    if (r.status === 401 && init.slot && path !== "/auth/login") dropAccount(init.slot);
+    throw new CloudError(j.error ?? `The account service said ${r.status}.`);
+  }
+  return j;
+}
+const msg = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+async function readConfig(): Promise<string | null> {
   for (const src of ["cloud.json", HOSTED_CONFIG]) {
     try {
       const r = await fetch(src, { cache: "no-cache" });
       if (!r.ok) continue;
-      const j = (await r.json()) as { supabaseUrl?: string; supabaseKey?: string };
-      if (j.supabaseUrl && j.supabaseKey) return { url: j.supabaseUrl.replace(/\/$/, ""), key: j.supabaseKey };
+      const j = (await r.json()) as { provider?: string; api?: string };
+      if (j.api && /^(https:\/\/|http:\/\/(localhost|127\.0\.0\.1)[:/])/.test(j.api)) return j.api.replace(/\/$/, "");
     } catch { /* try the next one */ }
   }
   return null;
 }
 
 export async function initCloud(): Promise<void> {
-  conf = await readConfig();
-  if (!conf) { set({ status: "off" }); return; }
-  const accounts = ls.get<CloudAccount[]>("gp.accounts", []);
+  api = await readConfig();
+  if (!api) { set({ status: "off" }); return; }
+  const accounts = ls.get<CloudAccount[]>("gp.accounts", []).filter((a) => ls.get<string | null>(tokenKey(a.slot), null));
   const active = ls.get<string | null>("gp.activeAccount", accounts[0]?.slot ?? null);
   set({ status: "ready", accounts, active: accounts.some((a) => a.slot === active) ? active : accounts[0]?.slot ?? null });
   void loadProfile();
@@ -85,41 +96,38 @@ function saveAccounts(accounts: CloudAccount[], active: string | null) {
   ls.set("gp.activeAccount", active);
   set({ accounts, active, profile: null });
 }
+/** Session ended on the server (signed out elsewhere, or expired): forget it here. */
+function dropAccount(slot: string) {
+  ls.del(tokenKey(slot));
+  const rest = state.accounts.filter((a) => a.slot !== slot);
+  saveAccounts(rest, state.active === slot ? rest[0]?.slot ?? null : state.active);
+}
 
-const friendly = (m: string) =>
-  /invalid login/i.test(m) ? "That email and password don't match an account." :
-  /email not confirmed/i.test(m) ? "Confirm your email first: we sent you a link when you signed up." :
-  /already registered|already exists/i.test(m) ? "There's already an account with that email. Sign in instead." :
-  /password should be/i.test(m) ? "Use a password of at least 8 characters." :
-  /rate limit/i.test(m) ? "Too many tries. Wait a minute and try again." :
-  /fetch|network/i.test(m) ? "Couldn't reach the account service. Check your internet connection." : m;
+interface AuthReply { token: string; user: { id: string; email: string; display_name: string | null; monthly_email: boolean } }
+function addSignedIn(r: AuthReply, slot: string) {
+  ls.set(tokenKey(slot), r.token);
+  const acct: CloudAccount = { slot, userId: r.user.id, email: r.user.email, name: r.user.display_name };
+  saveAccounts([...state.accounts.filter((a) => a.slot !== slot && a.userId !== r.user.id), acct], slot);
+  set({ profile: { email: r.user.email, display_name: r.user.display_name, monthly_email: r.user.monthly_email } });
+}
 
 /** Sign in. Adds the account if it's new on this device and makes it active. */
 export async function signIn(email: string, password: string): Promise<string | null> {
-  if (!conf) return "Accounts aren't set up yet.";
-  const existing = state.accounts.find((a) => a.email.toLowerCase() === email.trim().toLowerCase());
-  const slot = existing?.slot ?? crypto.randomUUID().slice(0, 8);
-  const { data, error } = await clientFor(slot).auth.signInWithPassword({ email: email.trim(), password });
-  if (error || !data.user) { if (!existing) clients.delete(slot); return friendly(error?.message ?? "Couldn't sign in."); }
-  const acct: CloudAccount = { slot, userId: data.user.id, email: data.user.email ?? email, name: (data.user.user_metadata?.display_name as string | undefined) ?? null };
-  saveAccounts([...state.accounts.filter((a) => a.slot !== slot), acct], slot);
-  void loadProfile();
-  return null;
+  try {
+    const existing = state.accounts.find((a) => a.email.toLowerCase() === email.trim().toLowerCase());
+    const r = await call<AuthReply>("/auth/login", { method: "POST", body: { email: email.trim(), password } });
+    addSignedIn(r, existing?.slot ?? crypto.randomUUID().slice(0, 8));
+    return null;
+  } catch (e) { return msg(e); }
 }
 
-/** Create an account. Returns { error } or { confirm: true } when the email needs confirming first. */
+/** Create an account (signed in straight away). */
 export async function signUp(name: string, email: string, password: string): Promise<{ error: string | null; confirm: boolean }> {
-  if (!conf) return { error: "Accounts aren't set up yet.", confirm: false };
-  const slot = crypto.randomUUID().slice(0, 8);
-  const { data, error } = await clientFor(slot).auth.signUp({
-    email: email.trim(), password,
-    options: { data: { display_name: name.trim() || null }, emailRedirectTo: "https://etihadairways1028-beep.github.io/glidepath/#signed-in" },
-  });
-  if (error) { clients.delete(slot); return { error: friendly(error.message), confirm: false }; }
-  if (!data.session || !data.user) { clients.delete(slot); return { error: null, confirm: true }; }
-  saveAccounts([...state.accounts, { slot, userId: data.user.id, email: data.user.email ?? email, name: name.trim() || null }], slot);
-  void loadProfile();
-  return { error: null, confirm: false };
+  try {
+    const r = await call<AuthReply>("/auth/signup", { method: "POST", body: { name: name.trim(), email: email.trim(), password } });
+    addSignedIn(r, crypto.randomUUID().slice(0, 8));
+    return { error: null, confirm: false };
+  } catch (e) { return { error: msg(e), confirm: false }; }
 }
 
 export function switchAccount(slot: string): void {
@@ -129,47 +137,37 @@ export function switchAccount(slot: string): void {
 }
 
 export async function signOut(slot: string): Promise<void> {
-  try { await clientFor(slot).auth.signOut({ scope: "local" }); } catch { /* already gone */ }
-  clients.delete(slot);
-  ls.del(`gp-auth-${slot}`);
+  try { await call("/auth/logout", { method: "POST", body: {}, slot }); } catch { /* already gone */ }
   ls.del(`gp.synced.${slot}`);
-  const rest = state.accounts.filter((a) => a.slot !== slot);
-  saveAccounts(rest, state.active === slot ? rest[0]?.slot ?? null : state.active);
+  dropAccount(slot);
   void loadProfile();
 }
 
 async function loadProfile(): Promise<void> {
-  const c = activeClient();
-  if (!c) { set({ profile: null }); return; }
-  const { data } = await c.from("profiles").select("email, display_name, monthly_email").maybeSingle();
-  set({ profile: (data as CloudProfile | null) ?? null });
+  const a = activeAccount();
+  if (!a) { set({ profile: null }); return; }
+  try { set({ profile: await call<CloudProfile>("/me", { slot: a.slot }) }); } catch { set({ profile: null }); }
 }
 
 export async function setMonthlyEmail(on: boolean): Promise<string | null> {
-  const c = activeClient(); const a = activeAccount();
-  if (!c || !a) return "Sign in first.";
-  const { error } = await c.from("profiles").update({ monthly_email: on }).eq("id", a.userId);
-  if (error) return friendly(error.message);
-  await loadProfile();
-  return null;
+  const a = activeAccount();
+  if (!a) return "Sign in first.";
+  try { set({ profile: await call<CloudProfile>("/me", { method: "PATCH", body: { monthly_email: on }, slot: a.slot }) }); return null; } catch (e) { return msg(e); }
 }
 
 /** Copy completed flight summaries that this account doesn't have yet. */
 export async function syncFlights(flights: FlightSummary[]): Promise<void> {
-  const c = activeClient(); const a = activeAccount();
-  if (!c || !a) return;
+  const a = activeAccount();
+  if (!a) return;
   const key = `gp.synced.${a.slot}`;
   const synced = ls.get<Record<string, string>>(key, {});
   const todo = flights.filter((f) => (f.status === "completed" || f.status === "incomplete") && synced[f.id] !== `${f.status}:${f.lastSeq}`);
   if (!todo.length) { set({ lastSync: Date.now(), syncError: null }); return; }
   for (let i = 0; i < todo.length; i += 50) {
     const batch = todo.slice(i, i + 50);
-    const { error } = await c.from("flights").upsert(batch.map((f) => ({
-      user_id: a.userId, id: f.id, status: f.status,
-      off_block_at: f.offBlockAt ? new Date(f.offBlockAt).toISOString() : new Date(f.startedAt).toISOString(),
-      summary: f, updated_at: new Date().toISOString(),
-    })));
-    if (error) { set({ syncError: friendly(error.message) }); return; }
+    try {
+      await call("/flights", { method: "PUT", slot: a.slot, body: batch.map((f) => ({ id: f.id, status: f.status, off_block_at: f.offBlockAt ?? f.startedAt, summary: f })) });
+    } catch (e) { set({ syncError: msg(e) }); return; }
     for (const f of batch) synced[f.id] = `${f.status}:${f.lastSeq}`;
     ls.set(key, synced);
   }
@@ -178,31 +176,35 @@ export async function syncFlights(flights: FlightSummary[]): Promise<void> {
 
 /** Every flight saved to the active account, newest first (for the logbook away from the PC). */
 export async function cloudFlights(): Promise<FlightSummary[] | null> {
-  const c = activeClient();
-  if (!c) return null;
-  const { data, error } = await c.from("flights").select("summary").order("off_block_at", { ascending: false }).limit(2000);
-  if (error) return null;
-  return ((data ?? []) as Array<{ summary: FlightSummary }>).map((r) => r.summary);
+  const a = activeAccount();
+  if (!a) return null;
+  try { return await call<FlightSummary[]>("/flights", { slot: a.slot }); } catch { return null; }
 }
 
 /** Remember this Bridge on the account so other signed-in devices can find it. */
 export async function saveBridge(b: { bridgeId: string; name: string; addresses: string[]; port: number; token: string }): Promise<void> {
-  const c = activeClient(); const a = activeAccount();
-  if (!c || !a) return;
-  await c.from("bridges").upsert({ user_id: a.userId, bridge_id: b.bridgeId, name: b.name, addresses: b.addresses, port: b.port, token: b.token, updated_at: new Date().toISOString() });
+  const a = activeAccount();
+  if (!a) return;
+  try { await call("/bridges", { method: "PUT", slot: a.slot, body: { bridge_id: b.bridgeId, name: b.name, addresses: b.addresses, port: b.port, token: b.token } }); } catch { /* best effort */ }
 }
 
 export async function savedBridges(): Promise<SavedBridge[]> {
-  const c = activeClient();
-  if (!c) return [];
-  const { data } = await c.from("bridges").select("bridge_id, name, addresses, port, token, updated_at").order("updated_at", { ascending: false });
-  return (data as SavedBridge[] | null) ?? [];
+  const a = activeAccount();
+  if (!a) return [];
+  try { return await call<SavedBridge[]>("/bridges", { slot: a.slot }); } catch { return []; }
 }
 
 export async function forgetBridge(bridgeId: string): Promise<void> {
-  const c = activeClient(); const a = activeAccount();
-  if (!c || !a) return;
-  await c.from("bridges").delete().eq("user_id", a.userId).eq("bridge_id", bridgeId);
+  const a = activeAccount();
+  if (!a) return;
+  try { await call(`/bridges/${encodeURIComponent(bridgeId)}`, { method: "DELETE", slot: a.slot }); } catch { /* best effort */ }
+}
+
+/** Delete the active account and everything stored with it. */
+export async function deleteAccount(): Promise<string | null> {
+  const a = activeAccount();
+  if (!a) return "Sign in first.";
+  try { await call("/me", { method: "DELETE", slot: a.slot }); dropAccount(a.slot); void loadProfile(); return null; } catch (e) { return msg(e); }
 }
 
 /**
@@ -231,23 +233,17 @@ export async function findBridgeOnNetwork(): Promise<{ url: string; token: strin
 
 /** Ask the server to email this month's brief so far to the active account (at most once an hour). */
 export async function sendBriefPreview(): Promise<string> {
-  const c = activeClient();
-  if (!c) return "Sign in first.";
-  const { data, error } = await c.functions.invoke("monthly-brief", { body: { preview: true } });
-  if (error) {
-    let msg = error.message;
-    try { const b = await (error as { context?: Response }).context?.json(); if (b?.error) msg = b.error; } catch { /* keep message */ }
-    return friendly(msg);
-  }
-  const d = data as { sent?: boolean; reason?: string; error?: string | null };
-  return d.sent ? `Sent to ${activeAccount()?.email}. Check your inbox (and spam, the first time).` : d.reason ?? d.error ?? "Nothing was sent.";
+  const a = activeAccount();
+  if (!a) return "Sign in first.";
+  try {
+    const d = await call<{ sent?: boolean; reason?: string }>("/brief/preview", { method: "POST", body: {}, slot: a.slot });
+    return d.sent ? `Sent to ${a.email}. Check your inbox (and spam, the first time).` : d.reason ?? "Nothing was sent.";
+  } catch (e) { return msg(e); }
 }
 
-/** A short-lived download link for the Windows Bridge, for signed-in accounts. */
+/** The Windows Bridge download, for signed-in accounts. */
 export async function downloadLink(): Promise<{ url: string | null; error: string | null }> {
-  const c = activeClient();
-  if (!c) return { url: null, error: "Sign in to download." };
-  const { data, error } = await c.functions.invoke("download", { body: {} });
-  if (error) return { url: null, error: friendly(error.message) };
-  return { url: (data as { url?: string }).url ?? null, error: null };
+  const a = activeAccount();
+  if (!a) return { url: null, error: "Sign in to download." };
+  try { return { url: (await call<{ url: string }>("/download", { slot: a.slot })).url, error: null }; } catch (e) { return { url: null, error: msg(e) }; }
 }

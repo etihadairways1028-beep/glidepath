@@ -1,0 +1,14 @@
+# Filled in by .github/workflows/accounts.yml (DATABASE_ID). You don't need to edit this.
+name = "glidepath-accounts"
+main = "src/worker.ts"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "glidepath"
+database_id = "DATABASE_ID"
+
+[triggers]
+# 07:00 UTC on the 1st, 2nd and 3rd (later days pick up anyone a run missed).
+crons = ["0 7 1-3 * *"]

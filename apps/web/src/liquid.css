@@ -877,3 +877,21 @@ a.tile:hover, .tile[role="button"]:hover { transform: translateY(-2px); }
 .pair-addr-in { display: block; margin-top: 10px; width: min(320px, 100%); height: 44px; border-radius: 14px; padding: 0 14px; font: inherit; font-size: 16px; color: inherit; background: rgba(127,127,127,.12); border: 1px solid rgba(127,127,127,.25); }
 .linkish { margin-top: 10px; padding: 0; border: 0; background: none; color: #0A84FF; font: inherit; font-size: 14px; cursor: pointer; }
 .home-map .map-note { display: none; }
+.btn.danger { background: #FF453A; color: #fff; }
+.welcome .signin { display: flex; flex-direction: column; gap: 16px; }
+.welcome .signin-copy h2, .welcome .signin-copy .h2 { font-size: 22px; }
+.welcome .signin .seg { align-self: stretch; }
+.welcome .signin .seg button { flex: 1; white-space: nowrap; }
+/* Flight replay */
+.replay { padding: 0; overflow: hidden; border-radius: 28px; display: flex; flex-direction: column; }
+.replay-map { position: relative; height: clamp(320px, 52vh, 560px); }
+.replay-map .map, .replay-map .maplibregl-map { position: absolute; inset: 0; }
+.replay-read { position: absolute; z-index: 3; left: 12px; top: 12px; display: flex; gap: 16px; padding: 10px 14px; border-radius: 18px; font-variant-numeric: tabular-nums; }
+.replay-read span { display: flex; flex-direction: column; font-family: var(--mono, ui-monospace, monospace); font-size: 15px; font-weight: 650; }
+.replay-read small { font-size: 10.5px; letter-spacing: .06em; color: var(--mist); font-weight: 600; }
+.replay-bar { display: flex; align-items: center; gap: 12px; padding: 14px 16px 6px; }
+.replay-scrub { flex: 1; accent-color: #0A84FF; height: 28px; }
+.replay-speed button { min-width: 44px; }
+.replay-jumps { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 16px 16px; }
+.btn.round-lg { width: 46px; height: 46px; padding: 0; border-radius: 50%; justify-content: center; flex: none; }
+@media (max-width: 640px) { .replay-read { gap: 10px; font-size: 13px; } .replay-speed button { min-width: 36px; } .replay-bar { flex-wrap: wrap; } .replay-scrub { flex-basis: 100%; order: 3; } }

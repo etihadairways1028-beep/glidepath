@@ -1,3 +1,4 @@
+import { Replay, replayPoints } from "../components/Replay";
 import { DebriefPanel, HandlingCard, TakeoffCard } from "../components/Debrief";
 import { Career } from "../components/Career";
 import { cloudFlights, useCloud } from "../data/cloud";
@@ -10,7 +11,7 @@ import { activeBridge } from "../data/bridge";
 import { dur, EVENT_LABEL, fmt, fuel, timingsFor, zulu } from "../data/derive";
 import { TimingsTable } from "../components/Timings";
 import { AircraftHero } from "../components/Imagery";
-import { framesToTrail, useApp, useSettings, type TrailPoint } from "../data/store";
+import { framesToTrail, settingsStore, useApp, useSettings, type TrailPoint } from "../data/store";
 import { LandingSummary } from "./Flight";
 import { touchdownWords } from "@glidepath/flight-engine";
 import { gradeOf } from "./Home";
@@ -107,18 +108,22 @@ export function FlightDetail({ id }: { id: string }) {
   const { fuelUnit } = useSettings();
   const [flight, setFlight] = useState<FlightSummary | null>(null);
   const [trail, setTrail] = useState<TrailPoint[]>([]);
+  const [frames, setFrames] = useState<TelemetryFrame[] | null>(null);
   const [events, setEvents] = useState<FlightEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     if (mode === "demo" && liveFlight?.id === id) { setFlight(liveFlight); setTrail(liveTrail); setEvents(liveEvents); return; }
+    setError(null);
     const b = activeBridge();
     if (!b) {
+      // Paired but still connecting: wait for the Bridge rather than showing an error.
+      if (settingsStore.get().token && mode !== "demo") return;
       // Away from the PC: the account has the summary (debrief, timings, landing), not the track.
       void cloudFlights().then((all) => { const f = all?.find((x) => x.id === id); if (f) setFlight(f); else setError("This flight isn't on this device. Connect your Bridge or sign in to the account that flew it."); });
       return;
     }
     Promise.all([b.get<FlightSummary>(`/api/flights/${id}`), b.get<TelemetryFrame[]>(`/api/flights/${id}/frames`), b.get<FlightEvent[]>(`/api/flights/${id}/events`)])
-      .then(([f, fr, ev]) => { setFlight(f); setTrail(framesToTrail(fr)); setEvents(ev); })
+      .then(([f, fr, ev]) => { setFlight(f); setFrames(fr); setTrail(framesToTrail(fr)); setEvents(ev); })
       .catch((e) => setError(e.message));
   }, [id, mode]);
 
@@ -150,9 +155,13 @@ export function FlightDetail({ id }: { id: string }) {
           {flight.landings.at(-1) ? <p className="fh-meta" style={{ marginTop: 10 }}>Landed at <b style={{ color: "var(--ink)" }}>{fmt(Math.abs(flight.landings.at(-1)!.touchdownVsFpm ?? 0))} fpm</b>, graded {flight.landings.at(-1)!.grade}</p> : null}
       </AircraftHero>
       <DebriefPanel flight={flight} />
-      <section className="glass" style={{ height: 380, overflow: "hidden", position: "relative" }}>
-        <MapView trail={trail} plan={flight.plan} airports={airports} interactive />
-      </section>
+      {trail.length > 1 ? (
+        <Replay points={replayPoints(frames, trail)} plan={flight.plan} airports={airports} events={events} />
+      ) : (
+        <section className="glass" style={{ height: 380, overflow: "hidden", position: "relative" }}>
+          <MapView trail={trail} plan={flight.plan} airports={airports} interactive />
+        </section>
+      )}
       <div className="grid cols-4">
         <Tile k="Block time" v={dur(block)} />
         <Tile k="Air time" v={dur(air)} />

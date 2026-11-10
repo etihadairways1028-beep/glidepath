@@ -1,0 +1,104 @@
+# Deploys Glidepath accounts (sign-up, sign-in, flight sync) to Cloudflare's free plan.
+#
+# One-time setup (about 5 minutes, no card needed) is in cloud/cloudflare/README.md:
+# add the repository secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID, then run
+# this workflow from the Actions tab (or push a change under cloud/cloudflare).
+# It creates the database, deploys the service, and publishes cloud.json so the
+# app and website switch sign-in on by themselves.
+name: Deploy accounts (Cloudflare)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "cloud/cloudflare/**"
+      - "packages/flight-engine/src/**"
+      - ".github/workflows/accounts.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: accounts
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER_SEND_METRICS: "false"
+    defaults:
+      run:
+        working-directory: cloud/cloudflare
+    steps:
+      - name: Check the Cloudflare secrets are there
+        working-directory: .
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::Add the repository secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID first (see cloud/cloudflare/README.md)."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install wrangler
+        run: npm i --no-audit --no-fund --legacy-peer-deps wrangler@4 @cloudflare/workers-types
+
+      - name: Create or find the database
+        run: |
+          find_db() { npx wrangler d1 list --json | node -e 'const l=JSON.parse(require("fs").readFileSync(0,"utf8"));const d=l.find(x=>x.name==="glidepath");if(d)process.stdout.write(d.uuid)'; }
+          ID=$(find_db)
+          if [ -z "$ID" ]; then npx wrangler d1 create glidepath; ID=$(find_db); fi
+          if [ -z "$ID" ]; then echo "::error::Couldn't create the D1 database. Check the API token has D1 Edit permission."; exit 1; fi
+          sed "s/DATABASE_ID/$ID/" wrangler.template.toml > wrangler.toml
+          npx wrangler d1 execute glidepath --remote --file schema.sql
+
+      - name: Deploy the service
+        id: deploy
+        run: |
+          OUT=$(npx wrangler deploy 2>&1) || { echo "$OUT"; echo "::error::Deploy failed. If it mentions a workers.dev subdomain, open Workers & Pages in the Cloudflare dashboard once to pick one, then run this again."; exit 1; }
+          echo "$OUT"
+          URL=$(echo "$OUT" | grep -oE 'https://[a-z0-9.-]+\.workers\.dev' | head -1)
+          if [ -z "$URL" ]; then echo "::error::Deployed, but couldn't read the service address from the output."; exit 1; fi
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+
+      - name: Set the password pepper (first run only)
+        run: |
+          if ! npx wrangler secret list 2>/dev/null | grep -q '"PEPPER"'; then
+            openssl rand -hex 32 | npx wrangler secret put PEPPER
+          fi
+
+      - name: Email settings (optional, for the monthly brief)
+        env:
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+          BREVO_SENDER_EMAIL: ${{ secrets.BREVO_SENDER_EMAIL }}
+        run: |
+          if [ -n "$BREVO_API_KEY" ] && [ -n "$BREVO_SENDER_EMAIL" ]; then
+            printf '%s' "$BREVO_API_KEY" | npx wrangler secret put BREVO_API_KEY
+            printf '%s' "$BREVO_SENDER_EMAIL" | npx wrangler secret put BREVO_SENDER_EMAIL
+          else
+            echo "No Brevo secrets: accounts work, monthly emails stay off."
+          fi
+
+      - name: Check it answers
+        run: curl -fsS "${{ steps.deploy.outputs.url }}/health"
+
+      - name: Switch sign-in on for the website and app
+        working-directory: .
+        run: |
+          git config user.name "glidepath-bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin gh-pages
+          git worktree add /tmp/pages origin/gh-pages
+          cd /tmp/pages
+          git checkout -B gh-pages origin/gh-pages
+          printf '{"provider":"cloudflare","api":"%s"}\n' "${{ steps.deploy.outputs.url }}" > cloud.json
+          git add cloud.json
+          if git diff --cached --quiet; then echo "cloud.json already up to date"; else git commit -m "Switch on accounts (Cloudflare)" && git push origin gh-pages; fi

@@ -1,7 +1,7 @@
 /** Account: sign in (several accounts per device), monthly brief, saved PCs, flight sync. */
 import { useEffect, useState } from "react";
 import { Icon, Notice, Section } from "../components/ui";
-import { forgetBridge, savedBridges, sendBriefPreview, setMonthlyEmail, signIn, signOut, signUp, switchAccount, useCloud, type SavedBridge } from "../data/cloud";
+import { deleteAccount, forgetBridge, savedBridges, sendBriefPreview, setMonthlyEmail, signIn, signOut, signUp, switchAccount, useCloud, type SavedBridge } from "../data/cloud";
 
 export function Account() {
   const c = useCloud();
@@ -48,9 +48,27 @@ export function Account() {
           </Section>
           {active && <MonthlyBrief monthly={c.profile?.monthly_email ?? true} email={active.email} />}
           {active && <SavedPcs key={active.slot} />}
+          {active && <DeleteAccount email={active.email} />}
         </div>
       )}
     </div>
+  );
+}
+
+function DeleteAccount({ email }: { email: string }) {
+  const [sure, setSure] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  return (
+    <Section title="Delete account">
+      <p className="muted" style={{ margin: 0 }}>Removes {email}, its synced flights and saved PCs from Glidepath's servers. Flights on your PC stay there.</p>
+      {sure ? (
+        <div className="row wrap" style={{ marginTop: 12 }}>
+          <button className="btn small danger" onClick={async () => setErr(await deleteAccount())}>Yes, delete it for good</button>
+          <button className="btn small" onClick={() => setSure(false)}>Keep my account</button>
+        </div>
+      ) : <button className="btn small" style={{ marginTop: 12 }} onClick={() => setSure(true)}>Delete account…</button>}
+      {err && <Notice>{err}</Notice>}
+    </Section>
   );
 }
 
@@ -128,7 +146,7 @@ function SavedPcs() {
   return (
     <Section title="Your PCs">
       {list === null ? <div className="skeleton" style={{ height: 60 }} /> : list.length === 0 ? (
-        <p className="muted" style={{ margin: 0, fontSize: 14 }}>Pair with your Bridge once (scan its QR code) while signed in, and it's saved here. After that, any device signed in to this account finds it on your Wi-Fi.</p>
+        <p className="muted" style={{ margin: 0, fontSize: 14 }}>Connect to your PC once (type the code from the Bridge window) while signed in, and it's saved here. After that, any device signed in to this account finds it on your Wi-Fi.</p>
       ) : (
         <div className="cg-rows" style={{ marginTop: 0 }}>
           {list.map((b) => (
@@ -169,7 +187,11 @@ export function YourPcs() {
 }
 
 const WELCOME_KEY = "glidepath.welcomed";
-export const hasBeenWelcomed = (): boolean => { try { return localStorage.getItem(WELCOME_KEY) === "1"; } catch { return true; } };
+/** Skipped inside the website's live preview and for "try the app" demo links. */
+export const hasBeenWelcomed = (): boolean => {
+  if (window.self !== window.top || /[?&]demo=1/.test(location.search)) return true;
+  try { return localStorage.getItem(WELCOME_KEY) === "1"; } catch { return true; }
+};
 
 /** First open on a device: sign in or create an account, or carry on without one. */
 export function Welcome({ onDone }: { onDone: () => void }) {

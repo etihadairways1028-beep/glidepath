@@ -15,8 +15,16 @@
     if (cfg.downloadUrl) a.setAttribute("download", "");
   });
   if (cfg.sha256) $("sha").textContent = cfg.sha256;
+  // Mobile menu
+  const mb = $("menu-btn"), ms = $("menu-sheet");
+  if (mb && ms) {
+    const setOpen = (on) => { ms.hidden = !on; mb.setAttribute("aria-expanded", String(on)); mb.classList.toggle("on", on); };
+    mb.addEventListener("click", () => setOpen(ms.hidden));
+    ms.addEventListener("click", (e) => { if (e.target.closest("a")) setOpen(false); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") setOpen(false); });
+  }
   if (cfg.version) {
-    $("build-line").textContent = "Early test build " + cfg.version + ". Not code-signed yet, so Windows asks you to confirm before it opens.";
+    if ($("dl-ver")) $("dl-ver").textContent = cfg.version + " (early test build)";
     $("download-title").textContent = "Glidepath Bridge " + cfg.version + " for Windows";
   }
 
