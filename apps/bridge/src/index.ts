@@ -6,7 +6,9 @@
 import { PROTOCOL_VERSION, type AircraftInfo, type BridgeStatus, type SimConnectionState, type SimulatorInfo } from "@glidepath/protocol";
 import { BRIDGE_VERSION, HOSTNAME, loadConfig, loadIdentity } from "./config.js";
 import { exec } from "node:child_process";
-import { platform } from "node:os";
+import { platform, homedir } from "node:os";
+import { existsSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { lanAddresses } from "./server.js";
 import { createLogger } from "./log.js";
 import { Recorder } from "./recorder.js";
@@ -167,7 +169,21 @@ async function main(): Promise<void> {
     "  To stop:         close this window or press Ctrl+C",
     "",
   ].join("\n"));
+  const spaced = `${server.pairCode.slice(0, 3)} ${server.pairCode.slice(3)}`;
+  log.info(`Pairing code: ${spaced}`);
+  try { process.title = `Glidepath Bridge - code ${spaced}`; } catch { /* ignore */ }
+  writeCodeFile(spaced, cfg.port, log);
   if (cfg.openBrowser) openInBrowser(`http://localhost:${cfg.port}`);
+}
+
+/** Put the pairing code on the Desktop too, so it is easy to find while flying. */
+function writeCodeFile(code: string, port: number, log: { info(m: string): void }): void {
+  const home = homedir();
+  const desks = [join(home, "Desktop"), join(home, "OneDrive", "Desktop")].filter((d) => existsSync(d));
+  const text = `GLIDEPATH PAIRING CODE: ${code}\r\n\r\nOn the iPad: open the Glidepath website or app, tap Connect to my PC, and type this code.\r\nOr in Safari go to glidepath.local:${port}\r\n\r\nThe code changes each time the Bridge starts. This file is updated automatically.\r\n`;
+  for (const d of desks) {
+    try { writeFileSync(join(d, "Glidepath code.txt"), text); log.info(`Pairing code also saved to ${join(d, "Glidepath code.txt")}`); } catch { /* not writable */ }
+  }
 }
 
 function openInBrowser(url: string): void {

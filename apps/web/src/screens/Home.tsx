@@ -83,7 +83,7 @@ function Onboarding() {
       </div>
       <ol className="onboard-steps">
         <li><span>Open <b>Glidepath Bridge</b> on the PC you fly on, on the same Wi-Fi as this device.</span></li>
-        <li><span>The Bridge window shows a <b>6-digit code</b>.</span></li>
+        <li><span>Find the <b>6-digit code</b>: it is in the black Bridge window, at the top of the Bridge page on your PC (localhost:4810), and in <b>Glidepath code.txt</b> on your PC Desktop.</span></li>
         <li><span>Type it here and tap <b>Connect</b>. Done.</span></li>
       </ol>
     </section>
@@ -111,7 +111,7 @@ function PairWithCode() {
   };
   return (
     <form className="pair-form" onSubmit={go}>
-      <p className="muted" style={{ margin: "10px 0 12px" }}>Type the 6-digit code shown in the Glidepath Bridge window on your PC.</p>
+      <p className="muted" style={{ margin: "10px 0 12px" }}>Type the 6-digit code from your PC: it is in the black Bridge window, at the top of localhost:4810, and in Glidepath code.txt on your Desktop.</p>
       <div className="row wrap">
         <input className="pair-code" inputMode="numeric" autoComplete="one-time-code" maxLength={7} placeholder="000 000" aria-label="Code from your PC" value={code} onChange={(e) => setCode(e.target.value.replace(/[^\d ]/g, ""))} />
         <button className="btn primary" disabled={busy || code.replace(/\D/g, "").length !== 6}>{busy ? "Connecting…" : "Connect"}</button>

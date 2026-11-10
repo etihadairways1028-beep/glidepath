@@ -1,4 +1,4 @@
-GLIDEPATH BRIDGE 0.8.4 (EARLY TEST BUILD) - WINDOWS
+GLIDEPATH BRIDGE 0.8.5 (EARLY TEST BUILD) - WINDOWS
 ====================================================
 
 The Bridge runs on the PC where you fly Microsoft Flight Simulator. It reads
