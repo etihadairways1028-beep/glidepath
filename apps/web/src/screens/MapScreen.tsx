@@ -1,3 +1,4 @@
+import { startDemo } from "../data/demo";
 import { useState } from "react";
 import { MapView } from "../components/MapView";
 import { Icon } from "../components/ui";
@@ -16,6 +17,12 @@ export function MapScreen() {
   const [follow, setFollow] = useState(true);
   const [sel, setSel] = useState<NetworkPilot | null>(null);
   const [layers, setLayers] = useState(false);
+  useEffect(() => {
+    if (!layers) return;
+    const k = (e: KeyboardEvent) => { if (e.key === "Escape") setLayers(false); };
+    window.addEventListener("keydown", k);
+    return () => window.removeEventListener("keydown", k);
+  }, [layers]);
   const bridge = mode === "bridge";
   // Traffic and ATC: through the Bridge when connected, otherwise straight from each network's public feed.
   const vatsim = usePoll(s.showVatsim ? () => getLiveNetwork("vatsim") : null, 20_000, [bridge, s.showVatsim]);
@@ -81,7 +88,16 @@ export function MapScreen() {
             {L.toGoNm !== null && <div className="muted" style={{ fontSize: 13, marginTop: 10 }}>{fmt(L.toGoNm)} nm to go{L.tod && !L.tod.pastTod && L.tod.minutesToTod !== null ? `, top of descent in about ${Math.max(1, Math.round(L.tod.minutesToTod))} min` : ""}</div>}
           </>
         ) : (
-          <div className="muted">{mode === "none" ? "Connect your Bridge or start the demo to see your aircraft." : "No flight yet."}</div>
+          mode === "none" ? (
+            <div>
+              <div style={{ fontWeight: 650, fontSize: 16 }}>No aircraft yet</div>
+              <div className="muted" style={{ fontSize: 13.5, marginTop: 4 }}>Connect to your PC to see your flight here. Live traffic and weather work already.</div>
+              <div className="row wrap" style={{ marginTop: 12, gap: 8 }}>
+                <a className="btn small primary" href="#/home">Connect to my PC</a>
+                <button className="btn small" onClick={() => startDemo()}>Watch a demo</button>
+              </div>
+            </div>
+          ) : <div className="muted">Waiting for your flight to start in the sim.</div>
         )}
         {mode === "demo" && <div className="est" style={{ marginTop: 8 }}>Demo flight: synthetic data</div>}
       </div>
@@ -89,8 +105,10 @@ export function MapScreen() {
         <button className={`btn glass${follow ? " on" : ""}`} aria-pressed={follow} aria-label="Follow my aircraft" title="Follow my aircraft" onClick={() => setFollow(!follow)}><span style={{ width: 22, height: 22 }}>{Icon.target()}</span></button>
         <button className={`btn glass map3d${s.map3d ? " on" : ""}`} aria-pressed={s.map3d} aria-label="3D chase view" title="3D chase view" onClick={() => { settingsStore.set({ map3d: !s.map3d }); if (!s.map3d) setFollow(true); }}>3D</button>
         <button className={`btn glass${layers ? " on" : ""}`} aria-expanded={layers} aria-label="Map layers" title="Map layers" onClick={() => setLayers(!layers)}><span style={{ width: 22, height: 22 }}>{Icon.layers()}</span></button>
+        {layers && <div className="layers-backdrop" onClick={() => setLayers(false)} aria-hidden="true" />}
         {layers && (
-          <div className="glass strong layers-pop">
+          <div className="glass strong layers-pop" role="dialog" aria-label="Map layers">
+            <div className="lp-top"><span>Layers</span><button className="btn small round" aria-label="Close layers" onClick={() => setLayers(false)}>{Icon.close()}</button></div>
             <p className="lp-h">Map</p>
             <BaseMapPicker />
             <p className="lp-h" style={{ marginTop: 16 }}>Traffic</p>

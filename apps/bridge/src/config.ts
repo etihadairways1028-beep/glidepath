@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir, hostname, platform } from "node:os";
 import { join } from "node:path";
 
-export const BRIDGE_VERSION = "0.8.2";
+export const BRIDGE_VERSION = "0.8.3";
 
 export type AdapterChoice = "auto" | "msfs" | "replay";
 

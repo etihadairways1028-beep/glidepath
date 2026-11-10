@@ -924,3 +924,17 @@ a.tile:hover, .tile[role="button"]:hover { transform: translateY(-2px); }
 .wx-taf summary { cursor: pointer; font-weight: 600; font-size: 13.5px; }
 .wx-taf pre { white-space: pre-wrap; margin: 8px 0 0; font-size: 12.5px; color: var(--mist); }
 .wx-add input::placeholder { text-transform: none; }
+/* Map controls: layers panel sits beside the buttons (a bottom sheet on phones), never on top of them. */
+.layers-backdrop { position: fixed; inset: 0; z-index: 4; background: transparent; }
+.map-tools { z-index: 5; }
+.layers-pop { z-index: 6; right: 58px; top: 0; }
+.lp-top { display: flex; align-items: center; justify-content: space-between; margin: -4px 0 6px; font-weight: 700; font-size: 17px; }
+@media (max-width: 600px) {
+  .layers-pop { position: fixed; left: 10px; right: 10px; top: auto; width: auto; bottom: calc(88px + env(safe-area-inset-bottom)); max-height: 62vh; border-radius: 26px; animation: gs-in .35s cubic-bezier(.2,1.1,.4,1) both; }
+  .layers-backdrop { background: rgba(0,0,0,.18); }
+}
+:root[data-theme="light"] .map-tools .btn:not(.on) { color: #1C1C1E; }
+.map-tools .btn svg { stroke: currentColor; }
+.gs-stack { z-index: 7; }
+.map-tools .btn.glass.on, :root[data-theme="light"] .map-tools .btn.glass.on { background: linear-gradient(180deg, #3D9BFF, #0A84FF) !important; color: #fff !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 8px 20px -8px rgba(10,132,255,.8) !important; }
+.gs-stack { z-index: 5; }

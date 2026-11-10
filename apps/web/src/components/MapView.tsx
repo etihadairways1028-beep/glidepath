@@ -357,7 +357,7 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
       if (zoomGoal.current !== null && Math.abs(m.getZoom() - zoomGoal.current) < 0.05) zoomGoal.current = null;
       const z = zoomGoal.current ?? Math.max(m.getZoom(), 5);
       // Ease-out glide: starts fast, so frequent position updates never leave the camera behind.
-      glide(m, { center: [aircraft.lon, aircraft.lat], zoom: z, pitch: m.getPitch(), bearing: m.getBearing(), top: 0 }, 450);
+      glide(m, { center: [aircraft.lon, aircraft.lat], zoom: z, pitch: 0, bearing: m.getBearing(), top: 0 }, 450);
     }
   }, [aircraft?.lat, aircraft?.lon, aircraft?.hdg, follow, threeD]);
 
