@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { BaseMapPicker, TrafficSources } from "../components/MapLayers";
 import { connectFromSettings } from "../App";
-import { ConnPill, Kv, Notice, Section } from "../components/ui";
+import { ConnPill, Icon, Kv, Notice, Section } from "../components/ui";
+import { WallpaperPicker } from "../components/Wallpaper";
 import { activeBridge, setActiveBridge } from "../data/bridge";
 import { startDemo, stopDemo } from "../data/demo";
 import { loadPlan } from "../data/external";
@@ -30,16 +31,14 @@ export function SettingsScreen() {
   return (
     <div className="stack">
       <h1 className="title">Settings</h1>
-      <nav className="more-links" aria-label="More screens">
-        <a className="btn small" href="#/charts">Charts</a>
-        <a className="btn small" href="#/copilot">Copilot</a>
-        <a className="btn small" href="#/checklists">Checklists</a>
-        <a className="btn small" href="#/tools">Pilot tools</a>
-        <a className="btn small" href="#/cockpit">Cockpit tools</a>
-        <a className="btn small" href="#/weather">Weather</a>
-        <a className="btn small" href="#/airports">Airports</a>
-        <a className="btn small" href="#/account">Account</a>
-        <a className="btn small" href="#/glance">Glance mode</a>
+      <nav className="more-grid" aria-label="More screens">
+        {([
+          ["charts", "Charts", Icon.chart], ["copilot", "Copilot", Icon.headset], ["checklists", "Checklists", Icon.checklist],
+          ["tools", "Pilot tools", Icon.calc], ["cockpit", "Cockpit tools", Icon.panel], ["weather", "Weather", Icon.cloud],
+          ["airports", "Airports", Icon.tower], ["glance", "Glance mode", Icon.expand], ["account", "Account", Icon.person],
+        ] as const).map(([id, label, I]) => (
+          <a key={id} className="more-tile glass" href={`#/${id}`}><span className={`more-ic ic-${id}`}><I /></span><span>{label}</span><span className="more-chev" aria-hidden="true">›</span></a>
+        ))}
       </nav>
       <div className="grid cols-2" style={{ alignItems: "start" }}>
         <div className="stack">
@@ -109,6 +108,9 @@ export function SettingsScreen() {
             <TrafficSources />
             <p className="faint" style={{ fontSize: 12.5, margin: "10px 0 0" }}>Your Bridge fetches each network once and shares it with every device, within each network's refresh limits. SayIntentions shows its public tracker: people flying with its AI ATC.</p>
           </Section>
+          <Section title="Background">
+            <WallpaperPicker />
+          </Section>
           <Section title="Units">
             <div className="between"><span>Fuel</span><div className="seg">{(["kg", "lb"] as const).map((u) => <button key={u} className={s.fuelUnit === u ? "on" : ""} onClick={() => settingsStore.set({ fuelUnit: u })}>{u}</button>)}</div></div>
           </Section>
@@ -141,7 +143,7 @@ export function SettingsScreen() {
             <p className="faint" style={{ fontSize: 12.5, margin: "10px 0 0" }}>For an iPad on a stand, use <a href="#/glance">Glance mode</a>. Lock Screen and widget cards need the native iPad app, which is planned.</p>
           </Section>
           <Section title="About">
-            <Kv k="Version" v="Glidepath 1.0.2" />
+            <Kv k="Version" v="Glidepath 1.0.3" />
             <Kv k="Airports" v="OurAirports, public domain" />
             <Kv k="Map" v="OpenFreeMap / OpenStreetMap, Natural Earth" />
             <Kv k="Weather" v="aviationweather.gov, via your Bridge" />

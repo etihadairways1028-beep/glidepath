@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { useWallpaper } from "./components/Wallpaper";
 import { ChartsScreen } from "./screens/Charts";
 import { RemoteScreen } from "./screens/Remote";
 import { ToolsScreen } from "./screens/Tools";
@@ -109,6 +110,8 @@ export function App() {
     document.documentElement.dataset.accent = s.accent;
     document.documentElement.dataset.glass = s.reduceTransparency ? "solid" : "glass";
   }, [s.accent, s.reduceTransparency]);
+
+  useWallpaper();
 
   // Light / dark / follow the device.
   useEffect(() => {

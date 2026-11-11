@@ -50,6 +50,8 @@ export interface Settings {
   fuelUnit: "kg" | "lb";
   accent: "glideslope" | "aurora" | "ice";
   theme: "system" | "dark" | "light";
+  /** Background behind the glass: a built-in wallpaper, plain, or the person's own photo. */
+  wallpaper: "aurora" | "sunset" | "ocean" | "dusk" | "forest" | "plain" | "photo";
   /** Speak phase changes, top of descent and approach altitude callouts. */
   voiceCallouts: boolean;
   reduceTransparency: boolean;
@@ -69,7 +71,7 @@ export interface Settings {
 }
 
 const DEFAULT_SETTINGS: Settings = {
-  bridgeUrl: "", token: "", simbriefUser: "", showVatsim: true, showIvao: false, showSayIntentions: false, fuelUnit: "kg", accent: "glideslope", theme: "system", voiceCallouts: false, reduceTransparency: false, mapStyle: "map", map3d: false, flightMessages: true, systemNotifications: false, atcAlerts: true, lightMessages: true, showAtc: true, showRadar: false, showMetars: false,
+  bridgeUrl: "", token: "", simbriefUser: "", showVatsim: true, showIvao: false, showSayIntentions: false, fuelUnit: "kg", accent: "glideslope", theme: "system", wallpaper: "aurora", voiceCallouts: false, reduceTransparency: false, mapStyle: "map", map3d: false, flightMessages: true, systemNotifications: false, atcAlerts: true, lightMessages: true, showAtc: true, showRadar: false, showMetars: false,
 };
 
 const initial: AppState = {
