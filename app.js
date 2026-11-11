@@ -365,3 +365,37 @@
     s.addEventListener("animationend", () => s.remove());
   }, { passive: true });
 })();
+
+/* Knows which device you're on and shows the right thing first:
+   iPad / iPhone / Android -> open the app (and how to put it on the Home Screen),
+   Windows -> download the Bridge, Mac -> the Bridge needs a Windows PC. */
+(function deviceAware() {
+  const ua = navigator.userAgent;
+  const iPad = /iPad/.test(ua) || (/Macintosh/.test(ua) && (navigator.maxTouchPoints > 1 || "ontouchend" in document));
+  const iPhone = /iPhone|iPod/.test(ua);
+  const android = /Android/.test(ua);
+  const mac = /Macintosh/.test(ua) && !iPad;
+  const win = /Windows/.test(ua);
+  const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  const kind = iPad ? "ipad" : iPhone ? "iphone" : android ? "android" : win ? "windows" : mac ? "mac" : "other";
+  document.documentElement.dataset.device = kind;
+  if (standalone) { location.replace("app/"); return; }
+  const hero = document.querySelector(".hero .cta .btn.primary");
+  const top = document.querySelector(".nav .btn.primary");
+  const tip = document.getElementById("device-tip");
+  const openApp = (el, label) => { if (!el) return; el.removeAttribute("data-download"); el.href = "app/"; el.innerHTML = label; };
+  if (iPad || iPhone || android) {
+    const name = iPad ? "iPad" : iPhone ? "iPhone" : "phone";
+    openApp(hero, `Open Glidepath on this ${name}`);
+    openApp(top, "Open app");
+    if (tip) {
+      tip.hidden = false;
+      tip.innerHTML = iPad || iPhone
+        ? `<b>Put it on your Home Screen:</b> tap <b>Open Glidepath</b>, then the <b>Share</b> button <span aria-hidden="true">⬆︎</span>, then <b>Add to Home Screen</b>. You'll also need the free Bridge on your Windows sim PC.`
+        : `<b>Put it on your Home Screen:</b> tap <b>Open Glidepath</b>, then the menu <b>⋮</b>, then <b>Add to Home screen</b> (or <b>Install app</b>). You'll also need the free Bridge on your Windows sim PC.`;
+    }
+  } else if (mac && tip) {
+    tip.hidden = false;
+    tip.innerHTML = `<b>On a Mac?</b> The Bridge runs on the Windows PC that runs Microsoft Flight Simulator. You can use the <a href="app/">Glidepath app</a> right here in your browser.`;
+  }
+})();

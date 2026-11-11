@@ -16,10 +16,34 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=B612+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="./assets/index-DZlgxHb7.js"></script>
+  <script type="module" crossorigin src="./assets/index-B5gjUM4D.js"></script>
   <link rel="stylesheet" crossorigin href="./assets/index-Dp0QGhHh.css">
 </head>
 <body>
   <div id="root"></div>
+  <script>
+    // If the app hasn't appeared after 8 seconds (or crashes while starting), offer a clean restart
+    // instead of a blank screen. A clean restart clears the offline copy and reloads.
+    (function () {
+      function rescue(why) {
+        if (document.getElementById("gp-rescue") || (document.getElementById("root") || {}).childElementCount) return;
+        var d = document.createElement("div"); d.id = "gp-rescue";
+        d.style.cssText = "position:fixed;inset:0;display:grid;place-items:center;background:#060818;color:#fff;font:16px -apple-system,system-ui,sans-serif;text-align:center;padding:24px;z-index:99";
+        d.innerHTML = '<div><div style="font-size:22px;font-weight:700;margin-bottom:8px">Glidepath is having trouble starting</div><div style="opacity:.7;margin-bottom:20px">' + (why || "It took too long to load.") + '</div><button id="gp-fix" style="font:600 17px -apple-system,system-ui;padding:14px 26px;border:0;border-radius:999px;background:#0A84FF;color:#fff">Restart Glidepath</button></div>';
+        document.body.appendChild(d);
+        document.getElementById("gp-fix").onclick = function () {
+          var done = function () { location.replace(location.pathname + "?fresh=" + Date.now() + "#/"); };
+          try {
+            Promise.all([
+              navigator.serviceWorker ? navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); }) : null,
+              window.caches ? caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); }) : null,
+            ]).then(done, done);
+          } catch (e) { done(); }
+        };
+      }
+      window.addEventListener("error", function (e) { setTimeout(function () { rescue("Something went wrong: " + (e.message || "unknown error")); }, 1500); });
+      setTimeout(function () { rescue(); }, 8000);
+    })();
+  </script>
 </body>
 </html>
