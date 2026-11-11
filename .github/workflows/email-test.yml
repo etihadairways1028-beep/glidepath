@@ -1,4 +1,4 @@
-# Sends one test email through Mailjet to the sender address and prints
+# Sends one test email (Gmail, then Mailjet) to the sender address and prints
 # Mailjet's answer (never the keys), so email problems can be diagnosed.
 name: Test email
 on:
