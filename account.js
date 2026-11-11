@@ -42,6 +42,8 @@
   function render() {
     const user = session && session.user;
     btn.hidden = false;
+    const ms = $("menu-signin");
+    if (ms) { ms.hidden = false; ms.textContent = user ? "Your account (" + (user.display_name || user.email.split("@")[0]) + ")" : "Sign in or create an account"; }
     btn.textContent = user ? (user.display_name || user.email.split("@")[0]) : "Sign in";
     $("si-title").textContent = user ? "You're signed in" : mode === "in" ? "Sign in to download" : "Create your free account";
     form.hidden = !!user;
@@ -57,6 +59,8 @@
 
   dlg.querySelectorAll(".seg button").forEach((b) => b.addEventListener("click", () => { mode = b.dataset.mode; msg.textContent = ""; render(); }));
   btn.addEventListener("click", open);
+  const ms = $("menu-signin");
+  if (ms) ms.addEventListener("click", () => { const sheet = $("menu-sheet"), mb = $("menu-btn"); if (sheet) sheet.hidden = true; if (mb) { mb.classList.remove("on"); mb.setAttribute("aria-expanded", "false"); } open(); });
   document.querySelectorAll("[data-download]").forEach((a) => a.addEventListener("click", (e) => { if (session) return; e.preventDefault(); e.stopPropagation(); open(); }, true));
   dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
 
