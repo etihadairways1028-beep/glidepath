@@ -1,0 +1,26 @@
+# Sends one test email through Mailjet to the sender address and prints
+# Mailjet's answer (never the keys), so email problems can be diagnosed.
+name: Test email
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [".github/workflows/email-test.yml"]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send a test email with Mailjet
+        env:
+          K: ${{ secrets.MAILJET_API_KEY }}
+          S: ${{ secrets.MAILJET_SECRET_KEY }}
+          FROM: ${{ secrets.MAILJET_SENDER_EMAIL }}
+        run: |
+          echo "Key set: $([ -n "$K" ] && echo yes || echo NO) · Secret set: $([ -n "$S" ] && echo yes || echo NO) · Sender set: $([ -n "$FROM" ] && echo yes || echo NO)"
+          echo "Key length: ${#K} · Secret length: ${#S}"
+          echo "--- Mailjet answer ---"
+          curl -s -u "$K:$S" https://api.mailjet.com/v3.1/send -H "Content-Type: application/json" \
+            -d "{\"Messages\":[{\"From\":{\"Email\":\"$FROM\",\"Name\":\"Glidepath\"},\"To\":[{\"Email\":\"$FROM\"}],\"Subject\":\"Glidepath test email\",\"TextPart\":\"If you can read this, Glidepath email works.\"}]}" \
+            | sed "s/$FROM/[sender]/g"
+          echo; echo "--- Sender status ---"
+          curl -s -u "$K:$S" "https://api.mailjet.com/v3/REST/sender?Limit=10" | python3 -c "import sys,json; d=json.load(sys.stdin); [print(x.get('Status'), '(valid)' if x.get('Status')=='Active' else '') for x in d.get('Data',[])] if 'Data' in d else print(d)"
