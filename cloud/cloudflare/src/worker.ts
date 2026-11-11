@@ -88,7 +88,22 @@ async function flightsBetween(env: Env, userId: string, from: number, to: number
   return results.map((r) => JSON.parse(r.summary));
 }
 
-async function route(req: Request, env: Env): Promise<Response> {
+/** A short welcome email after sign-up (only when email is switched on). */
+function welcomeEmail(name: string | null) {
+  const hi = name ? `Hi ${name.replace(/[<>&]/g, "")},` : "Hi,";
+  const app = "https://glidepath-ad9.pages.dev/app/";
+  const html = `<div style="font-family:-apple-system,Segoe UI,Arial,sans-serif;max-width:520px;margin:auto;padding:24px;color:#0b1527">
+<h1 style="font-size:24px;margin:0 0 12px">Welcome to Glidepath</h1>
+<p>${hi}</p><p>Your account is ready. Your logbook now follows you to every device you sign in on.</p>
+<ol><li>Install the Bridge on your sim PC from <a href="https://glidepath-ad9.pages.dev/#download">the website</a>.</li>
+<li>Open Glidepath on your iPad or phone and type the 6-digit code from your PC.</li><li>Fly. Your debrief is waiting when you park.</li></ol>
+<p><a href="${app}" style="display:inline-block;background:#0A84FF;color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none;font-weight:600">Open Glidepath</a></p>
+<p style="color:#667;font-size:13px">You'll get one short email on the 1st of each month about your flying. Turn it off any time in the app under Account.</p></div>`;
+  const text = `${hi}\n\nYour Glidepath account is ready.\n1. Install the Bridge on your sim PC: https://glidepath-ad9.pages.dev/#download\n2. Open Glidepath on your iPad and type the 6-digit code from your PC.\n3. Fly.\n\nOpen Glidepath: ${app}`;
+  return { html, text };
+}
+
+async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
   const url = new URL(req.url);
   const p = url.pathname.replace(/\/+$/, "") || "/";
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
@@ -102,6 +117,8 @@ async function route(req: Request, env: Env): Promise<Response> {
     if (await env.DB.prepare("SELECT 1 FROM users WHERE email = ?").bind(email).first()) return fail(409, "There's already an account with that email. Sign in instead.");
     const id = crypto.randomUUID(), salt = rand(16);
     await env.DB.prepare("INSERT INTO users (id, email, display_name, pw_hash, pw_salt, monthly_email, created_at) VALUES (?, ?, ?, ?, ?, 1, ?)").bind(id, email, name, await hashPassword(pw, salt, env.PEPPER), salt, Date.now()).run();
+    const w = welcomeEmail(name);
+    ctx?.waitUntil(sendEmail(env, email, name, "Welcome to Glidepath", w.html, w.text).then((e) => { if (e) console.log("welcome email:", e); }));
     return json(201, { token: await newSession(env, id), user: publicUser({ id, email, display_name: name }) });
   }
 
@@ -212,8 +229,8 @@ async function monthly(env: Env): Promise<void> {
 }
 
 export default {
-  async fetch(req: Request, env: Env): Promise<Response> {
-    try { return await route(req, env); } catch (e) { console.error(e); return fail(500, "Something went wrong on our side. Try again in a minute."); }
+  async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    try { return await route(req, env, ctx); } catch (e) { console.error(e); return fail(500, "Something went wrong on our side. Try again in a minute."); }
   },
   async scheduled(_c: ScheduledController, env: Env): Promise<void> { await monthly(env); },
 };
