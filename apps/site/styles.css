@@ -582,3 +582,7 @@ section, .hero, footer { background: transparent !important; }
 /* Live camera card: a real cockpit screenshot from MSFS */
 .cam-mock { background: url(assets/shots/cockpit.webp) center 60% / cover no-repeat !important; }
 .cam-mock::after { display: none !important; }
+/* Tick lists: one clean style (two older rules were fighting and squeezed the text) */
+.ticks { list-style: none !important; padding: 0 !important; margin: 16px 0 !important; display: flex !important; flex-direction: column; gap: 10px !important; }
+.ticks li { display: block !important; position: relative; padding-left: 32px !important; color: var(--ink); font-size: 15.5px; line-height: 1.5; }
+.ticks li::before { content: "✓" !important; position: absolute !important; left: 0; top: 1px; width: 22px; height: 22px; border-radius: 50%; display: grid !important; place-items: center; font-size: 12px; font-weight: 800; color: #5BE584; background: rgba(48,209,88,.2); }
