@@ -24,7 +24,7 @@
     document.addEventListener("keydown", (e) => { if (e.key === "Escape") setOpen(false); });
   }
   if (cfg.version) {
-    if ($("dl-ver")) $("dl-ver").textContent = cfg.version + " (early test build)";
+    if ($("dl-ver")) $("dl-ver").textContent = cfg.version;
     $("download-title").textContent = "Glidepath Bridge " + cfg.version + " for Windows";
   }
 

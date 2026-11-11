@@ -1,5 +1,5 @@
 /** Account: sign in (several accounts per device), monthly brief, saved PCs, flight sync. */
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import { Icon, Notice, Section } from "../components/ui";
 import { deleteAccount, forgetBridge, savedBridges, sendBriefPreview, setMonthlyEmail, signIn, signOut, signUp, switchAccount, useCloud, type SavedBridge } from "../data/cloud";
 
@@ -198,21 +198,37 @@ export function Welcome({ onDone }: { onDone: () => void }) {
   const c = useCloud();
   const finish = () => { try { localStorage.setItem(WELCOME_KEY, "1"); } catch { /* ignore */ } onDone(); };
   useEffect(() => { if (c.accounts.length > 0) finish(); }, [c.accounts.length]);
+  const feats: Array<[string, string, string, () => ReactElement]> = [
+    ["ic-map", "Your flight, live", "Map, timings and network traffic on your iPad, phone or laptop.", Icon.map],
+    ["ic-remote", "Fly from the sofa", "Autopilot, lights, engines and a live camera from the sim PC.", Icon.remote],
+    ["ic-flight", "Messages that matter", "Top of descent in 10 minutes, ATC online, and your debrief.", Icon.flight],
+    ["ic-logbook", "Every flight kept", "Logbook, replays, badges and landing grades. Free, all of it.", Icon.book],
+  ];
   return (
-    <div className="welcome">
-      <div className="welcome-in">
-        <img className="welcome-logo" src="icons/icon-192.png" alt="" width={72} height={72} />
-        <h1 className="title" style={{ textAlign: "center" }}>Welcome to Glidepath</h1>
-        <p className="muted" style={{ textAlign: "center", margin: "0 0 18px" }}>Your sim flight, live on your iPad, phone and PC.</p>
-        {c.status === "loading" && <div className="skeleton" style={{ height: 220 }} />}
-        {c.status === "off" && (
-          <section className="glass pad">
-            <div className="h2" style={{ margin: 0 }}>Sign-in opens soon</div>
-            <p className="muted" style={{ margin: "8px 0 0" }}>Accounts aren't switched on yet. You can use everything now: your flights are saved on your PC by the Bridge, and you can sign in later from Account.</p>
-          </section>
-        )}
-        {c.status !== "loading" && c.status !== "off" && <SignInCard onDone={finish} canCancel={false} />}
-        <button className="btn welcome-skip" onClick={finish}>{c.status === "off" ? "Continue" : "Continue without an account"}</button>
+    <div className="welcome v1">
+      <div className="welcome-grid">
+        <div className="welcome-hero">
+          <img className="welcome-logo" src="icons/icon-192.png" alt="" width={84} height={84} />
+          <h1 className="welcome-title">Your flight.<br />Off the desk.</h1>
+          <p className="muted welcome-sub">The free companion for Microsoft Flight Simulator 2020 and 2024.</p>
+          <ul className="welcome-feats">
+            {feats.map(([ic, t, d, I]) => (
+              <li key={t} className="glass"><span className={`nav-ic ${ic}`} aria-hidden="true"><I /></span><span><b>{t}</b><span>{d}</span></span></li>
+            ))}
+          </ul>
+        </div>
+        <div className="welcome-card">
+          {c.status === "loading" && <div className="skeleton" style={{ height: 300, borderRadius: 28 }} />}
+          {c.status === "off" && (
+            <section className="glass pad">
+              <div className="h2" style={{ margin: 0 }}>Sign-in isn't available here</div>
+              <p className="muted" style={{ margin: "8px 0 0" }}>You can use everything without an account: your flights are saved on your PC by the Bridge. Sign in later from Account.</p>
+            </section>
+          )}
+          {c.status !== "loading" && c.status !== "off" && <SignInCard onDone={finish} canCancel={false} />}
+          <button className="btn welcome-skip" onClick={finish}>{c.status === "off" ? "Get started" : "Continue without an account"}</button>
+          <p className="faint welcome-fine">No ads, no subscription. Live flight data stays on your own network.</p>
+        </div>
       </div>
     </div>
   );
