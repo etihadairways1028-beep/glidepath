@@ -4,6 +4,7 @@ import { NETWORK_LABEL, type Network } from "../data/external";
 import { NET_COLOR } from "./MapView";
 
 const SWATCH: Record<MapStyle, string> = {
+  chart: "linear-gradient(135deg, #03060c 0 45%, #0b3466 45% 100%)",
   satellite: "linear-gradient(135deg, #2f4a2a 0%, #5d6b3c 35%, #2a4f6b 60%, #183650 100%)",
   map: "linear-gradient(120deg, #CFE8C0 0 22%, #F4F2EC 22% 44%, #FBD583 44% 50%, #F4F2EC 50% 70%, #A9D3F5 70% 100%)",
   dark: "linear-gradient(135deg, #0b0f17, #1c2230 60%, #2a3142)",

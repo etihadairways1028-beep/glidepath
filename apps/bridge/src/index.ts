@@ -10,6 +10,7 @@ import { platform, homedir } from "node:os";
 import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { lanAddresses } from "./server.js";
+import { ChartService } from "./charts.js";
 import { createLogger } from "./log.js";
 import { Recorder } from "./recorder.js";
 import { FlightSession } from "./session.js";
@@ -120,6 +121,7 @@ async function main(): Promise<void> {
   });
   adapter.on("sessionEnd", () => session.endSession());
   server.setRemote(adapter);
+  server.setCharts(new ChartService(join(cfg.dataDir, "charts"), fetch, log.child("charts")));
 
   try {
     await server.start();

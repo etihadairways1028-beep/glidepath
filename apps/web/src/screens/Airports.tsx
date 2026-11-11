@@ -1,3 +1,4 @@
+import { ChartsFor } from "./Charts";
 import { AirportBoard } from "../components/AirportBoard";
 import { useEffect, useState } from "react";
 import type { Airport } from "@glidepath/aviation-data";
@@ -75,6 +76,7 @@ export function AirportPage({ code }: { code: string }) {
         <span className="apt-map-tag">Runways, taxiways and gates from OpenStreetMap{bridge ? "" : ". Connect your Bridge for stand numbers"}</span>
       </section>
       <AirportBoard code={apt.code} lat={apt.lat} lon={apt.lon} />
+      <section className="glass pad"><div className="between" style={{ marginBottom: 12 }}><h2 className="h2" style={{ margin: 0 }}>Charts</h2></div><ChartsFor icao={apt.code} /></section>
       <div className="grid cols-3">
         <Section title="Airport">
           <Kv k="Elevation" v={`${fmt(apt.elevationFt)} ft`} />

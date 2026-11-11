@@ -33,6 +33,7 @@ import type { AirportDb } from "@glidepath/aviation-data";
 import { appAsset } from "./assets.js";
 import { commandDone, planCommand, type Capability } from "./remote.js";
 import type { SimAdapter } from "./adapters/types.js";
+import type { ChartService } from "./charts.js";
 
 /** Websites allowed to call this Bridge from a browser (the hosted Glidepath app). */
 const ALLOWED_ORIGINS = [/^https:\/\/etihadairways1028-beep\.github\.io$/, /^http:\/\/localhost(:\d+)?$/, /^http:\/\/127\.0\.0\.1(:\d+)?$/];
@@ -213,6 +214,9 @@ export class LanServer {
         break;
     }
   }
+
+  private charts: ChartService | null = null;
+  setCharts(c: ChartService): void { this.charts = c; }
 
   /* ---------- Live camera (WebRTC signalling only) ---------- */
   private cameraHost: Client | null = null;
@@ -432,6 +436,11 @@ export class LanServer {
           case "/api/ext/metarbox": return json(res, 200, await this.external.metarBox(url.searchParams.get("bbox") ?? ""));
           case "/api/ext/taf": return json(res, 200, await this.external.taf(ids));
           case "/api/ext/simbrief": return json(res, 200, await this.external.simbrief(url.searchParams.get("user") ?? ""));
+          case "/api/ext/charts": {
+            if (!this.charts) return json(res, 503, { error: "Charts are not available in this Bridge" });
+            const c = await this.charts.forAirport(url.searchParams.get("icao") ?? "");
+            return c ? json(res, 200, c) : json(res, 404, { error: "No FAA charts for this airport (the FAA publishes US airports only)." });
+          }
         }
       } catch (e) {
         return json(res, 502, { error: (e as Error).message });

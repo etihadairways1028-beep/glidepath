@@ -28,10 +28,11 @@ export interface AppState {
 }
 
 /** Base maps. "map" (kept for older saved settings) means: follow the light/dark theme. */
-export type MapStyle = "satellite" | "map" | "dark" | "light" | "fiord" | "liberty" | "bright";
+export type MapStyle = "chart" | "satellite" | "map" | "dark" | "light" | "fiord" | "liberty" | "bright";
 export const MAP_STYLES: Array<{ id: MapStyle; label: string; hint: string }> = [
   { id: "map", label: "Standard", hint: "Clean street map, light or dark with the app" },
-  { id: "satellite", label: "Satellite", hint: "Free Sentinel-2 imagery, soft close up" },
+  { id: "satellite", label: "Satellite", hint: "Sharp imagery near airports and cities" },
+  { id: "chart", label: "Chart", hint: "Navigation-chart look: black land, blue sea, lat/long grid, online ATC sectors" },
   { id: "dark", label: "Dark", hint: "Night-friendly street map" },
   { id: "fiord", label: "Navy", hint: "Deep blue, calm" },
   { id: "light", label: "Light", hint: "Clean and minimal" },

@@ -1,3 +1,4 @@
+import { ChartsScreen } from "./screens/Charts";
 import { RemoteScreen } from "./screens/Remote";
 import { ToolsScreen } from "./screens/Tools";
 import { ChecklistsScreen } from "./screens/Checklists";
@@ -49,6 +50,7 @@ const NAV: Array<{ id: string; label: string; icon: () => ReactNode; mobile: boo
   { id: "remote", label: "Remote", icon: Icon.remote, mobile: true },
   { id: "copilot", label: "Copilot", icon: Icon.headset, mobile: false },
   { id: "logbook", label: "Logbook", icon: Icon.book, mobile: true },
+  { id: "charts", label: "Charts", icon: Icon.chart, mobile: false },
   { id: "checklists", label: "Checklists", icon: Icon.checklist, mobile: false },
   { id: "tools", label: "Pilot tools", icon: Icon.calc, mobile: false },
   { id: "cockpit", label: "Cockpit tools", icon: Icon.panel, mobile: false },
@@ -154,6 +156,7 @@ export function App() {
     case "checklists": body = <ChecklistsScreen />; break;
     case "tools": body = <ToolsScreen />; break;
     case "remote": body = <RemoteScreen />; break;
+    case "charts": body = <ChartsScreen />; break;
     case "weather": body = <WeatherScreen />; break;
     default: body = <Home />;
   }
@@ -183,7 +186,7 @@ export function App() {
           {NAV.filter((n) => n.mobile).map((n) => (
             <a key={n.id} className={`tab${screen === n.id ? " on" : ""}`} href={`#/${n.id}`}>{n.icon()}{n.label === "Live map" ? "Map" : n.label}</a>
           ))}
-          <a className={`tab${["airports", "settings", "glance", "account", "cockpit", "weather", "checklists", "tools", "copilot"].includes(screen ?? "") ? " on" : ""}`} href="#/settings">{Icon.more()}More</a>
+          <a className={`tab${["airports", "settings", "glance", "account", "cockpit", "weather", "checklists", "tools", "copilot", "charts"].includes(screen ?? "") ? " on" : ""}`} href="#/settings">{Icon.more()}More</a>
         </nav>
       )}
     </>

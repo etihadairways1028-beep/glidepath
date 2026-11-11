@@ -20,6 +20,7 @@ export const Icon = {
   checklist: () => <svg viewBox="0 0 24 24" {...P}><rect x="4" y="3.5" width="16" height="17" rx="3" /><path d="m8 9 1.5 1.5L12 8M8 15l1.5 1.5L12 14M14.5 9.5H17M14.5 15.5H17" /></svg>,
   calc: () => <svg viewBox="0 0 24 24" {...P}><rect x="5" y="3" width="14" height="18" rx="3" /><path d="M8.5 7h7M8.5 11h.01M12 11h.01M15.5 11h.01M8.5 14.5h.01M12 14.5h.01M15.5 14.5h.01M8.5 18h.01M12 18h.01M15.5 18h.01" /></svg>,
   remote: () => <svg viewBox="0 0 24 24" {...P}><rect x="6" y="2.5" width="12" height="19" rx="3.5" /><circle cx="12" cy="9" r="2.6" /><path d="M9.5 15h.01M12 15h.01M14.5 15h.01M9.5 18h.01M12 18h.01M14.5 18h.01" /></svg>,
+  chart: () => <svg viewBox="0 0 24 24" {...P}><path d="M6 3h9l4 4v14H6z" /><path d="M15 3v4h4M9 17l2.5-5 2 3 1.5-2.5" /></svg>,
   plus: () => <svg viewBox="0 0 24 24" {...P}><path d="M12 5v14M5 12h14" /></svg>,
   person: () => <svg viewBox="0 0 24 24" {...P}><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" /></svg>,
   headset: () => <svg viewBox="0 0 24 24" {...P}><path d="M4 14v-2a8 8 0 0 1 16 0v2M4 14a2 2 0 0 1 2-2h1v6H6a2 2 0 0 1-2-2zM20 14a2 2 0 0 0-2-2h-1v6h1a2 2 0 0 0 2-2zM17 18c0 1.7-1.8 3-5 3" /></svg>,

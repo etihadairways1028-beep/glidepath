@@ -31,6 +31,7 @@ export function SettingsScreen() {
     <div className="stack">
       <h1 className="title">Settings</h1>
       <nav className="more-links" aria-label="More screens">
+        <a className="btn small" href="#/charts">Charts</a>
         <a className="btn small" href="#/copilot">Copilot</a>
         <a className="btn small" href="#/checklists">Checklists</a>
         <a className="btn small" href="#/tools">Pilot tools</a>
@@ -140,7 +141,7 @@ export function SettingsScreen() {
             <p className="faint" style={{ fontSize: 12.5, margin: "10px 0 0" }}>For an iPad on a stand, use <a href="#/glance">Glance mode</a>. Lock Screen and widget cards need the native iPad app, which is planned.</p>
           </Section>
           <Section title="About">
-            <Kv k="Version" v="Glidepath 0.9.1 (early test build)" />
+            <Kv k="Version" v="Glidepath 0.9.2 (early test build)" />
             <Kv k="Airports" v="OurAirports, public domain" />
             <Kv k="Map" v="OpenFreeMap / OpenStreetMap, Natural Earth" />
             <Kv k="Weather" v="aviationweather.gov, via your Bridge" />
