@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { ChartsScreen } from "./screens/Charts";
 import { RemoteScreen } from "./screens/Remote";
 import { ToolsScreen } from "./screens/Tools";
@@ -43,13 +44,16 @@ export function connectFromSettings(): void {
   if (url && token) setActiveBridge(new BridgeClient(url, token));
 }
 
+/** Sidebar sections, like the iPad's own apps: the flight first, then tools, then you. */
+const SECTION_BEFORE: Record<string, string> = { copilot: "Tools", account: "You" };
+
 const NAV: Array<{ id: string; label: string; icon: () => ReactNode; mobile: boolean }> = [
   { id: "home", label: "Home", icon: Icon.home, mobile: true },
   { id: "map", label: "Live map", icon: Icon.map, mobile: true },
   { id: "flight", label: "Flight", icon: Icon.flight, mobile: true },
   { id: "remote", label: "Remote", icon: Icon.remote, mobile: true },
-  { id: "copilot", label: "Copilot", icon: Icon.headset, mobile: false },
   { id: "logbook", label: "Logbook", icon: Icon.book, mobile: true },
+  { id: "copilot", label: "Copilot", icon: Icon.headset, mobile: false },
   { id: "charts", label: "Charts", icon: Icon.chart, mobile: false },
   { id: "checklists", label: "Checklists", icon: Icon.checklist, mobile: false },
   { id: "tools", label: "Pilot tools", icon: Icon.calc, mobile: false },
@@ -172,7 +176,10 @@ export function App() {
           <nav className="glass side" aria-label="Main">
             <a className="brand" href="#/home"><Mark />Glidepath</a>
             {NAV.map((n) => (
-              <a key={n.id} className={`nav-a${screen === n.id || (!screen && n.id === "home") ? " on" : ""}`} href={`#/${n.id}`}><span className={`nav-ic ic-${n.id}`}>{n.icon()}</span>{n.label}</a>
+              <Fragment key={n.id}>
+                {SECTION_BEFORE[n.id] && <div className="nav-sec">{SECTION_BEFORE[n.id]}</div>}
+                <a className={`nav-a${screen === n.id || (!screen && n.id === "home") ? " on" : ""}`} href={`#/${n.id}`}><span className={`nav-ic ic-${n.id}`}>{n.icon()}</span>{n.label}</a>
+              </Fragment>
             ))}
             <div className="side-foot faint">{mode === "demo" ? "Demo flight: synthetic data" : `Glidepath 1.0${status?.bridgeVersion && status.bridgeVersion !== "demo" ? ` · Bridge ${status.bridgeVersion}` : ""}`}</div>
           </nav>

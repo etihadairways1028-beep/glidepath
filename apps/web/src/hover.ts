@@ -32,3 +32,21 @@ export function installHover(): void {
     tilted = tilt;
   }, { passive: true });
 }
+
+/** A liquid ripple from the exact spot you press, on every button. */
+export function installRipple(): void {
+  if (typeof window === "undefined" || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  document.addEventListener("pointerdown", (e) => {
+    const b = (e.target as Element | null)?.closest?.(".btn, .rc-tog, .seg button, .nav-a, .tab") as HTMLElement | null;
+    if (!b) return;
+    const r = b.getBoundingClientRect();
+    const d = Math.max(r.width, r.height) * 2.2;
+    const s = document.createElement("span");
+    s.className = "gp-ripple";
+    s.style.cssText = `width:${d}px;height:${d}px;left:${e.clientX - r.left - d / 2}px;top:${e.clientY - r.top - d / 2}px`;
+    if (getComputedStyle(b).position === "static") b.style.position = "relative";
+    b.style.overflow = "hidden";
+    b.appendChild(s);
+    s.addEventListener("animationend", () => s.remove());
+  }, { passive: true });
+}

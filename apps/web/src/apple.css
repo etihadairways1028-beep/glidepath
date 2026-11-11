@@ -1,0 +1,268 @@
+/* ==========================================================================
+   Glidepath: Apple layer (loaded last).
+
+   This follows how iOS 26 and iPadOS 26 apps are actually built:
+   - Content sits on calm, solid "grouped" cards on a plain background.
+   - Liquid Glass is only for the layer that floats above the content: the
+     sidebar, the tab bar, toolbars, buttons over the map, and notifications.
+   - System colours, SF type, one accent colour, monochrome symbols, and room
+     to breathe.
+   ========================================================================== */
+
+:root, :root:not([data-theme="light"]) {
+  --a-bg: #000000;
+  --a-card: #1C1C1E;
+  --a-card2: #2C2C2E;
+  --a-fill: rgba(120, 120, 128, 0.24);
+  --a-fill2: rgba(120, 120, 128, 0.16);
+  --a-ink: #FFFFFF;
+  --a-ink2: rgba(235, 235, 245, 0.62);
+  --a-ink3: rgba(235, 235, 245, 0.32);
+  --a-sep: rgba(84, 84, 88, 0.55);
+  --a-blue: #0A84FF; --a-green: #30D158; --a-orange: #FF9F0A; --a-red: #FF453A; --a-yellow: #FFD60A; --a-purple: #BF5AF2;
+  --a-chrome: rgba(30, 30, 32, 0.55);
+  --a-chrome-rim: rgba(255, 255, 255, 0.16);
+}
+:root[data-theme="light"] {
+  --a-bg: #F2F2F7;
+  --a-card: #FFFFFF;
+  --a-card2: #F2F2F7;
+  --a-fill: rgba(120, 120, 128, 0.16);
+  --a-fill2: rgba(120, 120, 128, 0.10);
+  --a-ink: #000000;
+  --a-ink2: rgba(60, 60, 67, 0.62);
+  --a-ink3: rgba(60, 60, 67, 0.32);
+  --a-sep: rgba(60, 60, 67, 0.18);
+  --a-blue: #007AFF; --a-green: #34C759; --a-orange: #FF9500; --a-red: #FF3B30; --a-yellow: #FFCC00; --a-purple: #AF52DE;
+  --a-chrome: rgba(255, 255, 255, 0.62);
+  --a-chrome-rim: rgba(255, 255, 255, 0.9);
+}
+:root {
+  --ink: var(--a-ink); --mist: var(--a-ink2); --faint: var(--a-ink3); --accent: var(--a-blue);
+  --sf: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI Variable", "Segoe UI", "Inter", system-ui, sans-serif;
+}
+html, body { background: var(--a-bg) !important; color: var(--a-ink); font-family: var(--sf); }
+h1, h2, h3, .title, .h2, .welcome-title { font-family: var(--sf) !important; }
+
+/* No painted sky behind content: the background is calm, like a real app. */
+.sky { display: none !important; }
+
+/* ---------- Content: plain grouped cards ---------- */
+.glass, :root[data-theme="light"] .glass, .glass.strong, :root[data-theme="light"] .glass.strong {
+  background: var(--a-card) !important;
+  -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+  box-shadow: none !important;
+  border-radius: 22px !important;
+}
+.glass::before, .glass::after { display: none !important; }
+.tile, .tm-dur, .rc-target, .rc-eng, .debrief-times > div, .cl-items li, .badge, .board-list, .tl-out, .welcome-feats li {
+  background: var(--a-card2) !important;
+  box-shadow: none !important;
+}
+.cl-items li.on { background: color-mix(in srgb, var(--a-green) 16%, var(--a-card2)) !important; }
+.tl-out { background: color-mix(in srgb, var(--a-blue) 10%, var(--a-card2)) !important; }
+.badge.got { background: color-mix(in srgb, var(--hue) 18%, var(--a-card2)) !important; }
+
+/* Type: large titles, quiet labels */
+.title, .page-head .title { font-size: 34px !important; font-weight: 700 !important; letter-spacing: -0.022em !important; line-height: 1.1 !important; }
+.home-head .title { font-size: clamp(30px, 3.4vw, 40px) !important; letter-spacing: -0.03em !important; }
+.h2 { font-size: 20px !important; font-weight: 600 !important; letter-spacing: -0.02em !important; }
+.muted { color: var(--a-ink2) !important; }
+.faint { color: var(--a-ink3) !important; }
+.tile .k, .instruments .k, .rc-k, .label { color: var(--a-ink2) !important; font-weight: 500 !important; letter-spacing: 0 !important; text-transform: none !important; }
+.tile .v { font-weight: 600 !important; }
+.page { padding-top: 34px !important; }
+
+/* ---------- Controls ---------- */
+.btn { border-radius: 999px !important; font-weight: 600 !important; border: 0 !important; height: 40px; }
+.btn:not(.primary) { background: var(--a-fill2) !important; color: var(--a-blue) !important; box-shadow: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+.btn.primary { background: var(--a-blue) !important; color: #fff !important; box-shadow: none !important; }
+.btn.small { height: 34px; }
+.btn:disabled { opacity: .4; }
+@media (hover: hover) and (pointer: fine) {
+  .btn:not(.primary):hover { background: var(--a-fill) !important; transform: translateY(-1px) scale(1.02) !important; animation: none !important; box-shadow: 0 6px 18px -10px rgba(0,0,0,.35) !important; }
+  .btn.primary:hover { background: color-mix(in srgb, var(--a-blue) 88%, #fff) !important; transform: translateY(-1px) scale(1.02) !important; animation: none !important; box-shadow: 0 10px 24px -12px var(--a-blue) !important; }
+  .tile:hover, .badge:hover, .rc-target:hover, .welcome-feats li:hover, .tl-card:hover { transform: none !important; background-image: none !important; }
+  .nav-a:hover .nav-ic { transform: none !important; }
+}
+
+.seg { background: var(--a-fill2) !important; border-radius: 10px !important; padding: 2px !important; box-shadow: none !important; }
+.seg button { border-radius: 8px !important; color: var(--a-ink) !important; font-weight: 500 !important; }
+.seg button.on { background: var(--a-card) !important; box-shadow: 0 3px 8px rgba(0,0,0,.12), 0 0 0 0.5px rgba(0,0,0,.04) !important; font-weight: 600 !important; }
+:root:not([data-theme="light"]) .seg button.on { background: #636366 !important; }
+
+input:not([type=checkbox]):not([type=range]):not([type=radio]), select, textarea, .input {
+  background: var(--a-fill2) !important; box-shadow: none !important; border-radius: 12px !important; color: var(--a-ink) !important;
+}
+.pill { background: var(--a-fill2) !important; color: var(--a-ink2) !important; box-shadow: none !important; }
+.pill.live { color: var(--a-green) !important; }
+
+/* ---------- The floating layer: real Liquid Glass ---------- */
+.side, .side.glass {
+  background: var(--a-chrome) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(190%) !important; backdrop-filter: blur(30px) saturate(190%) !important;
+  box-shadow: inset 0 1px 0.5px var(--a-chrome-rim), inset 0 0 0 0.5px rgba(255,255,255,.08), 0 10px 40px -16px rgba(0,0,0,.35) !important;
+  border-radius: 28px !important;
+}
+.tabbar, .map-tools .btn, .gs-msg, .gs-msg.glass, .map-hud, .lp-sheet, .layers-pop {
+  background: var(--a-chrome) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(190%) !important; backdrop-filter: blur(24px) saturate(190%) !important;
+  box-shadow: inset 0 1px 0.5px var(--a-chrome-rim), inset 0 0 0 0.5px rgba(255,255,255,.08), 0 12px 32px -14px rgba(0,0,0,.45) !important;
+}
+.map-tools .btn { color: var(--a-ink) !important; }
+
+/* Sidebar rows: monochrome symbols, a tinted capsule when selected (iPadOS) */
+.nav-a { color: var(--a-ink) !important; font-weight: 500 !important; border-radius: 12px !important; padding: 8px 12px !important; gap: 12px !important; }
+.nav-ic, .nav-ic[class*="ic-"] { background: none !important; box-shadow: none !important; width: 22px !important; height: 22px !important; }
+.nav-ic svg { color: var(--a-blue) !important; width: 21px !important; height: 21px !important; }
+.nav-a.on { background: var(--a-fill) !important; box-shadow: none !important; font-weight: 600 !important; }
+.nav-a.on .nav-ic svg { color: var(--a-blue) !important; }
+@media (hover: hover) and (pointer: fine) { .nav-a:not(.on):hover { background: var(--a-fill2) !important; transform: none !important; } }
+.side-foot { color: var(--a-ink3) !important; }
+
+/* Tab bar (phone): glass capsule, the selected tab in the accent colour */
+@media (max-width: 900px) {
+  .tab { color: var(--a-ink2) !important; }
+  .tab.on { color: var(--a-blue) !important; background: var(--a-fill2) !important; box-shadow: none !important; transform: none !important; }
+  .tab.on svg { filter: none !important; }
+}
+
+/* Welcome: keep the feature icons coloured (it's a one-time screen), on calm cards */
+.welcome-feats .nav-ic { width: 40px !important; height: 40px !important; border-radius: 10px !important; background: linear-gradient(180deg, var(--c1), var(--c2)) !important; }
+.welcome-feats .nav-ic svg { color: #fff !important; }
+.welcome-feats li { box-shadow: none !important; }
+
+/* Banners stay one at a time on phones */
+.gs-title { color: var(--a-ink); }
+
+/* Less motion: content appears quickly, without the cascade */
+main .glass { animation: gpFade .35s ease both !important; }
+@keyframes gpFade { from { opacity: 0; } to { opacity: 1; } }
+.nav-sec { margin: 16px 12px 4px; font-size: 13px; font-weight: 600; color: var(--a-ink2); }
+.side { gap: 1px !important; overflow-y: auto; }
+.brand { margin-bottom: 10px; }
+/* One message at a time everywhere: calmer */
+.gs-msg:not(:last-child) { display: none !important; }
+
+/* ===================== Liquid Glass, 80% see-through, over a colour wallpaper ===================== */
+:root, :root:not([data-theme="light"]) {
+  --lg-tint: rgba(24, 26, 40, 0.22);       /* ~80% see-through */
+  --lg-tint2: rgba(255, 255, 255, 0.07);
+  --lg-blur: blur(34px) saturate(210%) brightness(1.08);
+  --lg-rim: rgba(255, 255, 255, 0.42);
+  --lg-rim2: rgba(255, 255, 255, 0.12);
+  --lg-shadow: 0 20px 50px -24px rgba(0, 0, 20, 0.7);
+}
+:root[data-theme="light"] {
+  --lg-tint: rgba(255, 255, 255, 0.22);
+  --lg-tint2: rgba(255, 255, 255, 0.38);
+  --lg-blur: blur(30px) saturate(220%) brightness(1.1);
+  --lg-rim: rgba(255, 255, 255, 1);
+  --lg-rim2: rgba(255, 255, 255, 0.7);
+  --lg-shadow: 0 18px 44px -22px rgba(40, 60, 140, 0.35);
+}
+
+/* The wallpaper: an aurora that drifts slowly */
+.sky { display: block !important; position: fixed; inset: 0; z-index: 0; overflow: hidden;
+  background: #060818 !important; }
+.sky::before, .sky::after { content: ""; position: absolute; inset: -25%; pointer-events: none; }
+.sky::before {
+  background:
+    radial-gradient(38% 34% at 18% 22%, #2F5BFF 0%, transparent 70%),
+    radial-gradient(34% 32% at 82% 18%, #8A3FFC 0%, transparent 70%),
+    radial-gradient(40% 36% at 70% 82%, #00BFA6 0%, transparent 70%),
+    radial-gradient(30% 28% at 22% 85%, #FF5E8A 0%, transparent 72%);
+  opacity: .85; filter: blur(30px) saturate(1.2);
+  animation: lgDrift 40s ease-in-out infinite alternate;
+}
+.sky::after { background: radial-gradient(60% 50% at 50% 50%, transparent 40%, rgba(0,0,10,.45) 100%); }
+:root[data-theme="light"] .sky { background: #EEF3FF !important; }
+:root[data-theme="light"] .sky::before {
+  background:
+    radial-gradient(38% 34% at 18% 22%, #7FB2FF 0%, transparent 70%),
+    radial-gradient(34% 32% at 82% 18%, #C3A6FF 0%, transparent 70%),
+    radial-gradient(40% 36% at 70% 82%, #84E8D4 0%, transparent 70%),
+    radial-gradient(30% 28% at 22% 85%, #FFB8A6 0%, transparent 72%);
+  opacity: .95;
+}
+:root[data-theme="light"] .sky::after { background: none; }
+.sky .light, .sky > * { display: none !important; }
+@keyframes lgDrift { 0% { transform: translate(0, 0) rotate(0deg) scale(1); } 50% { transform: translate(-3%, 2%) rotate(6deg) scale(1.05); } 100% { transform: translate(3%, -2%) rotate(-5deg) scale(1.02); } }
+@media (prefers-reduced-motion: reduce) { .sky::before { animation: none; } }
+html, body { background: transparent !important; }
+.shell { position: relative; z-index: 1; }
+
+/* Every panel is glass again: mostly clear, with light on the edges */
+.glass, :root[data-theme="light"] .glass, .glass.strong, :root[data-theme="light"] .glass.strong,
+.side, .side.glass, .tabbar, .map-tools .btn, .gs-msg, .gs-msg.glass, .map-hud {
+  background: linear-gradient(155deg, rgba(255,255,255,.16) 0%, rgba(255,255,255,.03) 45%, rgba(255,255,255,.06) 100%), var(--lg-tint) !important;
+  -webkit-backdrop-filter: var(--lg-blur) !important; backdrop-filter: var(--lg-blur) !important;
+  box-shadow:
+    inset 0 1px 0.5px var(--lg-rim),
+    inset 0 -1px 0.5px var(--lg-rim2),
+    inset 0 0 0 0.5px rgba(255,255,255,.12),
+    inset 0 -20px 30px -26px rgba(255,255,255,.35),
+    var(--lg-shadow) !important;
+}
+:root[data-theme="light"] .glass, :root[data-theme="light"] .side, :root[data-theme="light"] .tabbar, :root[data-theme="light"] .gs-msg {
+  background: linear-gradient(155deg, rgba(255,255,255,.7) 0%, rgba(255,255,255,.2) 45%, rgba(255,255,255,.35) 100%), var(--lg-tint) !important;
+}
+.tile, .tm-dur, .rc-target, .rc-eng, .debrief-times > div, .cl-items li, .badge, .board-list, .tl-out, .welcome-feats li {
+  background: var(--lg-tint2) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 0 0 0.5px rgba(255,255,255,.1) !important;
+}
+:root[data-theme="light"] .tile, :root[data-theme="light"] .rc-target, :root[data-theme="light"] .debrief-times > div, :root[data-theme="light"] .cl-items li, :root[data-theme="light"] .badge, :root[data-theme="light"] .tl-out, :root[data-theme="light"] .welcome-feats li {
+  box-shadow: inset 0 1px 0 #fff, inset 0 0 0 0.5px rgba(255,255,255,.8) !important;
+}
+.glass .glass { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+
+/* Controls: glass capsules, the accent stays blue */
+.btn:not(.primary) { background: rgba(255,255,255,.12) !important; color: var(--a-ink) !important; box-shadow: inset 0 1px 0.5px var(--lg-rim), inset 0 0 0 0.5px rgba(255,255,255,.12) !important; -webkit-backdrop-filter: blur(14px) saturate(180%) !important; backdrop-filter: blur(14px) saturate(180%) !important; }
+:root[data-theme="light"] .btn:not(.primary) { background: rgba(255,255,255,.55) !important; color: var(--a-blue) !important; }
+.btn.primary { background: linear-gradient(180deg, #4AA3FF, #0A6CFF) !important; box-shadow: inset 0 1px 0.5px rgba(255,255,255,.6), 0 8px 22px -10px rgba(10,108,255,.8) !important; }
+.seg { background: rgba(0,0,0,.18) !important; }
+:root[data-theme="light"] .seg { background: rgba(255,255,255,.35) !important; }
+.seg button.on { background: rgba(255,255,255,.28) !important; box-shadow: inset 0 1px 0.5px rgba(255,255,255,.7), 0 4px 12px -6px rgba(0,0,0,.4) !important; }
+:root[data-theme="light"] .seg button.on { background: #fff !important; }
+input:not([type=checkbox]):not([type=range]):not([type=radio]), select, textarea, .input { background: rgba(255,255,255,.08) !important; box-shadow: inset 0 0 0 0.5px rgba(255,255,255,.14) !important; }
+:root[data-theme="light"] input:not([type=checkbox]):not([type=range]):not([type=radio]), :root[data-theme="light"] select, :root[data-theme="light"] textarea { background: rgba(255,255,255,.5) !important; }
+.nav-a.on { background: rgba(255,255,255,.16) !important; box-shadow: inset 0 1px 0.5px rgba(255,255,255,.45) !important; }
+:root[data-theme="light"] .nav-a.on { background: rgba(255,255,255,.7) !important; }
+.nav-ic svg { color: #7DB8FF !important; }
+:root[data-theme="light"] .nav-ic svg { color: var(--a-blue) !important; }
+
+/* ===================== Button motion: lift, light, shine, glow, ripple ===================== */
+.gp-ripple { position: absolute; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, rgba(255,255,255,.55) 0%, rgba(255,255,255,.18) 40%, transparent 70%); transform: scale(0); animation: gpRipple .65s cubic-bezier(.2,.8,.2,1) forwards; }
+@keyframes gpRipple { to { transform: scale(1); opacity: 0; } }
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .btn, .rc-tog { transition: transform .5s cubic-bezier(.34,1.7,.5,1), box-shadow .35s ease, background .3s ease, color .2s ease !important; }
+  .btn:not(.primary):hover, .rc-tog:hover {
+    background:
+      radial-gradient(80px circle at var(--hx, 50%) var(--hy, 50%), rgba(255,255,255,.38), transparent 70%),
+      linear-gradient(110deg, transparent 30%, rgba(255,255,255,.35) 50%, transparent 70%) no-repeat,
+      rgba(255,255,255,.16) !important;
+    background-size: auto, 260% 100%, auto !important;
+    animation: gpSheen2 1s cubic-bezier(.2,.8,.2,1) forwards !important;
+    transform: translateY(-3px) scale(1.06) !important;
+    box-shadow: inset 0 1px 0.5px rgba(255,255,255,.75), inset 0 0 0 0.5px rgba(255,255,255,.25), 0 14px 30px -12px rgba(0,0,0,.55), 0 0 0 5px rgba(125,184,255,.14) !important;
+  }
+  :root[data-theme="light"] .btn:not(.primary):hover { background-color: rgba(255,255,255,.75) !important; }
+  .btn.primary:hover {
+    background:
+      radial-gradient(80px circle at var(--hx, 50%) var(--hy, 50%), rgba(255,255,255,.5), transparent 70%),
+      linear-gradient(110deg, transparent 30%, rgba(255,255,255,.45) 50%, transparent 70%) no-repeat,
+      linear-gradient(180deg, #5AB0FF, #0A6CFF) !important;
+    background-size: auto, 260% 100%, auto !important;
+    animation: gpSheen2 1s cubic-bezier(.2,.8,.2,1) forwards !important;
+    transform: translateY(-3px) scale(1.06) !important;
+    box-shadow: inset 0 1px 0.5px rgba(255,255,255,.8), 0 18px 36px -12px rgba(10,108,255,.9), 0 0 0 6px rgba(10,132,255,.2), 0 0 40px -6px rgba(90,170,255,.6) !important;
+  }
+  @keyframes gpSheen2 { from { background-position: 0 0, 170% 0, 0 0; } to { background-position: 0 0, -70% 0, 0 0; } }
+  .btn:active, .rc-tog:active { transform: scale(.9) !important; transition: transform .1s ease !important; }
+  .nav-a { transition: background .25s ease, transform .45s cubic-bezier(.34,1.7,.5,1) !important; }
+  .nav-a:not(.on):hover { background: radial-gradient(110px circle at var(--hx, 30%) var(--hy, 50%), rgba(255,255,255,.18), rgba(255,255,255,.05) 70%) !important; transform: translateX(4px) !important; }
+  .nav-a:hover .nav-ic svg { transform: scale(1.18) rotate(-8deg); }
+  .nav-ic svg { transition: transform .45s cubic-bezier(.34,1.7,.5,1); }
+  .seg button:not(.on):hover { background: radial-gradient(60px circle at var(--hx, 50%) var(--hy, 50%), rgba(255,255,255,.25), transparent 70%) !important; transform: scale(1.04); }
+  .map-tools .btn:hover { transform: scale(1.12) !important; }
+}
