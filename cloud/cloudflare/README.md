@@ -47,3 +47,4 @@ Then run the workflow again.
 Email, display name, a salted and peppered PBKDF2 hash of the password (never
 the password), your flight summaries (no live telemetry), and the PCs you've
 paired. Deleting your account in the app removes all of it.
+
