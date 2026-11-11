@@ -82,7 +82,14 @@ jobs:
           MAILJET_API_KEY: ${{ secrets.MAILJET_API_KEY }}
           MAILJET_SECRET_KEY: ${{ secrets.MAILJET_SECRET_KEY }}
           MAILJET_SENDER_EMAIL: ${{ secrets.MAILJET_SENDER_EMAIL }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
         run: |
+          if [ -n "$GMAIL_USER" ] && [ -n "$GMAIL_APP_PASSWORD" ]; then
+            printf '%s' "$GMAIL_USER" | npx wrangler secret put GMAIL_USER
+            printf '%s' "$GMAIL_APP_PASSWORD" | npx wrangler secret put GMAIL_APP_PASSWORD
+            echo "Email via Gmail is on."
+          fi
           if [ -n "$MAILJET_API_KEY" ] && [ -n "$MAILJET_SECRET_KEY" ] && [ -n "$MAILJET_SENDER_EMAIL" ]; then
             printf '%s' "$MAILJET_API_KEY" | npx wrangler secret put MAILJET_API_KEY
             printf '%s' "$MAILJET_SECRET_KEY" | npx wrangler secret put MAILJET_SECRET_KEY

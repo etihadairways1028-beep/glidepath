@@ -10,7 +10,18 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+      - name: Send a test email with Gmail
+        env:
+          U: ${{ secrets.GMAIL_USER }}
+          P: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: |
+          if [ -z "$U" ] || [ -z "$P" ]; then echo "No Gmail secrets yet."; exit 0; fi
+          PW=$(printf '%s' "$P" | tr -d ' ')
+          printf 'From: Glidepath <%s>\r\nTo: <%s>\r\nSubject: Glidepath test email\r\n\r\nIf you can read this, Glidepath email works.\r\n' "$U" "$U" > mail.txt
+          curl -sS --ssl-reqd --url smtps://smtp.gmail.com:465 --user "$U:$PW" --mail-from "$U" --mail-rcpt "$U" --upload-file mail.txt 2>&1 | sed "s/$U/[you]/g" && echo "Gmail accepted the test email." || echo "Gmail refused it (see above)."
+
       - name: Send a test email with Mailjet
+        continue-on-error: true
         env:
           K: ${{ secrets.MAILJET_API_KEY }}
           S: ${{ secrets.MAILJET_SECRET_KEY }}

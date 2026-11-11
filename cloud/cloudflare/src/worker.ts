@@ -10,12 +10,15 @@
  * guesses. Ten wrong passwords lock that email for 15 minutes.
  */
 import { composeMonthlyBrief } from "../../../packages/flight-engine/src/brief";
+import { sendGmail } from "./gmail";
 
 interface Env {
   DB: D1Database;
   PEPPER: string;
   BREVO_API_KEY?: string;
   BREVO_SENDER_EMAIL?: string;
+  GMAIL_USER?: string;
+  GMAIL_APP_PASSWORD?: string;
   MAILJET_API_KEY?: string;
   MAILJET_SECRET_KEY?: string;
   MAILJET_SENDER_EMAIL?: string;
@@ -77,6 +80,8 @@ async function body<T>(req: Request): Promise<T | null> {
 const validEmail = (e: string) => e.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
 async function sendEmail(env: Env, to: string, name: string | null, subject: string, html: string, text: string): Promise<string | null> {
+  // Gmail with an app password (no email service needed) comes first, then Mailjet, then Brevo.
+  if (env.GMAIL_USER && env.GMAIL_APP_PASSWORD) return sendGmail(env.GMAIL_USER, env.GMAIL_APP_PASSWORD, to, name, subject, html, text);
   // Mailjet (free, 200 a day) if its keys are set, otherwise Brevo.
   if (env.MAILJET_API_KEY && env.MAILJET_SECRET_KEY && env.MAILJET_SENDER_EMAIL) {
     const r = await fetch("https://api.mailjet.com/v3.1/send", {
