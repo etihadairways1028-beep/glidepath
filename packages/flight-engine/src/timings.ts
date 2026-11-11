@@ -76,6 +76,8 @@ export interface TimingsInput {
   minutesToTod: number | null;
   cruiseAltitudeFt: number | null;
   actual: { offBlock: number | null; wheelsUp: number | null; topOfClimb: number | null; topOfDescent: number | null; wheelsDown: number | null; onBlock: number | null };
+  /** Simulation rate (1 = real time). Estimates are shown in real (wall-clock) time. */
+  simRate?: number | null;
   /** Scheduled times from the plan, Unix SECONDS (SimBrief's unit). */
   plan: { out: number | null; off: number | null; on: number | null; in: number | null; airTimeS: number | null } | null;
 }
@@ -107,6 +109,8 @@ export function computeTimings(i: TimingsInput): FlightTimings {
   const s = (v: number | null | undefined) => (v === null || v === undefined ? null : v * 1000);
   const sched = { out: s(i.plan?.out), off: s(i.plan?.off), on: s(i.plan?.on), in: s(i.plan?.in) };
   const a = i.actual;
+  const rate = i.simRate && Number.isFinite(i.simRate) && i.simRate > 0 ? Math.min(128, Math.max(0.25, i.simRate)) : 1;
+  const rateNote = rate !== 1 ? ` (sim rate ${rate}x, shown in real time)` : "";
 
   const plannedTaxiOut = sched.out !== null && sched.off !== null ? sched.off - sched.out : null;
   const plannedTaxiIn = sched.on !== null && sched.in !== null ? sched.in - sched.on : null;
@@ -126,8 +130,8 @@ export function computeTimings(i: TimingsInput): FlightTimings {
   }
   if (a.wheelsDown === null && !i.completed) {
     if (i.airborne && i.toGoNm !== null && (i.groundSpeedKt ?? 0) > 60) {
-      estOn = i.now + timeToFlyMs(i.toGoNm, i.groundSpeedKt!);
-      basis = `${Math.round(i.toGoNm)} nm to go at ${Math.round(i.groundSpeedKt!)} kt, last 30 nm at approach speed`;
+      estOn = i.now + timeToFlyMs(i.toGoNm, i.groundSpeedKt!) / rate;
+      basis = `${Math.round(i.toGoNm)} nm to go at ${Math.round(i.groundSpeedKt!)} kt, last 30 nm at approach speed${rateNote}`;
     } else if (!i.airborne && estOff !== null && plannedAir !== null) {
       estOn = estOff + plannedAir;
       basis = "planned air time from the estimated take-off";
@@ -146,10 +150,10 @@ export function computeTimings(i: TimingsInput): FlightTimings {
   let estToc: number | null = null;
   if (a.topOfClimb === null && i.airborne && i.cruiseAltitudeFt !== null && i.altitudeFt !== null && (i.verticalSpeedFpm ?? 0) > 300) {
     const left = i.cruiseAltitudeFt - i.altitudeFt;
-    if (left > 0) estToc = i.now + (left / i.verticalSpeedFpm!) * MIN;
+    if (left > 0) estToc = i.now + ((left / i.verticalSpeedFpm!) * MIN) / rate;
   }
   let estTod: number | null = null;
-  if (a.topOfDescent === null && i.airborne && i.minutesToTod !== null && i.minutesToTod > 0) estTod = i.now + i.minutesToTod * MIN;
+  if (a.topOfDescent === null && i.airborne && i.minutesToTod !== null && i.minutesToTod > 0) estTod = i.now + (i.minutesToTod * MIN) / rate;
   // Descent has begun but is not yet confirmed (the phase detector waits 30 s): it is happening now.
   if (a.topOfDescent === null && estTod === null && i.airborne && a.wheelsUp !== null && (i.verticalSpeedFpm ?? 0) < -500 && (i.altitudeFt ?? 0) > 8000) estTod = i.now;
 

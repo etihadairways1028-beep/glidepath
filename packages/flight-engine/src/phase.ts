@@ -47,6 +47,7 @@ export const DEFAULT_THRESHOLDS: Thresholds = {
 };
 
 type HoldKey =
+  | "levelLow"
   | "pushback" | "taxi" | "roll" | "reject" | "level" | "descent" | "approach" | "goAround"
   | "slow" | "stopped" | "touchAndGo";
 
@@ -188,7 +189,12 @@ export class PhaseDetector {
         const nearPlanned = planned !== null && alt !== null && alt >= planned - 1000;
         const levelHold = planned !== null ? 30 : 90;
         const highEnough = (agl ?? alt ?? 0) > 3000;
-        if (this.hold("level", Math.abs(vs) < this.th.levelFpm && highEnough && (planned === null || nearPlanned), f.t, levelHold)) {
+        // Without a plan, a short level-off below 10,000 ft is usually an ATC restriction,
+        // not the cruise: wait 5 minutes level before calling it the cruise.
+        const isLevel = Math.abs(vs) < this.th.levelFpm && highEnough;
+        const levelHigh = this.hold("level", isLevel && (planned === null ? (alt ?? 0) >= 10000 : nearPlanned), f.t, levelHold);
+        const levelLow = planned === null && this.hold("levelLow", isLevel && (alt ?? 0) < 10000, f.t, 300);
+        if (levelHigh || levelLow) {
           this.cruiseAltFt = alt;
           out.push(this.transition("TOP_OF_CLIMB", f, "CRUISE", { altitudeFt: round(alt, 0) }));
           break;

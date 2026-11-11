@@ -8,3 +8,4 @@ export * from "./review.js";
 export * from "./debrief.js";
 export * from "./career.js";
 export * from "./brief.js";
+export * from "./badges.js";

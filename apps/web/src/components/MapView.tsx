@@ -1,7 +1,9 @@
 /**
  * Map: MapLibre GL (open source), no API keys.
- *  - Satellite: Sentinel-2 cloudless imagery by EOX (Copernicus data), with
- *    OpenFreeMap labels, borders and runways drawn over it.
+ *  - Satellite: Esri World Imagery (sub-metre over most airports and cities)
+ *    from zoom 9, over Sentinel-2 cloudless by EOX for the whole globe, with
+ *    OpenFreeMap roads, labels and airport markings drawn over it (hybrid).
+ *    Esri allows free use in non-commercial apps with attribution.
  *  - Standard: Glidepath's own street map (streetStyle.ts) on OpenFreeMap tiles,
  *    light or dark with the app. OpenFreeMap's stock styles are also offered.
  *  - Offline: bundled Natural Earth coastlines if neither can load.
@@ -19,6 +21,7 @@ import type { MetarDot, PlacedController } from "../data/networks";
 import { OFM, OFM_ATTR, streetStyle } from "./streetStyle";
 const DEM_TILES = "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png";
 const DEM_ATTR = 'Terrain: <a href="https://registry.opendata.aws/terrain-tiles/" target="_blank">AWS Terrain Tiles</a> (Mapzen, USGS, others)';
+const ESRI_ATTR = 'Imagery: Esri, Maxar, Earthstar Geographics, and the GIS User Community';
 const S2_ATTR = '<a href="https://s2maps.eu" target="_blank">Sentinel-2 cloudless</a> by EOX IT Services GmbH (contains modified Copernicus Sentinel data 2020)';
 
 function satelliteStyle(): StyleSpecification {
@@ -27,13 +30,22 @@ function satelliteStyle(): StyleSpecification {
     glyphs: `${OFM}/fonts/{fontstack}/{range}.pbf`,
     sources: {
       s2: { type: "raster", tiles: ["https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg"], tileSize: 256, maxzoom: 14, attribution: S2_ATTR },
+      esri: { type: "raster", tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"], tileSize: 256, minzoom: 9, maxzoom: 18, attribution: ESRI_ATTR },
       omt: { type: "vector", url: `${OFM}/planet`, attribution: OFM_ATTR },
       land: { type: "geojson", data: "data/land.geojson" },
     },
     layers: [
       { id: "bg", type: "background", paint: { "background-color": "#0a1830" } },
       { id: "land-under", type: "fill", source: "land", paint: { "fill-color": "#22301f" } },
-      { id: "s2", type: "raster", source: "s2", paint: { "raster-saturation": -0.12, "raster-contrast": 0.08, "raster-brightness-max": 0.88, "raster-fade-duration": 250 } },
+      { id: "s2", type: "raster", source: "s2", paint: { "raster-saturation": 0.05, "raster-contrast": 0.06, "raster-brightness-max": 0.97, "raster-fade-duration": 250 } },
+      // Sharp imagery from zoom 9, faded in so the switch isn't visible.
+      { id: "esri", type: "raster", source: "esri", minzoom: 9, paint: { "raster-opacity": ["interpolate", ["linear"], ["zoom"], 9, 0, 10.5, 1], "raster-saturation": 0.08, "raster-contrast": 0.08, "raster-brightness-max": 1, "raster-fade-duration": 200, "raster-resampling": "linear" } },
+      // Hybrid: main roads, faint, so the photo stays the star.
+      { id: "road-major", type: "line", source: "omt", "source-layer": "transportation", minzoom: 8, filter: ["in", ["get", "class"], ["literal", ["motorway", "trunk", "primary"]]],
+        layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "rgba(255,214,120,0.55)", "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.6, 12, 1.4, 16, 3] } },
+      { id: "road-name", type: "symbol", source: "omt", "source-layer": "transportation_name", minzoom: 13, filter: ["in", ["get", "class"], ["literal", ["motorway", "trunk", "primary", "secondary"]]],
+        layout: { "symbol-placement": "line", "text-field": ["coalesce", ["get", "name:en"], ["get", "name"]], "text-font": ["Noto Sans Regular"], "text-size": 11.5 },
+        paint: { "text-color": "#ffffff", "text-halo-color": "rgba(0,0,0,0.75)", "text-halo-width": 1.4 } },
       { id: "boundary", type: "line", source: "omt", "source-layer": "boundary", filter: ["all", ["<=", ["get", "admin_level"], 2], ["!=", ["get", "maritime"], 1]], paint: { "line-color": "rgba(255,255,255,0.35)", "line-width": 0.9 } },
       { id: "place-city", type: "symbol", source: "omt", "source-layer": "place", minzoom: 3, filter: ["in", ["get", "class"], ["literal", ["city", "town"]]],
         layout: { "text-field": ["coalesce", ["get", "name:en"], ["get", "name"]], "text-font": ["Noto Sans Regular"], "text-size": ["interpolate", ["linear"], ["zoom"], 4, 10.5, 10, 14], "text-letter-spacing": 0.02 },
@@ -392,7 +404,8 @@ function addAirportLayers(m: MLMap, kind: Kind) {
   if (kind === "offline") return;
   const light = LIGHT_KINDS.includes(kind);
   const std = kind === "std-light" || kind === "std-dark";
-  const runwayColor = kind === "satellite" ? "#2a2f3a" : light ? "#5E626C" : "#6A6F7A";
+  const sat = kind === "satellite";
+  const runwayColor = sat ? "rgba(20,24,32,0)" : light ? "#5E626C" : "#6A6F7A";
   // The Standard map already has these tiles; reuse them (one download, one credit line).
   const omt = m.getSource("omt") ? "omt" : "gp-omt";
   if (omt === "gp-omt" && !m.getSource("gp-omt")) m.addSource("gp-omt", { type: "vector", url: `${OFM}/planet` });
@@ -402,12 +415,12 @@ function addAirportLayers(m: MLMap, kind: Kind) {
   if (!m.getSource("gp-dem-hs")) m.addSource("gp-dem-hs", { type: "raster-dem", tiles: [DEM_TILES], tileSize: 256, maxzoom: 15, encoding: "terrarium" });
   add({ id: "gp-hillshade", type: "hillshade", source: "gp-dem-hs", maxzoom: 14, paint: { "hillshade-exaggeration": kind === "satellite" ? 0.12 : std ? (light ? 0.14 : 0.22) : light ? 0.3 : 0.45, "hillshade-shadow-color": light ? "#5a6b85" : "#000814", "hillshade-highlight-color": light ? "#ffffff" : "#4a6aa8", "hillshade-accent-color": light ? "#7a8aa5" : "#0b1430" } });
   const src = { source: omt, "source-layer": "aeroway" } as const;
-  add({ id: "gp-apron", type: "fill", ...src, minzoom: 11.5, filter: ["all", ["==", ["geometry-type"], "Polygon"], ["==", ["get", "class"], "apron"]], paint: { "fill-color": kind === "satellite" ? "rgba(30,36,48,.35)" : light ? "rgba(120,130,150,.18)" : "rgba(140,160,200,.10)" } });
-  add({ id: "gp-area", type: "fill", ...src, minzoom: 11, filter: ["all", ["==", ["geometry-type"], "Polygon"], ["in", ["get", "class"], ["literal", ["runway", "taxiway"]]]], paint: { "fill-color": ["match", ["get", "class"], "runway", runwayColor, light ? "rgba(90,98,115,.35)" : "rgba(52,58,72,.75)"], "fill-opacity": ["interpolate", ["linear"], ["zoom"], 11, 0.6, 14, 1] } });
-  add({ id: "gp-taxiway-casing", type: "line", ...src, minzoom: 12, filter: ["all", ["==", ["geometry-type"], "LineString"], ["==", ["get", "class"], "taxiway"]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": light ? "rgba(70,74,84,.28)" : "rgba(0,0,0,.45)", "line-width": ["interpolate", ["exponential", 2], ["zoom"], 12, 1.4, 14, 3, 15, 5, 17, 22, 19, 92] } });
-  add({ id: "gp-taxiway", type: "line", ...src, minzoom: 12, filter: ["all", ["==", ["geometry-type"], "LineString"], ["==", ["get", "class"], "taxiway"]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": light ? "#D9A21B" : kind === "satellite" ? "#F5C542" : "#C9A03A", "line-opacity": ["interpolate", ["linear"], ["zoom"], 12, 0.55, 15, 0.95], "line-width": ["interpolate", ["exponential", 2], ["zoom"], 12, 0.6, 14, 1.4, 15, 2.6, 17, 16, 19, 80] } });
-  add({ id: "gp-runway", type: "line", ...src, minzoom: 8, filter: ["all", ["==", ["geometry-type"], "LineString"], ["==", ["get", "class"], "runway"]], layout: { "line-cap": "butt" }, paint: { "line-color": runwayColor, "line-width": ["interpolate", ["exponential", 2], ["zoom"], 8, 2, 11, 3.5, 13, 7, 14, 11, 15, 18, 17, 56, 19, 215] } });
-  add({ id: "gp-runway-cl", type: "line", ...src, minzoom: 13, filter: ["all", ["==", ["geometry-type"], "LineString"], ["==", ["get", "class"], "runway"]], paint: { "line-color": "#ffffff", "line-opacity": 0.9, "line-width": ["interpolate", ["linear"], ["zoom"], 13, 0.8, 17, 2.5, 19, 7], "line-dasharray": [6, 5] } });
+  add({ id: "gp-apron", type: "fill", ...src, minzoom: 11.5, filter: ["all", ["==", ["geometry-type"], "Polygon"], ["==", ["get", "class"], "apron"]], paint: { "fill-color": sat ? "rgba(0,0,0,0)" : light ? "rgba(120,130,150,.18)" : "rgba(140,160,200,.10)" } });
+  add({ id: "gp-area", type: "fill", ...src, minzoom: 11, filter: ["all", ["==", ["geometry-type"], "Polygon"], ["in", ["get", "class"], ["literal", ["runway", "taxiway"]]]], paint: { "fill-color": sat ? "rgba(0,0,0,0)" : ["match", ["get", "class"], "runway", runwayColor, light ? "rgba(90,98,115,.35)" : "rgba(52,58,72,.75)"], "fill-opacity": ["interpolate", ["linear"], ["zoom"], 11, 0.6, 14, 1] } });
+  add({ id: "gp-taxiway-casing", type: "line", ...src, minzoom: 12, filter: ["all", ["==", ["geometry-type"], "LineString"], ["==", ["get", "class"], "taxiway"]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": light ? "rgba(70,74,84,.28)" : "rgba(0,0,0,.45)", "line-opacity": sat ? 0.35 : 1, "line-width": sat ? ["interpolate", ["linear"], ["zoom"], 12, 1.2, 16, 3, 19, 5] : ["interpolate", ["exponential", 2], ["zoom"], 12, 1.4, 14, 3, 15, 5, 17, 22, 19, 92] } });
+  add({ id: "gp-taxiway", type: "line", ...src, minzoom: 12, filter: ["all", ["==", ["geometry-type"], "LineString"], ["==", ["get", "class"], "taxiway"]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": light ? "#D9A21B" : kind === "satellite" ? "#F5C542" : "#C9A03A", "line-opacity": ["interpolate", ["linear"], ["zoom"], 12, 0.55, 15, 0.95], "line-width": sat ? ["interpolate", ["linear"], ["zoom"], 12, 0.6, 16, 1.6, 19, 3] : ["interpolate", ["exponential", 2], ["zoom"], 12, 0.6, 14, 1.4, 15, 2.6, 17, 16, 19, 80] } });
+  add({ id: "gp-runway", type: "line", ...src, minzoom: 8, filter: ["all", ["==", ["geometry-type"], "LineString"], ["==", ["get", "class"], "runway"]], layout: { "line-cap": "butt" }, paint: { "line-color": sat ? "#3a3f4a" : runwayColor, "line-opacity": sat ? ["interpolate", ["linear"], ["zoom"], 8, 0.9, 11, 0.7, 12.5, 0] : 1, "line-width": ["interpolate", ["exponential", 2], ["zoom"], 8, 2, 11, 3.5, 13, 7, 14, 11, 15, 18, 17, 56, 19, 215] } });
+  add({ id: "gp-runway-cl", type: "line", ...src, minzoom: 13, filter: ["all", ["==", ["geometry-type"], "LineString"], ["==", ["get", "class"], "runway"]], paint: { "line-color": "#ffffff", "line-opacity": sat ? 0 : 0.9, "line-width": ["interpolate", ["linear"], ["zoom"], 13, 0.8, 17, 2.5, 19, 7], "line-dasharray": [6, 5] } });
   add({ id: "gp-gate", type: "circle", ...src, minzoom: 15, filter: ["all", ["==", ["geometry-type"], "Point"], ["==", ["get", "class"], "gate"]], paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 15, 1.8, 18, 4.5], "circle-color": light ? "#8E8E93" : "#AEAEB2", "circle-stroke-color": light ? "#FFFFFF" : "rgba(0,0,0,.6)", "circle-stroke-width": 1 } });
   // Labels on top of everything.
   add({ id: "gp-taxiway-label", type: "symbol", ...src, minzoom: 14.5, filter: ["all", ["==", ["geometry-type"], "LineString"], ["==", ["get", "class"], "taxiway"], ["has", "ref"]], layout: { "symbol-placement": "line", "symbol-spacing": 260, "text-field": ["get", "ref"], "text-font": ["Noto Sans Bold"], "text-size": ["interpolate", ["linear"], ["zoom"], 14.5, 11, 18, 17], "text-keep-upright": true }, paint: { "text-color": "#111111", "text-halo-color": "#F5C542", "text-halo-width": 3 } }, false);

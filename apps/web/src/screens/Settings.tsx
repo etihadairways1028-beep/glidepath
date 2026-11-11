@@ -31,6 +31,7 @@ export function SettingsScreen() {
     <div className="stack">
       <h1 className="title">Settings</h1>
       <nav className="more-links" aria-label="More screens">
+        <a className="btn small" href="#/checklists">Checklists</a>
         <a className="btn small" href="#/cockpit">Cockpit tools</a>
         <a className="btn small" href="#/weather">Weather</a>
         <a className="btn small" href="#/airports">Airports</a>
@@ -110,6 +111,7 @@ export function SettingsScreen() {
           </Section>
           <Section title="Glideslope messages">
             <label className="between" style={{ padding: "8px 0" }}><span>Messages at each stage of the flight<br /><span className="faint" style={{ fontSize: 12.5 }}>Taxi, take-off, cruise reached, top of descent, approach, touchdown</span></span><input className="switch" type="checkbox" checked={s.flightMessages} onChange={(e) => settingsStore.set({ flightMessages: e.target.checked })} /></label>
+            <label className="between" style={{ padding: "8px 0" }}><span>Lights messages and reminders<br /><span className="faint" style={{ fontSize: 12.5 }}>When lights are switched, beacon before engine start, landing lights at 10,000 ft. Some add-ons (like Fenix) run their own lights and may not report them.</span></span><input className="switch" type="checkbox" checked={s.lightMessages} onChange={(e) => settingsStore.set({ lightMessages: e.target.checked })} /></label>
             <label className="between" style={{ padding: "8px 0" }}><span>Read them out loud</span><input className="switch" type="checkbox" checked={s.voiceCallouts} onChange={(e) => settingsStore.set({ voiceCallouts: e.target.checked })} /></label>
           </Section>
           <Section title="Appearance">
@@ -130,7 +132,7 @@ export function SettingsScreen() {
             <p className="faint" style={{ fontSize: 12.5, margin: "10px 0 0" }}>For an iPad on a stand, use <a href="#/glance">Glance mode</a>. Lock Screen and widget cards need the native iPad app, which is planned.</p>
           </Section>
           <Section title="About">
-            <Kv k="Version" v="Glidepath 0.8.5 (early test build)" />
+            <Kv k="Version" v="Glidepath 0.9.0 (early test build)" />
             <Kv k="Airports" v="OurAirports, public domain" />
             <Kv k="Map" v="OpenFreeMap / OpenStreetMap, Natural Earth" />
             <Kv k="Weather" v="aviationweather.gov, via your Bridge" />

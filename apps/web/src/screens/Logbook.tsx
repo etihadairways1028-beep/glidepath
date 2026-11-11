@@ -1,6 +1,7 @@
 import { Replay, replayPoints } from "../components/Replay";
 import { DebriefPanel, HandlingCard, TakeoffCard } from "../components/Debrief";
 import { Career } from "../components/Career";
+import { Badges } from "../components/Badges";
 import { cloudFlights, useCloud } from "../data/cloud";
 import { useEffect, useMemo, useState } from "react";
 import type { FlightEvent, FlightSummary, TelemetryFrame } from "@glidepath/protocol";
@@ -65,7 +66,7 @@ export function Logbook() {
       {mode === "none" && !fromCloud && <Notice info>Your logbook lives on your Bridge, so it keeps every flight even when this device is off. <a href="#/settings">Connect your Bridge</a> or <a href="#/account">sign in</a> to see it.</Notice>}
       {fromCloud && <Notice info>Showing the flights saved to your account. Connect your Bridge for full replays and maps of each flight.</Notice>}
       {error && <Notice>{error}</Notice>}
-      {(mode !== "none" || fromCloud) && flights && <Career flights={flights} />}
+      {(mode !== "none" || fromCloud) && flights && <><Career flights={flights} /><Badges flights={flights} /></>}
       <section className="glass pad">
         <div className="row wrap" style={{ marginBottom: 10 }}>
           <input className="input" style={{ flex: "1 1 220px", maxWidth: 360 }} placeholder="Search airport, aircraft or callsign" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search flights" />

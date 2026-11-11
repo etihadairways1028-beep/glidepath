@@ -1,3 +1,4 @@
+import { ChecklistsScreen } from "./screens/Checklists";
 import { useEffect, useState, type ReactNode } from "react";
 import { Icon, Mark } from "./components/ui";
 import { activeBridge, BridgeClient, consumePairingLink, detectBridgeUrl, setActiveBridge } from "./data/bridge";
@@ -45,6 +46,7 @@ const NAV: Array<{ id: string; label: string; icon: () => ReactNode; mobile: boo
   { id: "flight", label: "Flight", icon: Icon.flight, mobile: true },
   { id: "copilot", label: "Copilot", icon: Icon.headset, mobile: true },
   { id: "logbook", label: "Logbook", icon: Icon.book, mobile: true },
+  { id: "checklists", label: "Checklists", icon: Icon.checklist, mobile: false },
   { id: "cockpit", label: "Cockpit tools", icon: Icon.panel, mobile: false },
   { id: "weather", label: "Weather", icon: Icon.cloud, mobile: false },
   { id: "airports", label: "Airports", icon: Icon.tower, mobile: false },
@@ -145,6 +147,7 @@ export function App() {
     case "glance": body = <Glance />; break;
     case "copilot": body = <CopilotScreen />; break;
     case "cockpit": body = <CockpitScreen />; break;
+    case "checklists": body = <ChecklistsScreen />; break;
     case "weather": body = <WeatherScreen />; break;
     default: body = <Home />;
   }
@@ -160,7 +163,7 @@ export function App() {
           <nav className="glass side" aria-label="Main">
             <a className="brand" href="#/home"><Mark />Glidepath</a>
             {NAV.map((n) => (
-              <a key={n.id} className={`nav-a${screen === n.id || (!screen && n.id === "home") ? " on" : ""}`} href={`#/${n.id}`}>{n.icon()}{n.label}</a>
+              <a key={n.id} className={`nav-a${screen === n.id || (!screen && n.id === "home") ? " on" : ""}`} href={`#/${n.id}`}><span className={`nav-ic ic-${n.id}`}>{n.icon()}</span>{n.label}</a>
             ))}
             <div className="side-foot faint">{mode === "demo" ? "Demo flight: synthetic data" : `Early test build${status?.bridgeVersion && status.bridgeVersion !== "demo" ? ` ${status.bridgeVersion}` : ""}`}</div>
           </nav>
@@ -174,7 +177,7 @@ export function App() {
           {NAV.filter((n) => n.mobile).map((n) => (
             <a key={n.id} className={`tab${screen === n.id ? " on" : ""}`} href={`#/${n.id}`}>{n.icon()}{n.label === "Live map" ? "Map" : n.label}</a>
           ))}
-          <a className={`tab${["airports", "settings", "glance", "account", "cockpit", "weather"].includes(screen ?? "") ? " on" : ""}`} href="#/settings">{Icon.more()}More</a>
+          <a className={`tab${["airports", "settings", "glance", "account", "cockpit", "weather", "checklists"].includes(screen ?? "") ? " on" : ""}`} href="#/settings">{Icon.more()}More</a>
         </nav>
       )}
     </>

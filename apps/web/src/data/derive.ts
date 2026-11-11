@@ -45,6 +45,21 @@ export function eventTime(events: FlightEvent[], type: FlightEvent["type"]): num
   return events.find((e) => e.type === type)?.t ?? null;
 }
 
+/**
+ * Groundspeed smoothed over about 20 s, so arrival times don't jump around
+ * with every gust. Reset per flight.
+ */
+let gsMemo: { id: string; t: number; v: number } | null = null;
+function smoothGs(id: string, frame: TelemetryFrame | null): number | null {
+  const gs = frame?.speed.gsKt ?? null;
+  if (gs === null || !frame) return gs;
+  if (!gsMemo || gsMemo.id !== id || frame.t < gsMemo.t || frame.t - gsMemo.t > 60_000 || Math.abs(gs - gsMemo.v) > 120) { gsMemo = { id, t: frame.t, v: gs }; return gs; }
+  const dt = Math.max(0, frame.t - gsMemo.t) / 1000;
+  const k = 1 - Math.exp(-dt / 20);
+  gsMemo = { id, t: frame.t, v: gsMemo.v + (gs - gsMemo.v) * k };
+  return gsMemo.v;
+}
+
 /** Timings for any flight, live or finished. `now` is the latest frame time (or end of flight). */
 export function timingsFor(flight: FlightSummary, events: FlightEvent[], frame: TelemetryFrame | null, extra: { toGoNm: number | null; minutesToTod: number | null; now: number }): FlightTimings {
   const p = flight.plan;
@@ -52,7 +67,8 @@ export function timingsFor(flight: FlightSummary, events: FlightEvent[], frame: 
     now: extra.now,
     airborne: !!frame && !frame.position.onGround && flight.status !== "completed",
     completed: flight.status === "completed",
-    groundSpeedKt: frame?.speed.gsKt ?? null,
+    groundSpeedKt: smoothGs(flight.id, frame),
+    simRate: frame?.sim.simRate ?? 1,
     altitudeFt: frame?.position.altMslFt ?? null,
     verticalSpeedFpm: frame?.speed.vsFpm ?? null,
     toGoNm: extra.toGoNm,
@@ -112,6 +128,9 @@ export function derive(frame: TelemetryFrame | null, flight: FlightSummary | nul
       currentAltitudeFt: frame.position.altMslFt, groundSpeedKt: gs, trueAirspeedKt: frame.speed.tasKt,
       descentHeadwindKt: frame.speed.tasKt !== null ? frame.speed.tasKt - gs : null, target,
     });
+    // The calculator works in simulator time; show real time when the sim rate is up.
+    const rate = frame.sim.simRate && frame.sim.simRate > 0 ? frame.sim.simRate : 1;
+    if (r.minutesToTod !== null && rate !== 1) r.minutesToTod = Math.round((r.minutesToTod / rate) * 10) / 10;
     base.tod = { ...r, targetLabel: `${(elev + 3000).toLocaleString("en-US")} ft, 10 nm before ${dest.icao}` };
   }
   if (flight) {

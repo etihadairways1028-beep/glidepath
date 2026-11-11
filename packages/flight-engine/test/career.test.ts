@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { FlightSummary, LandingReport } from "@glidepath/protocol";
-import { careerStats, flightsInMonth, hoursText } from "../src/index.js";
+import { careerStats, computeBadges, flightsInMonth, hoursText, regionOf } from "../src/index.js";
 
 const H = 3_600_000;
 function flight(id: string, off: number, blockH: number, fpm: number | null, score: number, extra: Partial<FlightSummary> = {}): FlightSummary {
@@ -74,5 +74,28 @@ describe("monthly brief", async () => {
   });
   it("sends nothing for an empty month", () => {
     expect(composeMonthlyBrief(all, 2026, 9)).toBeNull();
+  });
+});
+
+describe("badges", () => {
+  const nov = Date.UTC(2026, 10, 6, 8);
+  it("earns badges from real logbook data only, with progress for the rest", () => {
+    const b = computeBadges([flight("a", nov, 7, -80, 97), flight("b", nov + 9 * H, 1.5, -310, 80, { departureIcao: "EGLL", arrivalIcao: "EGCC" })]);
+    const get = (id: string) => b.find((x) => x.id === id)!;
+    expect(get("first").earned).toBe(true);
+    expect(get("butter").earned).toBe(true);
+    expect(get("aplus").earned).toBe(true);
+    expect(get("longhaul").earned).toBe(true);
+    expect(get("flights10").earned).toBe(false);
+    expect(get("flights10").progressText).toBe("2 of 10");
+    expect(get("airports10").progressText).toBe("3 of 10");
+  });
+  it("no flights, no badges", () => {
+    expect(computeBadges([]).some((x) => x.earned)).toBe(false);
+  });
+  it("regions from ICAO prefixes", () => {
+    expect(regionOf("OMDB")).toBe("Middle East");
+    expect(regionOf("EGLL")).toBe("Europe");
+    expect(regionOf("KJFK")).toBe("North America");
   });
 });

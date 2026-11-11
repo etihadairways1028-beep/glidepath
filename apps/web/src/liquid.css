@@ -938,3 +938,101 @@ a.tile:hover, .tile[role="button"]:hover { transform: translateY(-2px); }
 .gs-stack { z-index: 7; }
 .map-tools .btn.glass.on, :root[data-theme="light"] .map-tools .btn.glass.on { background: linear-gradient(180deg, #3D9BFF, #0A84FF) !important; color: #fff !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 8px 20px -8px rgba(10,132,255,.8) !important; }
 .gs-stack { z-index: 5; }
+
+/* ===================== 0.9 colour + glass pass ===================== */
+/* iOS-style coloured icon tiles in the sidebar */
+.nav-ic { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; flex: none; color: #fff;
+  background: linear-gradient(180deg, var(--c1), var(--c2));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), inset 0 -1px 1px rgba(0,0,0,.18), 0 3px 8px -3px var(--c2); }
+.nav-ic svg { width: 17px !important; height: 17px !important; color: #fff !important; }
+.nav-a { gap: 11px; padding: 7px 12px 7px 8px; }
+.nav-a.on svg { color: #fff !important; }
+.ic-home { --c1: #5AC8FA; --c2: #0A84FF; }
+.ic-map { --c1: #4CD964; --c2: #1FA84A; }
+.ic-flight { --c1: #5E9BFF; --c2: #3A5BF0; }
+.ic-copilot { --c1: #C38BFF; --c2: #8E44E8; }
+.ic-logbook { --c1: #FFB340; --c2: #F07C00; }
+.ic-cockpit { --c1: #8E9AAF; --c2: #5B6478; }
+.ic-weather { --c1: #64D2FF; --c2: #1597D8; }
+.ic-airports { --c1: #FF7A6E; --c2: #E5403A; }
+.ic-glance { --c1: #40E0C8; --c2: #12A58E; }
+.ic-account { --c1: #A0A8FF; --c2: #5E5CE6; }
+.ic-settings { --c1: #A7AEBB; --c2: #6E7686; }
+.tab.on svg { filter: drop-shadow(0 2px 6px rgba(10,132,255,.45)); }
+
+/* A more colourful daylight sky, so the glass has colour to bend */
+:root[data-theme="light"] .sky { --sky-top: #9CC3F5; --sky-mid: #CFE1F8; --sky-low: #F7DCCB; --sky-horizon: rgba(255, 170, 120, 0.6); --light-a: #5E9BFF; --light-b: #FFB27A; --light-c: #B79BFF; }
+:root[data-theme="light"] .sky[data-sky="climb"] { --sky-top: #5FA0EE; --sky-mid: #A6CDF6; --sky-low: #DDF0FC; --light-a: #3F8CFF; --light-b: #6FDCEB; --light-c: #9AA6FF; }
+:root[data-theme="light"] .sky[data-sky="cruise"] { --sky-top: #2E6FD0; --sky-mid: #74AEEC; --sky-low: #CFE6FB; --light-a: #3A7BFF; --light-b: #62CFF2; --light-c: #8C8CFF; }
+:root[data-theme="light"] .sky[data-sky="descent"] { --sky-top: #86B2EA; --sky-mid: #C3D9F5; --sky-low: #F6D9E2; --light-a: #5A95FF; --light-b: #74E2C8; --light-c: #FF9DB8; }
+:root[data-theme="light"] .sky .light { opacity: 0.55; }
+:root[data-theme="light"] .sky .light.b, :root[data-theme="light"] .sky .light.c { opacity: 0.42; }
+/* Dark: a touch more colour in the night sky */
+:root:not([data-theme="light"]) .sky .light.a { opacity: 0.44; }
+:root:not([data-theme="light"]) .sky .light.b { opacity: 0.26; }
+:root:not([data-theme="light"]) .sky .light.c { opacity: 0.3; }
+
+/* Clearer glass: less milk, more refraction at the rim */
+:root[data-theme="light"] { --tint-regular: rgba(255,255,255,0.30); --tint-thick: rgba(255,255,255,0.42); --blur-regular: blur(28px) saturate(220%) brightness(1.05); --blur-thick: blur(38px) saturate(240%) brightness(1.06); }
+:root[data-theme="light"] .glass {
+  background: linear-gradient(165deg, rgba(255,255,255,.70) 0%, rgba(255,255,255,.30) 38%, rgba(255,255,255,.18) 64%, rgba(255,255,255,.42) 100%), var(--tint-regular);
+}
+.glass::before { padding: 1.2px; }
+:root[data-theme="light"] .glass::before { background: linear-gradient(150deg, #fff 0%, rgba(255,255,255,.6) 16%, rgba(255,255,255,0) 40%, rgba(255,255,255,0) 62%, rgba(150,200,255,.7) 88%, rgba(255,190,230,.6) 100%); }
+
+/* Section titles get a small coloured marker */
+.sec-title, .section > h2, .section h2.label { position: relative; }
+
+/* Glideslope banners: tinted by tone, smaller, stacked at the top right on big screens */
+.gs-msg.good { box-shadow: inset 3px 0 0 #34C759, var(--lift) !important; }
+.gs-msg.warn { box-shadow: inset 3px 0 0 #FF9F0A, var(--lift) !important; }
+.gs-msg.info { box-shadow: inset 3px 0 0 #0A84FF, var(--lift) !important; }
+@media (min-width: 900px) {
+  .gs-stack { left: auto !important; right: 20px !important; top: auto !important; bottom: 24px !important; transform: none !important; width: 340px !important; }
+}
+
+/* Badges */
+.badges { padding: 18px 20px; margin-top: 14px; }
+.badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.badge { display: flex; flex-direction: column; gap: 4px; padding: 14px; border-radius: 18px; background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02)); box-shadow: inset 0 0.5px 0 rgba(255,255,255,.25), inset 0 0 0 0.5px rgba(255,255,255,.06); opacity: .72; }
+.badge.got { opacity: 1; background: linear-gradient(160deg, color-mix(in srgb, var(--hue) 26%, transparent), rgba(255,255,255,.03)); box-shadow: inset 0 1px 0 rgba(255,255,255,.35), inset 0 0 0 0.5px color-mix(in srgb, var(--hue) 40%, transparent), 0 8px 22px -12px var(--hue); }
+.badge-ic { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; color: var(--faint); background: rgba(127,127,127,.14); margin-bottom: 6px; }
+.badge-ic svg { width: 22px; height: 22px; }
+.badge.got .badge-ic { color: #fff; background: radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--hue) 55%, #fff), var(--hue) 70%); box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 4px 12px -4px var(--hue); }
+.badge-t { font-weight: 650; font-size: 14.5px; }
+.badge-s { font-size: 12px; color: var(--mist); line-height: 1.35; }
+.badge-bar { position: relative; height: 5px; border-radius: 4px; background: rgba(127,127,127,.2); margin-top: 6px; }
+.badge-bar i { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: var(--hue); }
+.badge-bar em { position: absolute; right: 0; top: 7px; font-style: normal; font-size: 11px; color: var(--faint); }
+.badge:has(.badge-bar) { padding-bottom: 24px; }
+:root[data-theme="light"] .badge { background: linear-gradient(180deg, rgba(255,255,255,.6), rgba(255,255,255,.3)); box-shadow: inset 0 1px 0 #fff, inset 0 0 0 0.5px rgba(10,30,70,.06); }
+:root[data-theme="light"] .badge.got { background: linear-gradient(160deg, color-mix(in srgb, var(--hue) 22%, #fff), rgba(255,255,255,.5)); }
+.ic-checklists { --c1: #34E0A1; --c2: #0FA77A; }
+
+/* Checklists */
+.page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.cl-layout { display: grid; grid-template-columns: 290px 1fr; gap: 14px; align-items: start; }
+@media (max-width: 860px) { .cl-layout { grid-template-columns: 1fr; } }
+.cl-index { padding: 10px; display: flex; flex-direction: column; gap: 2px; }
+.cl-link { all: unset; cursor: pointer; display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; color: var(--mist); font-weight: 550; font-size: 14.5px; transition: background .2s; }
+.cl-link:hover { background: rgba(127,127,127,.1); }
+.cl-link.on { color: var(--ink); background: rgba(10,132,255,.16); box-shadow: inset 0 0 0 0.5px rgba(10,132,255,.35); }
+.cl-ring { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; color: #fff; background: conic-gradient(#30D158 var(--p), rgba(127,127,127,.25) 0); -webkit-mask: radial-gradient(circle, transparent 6.5px, #000 7px); mask: radial-gradient(circle, transparent 6.5px, #000 7px); }
+.cl-link.full .cl-ring { -webkit-mask: none; mask: none; background: #30D158; }
+.cl-now { font-style: normal; font-size: 11px; font-weight: 700; color: #fff; background: #0A84FF; border-radius: 6px; padding: 1px 6px; margin-left: 8px; vertical-align: 1px; }
+.cl-count { font-size: 12.5px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.cl-card { padding: 22px 24px; }
+.cl-items { list-style: none; margin: 16px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.cl-items li { border-radius: 14px; background: rgba(127,127,127,.07); transition: background .25s; }
+.cl-items li.on { background: rgba(48,209,88,.13); }
+.cl-items button { all: unset; cursor: pointer; display: flex; align-items: center; gap: 12px; width: calc(100% - 28px); padding: 13px 14px; font-size: 15.5px; }
+.cl-box { width: 24px; height: 24px; border-radius: 8px; flex: none; display: grid; place-items: center; font-size: 14px; color: #fff; box-shadow: inset 0 0 0 1.5px rgba(127,127,127,.45); transition: all .2s; }
+li.on .cl-box { background: linear-gradient(180deg, #4CD964, #1FA84A); box-shadow: 0 3px 8px -3px #1FA84A; }
+li.on .cl-text { color: var(--mist); }
+.cl-dots { flex: 1; border-bottom: 1.5px dotted rgba(127,127,127,.4); transform: translateY(4px); min-width: 20px; }
+.cl-val { font-weight: 650; text-transform: uppercase; font-size: 13.5px; letter-spacing: .03em; text-align: right; }
+.cl-sim { display: block; font-size: 11.5px; padding: 0 14px 10px 50px; margin-top: -6px; color: #FF9F0A; }
+.cl-sim.ok { color: #30D158; }
+/* Phones: one Glideslope message at a time (the newest), so they never cover the screen */
+@media (max-width: 900px) { .gs-msg:not(:last-child) { display: none; } .gs-msg { padding: 10px 14px !important; } }
+@media (min-width: 901px) { .gs-msg:nth-last-child(n+3) { display: none; } }

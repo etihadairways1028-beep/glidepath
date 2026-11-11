@@ -37,6 +37,14 @@ describe("flight timings", () => {
     expect(t.milestones[1]!.state).toBe("next");
   });
 
+  it("sim rate 4x: the landing estimate is in real time, a quarter as far away", () => {
+    const air = { offBlock: T0, wheelsUp: T0 + 10 * MIN, topOfClimb: null, topOfDescent: null, wheelsDown: null, onBlock: null };
+    const one = computeTimings(base({ now: T0 + 30 * MIN, airborne: true, groundSpeedKt: 450, actual: air }));
+    const four = computeTimings(base({ now: T0 + 30 * MIN, airborne: true, groundSpeedKt: 450, actual: air, simRate: 4 }));
+    expect(four.toLandingMs! * 4).toBeCloseTo(one.toLandingMs!, -3);
+    expect(four.basis).toContain("4x");
+  });
+
   it("airborne: arrival estimate comes from distance to go and groundspeed", () => {
     const now = T0 + 40 * MIN;
     const t = computeTimings(base({

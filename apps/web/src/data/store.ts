@@ -57,13 +57,15 @@ export interface Settings {
   map3d: boolean;
   /** Glideslope banners at each stage of the flight. */
   flightMessages: boolean;
+  /** Messages when the aircraft lights are switched, plus light reminders. */
+  lightMessages: boolean;
   showAtc: boolean;
   showRadar: boolean;
   showMetars: boolean;
 }
 
 const DEFAULT_SETTINGS: Settings = {
-  bridgeUrl: "", token: "", simbriefUser: "", showVatsim: true, showIvao: false, showSayIntentions: false, fuelUnit: "kg", accent: "glideslope", theme: "system", voiceCallouts: false, reduceTransparency: false, mapStyle: "map", map3d: false, flightMessages: true, showAtc: true, showRadar: false, showMetars: false,
+  bridgeUrl: "", token: "", simbriefUser: "", showVatsim: true, showIvao: false, showSayIntentions: false, fuelUnit: "kg", accent: "glideslope", theme: "system", voiceCallouts: false, reduceTransparency: false, mapStyle: "map", map3d: false, flightMessages: true, lightMessages: true, showAtc: true, showRadar: false, showMetars: false,
 };
 
 const initial: AppState = {
