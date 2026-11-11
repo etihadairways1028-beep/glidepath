@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useApp } from "../data/store";
 
 const P = { fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
@@ -49,11 +49,46 @@ export function ConnPill() {
   return <span className="pill bad"><span className="dot" />{conn === "unauthorised" ? "Pairing key rejected" : "Bridge unreachable"}</span>;
 }
 
+/**
+ * Numbers that roll to their new value (like the iOS clock) instead of jumping.
+ * Works on already-formatted text such as "12,080", "+2,000" or "0.545"; anything
+ * that isn't a plain number is shown as it is.
+ */
+export function Roll({ text, ms = 450 }: { text: string; ms?: number }) {
+  const m = /^([+-]?)([\d,]+)(\.(\d+))?$/.exec(text.trim());
+  const target = m ? Number(`${m[1] === "-" ? "-" : ""}${m[2]!.replace(/,/g, "")}${m[3] ?? ""}`) : NaN;
+  const [shown, setShown] = useState(target);
+  const from = useRef(target);
+  const raf = useRef(0);
+  useEffect(() => {
+    if (!Number.isFinite(target)) return;
+    const start = performance.now(), a = Number.isFinite(from.current) ? from.current : target;
+    if (a === target || (typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches)) { from.current = target; setShown(target); return; }
+    cancelAnimationFrame(raf.current);
+    const step = (t: number) => {
+      const k = Math.min(1, (t - start) / ms), e = 1 - Math.pow(1 - k, 3);
+      const v = a + (target - a) * e;
+      from.current = v; setShown(v);
+      if (k < 1) raf.current = requestAnimationFrame(step);
+    };
+    raf.current = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf.current);
+  }, [target]);
+  if (!m || !Number.isFinite(shown)) return <>{text}</>;
+  const dec = m[4]?.length ?? 0;
+  const abs = Math.abs(shown);
+  const body = dec ? abs.toFixed(dec) : Math.round(abs).toString();
+  const [ip, fp] = body.split(".");
+  const withCommas = m[2]!.includes(",") || Math.round(abs) >= 1000 ? ip!.replace(/\B(?=(\d{3})+(?!\d))/g, ",") : ip!;
+  const sign = shown < 0 || m[1] === "-" ? (Math.round(shown * 10 ** dec) === 0 ? "" : "-") : m[1] === "+" ? "+" : "";
+  return <>{sign}{withCommas}{fp !== undefined ? `.${fp}` : ""}</>;
+}
+
 export function Tile({ k, v, unit, na }: { k: string; v: ReactNode; unit?: string; na?: boolean }) {
   return (
     <div className="tile">
       <div className="k">{k}</div>
-      {na ? <div className="v na">Not available</div> : <div className="v">{v}{unit && <span className="unit">{unit}</span>}</div>}
+      {na ? <div className="v na">Not available</div> : <div className="v">{typeof v === "string" ? <Roll text={v} /> : v}{unit && <span className="unit">{unit}</span>}</div>}
     </div>
   );
 }

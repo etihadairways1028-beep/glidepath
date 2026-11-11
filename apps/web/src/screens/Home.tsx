@@ -9,7 +9,7 @@ import { AircraftHero } from "../components/Imagery";
 import { buildDebrief } from "@glidepath/flight-engine";
 import { TimingsStrip } from "../components/Timings";
 import { useCopilot } from "../data/copilot";
-import { ConnPill, Grade, Icon, Notice } from "../components/ui";
+import { ConnPill, Grade, Icon, Notice, Roll } from "../components/ui";
 import { activeBridge } from "../data/bridge";
 import { startDemo } from "../data/demo";
 import { pairWithCode } from "../data/pair";
@@ -166,8 +166,8 @@ function Instruments() {
   return (
     <section className="glass instruments" aria-label="Instruments">
       <div><span className="k">Altitude</span><span className="v data">{altText(f.position.altMslFt)}</span></div>
-      <div><span className="k">Ground speed</span><span className="v data">{fmt(f.speed.gsKt)}<small> kt</small></span></div>
-      <div><span className="k">Vertical speed</span><span className="v data">{Math.abs(vs) < 100 ? "Level" : <>{vs > 0 ? "↑" : "↓"} {fmt(Math.abs(vs))}<small> fpm</small></>}</span></div>
+      <div><span className="k">Ground speed</span><span className="v data"><Roll text={fmt(f.speed.gsKt)} /><small> kt</small></span></div>
+      <div><span className="k">Vertical speed</span><span className="v data">{Math.abs(vs) < 100 ? "Level" : <>{vs > 0 ? "↑" : "↓"} <Roll text={fmt(Math.abs(vs))} /><small> fpm</small></>}</span></div>
       <div><span className="k">Heading</span><span className="v data">{hdg === null ? "—" : String(Math.round(hdg) % 360).padStart(3, "0")}<small>°</small></span></div>
       <div><span className="k">{L.fuelAtDestinationKg !== null ? "Fuel at landing" : "Fuel"}</span><span className="v data">{fuel(L.fuelAtDestinationKg ?? f.fuel.totalKg, fuelUnit)}</span></div>
     </section>

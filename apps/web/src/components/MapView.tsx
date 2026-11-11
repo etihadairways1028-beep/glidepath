@@ -157,6 +157,8 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
   const acMarker = useRef<maplibregl.Marker | null>(null);
   const aptMarkers = useRef<maplibregl.Marker[]>([]);
   const atcMarkers = useRef<maplibregl.Marker[]>([]);
+  const acAnim = useRef<{ t0: number; at: (t: number) => [number, number, number] } | null>(null);
+  const acRaf = useRef(0);
   const fitted = useRef(false);
   const [tilesOk, setTilesOk] = useState(true);
   const { mapStyle } = useSettings();
@@ -445,6 +447,7 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     if (!aircraft) {
       acMarker.current?.remove();
       acMarker.current = null;
+      acAnim.current = null;
       return;
     }
     if (!acMarker.current) {
@@ -453,7 +456,31 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
       d.innerHTML = `<span class="own-ac-pulse"></span><svg viewBox="0 0 48 48" width="46" height="46"><defs><linearGradient id="gp-fus" x1="0" x2="1"><stop offset="0" stop-color="#D9E3EF"/><stop offset=".5" stop-color="#FFFFFF"/><stop offset="1" stop-color="#C9D5E3"/></linearGradient></defs><path d="${AIRLINER_PATH}" fill="url(#gp-fus)" stroke="#0A6CFF" stroke-width="1.4" stroke-linejoin="round"/><path d="${ENGINES}" fill="#7C8DA6"/><path d="M22.4 5.6h3.2" stroke="#2B3A55" stroke-width="1.6" stroke-linecap="round"/></svg>`;
       acMarker.current = new maplibregl.Marker({ element: d, rotationAlignment: "map" }).setLngLat([aircraft.lon, aircraft.lat]).addTo(m);
     }
-    acMarker.current.setLngLat([aircraft.lon, aircraft.lat]).setRotation(aircraft.hdg);
+    // Glide the aircraft between updates at 60 fps instead of jumping (updates arrive a few times a second).
+    {
+      const now = performance.now();
+      const a = acAnim.current;
+      const cur = a ? a.at(now) : [aircraft.lon, aircraft.lat, aircraft.hdg] as [number, number, number];
+      const dur = a ? Math.min(1500, Math.max(120, now - a.t0)) : 0;
+      const far = Math.abs(cur[0] - aircraft.lon) + Math.abs(cur[1] - aircraft.lat) > 0.5; // teleport (slew, new flight): no glide
+      const from = far ? [aircraft.lon, aircraft.lat, aircraft.hdg] as [number, number, number] : cur;
+      const to: [number, number, number] = [aircraft.lon, aircraft.lat, aircraft.hdg];
+      const dh = ((to[2] - from[2] + 540) % 360) - 180;
+      acAnim.current = {
+        t0: now,
+        at: (t) => { const k = dur ? Math.min(1, (t - now) / dur) : 1; return [from[0] + (to[0] - from[0]) * k, from[1] + (to[1] - from[1]) * k, from[2] + dh * k]; },
+      };
+      if (!acRaf.current) {
+        const step = () => {
+          const an = acAnim.current, mk = acMarker.current;
+          if (!an || !mk) { acRaf.current = 0; return; }
+          const [lo, la, h] = an.at(performance.now());
+          mk.setLngLat([lo, la]).setRotation(h);
+          acRaf.current = requestAnimationFrame(step);
+        };
+        acRaf.current = requestAnimationFrame(step);
+      }
+    }
     if (follow && threeDRef.current) {
       // Chase camera: behind the aircraft, closer on the ground, wider in the cruise.
       const h = agl ?? 0;
