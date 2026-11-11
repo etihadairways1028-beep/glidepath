@@ -107,6 +107,9 @@ export class BridgeClient {
     this.ws?.close();
   }
 
+  /** A Bridge address that carries the pairing key, for things the browser loads itself (like a chart in a frame). */
+  authedUrl(path: string): string { return `${this.base}${path}${path.includes("?") ? "&" : "?"}token=${encodeURIComponent(this.token)}`; }
+
   async get<T>(path: string): Promise<T> {
     const res = await fetch(this.base + path, { headers: { Authorization: `Bearer ${this.token}` } });
     const body = await res.json().catch(() => ({}));

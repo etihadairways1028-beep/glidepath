@@ -21,6 +21,12 @@ const KIND_LABEL: Record<Kind, string> = { airport: "Airport", departure: "SID",
 const KINDS: Kind[] = ["airport", "departure", "arrival", "approach", "minimums", "other"];
 const isUS = (c: string) => /^(K|PA|PH|PG|TJ|TI|PF|PP|PO|PW)/.test(c) && c.length === 4;
 
+/** Charts load through your Bridge, so a failed download shows a clear message instead of an error page. */
+function frameUrl(c: Chart, cycle: string, bridge: ReturnType<typeof activeBridge>): string {
+  const file = c.url.split("/").pop() ?? "";
+  return bridge ? `${bridge.authedUrl(`/api/ext/chartpdf?cycle=${cycle}&file=${encodeURIComponent(file)}`)}#view=FitH` : `${c.url}#view=FitH`;
+}
+
 export function ChartsFor({ icao, compact = false }: { icao: string; compact?: boolean }) {
   const mode = useApp((s) => s.mode);
   const bridge = mode === "bridge" ? activeBridge() : null;
@@ -36,7 +42,13 @@ export function ChartsFor({ icao, compact = false }: { icao: string; compact?: b
     let stop = false;
     bridge.get<AirportCharts>(`/api/ext/charts?icao=${encodeURIComponent(code)}`)
       .then((d) => { if (stop) return; setData(d); const first = KINDS.find((k) => d.charts.some((c) => c.kind === k)) ?? "airport"; setKind(first); setOpen(d.charts.find((c) => c.kind === "airport") ?? null); })
-      .catch((e) => { if (!stop) setErr(/404/.test(String(e)) ? (/Not found/i.test(String(e)) ? "Your Bridge is older than this app. Download the latest Bridge for charts." : "The FAA has no charts for this airport.") : "Couldn't load the FAA charts. Your Bridge downloads them the first time (about 15 MB), so try again in a minute."); });
+      .catch((e) => {
+        if (stop) return;
+        const m = e instanceof Error ? e.message : String(e);
+        setErr(/^Not found$/i.test(m) ? "Your Bridge is older than this app. Download the latest Bridge from the website for charts."
+          : /No FAA charts/i.test(m) ? `The FAA has no charts for ${code}.`
+          : `Couldn't load the FAA charts right now (${m}). Your Bridge downloads the chart list the first time (about 15 MB), so try again in a minute.`);
+      });
     return () => { stop = true; };
   }, [bridge, code]);
 
@@ -70,7 +82,7 @@ export function ChartsFor({ icao, compact = false }: { icao: string; compact?: b
           <div className="ch-view">
             {open ? (<>
               <div className="between ch-view-top"><b>{open.name}</b><a className="btn small primary" href={open.url} target="_blank" rel="noreferrer">Open full screen</a></div>
-              <iframe key={open.url} src={`${open.url}#view=FitH`} title={open.name} />
+              <iframe key={open.url} src={frameUrl(open, data.cycle, bridge)} title={open.name} />
             </>) : <p className="muted" style={{ padding: 20 }}>Pick a chart.</p>}
           </div>
         </div>

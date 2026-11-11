@@ -419,6 +419,17 @@ export class LanServer {
       }
       return json(res, 404, { error: "Not found" });
     }
+    if (p === "/api/ext/chartpdf") {
+      // Shown inside the app, so errors come back as a small readable page, not JSON.
+      const page = (msg: string) => { res.writeHead(502, { "Content-Type": "text/html; charset=utf-8" }); res.end(`<!doctype html><meta name="viewport" content="width=device-width"><body style="margin:0;display:grid;place-items:center;height:100vh;font:15px -apple-system,Segoe UI,sans-serif;background:#0b1220;color:#e8eefa;text-align:center;padding:20px"><div><p style="font-size:17px;font-weight:600;margin:0 0 6px">This chart didn't load</p><p style="margin:0;opacity:.7">${msg.replace(/[<>&]/g, "")}<br>Try "Open full screen", or try again in a minute.</p></div>`); };
+      if (!this.charts) return page("Charts aren't available in this Bridge.");
+      try {
+        const buf = await this.charts.pdf(url.searchParams.get("cycle") ?? "", url.searchParams.get("file") ?? "");
+        res.writeHead(200, { "Content-Type": "application/pdf", "Content-Length": buf.length, "Cache-Control": "private, max-age=86400" });
+        res.end(buf);
+      } catch (e) { page((e as Error).message); }
+      return;
+    }
     if (p.startsWith("/api/ext/")) {
       if (!this.external) return json(res, 503, { error: "External data is disabled" });
       const ids = (url.searchParams.get("ids") ?? "").split(",");

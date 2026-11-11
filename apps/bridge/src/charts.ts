@@ -76,6 +76,22 @@ export class ChartService {
 
   constructor(private readonly dir: string, private readonly fetchImpl: Fetch = fetch, private readonly log?: { info(m: string): void; warn(m: string): void }) {}
 
+  private pdfs = new Map<string, Buffer>();
+  /** One chart PDF, fetched from the FAA through the Bridge (kept in memory for repeat views). */
+  async pdf(cycle: string, file: string): Promise<Buffer> {
+    if (!/^\d{4}$/.test(cycle) || !/^[A-Za-z0-9_-]{1,40}\.pdf$/i.test(file)) throw new Error("Not a chart file");
+    const key = `${cycle}/${file.toUpperCase()}`;
+    const hit = this.pdfs.get(key);
+    if (hit) return hit;
+    const res = await this.fetchImpl(`https://aeronav.faa.gov/d-tpp/${cycle}/${file.toUpperCase()}`, { signal: AbortSignal.timeout(30_000) });
+    if (!res.ok) throw new Error(`The FAA returned HTTP ${res.status}`);
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.subarray(0, 4).toString() !== "%PDF") throw new Error("The FAA didn't send a PDF");
+    this.pdfs.set(key, buf);
+    if (this.pdfs.size > 40) this.pdfs.delete(this.pdfs.keys().next().value!);
+    return buf;
+  }
+
   async forAirport(code: string): Promise<AirportCharts | null> {
     const c = code.trim().toUpperCase();
     if (!/^[A-Z0-9]{3,4}$/.test(c)) return null;
