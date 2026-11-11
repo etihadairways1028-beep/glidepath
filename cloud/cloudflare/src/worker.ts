@@ -16,6 +16,9 @@ interface Env {
   PEPPER: string;
   BREVO_API_KEY?: string;
   BREVO_SENDER_EMAIL?: string;
+  MAILJET_API_KEY?: string;
+  MAILJET_SECRET_KEY?: string;
+  MAILJET_SENDER_EMAIL?: string;
   APP_URL?: string;
   DOWNLOAD_URL?: string;
 }
@@ -74,6 +77,15 @@ async function body<T>(req: Request): Promise<T | null> {
 const validEmail = (e: string) => e.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
 async function sendEmail(env: Env, to: string, name: string | null, subject: string, html: string, text: string): Promise<string | null> {
+  // Mailjet (free, 200 a day) if its keys are set, otherwise Brevo.
+  if (env.MAILJET_API_KEY && env.MAILJET_SECRET_KEY && env.MAILJET_SENDER_EMAIL) {
+    const r = await fetch("https://api.mailjet.com/v3.1/send", {
+      method: "POST",
+      headers: { Authorization: `Basic ${btoa(`${env.MAILJET_API_KEY}:${env.MAILJET_SECRET_KEY}`)}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ Messages: [{ From: { Email: env.MAILJET_SENDER_EMAIL, Name: "Glidepath" }, To: [{ Email: to, ...(name ? { Name: name } : {}) }], Subject: subject, TextPart: text, HTMLPart: html }] }),
+    });
+    return r.ok ? null : `Email service said ${r.status}.`;
+  }
   if (!env.BREVO_API_KEY || !env.BREVO_SENDER_EMAIL) return "Email isn't switched on yet.";
   const r = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",

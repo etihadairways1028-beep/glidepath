@@ -79,7 +79,16 @@ jobs:
         env:
           BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
           BREVO_SENDER_EMAIL: ${{ secrets.BREVO_SENDER_EMAIL }}
+          MAILJET_API_KEY: ${{ secrets.MAILJET_API_KEY }}
+          MAILJET_SECRET_KEY: ${{ secrets.MAILJET_SECRET_KEY }}
+          MAILJET_SENDER_EMAIL: ${{ secrets.MAILJET_SENDER_EMAIL }}
         run: |
+          if [ -n "$MAILJET_API_KEY" ] && [ -n "$MAILJET_SECRET_KEY" ] && [ -n "$MAILJET_SENDER_EMAIL" ]; then
+            printf '%s' "$MAILJET_API_KEY" | npx wrangler secret put MAILJET_API_KEY
+            printf '%s' "$MAILJET_SECRET_KEY" | npx wrangler secret put MAILJET_SECRET_KEY
+            printf '%s' "$MAILJET_SENDER_EMAIL" | npx wrangler secret put MAILJET_SENDER_EMAIL
+            echo "Email via Mailjet is on."
+          fi
           if [ -n "$BREVO_API_KEY" ] && [ -n "$BREVO_SENDER_EMAIL" ]; then
             printf '%s' "$BREVO_API_KEY" | npx wrangler secret put BREVO_API_KEY
             printf '%s' "$BREVO_SENDER_EMAIL" | npx wrangler secret put BREVO_SENDER_EMAIL
