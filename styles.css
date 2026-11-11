@@ -616,3 +616,23 @@ body::before { filter: none !important; will-change: auto; }
 .device-tip { margin-top: 16px; padding: 14px 18px; border-radius: 20px; font-size: 15px; line-height: 1.5; color: var(--mist); max-width: 560px; }
 .device-tip b { color: var(--ink); }
 .device-tip a { color: #7DB8FF; }
+
+/* ===================== Liquid Glass 95%: clear body, thick bright edges (matches the app) ===================== */
+.glass {
+  background:
+    linear-gradient(140deg, rgba(255,255,255,.2) 0%, rgba(255,255,255,0) 28%, rgba(255,255,255,0) 72%, rgba(255,255,255,.13) 100%),
+    rgba(20,22,36,.08) !important;
+  -webkit-backdrop-filter: blur(15px) saturate(1.85) brightness(1.06) !important; backdrop-filter: blur(15px) saturate(1.85) brightness(1.06) !important;
+  box-shadow:
+    inset 1.5px 1.5px 1px -0.5px rgba(255,255,255,.92),
+    inset -1.5px -1.5px 1px -0.5px rgba(255,255,255,.55),
+    inset 0 0 0 0.5px rgba(255,255,255,.3),
+    inset 6px 8px 14px -10px rgba(255,255,255,.5),
+    inset -6px -8px 16px -10px rgba(255,255,255,.35),
+    0 18px 40px -18px rgba(0,0,0,.55) !important;
+}
+.glass :is(h1, h2, h3, strong, b) { text-shadow: 0 1px 10px rgba(0,0,0,.3); }
+:root[data-refract] .glass { -webkit-backdrop-filter: url(#lg-refract) blur(15px) saturate(1.85) brightness(1.06) !important; backdrop-filter: url(#lg-refract) blur(15px) saturate(1.85) brightness(1.06) !important; }
+:root[data-refract] .glass .glass { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+@media (pointer: coarse), (max-width: 1100px) { body::before { animation: none !important; transform: none !important; } }
+.si-forgot { margin-left: 6px; }

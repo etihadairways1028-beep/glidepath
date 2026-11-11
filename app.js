@@ -399,3 +399,16 @@
     tip.innerHTML = `<b>On a Mac?</b> The Bridge runs on the Windows PC that runs Microsoft Flight Simulator. You can use the <a href="app/">Glidepath app</a> right here in your browser.`;
   }
 })();
+
+/* Liquid Glass edges that bend the light behind them (desktop Chrome and Edge only; Safari keeps the plain glass). */
+(function refract() {
+  if (!/Chrome\//.test(navigator.userAgent) || "ontouchend" in document) return;
+  if (!matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+  var map = '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><defs><linearGradient id="x" x1="0" x2="1"><stop offset="0" stop-color="#f00"/><stop offset="1" stop-color="#000"/></linearGradient><linearGradient id="y" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#0f0"/><stop offset="1" stop-color="#000"/></linearGradient><filter id="b"><feGaussianBlur stdDeviation="22"/></filter></defs><rect width="400" height="400" fill="url(#x)"/><rect width="400" height="400" fill="url(#y)" style="mix-blend-mode:screen"/><rect x="34" y="34" width="332" height="332" rx="60" fill="#808000" filter="url(#b)"/></svg>';
+  var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("aria-hidden", "true");
+  svg.style.cssText = "position:absolute;width:0;height:0;pointer-events:none";
+  svg.innerHTML = '<filter id="lg-refract" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feImage href="data:image/svg+xml;utf8,' + encodeURIComponent(map) + '" x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" result="map"/><feDisplacementMap in="SourceGraphic" in2="map" scale="38" xChannelSelector="R" yChannelSelector="G" result="bent"/><feGaussianBlur in="bent" stdDeviation="3"/></filter>';
+  document.body.appendChild(svg);
+  document.documentElement.setAttribute("data-refract", "");
+})();

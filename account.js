@@ -75,13 +75,31 @@
         : await call("/auth/signup", "POST", { email, password, name: $("si-name").value.trim() });
       session = { token: r.token, user: r.user };
       store.set(session);
-      render();
+      render(); fp.hidden = true;
     } catch (err) {
       msg.className = "si-msg err"; msg.textContent = String(err.message || err);
     } finally {
       go.disabled = false; if (!session) go.textContent = mode === "in" ? "Sign in" : "Create account";
     }
   });
+
+  // "Forgot password?": emails a link that opens the app's reset screen.
+  const fp = document.createElement("button");
+  fp.type = "button"; fp.className = "btn ghost si-forgot"; fp.textContent = "Forgot password?";
+  go.insertAdjacentElement("afterend", fp);
+  const syncFp = () => { fp.hidden = mode !== "in" || !!(session && session.user); };
+  dlg.querySelectorAll(".seg button").forEach((b) => b.addEventListener("click", syncFp));
+  fp.addEventListener("click", async () => {
+    const email = $("si-email").value.trim();
+    if (!email) { msg.className = "si-msg err"; msg.textContent = "Type your email above first, then tap Forgot password."; $("si-email").focus(); return; }
+    fp.disabled = true; fp.textContent = "Sending…";
+    try {
+      const r = await call("/auth/forgot", "POST", { email });
+      msg.className = "si-msg"; msg.textContent = r.message || "If there's an account with that email, a reset link is on its way.";
+    } catch (err) { msg.className = "si-msg err"; msg.textContent = String(err.message || err); }
+    finally { fp.disabled = false; fp.textContent = "Forgot password?"; }
+  });
+  syncFp();
 
   $("si-dl").addEventListener("click", async () => {
     const b = $("si-dl"); b.disabled = true; b.textContent = "Getting your download…";
@@ -94,7 +112,7 @@
   });
   $("si-out").addEventListener("click", async () => {
     try { if (session) await call("/auth/logout", "POST", {}, session.token); } catch (_) { /* already gone */ }
-    session = null; store.set(null); mode = "in"; render();
+    session = null; store.set(null); mode = "in"; render(); fp.hidden = false;
   });
 
   render();
