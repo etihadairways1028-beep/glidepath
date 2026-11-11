@@ -49,3 +49,4 @@ the password), your flight summaries (no live telemetry), and the PCs you've
 paired. Deleting your account in the app removes all of it.
 
 
+
