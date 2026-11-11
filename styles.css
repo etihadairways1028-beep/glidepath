@@ -520,3 +520,10 @@ section { padding: 72px 0 0; }
 .faq-list details p { margin: 0 0 18px; color: var(--mist); }
 .remote, .gate, .free, .uses, .faq { padding-left: 24px; padding-right: 24px; }
 .map-art.shot img { object-position: 30% 50%; }
+
+/* ===================== 1.0: clearer glass, more colour behind it ===================== */
+body::before { content: ""; position: fixed; inset: -10%; z-index: -1; pointer-events: none;
+  background: radial-gradient(40% 35% at 15% 10%, rgba(47,107,255,.28), transparent 70%), radial-gradient(35% 30% at 85% 25%, rgba(255,138,76,.18), transparent 70%), radial-gradient(40% 40% at 60% 85%, rgba(176,75,255,.18), transparent 70%); filter: blur(20px); }
+.glass { background: linear-gradient(160deg, rgba(255,255,255,.14), rgba(255,255,255,.025) 42%, rgba(255,255,255,.06)) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(2.2) brightness(1.06) !important; backdrop-filter: blur(28px) saturate(2.2) brightness(1.06) !important;
+  box-shadow: inset 0 1px 0.5px rgba(255,255,255,.55), inset 0 -1px 0.5px rgba(255,255,255,.16), inset 0 0 0 0.5px rgba(255,255,255,.1), inset 0 -18px 26px -22px rgba(255,255,255,.25), 0 24px 54px -24px rgba(0,0,0,.7) !important; }
