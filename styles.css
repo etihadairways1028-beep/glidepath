@@ -527,3 +527,28 @@ body::before { content: ""; position: fixed; inset: -10%; z-index: -1; pointer-e
 .glass { background: linear-gradient(160deg, rgba(255,255,255,.14), rgba(255,255,255,.025) 42%, rgba(255,255,255,.06)) !important;
   -webkit-backdrop-filter: blur(28px) saturate(2.2) brightness(1.06) !important; backdrop-filter: blur(28px) saturate(2.2) brightness(1.06) !important;
   box-shadow: inset 0 1px 0.5px rgba(255,255,255,.55), inset 0 -1px 0.5px rgba(255,255,255,.16), inset 0 0 0 0.5px rgba(255,255,255,.1), inset 0 -18px 26px -22px rgba(255,255,255,.25), 0 24px 54px -24px rgba(0,0,0,.7) !important; }
+
+/* ===================== 1.0 hover ===================== */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .btn { position: relative; overflow: hidden; transition: transform .45s cubic-bezier(.34,1.56,.64,1), box-shadow .3s ease, filter .3s ease; }
+  .btn::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .25s ease;
+    background: radial-gradient(90px circle at var(--hx, 50%) var(--hy, 50%), rgba(255,255,255,.4), transparent 70%), linear-gradient(110deg, transparent 35%, rgba(255,255,255,.35) 50%, transparent 65%) no-repeat;
+    background-size: auto, 250% 100%; background-position: 0 0, 160% 0; }
+  .btn:hover { transform: translateY(-2px) scale(1.04); filter: brightness(1.08); }
+  .btn:hover::after { opacity: 1; animation: siteSheen .9s ease forwards; }
+  .btn-primary:hover, .btn.primary:hover { box-shadow: 0 16px 36px -10px rgba(47,107,255,.85), 0 0 0 4px rgba(47,107,255,.18); }
+  .btn:active { transform: scale(.95); transition-duration: .1s; }
+  @keyframes siteSheen { to { background-position: 0 0, -60% 0; } }
+  .nav a:not(.btn) { position: relative; transition: color .2s ease; }
+  .nav a:not(.btn)::after { content: ""; position: absolute; left: 50%; right: 50%; bottom: -6px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, #64D2FF, #2F6BFF); transition: left .35s cubic-bezier(.34,1.56,.64,1), right .35s cubic-bezier(.34,1.56,.64,1); }
+  .nav a:not(.btn):hover::after { left: 8px; right: 8px; }
+  .tile, .uses-grid article, .free-grid > div, .gmsg, .shot-card, .r-cam, .r-list { transition: transform .5s cubic-bezier(.2,1,.3,1), box-shadow .3s ease; transform-style: preserve-3d; }
+  .tile:hover, .uses-grid article:hover, .free-grid > div:hover, .gmsg:hover, .shot-card:hover, .r-cam:hover, .r-list:hover {
+    transform: perspective(900px) rotateX(var(--ry, 0deg)) rotateY(var(--rx, 0deg)) translateY(-4px);
+    background-image: radial-gradient(220px circle at var(--hx, 50%) var(--hy, 50%), rgba(255,255,255,.12), transparent 70%), linear-gradient(160deg, rgba(255,255,255,.14), rgba(255,255,255,.025) 42%, rgba(255,255,255,.06)) !important;
+  }
+  .faq-list summary { transition: color .2s ease, padding-left .35s cubic-bezier(.34,1.56,.64,1); }
+  .faq-list summary:hover { padding-left: 6px; color: #fff; }
+}
+.scroll-bar { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 1000; transform-origin: 0 50%; transform: scaleX(0); background: linear-gradient(90deg, #64D2FF, #2F6BFF 50%, #B04BFF); box-shadow: 0 0 12px rgba(47,107,255,.8); pointer-events: none; }
+.hero .devices { transition: transform .6s cubic-bezier(.2,1,.3,1); transform-style: preserve-3d; }

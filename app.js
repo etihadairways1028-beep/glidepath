@@ -297,3 +297,56 @@
   load();
   setInterval(load, 60000);
 })();
+
+/* Hover: a light that follows the cursor on buttons, and cards that tilt towards it. */
+(function hover() {
+  if (!matchMedia("(hover: hover) and (pointer: fine)").matches || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const LIGHT = ".btn, .nav a, .faq-list summary";
+  const TILT = ".tile, .uses-grid article, .free-grid > div, .gmsg, .shot-card, .r-cam, .r-list, .stat";
+  let last = null;
+  document.addEventListener("pointermove", (e) => {
+    const t = e.target;
+    const l = t.closest && t.closest(LIGHT);
+    if (l) { const r = l.getBoundingClientRect(); l.style.setProperty("--hx", e.clientX - r.left + "px"); l.style.setProperty("--hy", e.clientY - r.top + "px"); }
+    const c = t.closest && t.closest(TILT);
+    if (last && last !== c) { last.style.removeProperty("--rx"); last.style.removeProperty("--ry"); }
+    if (c) {
+      const r = c.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5;
+      c.style.setProperty("--rx", (x * 6).toFixed(2) + "deg"); c.style.setProperty("--ry", (-y * 6).toFixed(2) + "deg");
+      c.style.setProperty("--hx", e.clientX - r.left + "px"); c.style.setProperty("--hy", e.clientY - r.top + "px");
+    }
+    last = c;
+  }, { passive: true });
+})();
+
+/* Scroll progress bar, hero devices that follow the cursor, and live counts that count up. */
+(function polish() {
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const bar = document.createElement("div");
+  bar.className = "scroll-bar"; document.body.appendChild(bar);
+  const onScroll = () => { const h = document.documentElement; bar.style.transform = `scaleX(${h.scrollTop / Math.max(1, h.scrollHeight - h.clientHeight)})`; };
+  addEventListener("scroll", onScroll, { passive: true }); onScroll();
+  const dev = document.querySelector(".hero .devices");
+  if (dev && !reduced && matchMedia("(hover: hover) and (pointer: fine)").matches) {
+    addEventListener("pointermove", (e) => {
+      const x = e.clientX / innerWidth - .5, y = e.clientY / innerHeight - .5;
+      dev.style.transform = `perspective(1400px) rotateY(${x * 8}deg) rotateX(${-y * 6}deg) translateZ(0)`;
+    }, { passive: true });
+  }
+  // Count up the live network numbers when they arrive.
+  if (!reduced) {
+    const mo = new MutationObserver((list) => {
+      for (const m of list) {
+        const el = m.target.nodeType === 3 ? m.target.parentElement : m.target;
+        if (!el || el.dataset.counting || el.dataset.shown === el.textContent) continue;
+        const to = Number((el.textContent || "").replace(/,/g, ""));
+        if (!Number.isFinite(to) || to <= 0) continue;
+        el.dataset.counting = "1";
+        const t0 = performance.now(), from = Number((el.dataset.shown || "0").replace(/,/g, "")) || 0;
+        const step = (t) => { const k = Math.min(1, (t - t0) / 1100), e = 1 - Math.pow(1 - k, 3); el.textContent = Math.round(from + (to - from) * e).toLocaleString("en-US"); if (k < 1) requestAnimationFrame(step); else { el.dataset.shown = el.textContent; delete el.dataset.counting; } };
+        requestAnimationFrame(step);
+      }
+    });
+    ["nl-vp", "nl-vc", "nl-ip", "nl-ic"].forEach((id) => { const n = document.getElementById(id); if (n) mo.observe(n, { childList: true, characterData: true, subtree: true }); });
+  }
+})();
