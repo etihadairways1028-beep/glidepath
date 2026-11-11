@@ -1,7 +1,7 @@
 /** Account: sign in (several accounts per device), monthly brief, saved PCs, flight sync. */
 import { useEffect, useState, type ReactElement } from "react";
 import { Icon, Notice, Section } from "../components/ui";
-import { deleteAccount, forgetBridge, savedBridges, sendBriefPreview, setMonthlyEmail, signIn, signOut, signUp, switchAccount, useCloud, type SavedBridge } from "../data/cloud";
+import { deleteAccount, forgotPassword, resetPassword, setEmailPrefs, forgetBridge, savedBridges, sendBriefPreview, setMonthlyEmail, signIn, signOut, signUp, switchAccount, useCloud, type SavedBridge } from "../data/cloud";
 
 export function Account() {
   const c = useCloud();
@@ -47,6 +47,7 @@ export function Account() {
             {c.syncError && <Notice>{c.syncError}</Notice>}
           </Section>
           {active && <MonthlyBrief monthly={c.profile?.monthly_email ?? true} email={active.email} />}
+          {active && <EmailSettings />}
           {active && <SavedPcs key={active.slot} />}
           {active && <DeleteAccount email={active.email} />}
         </div>
@@ -115,6 +116,7 @@ function SignInCard({ onDone, canCancel }: { onDone: () => void; canCancel: bool
         {msg && <p className={msg.kind === "err" ? "form-err" : "form-ok"} role="status">{msg.text}</p>}
         <div className="row wrap">
           <button className="btn primary" type="submit" disabled={busy}>{busy ? "One moment…" : mode === "in" ? "Sign in" : "Create account"}</button>
+          {mode === "in" && <a className="btn ghost" href="#/forgot">Forgot password?</a>}
           {canCancel && <button className="btn" type="button" onClick={onDone}>Cancel</button>}
         </div>
       </form>
@@ -230,6 +232,95 @@ export function Welcome({ onDone }: { onDone: () => void }) {
           <p className="faint welcome-fine">No ads, no subscription. Live flight data stays on your own network.</p>
         </div>
       </div>
+    </div>
+  );
+}
+
+export function EmailSettings() {
+  const c = useCloud();
+  const p = c.profile?.email_prefs ?? { debrief: true, inflight: true, signin: true };
+  const [note, setNote] = useState<string | null>(null);
+  const rows: Array<[keyof typeof p, string, string]> = [
+    ["debrief", "Flight debrief", "After each flight: route, block and air time, fuel, and your landing grade, with a link to the full debrief."],
+    ["inflight", "Top of descent and arrival", "An email 10 minutes before top of descent and 10 minutes before landing, handy when you step away from the sim."],
+    ["signin", "New sign-in alerts", "Tells you when your account signs in on a new device."],
+  ];
+  return (
+    <Section title="Emails">
+      {rows.map(([k, t, d]) => (
+        <label key={k} className="between" style={{ padding: "8px 0", gap: 14, alignItems: "flex-start" }}>
+          <span><b style={{ color: "var(--ink)" }}>{t}</b><br /><small className="muted">{d}</small></span>
+          <input className="switch" type="checkbox" checked={p[k]} onChange={(e) => { void setEmailPrefs({ [k]: e.target.checked }).then(setNote); }} />
+        </label>
+      ))}
+      <p className="faint" style={{ fontSize: 12.5, margin: "8px 0 0" }}>Emails come from Glidepath's Gmail. If one doesn't show up, check Spam and mark it "Not spam" once.</p>
+      {note && <Notice>{note}</Notice>}
+    </Section>
+  );
+}
+
+/** "Forgot password?": emails a reset link. */
+export function ForgotPassword() {
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  return (
+    <div className="stack">
+      <h1 className="title">Forgot password</h1>
+      <section className="glass strong signin">
+        <div className="signin-copy">
+          <h2 className="onboard-h">Reset your password</h2>
+          <p className="muted" style={{ margin: "10px 0 0" }}>Type the email you signed up with. We'll send a link to choose a new password. It works for 1 hour.</p>
+        </div>
+        <form className="signin-form" onSubmit={(e) => { e.preventDefault(); if (busy) return; setBusy(true); void forgotPassword(email).then((r) => { setMsg(r); setBusy(false); }); }}>
+          <label className="field"><span>Email</span><input className="input" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
+          {msg && <p className={msg.ok ? "form-ok" : "form-err"} role="status">{msg.text}</p>}
+          <div className="row wrap">
+            <button className="btn primary" type="submit" disabled={busy}>{busy ? "Sending…" : "Email me a reset link"}</button>
+            <a className="btn" href="#/account">Back to sign in</a>
+          </div>
+        </form>
+      </section>
+    </div>
+  );
+}
+
+/** Opened from the reset email: choose a new password. */
+export function ResetPassword({ token }: { token?: string }) {
+  const [pw, setPw] = useState("");
+  const [pw2, setPw2] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+  const valid = !!token && /^[a-f0-9]{64}$/.test(token);
+  return (
+    <div className="stack">
+      <h1 className="title">New password</h1>
+      <section className="glass strong signin">
+        <div className="signin-copy">
+          <h2 className="onboard-h">{done ? "Password changed" : "Choose a new password"}</h2>
+          <p className="muted" style={{ margin: "10px 0 0" }}>{done ? "You're signed in on this device. Other devices were signed out, so sign in there with the new password." : "At least 8 characters. Every other device will be signed out."}</p>
+        </div>
+        {done ? (
+          <div className="signin-form"><div className="row wrap"><a className="btn primary" href="#/home">Open Glidepath</a><a className="btn" href="#/account">Account</a></div></div>
+        ) : !valid ? (
+          <div className="signin-form"><p className="form-err">That reset link isn't complete. Open it straight from the email, or ask for a new one.</p><div className="row wrap"><a className="btn primary" href="#/forgot">Send a new link</a></div></div>
+        ) : (
+          <form className="signin-form" onSubmit={(e) => {
+            e.preventDefault(); if (busy) return;
+            if (pw.length < 8) { setErr("Use a password of at least 8 characters."); return; }
+            if (pw !== pw2) { setErr("The two passwords don't match."); return; }
+            setBusy(true); setErr(null);
+            void resetPassword(token!, pw).then((e2) => { setBusy(false); if (e2) setErr(e2); else { setDone(true); history.replaceState(null, "", "#/account"); } });
+          }}>
+            <label className="field"><span>New password</span><input className="input" type="password" required minLength={8} autoComplete="new-password" value={pw} onChange={(e) => setPw(e.target.value)} /></label>
+            <label className="field"><span>Type it again</span><input className="input" type="password" required minLength={8} autoComplete="new-password" value={pw2} onChange={(e) => setPw2(e.target.value)} /></label>
+            {err && <p className="form-err" role="status">{err}</p>}
+            <div className="row wrap"><button className="btn primary" type="submit" disabled={busy}>{busy ? "Saving…" : "Save new password"}</button></div>
+            {err && /expired|used|valid/.test(err) && <a className="btn ghost" href="#/forgot">Send a new link</a>}
+          </form>
+        )}
+      </section>
     </div>
   );
 }

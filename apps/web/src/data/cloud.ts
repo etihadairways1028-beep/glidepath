@@ -20,7 +20,8 @@ const PROXY = `${SITE}/acct`;
 let bases: string[] = [];
 
 export interface CloudAccount { slot: string; userId: string; email: string; name: string | null }
-export interface CloudProfile { email: string; display_name: string | null; monthly_email: boolean }
+export interface EmailPrefs { debrief: boolean; inflight: boolean; signin: boolean }
+export interface CloudProfile { email: string; display_name: string | null; monthly_email: boolean; email_prefs?: EmailPrefs }
 export interface SavedBridge { bridge_id: string; name: string | null; addresses: string[]; port: number; token: string; updated_at: string }
 
 interface CloudState {
@@ -163,6 +164,38 @@ export async function setMonthlyEmail(on: boolean): Promise<string | null> {
   const a = activeAccount();
   if (!a) return "Sign in first.";
   try { set({ profile: await call<CloudProfile>("/me", { method: "PATCH", body: { monthly_email: on }, slot: a.slot }) }); return null; } catch (e) { return msg(e); }
+}
+
+/** Turn the debrief, in-flight and sign-in emails on or off. */
+export async function setEmailPrefs(p: Partial<EmailPrefs>): Promise<string | null> {
+  const a = activeAccount();
+  if (!a) return "Sign in first.";
+  try { set({ profile: await call<CloudProfile>("/me", { method: "PATCH", body: { email_prefs: p }, slot: a.slot }) }); return null; } catch (e) { return msg(e); }
+}
+
+/** Ask for a password reset link by email. Always answers the same way, account or not. */
+export async function forgotPassword(email: string): Promise<{ ok: boolean; text: string }> {
+  try {
+    const r = await call<{ message?: string }>("/auth/forgot", { method: "POST", body: { email: email.trim() } });
+    return { ok: true, text: r.message ?? "If there's an account with that email, a reset link is on its way." };
+  } catch (e) { return { ok: false, text: msg(e) }; }
+}
+
+/** Set a new password from an emailed link; signs in on this device. */
+export async function resetPassword(token: string, password: string): Promise<string | null> {
+  try {
+    const r = await call<AuthReply>("/auth/reset", { method: "POST", body: { token, password } });
+    const existing = state.accounts.find((a) => a.userId === r.user.id);
+    addSignedIn(r, existing?.slot ?? crypto.randomUUID().slice(0, 8));
+    return null;
+  } catch (e) { return msg(e); }
+}
+
+/** Email the pilot an in-flight heads-up (top of descent, 10 minutes to landing). Quietly does nothing when signed out or off. */
+export async function notifyByEmail(kind: "tod" | "arrival", flightId: string, title: string, body: string): Promise<void> {
+  const a = activeAccount();
+  if (!a || state.profile?.email_prefs?.inflight === false) return;
+  try { await call("/notify", { method: "POST", body: { kind, flight_id: flightId, title, body }, slot: a.slot }); } catch { /* best effort */ }
 }
 
 /** Copy completed flight summaries that this account doesn't have yet. */

@@ -14,7 +14,7 @@ import { settingsStore, store, useApp, useSettings } from "./data/store";
 import { CockpitScreen } from "./screens/Cockpit";
 import { WeatherScreen } from "./screens/Weather";
 import { GlideslopeBanners, useFlightMessages } from "./components/Glideslope";
-import { Account, hasBeenWelcomed, Welcome } from "./screens/Account";
+import { Account, ForgotPassword, ResetPassword, hasBeenWelcomed, Welcome } from "./screens/Account";
 import { CopilotScreen } from "./screens/Copilot";
 import { useCallouts } from "./data/copilot";
 import { Home } from "./screens/Home";
@@ -23,6 +23,7 @@ import { FlightScreen } from "./screens/Flight";
 import { Logbook, FlightDetail } from "./screens/Logbook";
 import { Airports, AirportPage } from "./screens/Airports";
 import { SettingsScreen } from "./screens/Settings";
+import { applyGlass } from "./glassLevel";
 import { Glance } from "./screens/Glance";
 
 /* ---------- hash router (works on GitHub Pages and on the Bridge) ---------- */
@@ -111,6 +112,9 @@ export function App() {
     document.documentElement.dataset.glass = s.reduceTransparency ? "solid" : "glass";
   }, [s.accent, s.reduceTransparency]);
 
+  // Liquid Glass strength (Settings → Appearance). 95 = clear glass with bright, thick edges.
+  useEffect(() => applyGlass(s.glassLevel ?? 95), [s.glassLevel]);
+
   useWallpaper();
 
   // Light / dark / follow the device.
@@ -157,6 +161,8 @@ export function App() {
     case "airports": body = rest[0] ? <AirportPage code={rest[0]} /> : <Airports />; break;
     case "settings": body = <SettingsScreen />; break;
     case "account": body = <Account />; break;
+    case "forgot": body = <ForgotPassword />; break;
+    case "reset": body = <ResetPassword token={rest[0]} />; break;
     case "glance": body = <Glance />; break;
     case "copilot": body = <CopilotScreen />; break;
     case "cockpit": body = <CockpitScreen />; break;
@@ -184,7 +190,7 @@ export function App() {
                 <a className={`nav-a${screen === n.id || (!screen && n.id === "home") ? " on" : ""}`} href={`#/${n.id}`}><span className={`nav-ic ic-${n.id}`}>{n.icon()}</span>{n.label}</a>
               </Fragment>
             ))}
-            <div className="side-foot faint">{mode === "demo" ? "Demo flight: synthetic data" : `Glidepath 1.0${status?.bridgeVersion && status.bridgeVersion !== "demo" ? ` · Bridge ${status.bridgeVersion}` : ""}`}</div>
+            <div className="side-foot faint">{mode === "demo" ? "Demo flight: synthetic data" : `Glidepath 1.0.6${status?.bridgeVersion && status.bridgeVersion !== "demo" ? ` · Bridge ${status.bridgeVersion}` : ""}`}</div>
           </nav>
         )}
         <main className="main" id="main">
@@ -196,7 +202,7 @@ export function App() {
           {NAV.filter((n) => n.mobile).map((n) => (
             <a key={n.id} className={`tab${screen === n.id ? " on" : ""}`} href={`#/${n.id}`}>{n.icon()}{n.label === "Live map" ? "Map" : n.label}</a>
           ))}
-          <a className={`tab${["airports", "settings", "glance", "account", "cockpit", "weather", "checklists", "tools", "copilot", "charts"].includes(screen ?? "") ? " on" : ""}`} href="#/settings">{Icon.more()}More</a>
+          <a className={`tab${["airports", "settings", "glance", "account", "forgot", "reset", "cockpit", "weather", "checklists", "tools", "copilot", "charts"].includes(screen ?? "") ? " on" : ""}`} href="#/settings">{Icon.more()}More</a>
         </nav>
       )}
     </>

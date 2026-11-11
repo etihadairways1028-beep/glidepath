@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useLive } from "../data/derive";
 import { settingsStore, store, useSettings } from "../data/store";
+import { notifyByEmail } from "../data/cloud";
 
 interface Msg { id: number; title: string; body: string; tone: "info" | "good" | "warn"; href?: string }
 let msgs: Msg[] = [];
@@ -91,6 +92,7 @@ export function useFlightMessages() {
     } else if (todMin <= 10.3 && todMin > 2 && !said.current.has("tod10")) {
       said.current.add("tod10");
       postFlightMessage(`Top of descent in ${Math.round(todMin)} minutes`, "Time to brief the arrival and set up the approach.");
+      void notifyByEmail("tod", L.flight?.id ?? "now", `Top of descent in ${Math.round(todMin)} minutes`, `Time to brief the arrival${L.destination?.icao ? ` into ${L.destination.icao}` : ""} and set up the approach.`);
     }
   }, [todMin == null ? null : Math.round(todMin * 2), flightMessages, L.phase]);
 
@@ -99,7 +101,7 @@ export function useFlightMessages() {
   useEffect(() => {
     if (!flightMessages || toLandMin == null) return;
     const dest = L.destination?.icao ?? L.flight?.arrivalIcao ?? "your destination";
-    if (toLandMin <= 10.3 && toLandMin > 3 && !said.current.has("arr10")) { said.current.add("arr10"); said.current.add("arr30"); postFlightMessage("10 minutes to landing", `About ${Math.round(toLandMin)} minutes to touchdown at ${dest}.`); }
+    if (toLandMin <= 10.3 && toLandMin > 3 && !said.current.has("arr10")) { said.current.add("arr10"); said.current.add("arr30"); postFlightMessage("10 minutes to landing", `About ${Math.round(toLandMin)} minutes to touchdown at ${dest}.`); void notifyByEmail("arrival", L.flight?.id ?? "now", "10 minutes to landing", `About ${Math.round(toLandMin)} minutes to touchdown at ${dest}.`); }
     else if (toLandMin <= 30.5 && toLandMin > 12 && !said.current.has("arr30")) { said.current.add("arr30"); postFlightMessage("30 minutes to landing", `Landing at ${dest} in about ${Math.round(toLandMin)} minutes.`); }
   }, [toLandMin == null ? null : Math.round(toLandMin * 2), flightMessages]);
 

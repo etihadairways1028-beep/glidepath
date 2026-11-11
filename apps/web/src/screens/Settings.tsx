@@ -3,6 +3,8 @@ import { BaseMapPicker, TrafficSources } from "../components/MapLayers";
 import { connectFromSettings } from "../App";
 import { ConnPill, Icon, Kv, Notice, Section } from "../components/ui";
 import { WallpaperPicker } from "../components/Wallpaper";
+import { EmailSettings } from "./Account";
+import { useCloud } from "../data/cloud";
 import { activeBridge, setActiveBridge } from "../data/bridge";
 import { startDemo, stopDemo } from "../data/demo";
 import { loadPlan } from "../data/external";
@@ -132,8 +134,14 @@ export function SettingsScreen() {
             <div className="between" style={{ padding: "6px 0" }}><span>Accent</span>
               <div className="seg">{([["glideslope", "Glideslope"], ["aurora", "Aurora"], ["ice", "Ice"]] as const).map(([k, l]) => <button key={k} className={s.accent === k ? "on" : ""} onClick={() => settingsStore.set({ accent: k })}>{l}</button>)}</div>
             </div>
+            <div style={{ padding: "8px 0" }}>
+              <div className="between"><span>Liquid Glass</span><b className="data">{s.reduceTransparency ? "Off" : `${s.glassLevel ?? 95}%`}</b></div>
+              <input className="lg-range" type="range" min={0} max={100} step={5} value={s.glassLevel ?? 95} disabled={s.reduceTransparency} aria-label="Liquid Glass strength" onChange={(e) => settingsStore.set({ glassLevel: Number(e.target.value) })} />
+              <div className="between faint" style={{ fontSize: 12 }}><span>Frosted</span><span>Crystal clear</span></div>
+            </div>
             <label className="between" style={{ padding: "8px 0" }}><span>Reduce transparency</span><input className="switch" type="checkbox" checked={s.reduceTransparency} onChange={(e) => settingsStore.set({ reduceTransparency: e.target.checked })} /></label>
           </Section>
+          <EmailsInSettings />
           <Section title="On your Home Screen">
             <ol style={{ margin: 0, paddingLeft: 18, color: "var(--mist)", lineHeight: 1.7 }}>
               <li>In Safari on your iPad or iPhone, go to glidepath.local:4810 and type the code shown on your PC.</li>
@@ -143,7 +151,7 @@ export function SettingsScreen() {
             <p className="faint" style={{ fontSize: 12.5, margin: "10px 0 0" }}>For an iPad on a stand, use <a href="#/glance">Glance mode</a>. Lock Screen and widget cards need the native iPad app, which is planned.</p>
           </Section>
           <Section title="About">
-            <Kv k="Version" v="Glidepath 1.0.5" />
+            <Kv k="Version" v="Glidepath 1.0.6" />
             <Kv k="Airports" v="OurAirports, public domain" />
             <Kv k="Map" v="OpenFreeMap / OpenStreetMap, Natural Earth" />
             <Kv k="Weather" v="aviationweather.gov, via your Bridge" />
@@ -156,4 +164,17 @@ export function SettingsScreen() {
       {activeBridge() === null && mode === "none" && <p className="faint" style={{ fontSize: 12.5 }}>Not connected.</p>}
     </div>
   );
+}
+
+/** The account emails, also here so they're easy to find. */
+function EmailsInSettings() {
+  const c = useCloud();
+  if (c.status !== "ready") return null;
+  if (!c.active) return (
+    <Section title="Emails">
+      <p className="muted" style={{ margin: 0, fontSize: 14 }}>Sign in to get your flight debrief, top of descent and arrival heads-ups, and sign-in alerts by email.</p>
+      <a className="btn small" style={{ marginTop: 12 }} href="#/account">Sign in</a>
+    </Section>
+  );
+  return <EmailSettings />;
 }

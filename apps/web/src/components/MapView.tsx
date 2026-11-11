@@ -382,9 +382,23 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
       const letters = [["D", /_DEL$|Delivery/i, "d"], ["G", /_GND$|_RMP$|Ground/i, "g"], ["T", /_TWR$|Tower/i, "t"], ["A", /_(APP|DEP)$|Approach/i, "a"], ["i", /_ATIS$/i, "i"]] as const;
       el.innerHTML = `<b>${code}</b><span>${letters.filter(([, re]) => has(re)).map(([l, , k]) => `<i class="${k}">${l}</i>`).join("")}</span>`;
       el.onclick = (ev) => { ev.stopPropagation(); const best = e.items.find((c) => /_TWR$/i.test(c.callsign)) ?? e.items[0]!; handlers.current.onSelectAtc?.(best); };
+      el.dataset.rank = String(e.items.length);
       return new maplibregl.Marker({ element: el, anchor: "bottom" }).setLngLat([e.lon, e.lat]).addTo(m);
     });
-    return () => { stop = true; };
+    // Zoomed out, badges overlap: show the busiest airports and hide the ones underneath.
+    const declutter = () => {
+      const shown: DOMRect[] = [];
+      const list = atcMarkers.current.map((mk) => mk.getElement()).sort((a, b) => Number(b.dataset.rank) - Number(a.dataset.rank));
+      for (const el of list) el.style.visibility = "";
+      for (const el of list) {
+        const r = el.getBoundingClientRect();
+        const hit = shown.some((o) => r.left < o.right + 2 && r.right > o.left - 2 && r.top < o.bottom + 2 && r.bottom > o.top - 2);
+        if (hit) el.style.visibility = "hidden"; else shown.push(r);
+      }
+    };
+    declutter();
+    m.on("moveend", declutter);
+    return () => { stop = true; m.off("moveend", declutter); };
   }, [ready, atc, centres.length]);
 
   // METAR dots

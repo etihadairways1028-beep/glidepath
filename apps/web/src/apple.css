@@ -364,3 +364,69 @@ html { -webkit-tap-highlight-color: transparent; }
 .rc-toast.confirmed { background: rgba(30,120,60,.85) !important; color: #fff !important; }
 .rc-toast.timeout, .rc-toast.disarmed { background: rgba(150,90,0,.85) !important; color: #fff !important; }
 .rc-toast.rejected, .rc-toast.unsupported { background: rgba(160,40,40,.85) !important; color: #fff !important; }
+
+/* Map badges: `all: unset` above wiped MapLibre's absolute positioning, so badges were laid
+   out one after another and drifted further from their airport the more were on screen. */
+.maplibregl-marker.atc-badge { position: absolute !important; top: 0 !important; left: 0 !important; }
+
+/* ===================== Liquid Glass 95%: clear body, thick bright edges (Settings → Appearance) ===================== */
+.glass, :root[data-theme="light"] .glass, .glass.strong, :root[data-theme="light"] .glass.strong,
+.side, .side.glass, .tabbar, .map-tools .btn, .gs-msg, .gs-msg.glass, .map-hud {
+  background:
+    linear-gradient(140deg, rgba(255,255,255,calc(var(--lg-edge-a, .3) * .7)) 0%, rgba(255,255,255,0) 28%, rgba(255,255,255,0) 72%, rgba(255,255,255,calc(var(--lg-edge-a, .3) * .45)) 100%),
+    var(--lg-tint) !important;
+  -webkit-backdrop-filter: blur(var(--lg-blurpx, 15px)) saturate(185%) brightness(1.06) !important;
+  backdrop-filter: blur(var(--lg-blurpx, 15px)) saturate(185%) brightness(1.06) !important;
+  box-shadow:
+    inset 1.5px 1.5px 1px -0.5px rgba(255,255,255,var(--lg-rim-a, .9)),
+    inset -1.5px -1.5px 1px -0.5px rgba(255,255,255,calc(var(--lg-rim-a, .9) * .6)),
+    inset 0 0 0 0.5px rgba(255,255,255,calc(var(--lg-rim-a, .9) * .35)),
+    inset 6px 8px 14px -10px rgba(255,255,255,calc(var(--lg-edge-a, .3) * 1.4)),
+    inset -6px -8px 16px -10px rgba(255,255,255,var(--lg-edge-a, .3)),
+    0 1px 1px rgba(0,0,0,.08),
+    0 18px 40px -18px rgba(0,0,0,.55) !important;
+}
+:root[data-theme="light"] .glass, :root[data-theme="light"] .glass.strong, :root[data-theme="light"] .side, :root[data-theme="light"] .tabbar, :root[data-theme="light"] .gs-msg, :root[data-theme="light"] .map-hud {
+  background:
+    linear-gradient(140deg, rgba(255,255,255,.8) 0%, rgba(255,255,255,.15) 30%, rgba(255,255,255,.1) 70%, rgba(255,255,255,.55) 100%),
+    var(--lg-tint-l) !important;
+  box-shadow:
+    inset 1.5px 1.5px 1px -0.5px #fff,
+    inset -1.5px -1.5px 1px -0.5px rgba(255,255,255,.85),
+    inset 0 0 0 0.5px rgba(255,255,255,.6),
+    inset 0 0 18px -6px rgba(255,255,255,.7),
+    0 18px 40px -20px rgba(30,50,120,.35) !important;
+}
+/* Text stays readable on clear glass */
+:root[data-lg="clear"]:not([data-theme="light"]) .glass :is(h1, h2, h3, .title, .h2, b, .data) { text-shadow: 0 1px 10px rgba(0,0,0,.35); }
+/* Desktop Chrome/Edge: the rim bends the light behind it */
+:root[data-refract] .glass, :root[data-refract] .side, :root[data-refract] .tabbar, :root[data-refract] .gs-msg {
+  -webkit-backdrop-filter: url(#lg-refract) blur(var(--lg-blurpx, 15px)) saturate(185%) brightness(1.06) !important;
+  backdrop-filter: url(#lg-refract) blur(var(--lg-blurpx, 15px)) saturate(185%) brightness(1.06) !important;
+}
+:root[data-refract] .glass .glass { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+/* Buttons: little glass pills */
+.btn:not(.primary) {
+  background: linear-gradient(140deg, rgba(255,255,255,.22), rgba(255,255,255,.04) 50%, rgba(255,255,255,.12)) !important;
+  box-shadow: inset 1px 1px 0.5px rgba(255,255,255,var(--lg-rim-a, .9)), inset -1px -1px 0.5px rgba(255,255,255,calc(var(--lg-rim-a, .9) * .45)), 0 6px 16px -10px rgba(0,0,0,.5) !important;
+}
+.btn.primary { box-shadow: inset 1px 1px 0.5px rgba(255,255,255,.75), inset -1px -1px 1px rgba(0,0,0,.18), 0 8px 22px -10px var(--a-blue, #0A84FF) !important; }
+/* Glass strength slider */
+.lg-range { width: 100%; margin: 10px 0 4px; accent-color: var(--a-blue, #0A84FF); height: 28px; }
+/* Solid mode wins over everything */
+:root[data-glass="solid"] .glass, :root[data-glass="solid"] .side, :root[data-glass="solid"] .tabbar, :root[data-glass="solid"] .gs-msg {
+  background: var(--a-bg2, #1c1c1e) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+}
+:root[data-glass="solid"][data-theme="light"] .glass, :root[data-glass="solid"][data-theme="light"] .side, :root[data-glass="solid"][data-theme="light"] .tabbar { background: #fff !important; }
+/* iPad and iPhone: same look, lighter blur so it stays smooth */
+@media (pointer: coarse), (max-width: 1100px) {
+  .glass, :root[data-theme="light"] .glass, .glass.strong, .side, .tabbar, .map-tools .btn, .gs-msg, .map-hud {
+    -webkit-backdrop-filter: blur(min(var(--lg-blurpx, 15px), 16px)) saturate(180%) !important; backdrop-filter: blur(min(var(--lg-blurpx, 15px), 16px)) saturate(180%) !important;
+  }
+}
+/* The wallpaper fills the screen edge to edge (an older rule rounded it into an ellipse with hard edges). */
+.sky::before, .sky::after { border-radius: 0 !important; width: auto !important; height: auto !important; inset: 0 !important; left: 0 !important; top: 0 !important; right: 0 !important; bottom: 0 !important; transform: none !important; animation: none !important; }
+/* Switch rows: the switch stays on the right of its text, however long the text is. */
+label.between { flex-wrap: nowrap !important; gap: 14px; align-items: center; }
+label.between > .switch { flex: none; margin-left: auto; }
+label.between > span { min-width: 0; }

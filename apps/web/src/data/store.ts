@@ -55,6 +55,8 @@ export interface Settings {
   /** Speak phase changes, top of descent and approach altitude callouts. */
   voiceCallouts: boolean;
   reduceTransparency: boolean;
+  /** How much Liquid Glass: 0 (frosted, solid) to 100 (crystal clear). */
+  glassLevel: number;
   /** Base map: satellite imagery, or a street map that follows the light/dark theme. */
   mapStyle: MapStyle;
   map3d: boolean;
@@ -71,7 +73,7 @@ export interface Settings {
 }
 
 const DEFAULT_SETTINGS: Settings = {
-  bridgeUrl: "", token: "", simbriefUser: "", showVatsim: true, showIvao: false, showSayIntentions: false, fuelUnit: "kg", accent: "glideslope", theme: "system", wallpaper: "aurora", voiceCallouts: false, reduceTransparency: false, mapStyle: "map", map3d: false, flightMessages: true, systemNotifications: false, atcAlerts: true, lightMessages: true, showAtc: true, showRadar: false, showMetars: false,
+  bridgeUrl: "", token: "", simbriefUser: "", showVatsim: true, showIvao: false, showSayIntentions: false, fuelUnit: "kg", accent: "glideslope", theme: "system", wallpaper: "aurora", voiceCallouts: false, reduceTransparency: false, glassLevel: 95, mapStyle: "map", map3d: false, flightMessages: true, systemNotifications: false, atcAlerts: true, lightMessages: true, showAtc: true, showRadar: false, showMetars: false,
 };
 
 const initial: AppState = {

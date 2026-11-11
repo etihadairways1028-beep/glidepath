@@ -11,6 +11,7 @@
  */
 import { composeMonthlyBrief } from "../../../packages/flight-engine/src/brief";
 import { sendGmail } from "./gmail";
+import { debriefMail, deviceName, inflightMail, resetMail, signinMail } from "./mails";
 
 interface Env {
   DB: D1Database;
@@ -64,6 +65,22 @@ async function userFrom(req: Request, env: Env): Promise<User | null> {
   if (Date.now() - row.last_used > 3600_000) await env.DB.prepare("UPDATE sessions SET last_used = ? WHERE token_hash = ?").bind(Date.now(), th).run();
   return row;
 }
+
+interface Prefs { debrief: boolean; inflight: boolean; signin: boolean }
+async function prefsOf(env: Env, userId: string): Promise<Prefs> {
+  const r = await env.DB.prepare("SELECT debrief, inflight, signin FROM email_prefs WHERE user_id = ?").bind(userId).first<{ debrief: number; inflight: number; signin: number }>();
+  return { debrief: r ? !!r.debrief : true, inflight: r ? !!r.inflight : true, signin: r ? !!r.signin : true };
+}
+/** Send at most once per (kind, period); returns false if it was already sent. */
+async function once(env: Env, userId: string, kind: string, period: string): Promise<boolean> {
+  const r = await env.DB.prepare("INSERT OR IGNORE INTO email_log (user_id, kind, period, sent_at) VALUES (?, ?, ?, ?)").bind(userId, kind, period, Date.now()).run();
+  return (r.meta?.changes ?? 0) > 0;
+}
+async function sentSince(env: Env, userId: string, kindPrefix: string, since: number): Promise<number> {
+  const r = await env.DB.prepare("SELECT COUNT(*) AS n FROM email_log WHERE user_id = ? AND kind LIKE ? AND sent_at >= ?").bind(userId, `${kindPrefix}%`, since).first<{ n: number }>();
+  return r?.n ?? 0;
+}
+const whenText = () => new Date().toUTCString().replace(":00 GMT", " UTC").replace(" GMT", " UTC");
 
 async function newSession(env: Env, userId: string): Promise<string> {
   const token = rand(32);
@@ -152,7 +169,48 @@ async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Re
       return fail(401, "That email and password don't match an account.");
     }
     await env.DB.prepare("DELETE FROM login_fails WHERE email = ?").bind(email).run();
+    if ((await prefsOf(env, u!.id)).signin && (await sentSince(env, u!.id, "signin", Date.now() - 600_000)) === 0) {
+      await once(env, u!.id, "signin", String(Date.now()));
+      const m = signinMail(deviceName(req.headers.get("User-Agent") ?? ""), whenText());
+      ctx?.waitUntil(sendEmail(env, u!.email, u!.display_name, m.subject, m.html, m.text).then((e) => { if (e) console.log("signin email:", e); }));
+    }
     return json(200, { token: await newSession(env, u!.id), user: publicUser(u!) });
+  }
+
+  if (p === "/auth/forgot" && req.method === "POST") {
+    const b = await body<{ email?: string }>(req);
+    const email = (b?.email ?? "").trim().toLowerCase();
+    // Same answer whether or not the account exists, so nobody can test which emails are registered.
+    const done = json(200, { ok: true, message: "If there's an account with that email, a reset link is on its way. Check your inbox (and Spam)." });
+    if (!validEmail(email)) return done;
+    const u = await env.DB.prepare("SELECT id, email, display_name FROM users WHERE email = ?").bind(email).first<{ id: string; email: string; display_name: string | null }>();
+    if (!u) return done;
+    if ((await sentSince(env, u.id, "reset:", Date.now() - 3600_000)) >= 3) return done;
+    const token = rand(32);
+    await env.DB.prepare("DELETE FROM password_resets WHERE user_id = ? OR expires_at < ?").bind(u.id, Date.now()).run();
+    await env.DB.prepare("INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES (?, ?, ?)").bind(await sha256(token), u.id, Date.now() + 3600_000).run();
+    await once(env, u.id, `reset:${token.slice(0, 8)}`, String(Date.now()));
+    const m = resetMail(`${env.APP_URL ?? "https://glidepath-ad9.pages.dev/app/"}#/reset/${token}`);
+    ctx?.waitUntil(sendEmail(env, u.email, u.display_name, m.subject, m.html, m.text).then((e) => { if (e) console.log("reset email:", e); }));
+    return done;
+  }
+  if (p === "/auth/reset" && req.method === "POST") {
+    const b = await body<{ token?: string; password?: string }>(req);
+    const token = String(b?.token ?? ""), pw = b?.password ?? "";
+    if (!/^[a-f0-9]{64}$/.test(token)) return fail(400, "That reset link isn't valid. Ask for a new one.");
+    if (pw.length < 8 || pw.length > 200) return fail(400, "Use a password of at least 8 characters.");
+    const th = await sha256(token);
+    const r = await env.DB.prepare("SELECT user_id, expires_at FROM password_resets WHERE token_hash = ?").bind(th).first<{ user_id: string; expires_at: number }>();
+    if (!r || r.expires_at < Date.now()) return fail(400, "That reset link has expired or was already used. Ask for a new one.");
+    const salt = rand(16);
+    await env.DB.batch([
+      env.DB.prepare("UPDATE users SET pw_hash = ?, pw_salt = ? WHERE id = ?").bind(await hashPassword(pw, salt, env.PEPPER), salt, r.user_id),
+      env.DB.prepare("DELETE FROM password_resets WHERE user_id = ?").bind(r.user_id),
+      env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(r.user_id), // sign out everywhere
+    ]);
+    const u = await env.DB.prepare("SELECT id, email, display_name, monthly_email FROM users WHERE id = ?").bind(r.user_id).first<User>();
+    await env.DB.prepare("DELETE FROM login_fails WHERE email = ?").bind(u!.email).run();
+    return json(200, { token: await newSession(env, r.user_id), user: publicUser(u!) });
   }
 
   const user = await userFrom(req, env);
@@ -163,16 +221,21 @@ async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Re
     await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(await sha256(t)).run();
     return json(200, { ok: true });
   }
-  if (p === "/me" && req.method === "GET") return json(200, publicUser(user));
+  if (p === "/me" && req.method === "GET") return json(200, { ...publicUser(user), email_prefs: await prefsOf(env, user.id) });
   if (p === "/me" && req.method === "PATCH") {
-    const b = await body<{ monthly_email?: boolean; display_name?: string }>(req);
+    const b = await body<{ monthly_email?: boolean; display_name?: string; email_prefs?: Partial<Prefs> }>(req);
+    if (b?.email_prefs && typeof b.email_prefs === "object") {
+      const cur = await prefsOf(env, user.id);
+      const n = { ...cur, ...Object.fromEntries(Object.entries(b.email_prefs).filter(([k, v]) => ["debrief", "inflight", "signin"].includes(k) && typeof v === "boolean")) } as Prefs;
+      await env.DB.prepare("INSERT OR REPLACE INTO email_prefs (user_id, debrief, inflight, signin) VALUES (?, ?, ?, ?)").bind(user.id, n.debrief ? 1 : 0, n.inflight ? 1 : 0, n.signin ? 1 : 0).run();
+    }
     if (typeof b?.monthly_email === "boolean") await env.DB.prepare("UPDATE users SET monthly_email = ? WHERE id = ?").bind(b.monthly_email ? 1 : 0, user.id).run();
     if (typeof b?.display_name === "string") await env.DB.prepare("UPDATE users SET display_name = ? WHERE id = ?").bind(b.display_name.trim().slice(0, 60) || null, user.id).run();
     const u = await env.DB.prepare("SELECT id, email, display_name, monthly_email FROM users WHERE id = ?").bind(user.id).first<User>();
-    return json(200, publicUser(u!));
+    return json(200, { ...publicUser(u!), email_prefs: await prefsOf(env, user.id) });
   }
   if (p === "/me" && req.method === "DELETE") {
-    await env.DB.batch(["sessions", "flights", "bridges"].map((t) => env.DB.prepare(`DELETE FROM ${t} WHERE user_id = ?`).bind(user.id)).concat(env.DB.prepare("DELETE FROM users WHERE id = ?").bind(user.id)));
+    await env.DB.batch(["sessions", "flights", "bridges", "email_prefs", "password_resets", "email_log"].map((t) => env.DB.prepare(`DELETE FROM ${t} WHERE user_id = ?`).bind(user.id)).concat(env.DB.prepare("DELETE FROM users WHERE id = ?").bind(user.id)));
     return json(200, { ok: true });
   }
 
@@ -184,12 +247,25 @@ async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Re
     const list = await body<Array<{ id?: string; status?: string; off_block_at?: number; summary?: unknown }>>(req);
     if (!Array.isArray(list) || list.length > 50) return fail(400, "Send up to 50 flights at a time.");
     const stmts = [];
+    const fresh: Array<Record<string, unknown>> = [];
     for (const f of list) {
+      // A debrief email for a flight that just finished (not for old flights arriving on a first sync).
+      const sm = (f.summary ?? {}) as Record<string, unknown>;
+      const endT = Number(sm.onBlockAt ?? sm.endedAt ?? 0);
+      if (f.id && String(f.status ?? "completed") === "completed" && endT > Date.now() - 6 * 3600_000) fresh.push({ ...sm, id: f.id });
       const s = JSON.stringify(f.summary ?? null);
       if (!f.id || typeof f.id !== "string" || f.id.length > 64 || s.length > 200_000) return fail(400, "A flight wasn't in the expected format.");
       stmts.push(env.DB.prepare("INSERT OR REPLACE INTO flights (user_id, id, status, off_block_at, summary, updated_at) VALUES (?, ?, ?, ?, ?, ?)").bind(user.id, f.id, String(f.status ?? "completed"), Number(f.off_block_at) || Date.now(), s, Date.now()));
     }
     if (stmts.length) await env.DB.batch(stmts);
+    if (fresh.length && (await prefsOf(env, user.id)).debrief) {
+      for (const f of fresh.slice(0, 2)) {
+        if ((await sentSince(env, user.id, "debrief:", Date.now() - 86_400_000)) >= 6) break;
+        if (!(await once(env, user.id, `debrief:${String(f.id).slice(0, 60)}`, "1"))) continue;
+        const m = debriefMail(f);
+        ctx?.waitUntil(sendEmail(env, user.email, user.display_name, m.subject, m.html, m.text).then((e) => { if (e) console.log("debrief email:", e); }));
+      }
+    }
     return json(200, { saved: stmts.length });
   }
 
@@ -222,6 +298,21 @@ async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Re
     if (err) return json(200, { sent: false, reason: err });
     await env.DB.prepare("INSERT OR IGNORE INTO email_log (user_id, kind, period, sent_at) VALUES (?, 'preview', ?, ?)").bind(user.id, period, Date.now()).run();
     return json(200, { sent: true });
+  }
+
+  if (p === "/notify" && req.method === "POST") {
+    const b = await body<{ kind?: string; flight_id?: string; title?: string; body?: string }>(req);
+    const kind = ["tod", "arrival", "flight"].includes(String(b?.kind)) ? String(b!.kind) : "flight";
+    const title = String(b?.title ?? "").slice(0, 80), text = String(b?.body ?? "").slice(0, 300);
+    if (!title) return fail(400, "Missing message.");
+    if (!(await prefsOf(env, user.id)).inflight) return json(200, { sent: false, reason: "In-flight emails are off." });
+    if ((await sentSince(env, user.id, "inflight:", Date.now() - 3600_000)) >= 6) return json(200, { sent: false, reason: "Enough emails for this hour." });
+    if (!(await once(env, user.id, `inflight:${kind}:${String(b?.flight_id ?? "").slice(0, 60)}`, "1"))) return json(200, { sent: false, reason: "Already sent for this flight." });
+    const m = inflightMail(kind, title, text);
+    const err = await sendEmail(env, user.email, user.display_name, m.subject, m.html, m.text);
+    // If it didn't go out, forget it so the next try can send it.
+    if (err) await env.DB.prepare("DELETE FROM email_log WHERE user_id = ? AND kind = ? AND period = '1'").bind(user.id, `inflight:${kind}:${String(b?.flight_id ?? "").slice(0, 60)}`).run();
+    return json(200, err ? { sent: false, reason: err } : { sent: true });
   }
 
   if (p === "/download" && req.method === "GET") {

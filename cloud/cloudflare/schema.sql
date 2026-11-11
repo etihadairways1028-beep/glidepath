@@ -47,3 +47,14 @@ CREATE TABLE IF NOT EXISTS email_log (
   sent_at INTEGER NOT NULL,
   PRIMARY KEY (user_id, kind, period)
 );
+CREATE TABLE IF NOT EXISTS email_prefs (
+  user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  debrief INTEGER NOT NULL DEFAULT 1,
+  inflight INTEGER NOT NULL DEFAULT 1,
+  signin INTEGER NOT NULL DEFAULT 1
+);
+CREATE TABLE IF NOT EXISTS password_resets (
+  token_hash TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at INTEGER NOT NULL
+);
