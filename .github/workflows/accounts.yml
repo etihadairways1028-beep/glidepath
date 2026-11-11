@@ -90,6 +90,16 @@ jobs:
       - name: Check it answers
         run: curl -fsS "${{ steps.deploy.outputs.url }}/health"
 
+      - name: Try a real sign-up and delete it again
+        working-directory: .
+        run: |
+          U="${{ steps.deploy.outputs.url }}"
+          E="ci-$(date +%s)-$RANDOM@example.com"
+          echo "Preflight:"; curl -s -o /dev/null -D - -X OPTIONS "$U/auth/signup" -H "Origin: https://glidepath-ad9.pages.dev" -H "Access-Control-Request-Method: POST" -H "Access-Control-Request-Headers: content-type" | grep -i -E "^HTTP|access-control-allow-origin"
+          echo "Sign-up:"; R=$(curl -s -w "\n%{http_code} %{time_total}s" -X POST "$U/auth/signup" -H "Origin: https://glidepath-ad9.pages.dev" -H "Content-Type: application/json" -d "{\"email\":\"$E\",\"password\":\"test-password-123\",\"name\":\"CI\"}"); echo "$R" | head -c 400; echo
+          TOKEN=$(echo "$R" | head -1 | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+          if [ -n "$TOKEN" ]; then curl -s -X DELETE "$U/me" -H "Authorization: Bearer $TOKEN" -o /dev/null -w "Cleanup: %{http_code}\n"; else echo "::warning::Sign-up did not return a session."; fi
+
       - name: Switch sign-in on for the website and app
         working-directory: .
         run: |
