@@ -88,12 +88,12 @@ async function place(controllers: NetworkController[], known: Map<string, [numbe
   const out: PlacedController[] = [];
   for (const c of controllers) {
     if (c.facility === "ATIS") continue;
-    let p = known.get(c.callsign) ?? null;
-    if (!p && db) {
-      const prefix = c.callsign.split(/[_-]/)[0]!;
-      const a = db.get(prefix) ?? (prefix.length === 3 ? db.get(`K${prefix}`) : null);
-      if (a) p = [a.lat, a.lon];
-    }
+    const prefix = c.callsign.toUpperCase().split(/[_-]/)[0]!;
+    const apt = db ? db.get(prefix) ?? (prefix.length === 3 ? db.get(`K${prefix}`) : null) : null;
+    // Airport positions (delivery, ground, tower, approach) always sit at their airport: a
+    // reported transceiver position can be wherever the controller set it, even another country.
+    const isCentre = /_(CTR|FSS)$/i.test(c.callsign) || /Centre|Flight service/i.test(c.facility);
+    let p: [number, number] | null = !isCentre && apt ? [apt.lat, apt.lon] : known.get(c.callsign) ?? (apt ? [apt.lat, apt.lon] : null);
     if (p) out.push({ ...c, lat: p[0], lon: p[1] });
   }
   return out;
