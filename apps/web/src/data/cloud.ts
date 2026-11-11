@@ -14,6 +14,10 @@ import { useSyncExternalStore } from "react";
 import type { FlightSummary } from "@glidepath/protocol";
 
 const HOSTED_CONFIG = "https://etihadairways1028-beep.github.io/glidepath/cloud.json";
+/** The website on Cloudflare Pages forwards /acct to the accounts service. Some networks block *.workers.dev, so try this first. */
+const SITE = "https://glidepath-ad9.pages.dev";
+const PROXY = `${SITE}/acct`;
+let bases: string[] = [];
 
 export interface CloudAccount { slot: string; userId: string; email: string; name: string | null }
 export interface CloudProfile { email: string; display_name: string | null; monthly_email: boolean }
@@ -51,16 +55,21 @@ class CloudError extends Error {}
 async function call<T>(path: string, init: { method?: string; body?: unknown; slot?: string | null } = {}): Promise<T> {
   if (!api) throw new CloudError("Accounts aren't set up yet.");
   const token = init.slot ? ls.get<string | null>(tokenKey(init.slot), null) : null;
-  let r: Response;
-  try {
-    r = await fetch(`${api}${path}`, {
-      method: init.method ?? "GET",
-      headers: { ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
-    });
-  } catch {
-    throw new CloudError("Couldn't reach the account service. Check your internet connection.");
+  let r: Response | null = null;
+  // Try the website's own address first, then the service directly; remember whichever works.
+  for (const base of bases.length ? bases : [api]) {
+    try {
+      r = await fetch(`${base}${path}`, {
+        method: init.method ?? "GET",
+        headers: { ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
+      });
+      if (r.status === 404 && base === PROXY) { r = null; continue; } // site without the forwarder
+      if (bases[0] !== base) bases = [base, ...bases.filter((b) => b !== base)];
+      break;
+    } catch { r = null; }
   }
+  if (!r) throw new CloudError("Couldn't reach the account service. Check your internet connection, then try again.");
   const j = await r.json().catch(() => ({})) as T & { error?: string };
   if (!r.ok) {
     if (r.status === 401 && init.slot && path !== "/auth/login") dropAccount(init.slot);
@@ -71,7 +80,7 @@ async function call<T>(path: string, init: { method?: string; body?: unknown; sl
 const msg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 async function readConfig(): Promise<string | null> {
-  for (const src of ["cloud.json", HOSTED_CONFIG]) {
+  for (const src of ["cloud.json", `${SITE}/cloud.json`, HOSTED_CONFIG]) {
     try {
       const r = await fetch(src, { cache: "no-cache" });
       if (!r.ok) continue;
@@ -85,6 +94,7 @@ async function readConfig(): Promise<string | null> {
 export async function initCloud(): Promise<void> {
   api = await readConfig();
   if (!api) { set({ status: "off" }); return; }
+  bases = /^http:\/\/(localhost|127\.0\.0\.1)/.test(api) ? [api] : [location.origin === SITE ? `${SITE}/acct` : PROXY, api];
   const accounts = ls.get<CloudAccount[]>("gp.accounts", []).filter((a) => ls.get<string | null>(tokenKey(a.slot), null));
   const active = ls.get<string | null>("gp.activeAccount", accounts[0]?.slot ?? null);
   set({ status: "ready", accounts, active: accounts.some((a) => a.slot === active) ? active : accounts[0]?.slot ?? null });
