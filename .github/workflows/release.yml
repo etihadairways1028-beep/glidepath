@@ -1,0 +1,35 @@
+# Publishes the Windows Bridge downloads as a GitHub Release.
+# The website links to releases/latest/download/..., because the downloads are
+# too big for Cloudflare Pages (25 MB per file) and don't belong in the site.
+# To publish: push the files to the "bridge-downloads" branch (top level):
+#   GlidepathBridge-Setup.exe, GlidepathBridge-windows-x64.zip, *.sha256, VERSION
+name: Publish Bridge downloads
+
+on:
+  push:
+    branches: [bridge-downloads]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: bridge-downloads
+      - name: Create or update the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V=$(cat VERSION | tr -d '[:space:]')
+          TAG="v$V"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" GlidepathBridge-Setup.exe GlidepathBridge-Setup.exe.sha256 GlidepathBridge-windows-x64.zip GlidepathBridge-windows-x64.zip.sha256 --clobber
+          else
+            gh release create "$TAG" GlidepathBridge-Setup.exe GlidepathBridge-Setup.exe.sha256 GlidepathBridge-windows-x64.zip GlidepathBridge-windows-x64.zip.sha256 \
+              --target "$GITHUB_SHA" --title "Glidepath Bridge $V" --latest \
+              --notes "Windows Bridge for Glidepath $V (early test build). Run GlidepathBridge-Setup.exe, or unzip the zip. Check the SHA-256 against the .sha256 file."
+          fi

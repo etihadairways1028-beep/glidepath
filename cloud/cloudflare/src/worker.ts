@@ -191,7 +191,7 @@ async function route(req: Request, env: Env): Promise<Response> {
   }
 
   if (p === "/download" && req.method === "GET") {
-    return json(200, { url: env.DOWNLOAD_URL ?? "https://etihadairways1028-beep.github.io/glidepath/downloads/GlidepathBridge-Setup.exe" });
+    return json(200, { url: env.DOWNLOAD_URL ?? "https://github.com/etihadairways1028-beep/glidepath/releases/latest/download/GlidepathBridge-Setup.exe" });
   }
 
   return fail(404, "Not found.");
