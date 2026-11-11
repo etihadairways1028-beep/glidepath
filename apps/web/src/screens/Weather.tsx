@@ -3,6 +3,7 @@
  * destination and alternate (from the flight plan), any airports you add, and
  * the rain radar. Every report shows when it was observed and where it came from.
  */
+import { useRadarFrames } from "../data/radar";
 import { useEffect, useState } from "react";
 import { Icon, Notice, Section } from "../components/ui";
 import { MapView } from "../components/MapView";
@@ -39,12 +40,16 @@ export function WeatherScreen() {
   const ids = roles.map((r) => r.code);
   const metars = usePoll(bridge && ids.length ? () => getMetar(ids) : null, 5 * 60_000, [bridge, ids.join(",")]);
   const tafs = usePoll(bridge && ids.length ? () => getTaf(ids) : null, 20 * 60_000, [bridge, ids.join(",")]);
-  const radar = usePoll(async () => {
-    const r = await fetch("https://api.rainviewer.com/public/weather-maps.json", { cache: "no-store" });
-    const j = await r.json() as { host: string; radar: { past: Array<{ path: string; time: number }> } };
-    const last = j.radar.past.at(-1);
-    return last ? { tiles: `${j.host}${last.path}/256/{z}/{x}/{y}/2/1_1.png`, time: last.time } : null;
-  }, 10 * 60_000, []);
+  const radar = useRadarFrames();
+  const frames = radar.data ?? [];
+  const [idx, setIdx] = useState<number | null>(null);
+  const [playing, setPlaying] = useState(true);
+  const cur = idx ?? frames.length - 1;
+  useEffect(() => {
+    if (!playing || frames.length < 2) return;
+    const t = window.setInterval(() => setIdx((i) => { const n = (i ?? frames.length - 1) + 1; return n >= frames.length ? 0 : n; }), 650);
+    return () => window.clearInterval(t);
+  }, [playing, frames.length]);
   const save = (list: string[]) => { setExtra(list); try { localStorage.setItem(KEY, JSON.stringify(list)); } catch { /* ignore */ } };
   const center: [number, number] | undefined = L.plan ? [L.plan.destination.lon, L.plan.destination.lat] : L.frame ? [L.frame.position.lon, L.frame.position.lat] : undefined;
 
@@ -62,8 +67,14 @@ export function WeatherScreen() {
       </div>
 
       <section className="glass wx-radar" aria-label="Rain radar">
-        <MapView trail={[]} plan={L.plan} center={center ?? [0, 30]} zoom={center ? 6 : 1.8} radarTiles={radar.data?.tiles ?? null} aircraft={L.frame && L.frame.attitude.headingTrueDeg !== null ? { lat: L.frame.position.lat, lon: L.frame.position.lon, hdg: L.frame.attitude.headingTrueDeg } : null} interactive />
-        <span className="wx-radar-tag">{radar.data ? `Rain radar · ${new Date(radar.data.time * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : radar.error ? "Radar unavailable right now" : "Loading radar…"}</span>
+        <MapView trail={[]} plan={L.plan} center={center ?? [0, 30]} zoom={center ? 6 : 1.8} radarFrames={frames} radarIndex={cur} aircraft={L.frame && L.frame.attitude.headingTrueDeg !== null ? { lat: L.frame.position.lat, lon: L.frame.position.lon, hdg: L.frame.attitude.headingTrueDeg } : null} interactive />
+        <div className="glass radar-bar">
+          {frames.length > 1 ? (<>
+            <button className="radar-play" onClick={() => setPlaying((p) => !p)} aria-label={playing ? "Pause radar" : "Play radar"}>{playing ? "❚❚" : "▶"}</button>
+            <input type="range" min={0} max={frames.length - 1} value={cur} onChange={(e) => { setPlaying(false); setIdx(Number(e.target.value)); }} aria-label="Radar time" />
+            <span className="radar-time data">{new Date(frames[cur]!.time * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}{cur === frames.length - 1 ? " · latest" : ` · ${Math.round((frames[frames.length - 1]!.time - frames[cur]!.time) / 60)} min ago`}</span>
+          </>) : <span className="radar-time">{radar.error ? "Radar unavailable right now" : "Loading radar…"}</span>}
+        </div>
       </section>
 
       {!bridge && <Notice info>METAR and TAF come through your Bridge (the weather service doesn't allow direct requests from browsers). Connect your PC to see them; the radar works anywhere.</Notice>}

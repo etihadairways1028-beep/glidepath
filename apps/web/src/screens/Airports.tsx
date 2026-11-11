@@ -1,3 +1,4 @@
+import { AirportBoard } from "../components/AirportBoard";
 import { useEffect, useState } from "react";
 import type { Airport } from "@glidepath/aviation-data";
 import { AirportHero, RunwayDiagram } from "../components/Imagery";
@@ -73,6 +74,7 @@ export function AirportPage({ code }: { code: string }) {
         <MapView key={apt.code} trail={[]} center={[apt.lon, apt.lat]} zoom={apt.size === "small" ? 14.6 : apt.size === "medium" ? 14 : 13.4} stands={stands.data ?? []} interactive />
         <span className="apt-map-tag">Runways, taxiways and gates from OpenStreetMap{bridge ? "" : ". Connect your Bridge for stand numbers"}</span>
       </section>
+      <AirportBoard code={apt.code} lat={apt.lat} lon={apt.lon} />
       <div className="grid cols-3">
         <Section title="Airport">
           <Kv k="Elevation" v={`${fmt(apt.elevationFt)} ft`} />

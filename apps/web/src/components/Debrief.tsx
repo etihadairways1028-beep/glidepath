@@ -32,6 +32,8 @@ export function DebriefPanel({ flight }: { flight: FlightSummary }) {
         </div>
       </div>
 
+      <DebriefTimes flight={flight} />
+
       {(d.wentWell.length > 0 || d.toImprove.length > 0) && (
         <div className="debrief-cols">
           {d.wentWell.length > 0 && (
@@ -157,4 +159,21 @@ export function HandlingCard({ s }: { s: FlightStats }) {
       <Kv k="Fastest taxi" v={s.maxTaxiKt === null ? "—" : `${s.maxTaxiKt} kt`} />
     </Section>
   );
+}
+
+const durTxt = (ms: number | null) => { if (ms === null || ms < 0) return "—"; const m = Math.round(ms / 60000); return m >= 60 ? `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m` : `${m} min`; };
+const span = (a: number | null, b: number | null) => (a !== null && b !== null ? b - a : null);
+
+/** The numbers everyone asks for after a flight: block, air and taxi times, distance and fuel. */
+function DebriefTimes({ flight: f }: { flight: FlightSummary }) {
+  const fuel = f.fuelStartKg !== null && f.fuelEndKg !== null ? f.fuelStartKg - f.fuelEndKg : null;
+  const items: Array<[string, string]> = [
+    ["Block time", durTxt(span(f.offBlockAt, f.onBlockAt))],
+    ["Air time", durTxt(span(f.wheelsUpAt, f.wheelsDownAt))],
+    ["Taxi out", durTxt(span(f.offBlockAt, f.wheelsUpAt))],
+    ["Taxi in", durTxt(span(f.wheelsDownAt, f.onBlockAt))],
+    ["Distance", `${Math.round(f.distanceNm).toLocaleString("en-US")} nm`],
+    ["Fuel used", fuel !== null && fuel > 0 ? `${Math.round(fuel).toLocaleString("en-US")} kg` : "—"],
+  ];
+  return <div className="debrief-times">{items.map(([k, v]) => <div key={k}><span>{k}</span><b className="data">{v}</b></div>)}</div>;
 }

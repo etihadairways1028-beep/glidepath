@@ -93,6 +93,9 @@ export interface MapViewProps {
   metars?: MetarDot[];
   /** RainViewer radar tile URL template, or null for off. */
   radarTiles?: string | null;
+  /** Animated radar: every frame is loaded once and shown by index. */
+  radarFrames?: Array<{ tiles: string; time: number }> | null;
+  radarIndex?: number;
   onSelectAtc?: (c: PlacedController | null) => void;
   onSelectMetar?: (m: MetarDot | null) => void;
   /** Visible area after each move: [west, south, east, north]. */
@@ -113,7 +116,7 @@ export interface MapViewProps {
   interactive?: boolean;
 }
 
-export function MapView({ trail, plan, aircraft, airports = [], traffic = [], atc = [], metars = [], radarTiles = null, onSelectAtc, onSelectMetar, onView, follow, center, zoom: startZoom, threeD = false, stands = [], agl = null, onGround = false, onSelectTraffic, onUserMove, interactive = true }: MapViewProps) {
+export function MapView({ trail, plan, aircraft, airports = [], traffic = [], atc = [], metars = [], radarTiles = null, radarFrames = null, radarIndex = 0, onSelectAtc, onSelectMetar, onView, follow, center, zoom: startZoom, threeD = false, stands = [], agl = null, onGround = false, onSelectTraffic, onUserMove, interactive = true }: MapViewProps) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<MLMap | null>(null);
   const [ready, setReady] = useState(false);
@@ -331,6 +334,27 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     if (m.getSource("radar")) m.removeSource("radar");
     if (radarTiles) addRadar(m, radarTiles);
   }, [ready, radarTiles]);
+
+  // Animated radar: one layer per frame, only the current one visible.
+  const framesKey = radarFrames?.map((f) => f.time).join(",") ?? "";
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !ready) return;
+    const style = m.getStyle();
+    for (const l of style.layers ?? []) if (l.id.startsWith("radarf-")) m.removeLayer(l.id);
+    for (const id of Object.keys(style.sources ?? {})) if (id.startsWith("radarf-")) m.removeSource(id);
+    if (!radarFrames?.length) return;
+    const before = m.getLayer("route-casing") ? "route-casing" : undefined;
+    radarFrames.forEach((f, i) => {
+      m.addSource(`radarf-${i}`, { type: "raster", tiles: [f.tiles], tileSize: 256, maxzoom: 7, attribution: i === 0 ? '<a href="https://www.rainviewer.com" target="_blank">RainViewer</a>' : undefined });
+      m.addLayer({ id: `radarf-${i}`, type: "raster", source: `radarf-${i}`, paint: { "raster-opacity": 0, "raster-opacity-transition": { duration: 250 }, "raster-fade-duration": 0 } }, before);
+    });
+  }, [ready, framesKey]);
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !ready || !radarFrames?.length) return;
+    radarFrames.forEach((_, i) => { if (m.getLayer(`radarf-${i}`)) m.setPaintProperty(`radarf-${i}`, "raster-opacity", i === radarIndex ? 0.7 : 0); });
+  }, [ready, framesKey, radarIndex]);
 
   // Airports (HTML markers)
   useEffect(() => {

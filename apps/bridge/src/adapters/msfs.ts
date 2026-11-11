@@ -19,6 +19,7 @@ import { EventEmitter } from "node:events";
 import {
   open,
   Protocol,
+  RawBuffer,
   SimConnectConstants,
   SimConnectDataType,
   SimConnectPeriod,
@@ -32,6 +33,13 @@ import { emptyFrame } from "@glidepath/protocol";
 import type { Logger } from "../log.js";
 import { profileForTitle } from "../profiles.js";
 import type { RawFrame, SimAdapter } from "./types.js";
+import { ALL_EVENTS, type Step } from "../remote.js";
+
+// Remote control ids
+const EVT_REMOTE_BASE = 1000; // + index into ALL_EVENTS
+const DEF_CAMERA = 3;
+const GROUP_PRIORITY_HIGHEST = 1;
+const FLAG_GROUPID_IS_PRIORITY = 16;
 
 const LB_TO_KG = 0.45359237;
 
@@ -226,6 +234,32 @@ export class MsfsAdapter extends EventEmitter implements SimAdapter {
     h.subscribeToSystemEvent(EVT_AIRCRAFT_LOADED, "AircraftLoaded");
     h.subscribeToSystemEvent(EVT_FLIGHT_LOADED, "FlightLoaded");
     h.subscribeToSystemEvent(EVT_CRASHED, "Crashed");
+    // Remote control: map each key event once, plus a definition for the camera.
+    ALL_EVENTS.forEach((name, i) => h.mapClientEventToSimEvent(EVT_REMOTE_BASE + i, name));
+    h.clearDataDefinition(DEF_CAMERA);
+    h.addToDataDefinition(DEF_CAMERA, "CAMERA STATE", "number", SimConnectDataType.INT32);
+  }
+
+  /** Send remote-control steps. Returns an error message, or null when sent. */
+  command(steps: Step[]): string | null {
+    const h = this.handle;
+    if (!h) return "The simulator isn't connected.";
+    try {
+      for (const st of steps) {
+        if (st.kind === "event") {
+          const i = ALL_EVENTS.indexOf(st.event);
+          if (i < 0) return `Unknown event ${st.event}`;
+          h.transmitClientEvent(SimConnectConstants.OBJECT_ID_USER, EVT_REMOTE_BASE + i, st.data ?? 0, GROUP_PRIORITY_HIGHEST, FLAG_GROUPID_IS_PRIORITY);
+        } else {
+          const buf = new RawBuffer(4);
+          buf.writeInt32(st.state);
+          h.setDataOnSimObject(DEF_CAMERA, SimConnectConstants.OBJECT_ID_USER, { buffer: buf, arrayCount: 0, tagged: false });
+        }
+      }
+      return null;
+    } catch (e) {
+      return e instanceof Error ? e.message : String(e);
+    }
   }
 
   private requestIdent(h: SimConnectConnection): void {

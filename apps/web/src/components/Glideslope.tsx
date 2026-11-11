@@ -7,22 +7,35 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useLive } from "../data/derive";
 import { settingsStore, store, useSettings } from "../data/store";
 
-interface Msg { id: number; title: string; body: string; tone: "info" | "good" | "warn" }
+interface Msg { id: number; title: string; body: string; tone: "info" | "good" | "warn"; href?: string }
 let msgs: Msg[] = [];
 const subs = new Set<() => void>();
 let nextId = 1;
 const emit = () => subs.forEach((f) => f());
-export function postFlightMessage(title: string, body: string, tone: Msg["tone"] = "info") {
-  const m = { id: nextId++, title, body, tone };
+export function postFlightMessage(title: string, body: string, tone: Msg["tone"] = "info", href?: string) {
+  const m = { id: nextId++, title, body, tone, href };
   msgs = [...msgs.slice(-2), m];
   emit();
-  window.setTimeout(() => { msgs = msgs.filter((x) => x.id !== m.id); emit(); }, 7000);
+  window.setTimeout(() => { msgs = msgs.filter((x) => x.id !== m.id); emit(); }, href ? 15000 : 7000);
+  void systemNotify(title, body, href);
   if (settingsStore.get().voiceCallouts && "speechSynthesis" in window) {
     const u = new SpeechSynthesisUtterance(`${title}. ${body}`);
     u.rate = 1.03; u.lang = "en-US";
     window.speechSynthesis.speak(u);
   }
 }
+/** A system notification too, when allowed and the app isn't on screen. Tapping it opens the app. */
+async function systemNotify(title: string, body: string, href?: string) {
+  try {
+    if (!settingsStore.get().systemNotifications || !("Notification" in window) || Notification.permission !== "granted") return;
+    if (document.visibilityState === "visible" && !href) return;
+    const reg = await navigator.serviceWorker?.getRegistration();
+    const url = href ?? "#/";
+    if (reg) await reg.showNotification(`Glidepath · ${title}`, { body, tag: `gp-${title}`, icon: "icons/icon-192.png", badge: "icons/icon-192.png", data: { url } });
+    else new Notification(`Glidepath · ${title}`, { body });
+  } catch { /* notifications are a bonus */ }
+}
+
 const useMsgs = () => useSyncExternalStore((f) => { subs.add(f); return () => subs.delete(f); }, () => msgs, () => msgs);
 
 const fl = (ft: number | null | undefined) => (ft == null ? "" : ft >= 18000 ? `FL${Math.round(ft / 100).toString().padStart(3, "0")}` : `${Math.round(ft / 100) * 100} ft`);
@@ -59,25 +72,39 @@ export function useFlightMessages() {
       case "DESCENT": once("desc", "Descent started", `${toGo ?? `Descending towards ${dest}`}.${eta ? ` Landing in about ${eta}.` : ""}`); break;
       case "APPROACH": once("app", "On approach", `Approaching ${dest}. Check your landing configuration.`); break;
       case "TAXI_IN": once("taxiin", `Welcome to ${dest}`, "Taxi to the gate."); break;
-      case "COMPLETED": once("done", "On blocks", "Flight saved to your logbook.", "good"); said.current.clear(); break;
+      case "COMPLETED": {
+        const id = L.flight?.id;
+        if (!said.current.has("done")) { said.current.add("done"); postFlightMessage("Your debrief is ready", "Flight saved to your logbook. Tap to see how it went.", "good", id ? `#/logbook/${id}` : "#/logbook"); }
+        said.current.clear(); break;
+      }
     }
     // A go-around or a new flight re-arms the approach and landing messages.
     if (phase === "CLIMB" && (prev === "APPROACH" || prev === "LANDING")) for (const k of ["app", "desc", "cruise"]) said.current.delete(k);
   }, [L.phase, flightMessages]);
 
-  // Top of descent coming up. Fires even if a reading is skipped (sim rate, a stutter).
+  // Top of descent: 10 minutes out, then now. Fires even if a reading is skipped (sim rate, a stutter).
   const todMin = L.tod && !L.tod.pastTod ? L.tod.minutesToTod : null;
   useEffect(() => {
     if (!flightMessages || todMin == null || L.phase !== "CRUISE") return;
     if (todMin <= 1) {
-      if (!said.current.has("tod1")) { said.current.add("tod1"); said.current.add("tod5"); postFlightMessage("Top of descent now", "Start your descent.", "warn"); }
-    } else if (todMin <= 5.2 && !said.current.has("tod5")) {
-      said.current.add("tod5");
-      postFlightMessage(`Top of descent in ${Math.round(todMin)} minutes`, "Time to brief the arrival.");
+      if (!said.current.has("tod1")) { said.current.add("tod1"); said.current.add("tod10"); postFlightMessage("Top of descent now", "Start your descent.", "warn"); }
+    } else if (todMin <= 10.3 && todMin > 2 && !said.current.has("tod10")) {
+      said.current.add("tod10");
+      postFlightMessage(`Top of descent in ${Math.round(todMin)} minutes`, "Time to brief the arrival and set up the approach.");
     }
   }, [todMin == null ? null : Math.round(todMin * 2), flightMessages, L.phase]);
 
+  // Arrival: 30 and 10 minutes to landing.
+  const toLandMin = L.timings?.toLandingMs != null && L.airborne ? L.timings.toLandingMs / 60000 : null;
+  useEffect(() => {
+    if (!flightMessages || toLandMin == null) return;
+    const dest = L.destination?.icao ?? L.flight?.arrivalIcao ?? "your destination";
+    if (toLandMin <= 10.3 && toLandMin > 3 && !said.current.has("arr10")) { said.current.add("arr10"); said.current.add("arr30"); postFlightMessage("10 minutes to landing", `About ${Math.round(toLandMin)} minutes to touchdown at ${dest}.`); }
+    else if (toLandMin <= 30.5 && toLandMin > 12 && !said.current.has("arr30")) { said.current.add("arr30"); postFlightMessage("30 minutes to landing", `Landing at ${dest} in about ${Math.round(toLandMin)} minutes.`); }
+  }, [toLandMin == null ? null : Math.round(toLandMin * 2), flightMessages]);
+
   useLightMessages(L);
+  useAtcAlerts(L);
 
   // Landing result.
   useEffect(() => { const off = store.subscribe(() => {
@@ -155,6 +182,48 @@ function useLightMessages(L: ReturnType<typeof useLive>) {
   }, [alt == null ? null : Math.round(alt / 100), key, L.phase, enginesRunning, lightMessages]);
 }
 
+/**
+ * ATC online alerts: polls the networks you show on the map every two minutes
+ * and tells you when a controller logs on at your departure or destination.
+ * Controllers already online when the flight starts are listed once.
+ */
+function useAtcAlerts(L: ReturnType<typeof useLive>) {
+  const st = useSettings();
+  const dep = L.flight?.departureIcao ?? L.plan?.origin.icao ?? null;
+  const arr = L.flight?.arrivalIcao ?? L.plan?.destination.icao ?? null;
+  const known = useRef<Map<string, Set<string>>>(new Map());
+  const active = !!L.frame && !L.completed && !!(dep || arr) && st.atcAlerts;
+  const nets = [st.showVatsim ? "vatsim" : null, st.showIvao ? "ivao" : null].filter(Boolean) as Array<"vatsim" | "ivao">;
+  useEffect(() => {
+    if (!active || !nets.length) return;
+    let stop = false;
+    const prefixes = [dep, arr].filter(Boolean).map((c) => `${c!.toUpperCase()}_`);
+    const tick = async () => {
+      for (const n of nets) {
+        try {
+          const { getLiveNetwork } = await import("../data/networks");
+          const live = await getLiveNetwork(n);
+          if (stop) return;
+          const here = live.controllers.filter((c) => c.facility !== "ATIS" && prefixes.some((p) => c.callsign.toUpperCase().startsWith(p)));
+          const key = `${n}:${dep}-${arr}`;
+          const seen = known.current.get(key);
+          const label = n === "vatsim" ? "VATSIM" : "IVAO";
+          if (!seen) {
+            known.current.set(key, new Set(here.map((c) => c.callsign)));
+            if (here.length) postFlightMessage(`ATC online (${label})`, here.slice(0, 4).map((c) => `${c.callsign}${c.frequency ? ` ${c.frequency}` : ""}`).join(", "));
+          } else {
+            for (const c of here) if (!seen.has(c.callsign)) { seen.add(c.callsign); postFlightMessage(`${c.callsign} is online`, `${label}${c.frequency ? `, ${c.frequency}` : ""}.`, "good"); }
+            for (const cs of [...seen]) if (!here.some((c) => c.callsign === cs)) seen.delete(cs);
+          }
+        } catch { /* try again next round */ }
+      }
+    };
+    void tick();
+    const t = window.setInterval(tick, 120_000);
+    return () => { stop = true; window.clearInterval(t); };
+  }, [active, dep, arr, nets.join(",")]);
+}
+
 export function GlideslopeBanners() {
   const list = useMsgs();
   const [, force] = useState(0);
@@ -162,10 +231,11 @@ export function GlideslopeBanners() {
   return (
     <div className="gs-stack" aria-live="polite">
       {list.map((m) => (
-        <div key={m.id} className={`glass strong gs-msg ${m.tone}`} role="status" onClick={() => { msgs = msgs.filter((x) => x.id !== m.id); emit(); force((n) => n + 1); }}>
+        <div key={m.id} className={`glass strong gs-msg ${m.tone}`} role="status" onClick={() => { if (m.href) location.hash = m.href.replace(/^#/, ""); msgs = msgs.filter((x) => x.id !== m.id); emit(); force((n) => n + 1); }}>
           <div className="gs-from"><span className="gs-dot" />Glideslope</div>
           <div className="gs-title">{m.title}</div>
           <div className="gs-body">{m.body}</div>
+          {m.href && <div className="gs-cta">Open debrief ›</div>}
         </div>
       ))}
     </div>

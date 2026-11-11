@@ -1,3 +1,5 @@
+import { RemoteScreen } from "./screens/Remote";
+import { ToolsScreen } from "./screens/Tools";
 import { ChecklistsScreen } from "./screens/Checklists";
 import { useEffect, useState, type ReactNode } from "react";
 import { Icon, Mark } from "./components/ui";
@@ -44,9 +46,11 @@ const NAV: Array<{ id: string; label: string; icon: () => ReactNode; mobile: boo
   { id: "home", label: "Home", icon: Icon.home, mobile: true },
   { id: "map", label: "Live map", icon: Icon.map, mobile: true },
   { id: "flight", label: "Flight", icon: Icon.flight, mobile: true },
-  { id: "copilot", label: "Copilot", icon: Icon.headset, mobile: true },
+  { id: "remote", label: "Remote", icon: Icon.remote, mobile: true },
+  { id: "copilot", label: "Copilot", icon: Icon.headset, mobile: false },
   { id: "logbook", label: "Logbook", icon: Icon.book, mobile: true },
   { id: "checklists", label: "Checklists", icon: Icon.checklist, mobile: false },
+  { id: "tools", label: "Pilot tools", icon: Icon.calc, mobile: false },
   { id: "cockpit", label: "Cockpit tools", icon: Icon.panel, mobile: false },
   { id: "weather", label: "Weather", icon: Icon.cloud, mobile: false },
   { id: "airports", label: "Airports", icon: Icon.tower, mobile: false },
@@ -148,6 +152,8 @@ export function App() {
     case "copilot": body = <CopilotScreen />; break;
     case "cockpit": body = <CockpitScreen />; break;
     case "checklists": body = <ChecklistsScreen />; break;
+    case "tools": body = <ToolsScreen />; break;
+    case "remote": body = <RemoteScreen />; break;
     case "weather": body = <WeatherScreen />; break;
     default: body = <Home />;
   }
@@ -177,7 +183,7 @@ export function App() {
           {NAV.filter((n) => n.mobile).map((n) => (
             <a key={n.id} className={`tab${screen === n.id ? " on" : ""}`} href={`#/${n.id}`}>{n.icon()}{n.label === "Live map" ? "Map" : n.label}</a>
           ))}
-          <a className={`tab${["airports", "settings", "glance", "account", "cockpit", "weather", "checklists"].includes(screen ?? "") ? " on" : ""}`} href="#/settings">{Icon.more()}More</a>
+          <a className={`tab${["airports", "settings", "glance", "account", "cockpit", "weather", "checklists", "tools", "copilot"].includes(screen ?? "") ? " on" : ""}`} href="#/settings">{Icon.more()}More</a>
         </nav>
       )}
     </>

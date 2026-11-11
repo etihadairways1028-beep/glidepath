@@ -457,12 +457,32 @@ export type CommandRequest = z.infer<typeof CommandRequest>;
 /* Wire messages                                                       */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Live camera: WebRTC signalling relayed by the Bridge. The PC (the "host")
+ * shares the simulator window; viewers on the same network watch it.
+ * The video itself goes device to device; the Bridge only passes these notes.
+ */
+export const RtcClient = z.object({
+  type: z.literal("rtc"),
+  kind: z.enum(["host-on", "host-off", "watch", "signal", "leave"]),
+  to: z.string().max(64).optional(),
+  data: z.unknown().optional(),
+});
+export const RtcServer = z.object({
+  type: z.literal("rtc"),
+  kind: z.enum(["host-state", "watch", "signal", "leave"]),
+  from: z.string().max(64).optional(),
+  live: z.boolean().optional(),
+  data: z.unknown().optional(),
+});
+
 /** Messages from a client (app) to the Bridge. */
 export const ClientMessage = z.discriminatedUnion("type", [
   z.object({ type: z.literal("hello"), protocolVersion: z.number().int(), client: z.string().max(64), lastSeq: z.number().int().nonnegative().nullable() }),
   z.object({ type: z.literal("resume"), fromSeq: z.number().int().nonnegative() }),
   z.object({ type: z.literal("ping"), t: z.number() }),
   CommandRequest,
+  RtcClient,
 ]);
 export type ClientMessage = z.infer<typeof ClientMessage>;
 
@@ -478,6 +498,7 @@ export const ServerMessage = z.discriminatedUnion("type", [
   z.object({ type: z.literal("commandState"), id: z.string(), state: CommandState, detail: z.string().nullable() }),
   z.object({ type: z.literal("pong"), t: z.number() }),
   z.object({ type: z.literal("error"), code: z.string(), message: z.string() }),
+  RtcServer,
 ]);
 export type ServerMessage = z.infer<typeof ServerMessage>;
 

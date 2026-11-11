@@ -119,6 +119,7 @@ async function main(): Promise<void> {
     }
   });
   adapter.on("sessionEnd", () => session.endSession());
+  server.setRemote(adapter);
 
   try {
     await server.start();

@@ -59,13 +59,16 @@ export interface Settings {
   flightMessages: boolean;
   /** Messages when the aircraft lights are switched, plus light reminders. */
   lightMessages: boolean;
+  /** Also show Glideslope messages as system notifications (when the app is in the background). */
+  systemNotifications: boolean;
+  atcAlerts: boolean;
   showAtc: boolean;
   showRadar: boolean;
   showMetars: boolean;
 }
 
 const DEFAULT_SETTINGS: Settings = {
-  bridgeUrl: "", token: "", simbriefUser: "", showVatsim: true, showIvao: false, showSayIntentions: false, fuelUnit: "kg", accent: "glideslope", theme: "system", voiceCallouts: false, reduceTransparency: false, mapStyle: "map", map3d: false, flightMessages: true, lightMessages: true, showAtc: true, showRadar: false, showMetars: false,
+  bridgeUrl: "", token: "", simbriefUser: "", showVatsim: true, showIvao: false, showSayIntentions: false, fuelUnit: "kg", accent: "glideslope", theme: "system", voiceCallouts: false, reduceTransparency: false, mapStyle: "map", map3d: false, flightMessages: true, systemNotifications: false, atcAlerts: true, lightMessages: true, showAtc: true, showRadar: false, showMetars: false,
 };
 
 const initial: AppState = {

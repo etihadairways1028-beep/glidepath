@@ -70,6 +70,26 @@ export class BridgeClient {
 
   constructor(private readonly base: string, private readonly token: string) {}
 
+  /* ---- Remote control ---- */
+  private cmdWaiters = new Map<string, (r: { state: string; detail: string | null }) => void>();
+  /** Send a command; resolves with the final state (confirmed, timeout, rejected, …). */
+  command(capability: string, value: number | boolean | null, confirmed = false): Promise<{ state: string; detail: string | null }> {
+    const id = `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+    return new Promise((resolve) => {
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) { resolve({ state: "rejected", detail: "Not connected to your PC." }); return; }
+      const t = window.setTimeout(() => { this.cmdWaiters.delete(id); resolve({ state: "timeout", detail: "No answer from your PC." }); }, 8000);
+      this.cmdWaiters.set(id, (r) => { window.clearTimeout(t); resolve(r); });
+      this.ws.send(JSON.stringify({ type: "command", id, capability, value, confirmed }));
+    });
+  }
+
+  /* ---- Live camera signalling ---- */
+  rtcListeners = new Set<(m: { kind: string; from?: string; live?: boolean; data?: unknown }) => void>();
+  cameraLive = false;
+  rtc(kind: "host-on" | "host-off" | "watch" | "signal" | "leave", to?: string, data?: unknown): void {
+    if (this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify({ type: "rtc", kind, to, data }));
+  }
+
   /** The address this device reaches the Bridge on. */
   get baseUrl(): string { return this.base; }
 
@@ -218,6 +238,16 @@ export class BridgeClient {
         break;
       case "error":
         if (msg.code === "protocol_mismatch") store.set({ connMessage: msg.message });
+        break;
+      case "commandState": {
+        if (msg.state === "pending") break;
+        const w = this.cmdWaiters.get(msg.id);
+        if (w) { this.cmdWaiters.delete(msg.id); w({ state: msg.state, detail: msg.detail }); }
+        break;
+      }
+      case "rtc":
+        if (msg.kind === "host-state") this.cameraLive = !!msg.live;
+        this.rtcListeners.forEach((f) => f(msg));
         break;
     }
   }

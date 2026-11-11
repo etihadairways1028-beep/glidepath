@@ -17,6 +17,8 @@ export interface SimAdapter extends EventEmitter {
   readonly id: string;
   start(): Promise<void>;
   stop(): Promise<void>;
+  /** Remote control: send steps to the simulator. Error message, or null when sent. Absent = not supported. */
+  command?(steps: import("../remote.js").Step[]): string | null;
   on<E extends keyof AdapterEvents>(event: E, listener: AdapterEvents[E]): this;
   emit<E extends keyof AdapterEvents>(event: E, ...args: Parameters<AdapterEvents[E]>): boolean;
 }

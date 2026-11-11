@@ -31,6 +31,8 @@ import { HttpError, type AiConfig, type AiService, type ChatMessage } from "./ai
 import type { ExternalData } from "./external.js";
 import type { AirportDb } from "@glidepath/aviation-data";
 import { appAsset } from "./assets.js";
+import { commandDone, planCommand, type Capability } from "./remote.js";
+import type { SimAdapter } from "./adapters/types.js";
 
 /** Websites allowed to call this Bridge from a browser (the hosted Glidepath app). */
 const ALLOWED_ORIGINS = [/^https:\/\/etihadairways1028-beep\.github\.io$/, /^http:\/\/localhost(:\d+)?$/, /^http:\/\/127\.0\.0\.1(:\d+)?$/];
@@ -42,6 +44,8 @@ interface Client {
   queued: { frame: TelemetryFrame; phase: FlightPhase } | null;
   /** Messages per 10 s window, for rate limiting. */
   msgCount: number;
+  /** Short random id, used to route camera signalling. */
+  id: string;
 }
 
 export class LanServer {
@@ -158,13 +162,14 @@ export class LanServer {
   /* ---------------- WebSocket ---------------- */
 
   private onConnection(ws: WebSocket, name: string): void {
-    const client: Client = { ws, name: name.slice(0, 64), lastFrameSent: 0, queued: null, msgCount: 0 };
+    const client: Client = { ws, name: name.slice(0, 64), lastFrameSent: 0, queued: null, msgCount: 0, id: randomInt(1e9, 9e9).toString(36) };
     this.clients.add(client);
     this.log.info(`Client connected: ${client.name} (${this.clients.size} total)`);
     this.send(client, { type: "welcome", status: this.getStatus(), flight: this.session.activeFlight });
+    this.send(client, { type: "rtc", kind: "host-state", live: !!this.cameraHost });
 
     ws.on("message", (data) => {
-      if (++client.msgCount > 100) {
+      if (++client.msgCount > 240) {
         this.send(client, { type: "error", code: "rate_limited", message: "Too many messages" });
         return;
       }
@@ -179,6 +184,8 @@ export class LanServer {
     });
     ws.on("close", () => {
       this.clients.delete(client);
+      if (this.cameraHost === client) { this.cameraHost = null; this.broadcast({ type: "rtc", kind: "host-state", live: false }); }
+      else if (this.cameraHost) this.send(this.cameraHost, { type: "rtc", kind: "leave", from: client.id });
       this.log.info(`Client disconnected: ${client.name} (${this.clients.size} left)`);
     });
     ws.on("error", (e) => this.log.warn(`Client ${client.name} error`, e.message));
@@ -199,10 +206,79 @@ export class LanServer {
         this.send(client, { type: "pong", t: msg.t });
         break;
       case "command":
-        // Remote control is Stage 5. Say so honestly instead of pretending.
-        this.send(client, { type: "commandState", id: msg.id, state: "unsupported", detail: "Remote control is not available in this Bridge version" });
+        this.runCommand(client, msg);
+        break;
+      case "rtc":
+        this.onRtc(client, msg);
         break;
     }
+  }
+
+  /* ---------- Live camera (WebRTC signalling only) ---------- */
+  private cameraHost: Client | null = null;
+  private onRtc(client: Client, msg: Extract<ClientMessage, { type: "rtc" }>): void {
+    switch (msg.kind) {
+      case "host-on":
+        this.cameraHost = client;
+        this.log.info(`Live camera shared from ${client.name}`);
+        this.broadcast({ type: "rtc", kind: "host-state", live: true });
+        break;
+      case "host-off":
+        if (this.cameraHost === client) { this.cameraHost = null; this.broadcast({ type: "rtc", kind: "host-state", live: false }); }
+        break;
+      case "watch":
+        if (this.cameraHost) this.send(this.cameraHost, { type: "rtc", kind: "watch", from: client.id });
+        else this.send(client, { type: "rtc", kind: "host-state", live: false });
+        break;
+      case "leave":
+        if (this.cameraHost && this.cameraHost !== client) this.send(this.cameraHost, { type: "rtc", kind: "leave", from: client.id });
+        break;
+      case "signal": {
+        const to = client === this.cameraHost ? [...this.clients].find((c) => c.id === msg.to) : this.cameraHost;
+        if (to) this.send(to, { type: "rtc", kind: "signal", from: client.id, data: msg.data });
+        break;
+      }
+    }
+  }
+
+  /* ---------- Remote control ---------- */
+  private remoteAdapter: SimAdapter | null = null;
+  private lastFrame: TelemetryFrame | null = null;
+  private waiting: Array<{ client: Client; id: string; cap: Capability; value: number | boolean | null; until: number }> = [];
+
+  /** Give the server the adapter, so the app can send commands to the sim. */
+  setRemote(adapter: SimAdapter): void {
+    this.remoteAdapter = adapter;
+    adapter.on("frame", (f) => {
+      this.lastFrame = { ...f, seq: 0 } as TelemetryFrame;
+      if (!this.waiting.length) return;
+      const now = Date.now();
+      this.waiting = this.waiting.filter((w) => {
+        if (commandDone(w.cap, w.value, this.lastFrame!)) { this.send(w.client, { type: "commandState", id: w.id, state: "confirmed", detail: null }); return false; }
+        if (now > w.until) { this.send(w.client, { type: "commandState", id: w.id, state: "timeout", detail: `Sent to the sim, but ${w.cap.label.toLowerCase()} didn't change. This aircraft may use its own systems for it.` }); return false; }
+        return true;
+      });
+    });
+  }
+
+  private runCommand(client: Client, msg: Extract<ClientMessage, { type: "command" }>): void {
+    const a = this.remoteAdapter;
+    if (!a?.command) { this.send(client, { type: "commandState", id: msg.id, state: "unsupported", detail: "Remote control works with Microsoft Flight Simulator, not the demo replay." }); return; }
+    const plan = planCommand(msg.capability, msg.value, msg.confirmed, this.lastFrame);
+    if (!plan.ok) { this.send(client, { type: "commandState", id: msg.id, state: plan.state, detail: plan.detail }); return; }
+    if (plan.already) { this.send(client, { type: "commandState", id: msg.id, state: "confirmed", detail: "Already set." }); return; }
+    const err = a.command(plan.steps);
+    if (err) { this.send(client, { type: "commandState", id: msg.id, state: "rejected", detail: err }); return; }
+    this.log.info(`Remote: ${plan.cap.label}${msg.value !== null ? ` → ${String(msg.value)}` : ""}`);
+    this.send(client, { type: "commandState", id: msg.id, state: "pending", detail: null });
+    this.waiting.push({ client, id: msg.id, cap: plan.cap, value: msg.value, until: Date.now() + 4000 });
+    // If frames stop (paused, disconnected), still answer.
+    setTimeout(() => {
+      const w = this.waiting.find((x) => x.id === msg.id);
+      if (!w) return;
+      this.waiting = this.waiting.filter((x) => x !== w);
+      this.send(client, { type: "commandState", id: msg.id, state: commandDone(w.cap, w.value, this.lastFrame ?? ({} as TelemetryFrame)) ? "confirmed" : "timeout", detail: "No reply from the sim in time." });
+    }, 5000);
   }
 
   /** Send every frame after `seq`, in chunks, from memory or disk. */
