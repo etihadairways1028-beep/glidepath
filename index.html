@@ -26,11 +26,11 @@
       <a class="brand" href="#" aria-label="Glidepath home"><img src="assets/mark.svg" alt="" width="28" height="28"><span>Glidepath</span></a>
       <div class="links">
         <a href="#features">Features</a>
+        <a href="#remote">Remote</a>
+        <a href="#gate">Gate to gate</a>
         <a href="#debrief">Debrief</a>
-        <a href="#demo">Demo</a>
-        <a href="#brief">Monthly brief</a>
         <a href="#aircraft">Aircraft</a>
-        <a href="#today">What works</a>
+        <a href="#faq">FAQ</a>
         <a href="app/">App</a>
       </div>
       <button class="btn glass small" id="acct-btn" type="button" hidden>Sign in</button>
@@ -39,11 +39,14 @@
     </nav>
     <div class="menu-sheet glass strong" id="menu-sheet" hidden>
       <a href="#features">Features</a>
+      <a href="#remote">Remote control and camera</a>
+      <a href="#gate">Gate to gate</a>
       <a href="#debrief">Landing debrief</a>
       <a href="#demo">Watch the demo</a>
       <a href="#brief">Monthly brief</a>
       <a href="#aircraft">Aircraft compatibility</a>
       <a href="#today">What works today</a>
+      <a href="#faq">Questions</a>
       <a href="app/">Open the app</a>
       <a href="#download">Download for Windows</a>
     </div>
@@ -115,7 +118,15 @@
       </div>
     </section>
 
-    <p class="sources reveal">Built on open data: <span>OurAirports</span><span>SimBrief</span><span>VATSIM</span><span>IVAO</span><span>aviationweather.gov</span><span>OpenStreetMap</span><span>Sentinel-2</span></p>
+    <p class="sources reveal">Built on open data: <span>OurAirports</span><span>SimBrief</span><span>VATSIM</span><span>IVAO</span><span>aviationweather.gov</span><span>OpenStreetMap</span><span>Esri World Imagery</span><span>RainViewer</span></p>
+
+    <!-- LIVE NETWORK -->
+    <div class="netlive glass reveal" id="netlive" aria-live="polite">
+      <span class="nl-dot"></span><span class="nl-k">Online right now</span>
+      <span class="nl-item"><b class="data" id="nl-vp">…</b> pilots and <b class="data" id="nl-vc">…</b> controllers on VATSIM</span>
+      <span class="nl-item"><b class="data" id="nl-ip">…</b> pilots and <b class="data" id="nl-ic">…</b> controllers on IVAO</span>
+      <span class="nl-src">Live from the networks' public data. Glidepath shows them all on your map.</span>
+    </div>
 
     <!-- FEATURES -->
     <section id="features" class="features" aria-labelledby="features-title">
@@ -140,27 +151,10 @@
         </article>
 
         <article class="tile glass t-map reveal">
-          <div class="map-art" aria-hidden="true">
-            <svg viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice">
-              <defs>
-                <linearGradient id="trailg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#64D2FF"/><stop offset=".6" stop-color="#0A84FF"/><stop offset="1" stop-color="#BF5AF2"/></linearGradient>
-                <radialGradient id="land" cx=".4" cy=".55" r=".8"><stop offset="0" stop-color="#1d3a2c"/><stop offset=".6" stop-color="#14261f"/><stop offset="1" stop-color="#0b1a24"/></radialGradient>
-                <filter id="glow"><feGaussianBlur stdDeviation="4"/></filter>
-              </defs>
-              <rect width="400" height="260" fill="url(#land)"/>
-              <path d="M0 210 C 60 200, 90 230, 150 225 S 260 250, 400 235 V260 H0Z" fill="#0b2033"/>
-              <path d="M300 0 C 320 40, 360 60, 400 70 V0Z" fill="#0b2033"/>
-              <path class="route" d="M80 205 C 140 170, 190 120, 250 92 S 320 52, 336 44" fill="none" stroke="#E05CFF" stroke-width="2" stroke-dasharray="6 5" opacity=".9"/>
-              <path class="trail" d="M80 205 C 140 170, 190 120, 250 92" fill="none" stroke="url(#trailg)" stroke-width="10" opacity=".35" filter="url(#glow)"/>
-              <path class="trail" d="M80 205 C 140 170, 190 120, 250 92" fill="none" stroke="url(#trailg)" stroke-width="3.5" stroke-linecap="round"/>
-              <circle cx="80" cy="205" r="6" fill="#30D158" stroke="#fff" stroke-width="2.5"/>
-              <circle cx="336" cy="44" r="6" fill="#FF9F0A" stroke="#fff" stroke-width="2.5"/>
-              <g transform="translate(250 92) rotate(58)"><circle r="18" fill="#0A84FF" opacity=".3"/><path d="M0 -12c1 0 1.7 1 1.7 2.4v6.8l9.4 5.5v2.6l-9.4-2.8v5.6l2.8 2.2v1.8L0 24.9l-4.5 1.1v-1.8l2.8-2.2v-5.6l-9.4 2.8v-2.6l9.4-5.5v-6.8C-1.7-11-1-12 0-12z" fill="#fff" stroke="#0A84FF" stroke-width="1.2" transform="translate(0 -6)"/></g>
-            </svg>
-          </div>
+          <div class="map-art shot"><img src="assets/shots/map.webp" alt="Glidepath map of Zurich airport: runways 10/28 and 16/34 with every taxiway named in yellow" loading="lazy" width="968" height="504"></div>
           <div class="tile-over">
-            <h3>Satellite map with your trail</h3>
-            <p>Sentinel-2 imagery or six street styles. Your route, your trail, and VATSIM, IVAO and SayIntentions traffic around you.</p>
+            <h3>Airport maps you can taxi by</h3>
+            <p>Every taxiway named, every runway numbered, from OpenStreetMap. Zurich, as the app draws it. Plus sharp satellite imagery, your route and trail, and VATSIM, IVAO and SayIntentions traffic.</p>
           </div>
         </article>
 
@@ -208,6 +202,59 @@
           </ul>
           <p class="tile-foot">Example numbers to show the layout. First logbook row is the demo flight; the other two are examples.</p>
         </article>
+      </div>
+    </section>
+
+    <!-- REMOTE -->
+    <section id="remote" class="remote" aria-labelledby="remote-title">
+      <div class="section-head reveal">
+        <p class="kicker">Remote control and live camera</p>
+        <h2 id="remote-title">Fly from the sofa. Free.</h2>
+        <p class="lede">Set the autopilot, flick the lights, start the engines and watch the cockpit from your iPad, phone or laptop. No subscription, nothing locked.</p>
+      </div>
+      <div class="remote-grid">
+        <figure class="glass shot-card reveal r-ap"><img src="assets/shots/autopilot.webp" alt="Glidepath autopilot panel: speed 290 kt, heading 337, altitude 24,000 ft, AP, FD, A/THR and NAV engaged" loading="lazy" width="968" height="247"><figcaption>Autopilot: speed, heading, altitude and vertical speed, plus every mode. Tap a number to type it.</figcaption></figure>
+        <figure class="glass shot-card reveal r-eng"><img src="assets/shots/engines.webp" alt="Glidepath engine panel: two engines at 88% N1 with N2, EGT and fuel flow" loading="lazy" width="477" height="380"><figcaption>Engines: N1, N2, EGT and fuel flow, live. Auto-start and shutdown on the ground.</figcaption></figure>
+        <article class="glass r-cam reveal">
+          <div class="cam-mock" aria-hidden="true"><span class="cam-live"><i></i>LIVE</span><span class="cam-seg"><b>Cockpit</b><span>Outside</span><span>Drone</span></span></div>
+          <h3>Live camera</h3>
+          <p>Your sim PC shares its screen, and your iPad watches it over your Wi-Fi, device to device. Switch between cockpit, outside and drone views from the couch.</p>
+        </article>
+        <article class="glass r-list reveal">
+          <h3>Every button tells the truth</h3>
+          <p>Glidepath checks the simulator's own data after each tap. You see <b>Done</b> only when the sim actually changed, and a plain warning when an aircraft ignores a control.</p>
+          <ul class="ticks">
+            <li>Lights: beacon, strobes, landing, taxi, nav, logo, wing</li>
+            <li>Parking brake, gear, flaps and pause</li>
+            <li>Safety checks: no gear up on the ground, no engine shutdown in the air</li>
+          </ul>
+          <p class="fine">Uses the simulator's standard controls. Default aircraft respond to all of them; PMDG, Fenix and FSLabs run their own systems and may ignore some. Built and checked on our side; first tests in the sim are happening now.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- GATE TO GATE -->
+    <section id="gate" class="gate" aria-labelledby="gate-title">
+      <div class="section-head reveal">
+        <p class="kicker">Gate to gate</p>
+        <h2 id="gate-title">Walk away from the desk. Glidepath tells you when to come back.</h2>
+      </div>
+      <div class="gate-wrap">
+        <ol class="gate-line reveal">
+          <li><b>Preflight</b><span>Load your SimBrief plan. Checklists open for the phase you're in, and tick themselves from the sim.</span></li>
+          <li><b>Pushback and taxi</b><span>Recording starts by itself. Beacon off with engines running? You'll hear about it.</span></li>
+          <li><b>Take-off</b><span>Rotation, lift-off and climb measured from the roll to 1,500 ft.</span></li>
+          <li><b>Cruise</b><span>"Cruise reached", then top of descent 10 minutes out, ATC coming online at your destination, and the weather radar ahead.</span></li>
+          <li><b>Descent and approach</b><span>10 minutes to landing, landing lights at 10,000 ft, and a stable-approach check at 1,000 and 500 ft.</span></li>
+          <li><b>On blocks</b><span>Your debrief arrives as a message. One tap opens it: grades, block and air time, fuel, and what to try next time.</span></li>
+        </ol>
+        <div class="gate-msgs reveal" aria-label="Example messages from Glidepath">
+          <div class="gmsg glass"><span class="gm-from"><i class="b"></i>Glidepath</span><b>Top of descent in 10 minutes</b><span>Time to brief the arrival and set up the approach.</span></div>
+          <div class="gmsg glass"><span class="gm-from"><i class="g"></i>Glidepath</span><b>EGCC_APP is online</b><span>VATSIM, 118.580.</span></div>
+          <div class="gmsg glass"><span class="gm-from"><i class="b"></i>Glidepath</span><b>10 minutes to landing</b><span>About 10 minutes to touchdown at EGCC.</span></div>
+          <div class="gmsg glass"><span class="gm-from"><i class="g"></i>Glidepath</span><b>Your debrief is ready</b><span>Flight saved to your logbook. Tap to see how it went.</span><em>Open debrief ›</em></div>
+          <p class="fine">The real wording the app uses. Shown on screen, read out loud if you like, and as notifications when Glidepath is in the background.</p>
+        </div>
       </div>
     </section>
 
@@ -404,6 +451,10 @@
             <li><b>Cockpit tools:</b> Fenix and FSLabs EFBs, the GSX remote and FlyByWire SimBridge, opened from your PC. Built on each add-on's documented address, not yet tried with every add-on.</li>
             <li><b>Airport maps</b> with taxiways, gates and stands, and a 3D chase view over real terrain.</li>
             <li><b>Lights messages and reminders</b> (beacon, strobes, landing lights at 10,000 ft). Work with aircraft that use the simulator's standard light switches; some add-ons, like Fenix, run their own and may not report them.</li>
+            <li><b>Remote control</b>: autopilot, lights, gear, flaps, parking brake, pause, engine auto-start and camera views. Standard simulator controls; each button checks the sim really changed. Not yet tried in the sim.</li>
+            <li><b>Live camera</b> from your sim PC to your iPad over Wi-Fi. Checked between two browsers; not yet with the sim.</li>
+            <li><b>Messages</b> for top of descent in 10 minutes, 10 and 30 minutes to landing, ATC online at your airports, and a debrief message that opens the debrief. Also as notifications when Glidepath is in the background.</li>
+            <li><b>Live airport boards</b> from VATSIM and IVAO, an <b>animated rain radar</b>, and <b>pilot tools</b> (clocks, crosswind, descent, approach path, fuel, converter).</li>
             <li><b>Sharper satellite map</b> from Esri World Imagery near airports and cities, with roads and airport markings on top.</li>
             <li><b>Accounts:</b> sign up, sign in, several accounts per device, flights synced between devices. Built on Cloudflare and tested locally; live once the service is deployed. The monthly email needs an email service on top.</li>
           </ul>
@@ -411,13 +462,61 @@
           <ul>
             <li><b>Native iPhone and iPad app</b> with a Lock Screen Live Activity.</li>
             <li><b>PMDG 737 and 777 CDU</b> on your iPad, through PMDG's SDK.</li>
-            <li><b>Remote control</b> of your aircraft, and <b>X-Plane</b>.</li>
+            <li><b>Watching away from home</b> over mobile data (needs a small free relay server).</li>
+            <li><b>Replying to ATC</b> from the iPad, and <b>X-Plane</b>.</li>
           </ul>
         </div>
       </div>
     </section>
 
     <!-- DOWNLOAD -->
+
+    <!-- FREE -->
+    <section id="free" class="free" aria-labelledby="free-title">
+      <div class="section-head reveal">
+        <p class="kicker">No plans, no tiers</p>
+        <h2 id="free-title">Free. All of it.</h2>
+        <p class="lede">Other companion apps keep remote control, history and the good bits behind a monthly fee. Glidepath doesn't have a paid version.</p>
+      </div>
+      <div class="free-grid reveal">
+        <div class="glass">Live map with network traffic and ATC</div>
+        <div class="glass">Remote control: autopilot, lights, engines</div>
+        <div class="glass">Live camera to your iPad</div>
+        <div class="glass">ATC online alerts</div>
+        <div class="glass">Unlimited logbook, replays and debriefs</div>
+        <div class="glass">Bridge on as many PCs as you own</div>
+        <div class="glass">Animated rain radar and METAR</div>
+        <div class="glass">Live airport boards</div>
+        <div class="glass">Checklists, badges and pilot tools</div>
+        <div class="glass">iPad, iPhone, Android, Mac and PC</div>
+      </div>
+    </section>
+
+    <!-- USE CASES -->
+    <section class="uses" aria-labelledby="uses-title">
+      <div class="section-head reveal"><p class="kicker">Made for</p><h2 id="uses-title">However you fly.</h2></div>
+      <div class="uses-grid">
+        <article class="glass reveal"><h3>Long haul</h3><p>Cook dinner during a 9-hour cruise. Top of descent and ATC alerts find you; the camera shows the flight deck from the kitchen.</p></article>
+        <article class="glass reveal"><h3>VATSIM and IVAO</h3><p>Every controller and pilot on the map, live boards for your airports, and a message when your centre comes online.</p></article>
+        <article class="glass reveal"><h3>Landing practice</h3><p>Seven-factor grades with the thresholds published, a touchdown diagram and a replay of every approach.</p></article>
+        <article class="glass reveal"><h3>Second screen</h3><p>Put the iPad next to your yoke: map, autopilot, engines and checklists without alt-tabbing.</p></article>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section id="faq" class="faq" aria-labelledby="faq-title">
+      <div class="section-head reveal"><p class="kicker">Questions</p><h2 id="faq-title">Good to know.</h2></div>
+      <div class="faq-list reveal">
+        <details class="glass"><summary>Is it really free?</summary><p>Yes. There is no paid version and nothing is locked. Glidepath runs on free services, and your flight data stays on your own PC and devices.</p></details>
+        <details class="glass"><summary>Do I need an App Store app?</summary><p>No. Open the app link in Safari on your iPad or iPhone and add it to your Home Screen. It also works in any browser on Android, Mac and PC.</p></details>
+        <details class="glass"><summary>Which simulators work?</summary><p>Microsoft Flight Simulator 2020 and 2024. X-Plane isn't supported yet.</p></details>
+        <details class="glass"><summary>Will remote control work with PMDG, Fenix or FSLabs?</summary><p>Partly. Glidepath uses the simulator's standard controls. Default aircraft respond to all of them; study-level add-ons run their own systems and may ignore some. Every button tells you whether the sim actually changed.</p></details>
+        <details class="glass"><summary>Can I watch my flight away from home?</summary><p>Not yet. Today everything runs over your home Wi-Fi. Watching over mobile data needs a small free relay server and is next on the list.</p></details>
+        <details class="glass"><summary>Do I need to put anything in my Community folder?</summary><p>No. The Bridge talks to the sim through SimConnect, which is built into Microsoft Flight Simulator.</p></details>
+        <details class="glass"><summary>Is my data private?</summary><p>Live telemetry never leaves your network. If you make an account, only flight summaries are stored, so your logbook follows you between devices. Delete your account in the app and it's all gone.</p></details>
+        <details class="glass"><summary>Windows says it protected my PC. Is that safe?</summary><p>Windows shows that for new apps that aren't code-signed yet. Check the file's SHA-256 against the one on this page, then choose <i>More info</i> and <i>Run</i>. The code is open on GitHub.</p></details>
+      </div>
+    </section>
     <section id="download" class="download" aria-labelledby="download-title">
       <div class="dl glass strong reveal">
         <div class="dl-main">

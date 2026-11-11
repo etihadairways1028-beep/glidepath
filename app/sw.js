@@ -11,3 +11,12 @@ self.addEventListener("fetch", (e) => {
     return res;
   }).catch(() => caches.match(e.request).then((r) => r || caches.match("./index.html"))));
 });
+// Tapping a Glidepath notification opens the app on the right screen.
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const target = new URL(e.notification.data?.url || "./", self.registration.scope).href;
+  e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+    for (const c of list) { if ("focus" in c) { c.navigate(target).catch(() => undefined); return c.focus(); } }
+    return self.clients.openWindow(target);
+  }));
+});
