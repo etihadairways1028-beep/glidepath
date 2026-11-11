@@ -350,3 +350,18 @@
     ["nl-vp", "nl-vc", "nl-ip", "nl-ic"].forEach((id) => { const n = document.getElementById(id); if (n) mo.observe(n, { childList: true, characterData: true, subtree: true }); });
   }
 })();
+
+/* Liquid ripple from where you press a button. */
+(function ripple() {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  document.addEventListener("pointerdown", (e) => {
+    const b = e.target.closest && e.target.closest(".btn");
+    if (!b) return;
+    const r = b.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2.2;
+    const s = document.createElement("span");
+    s.className = "site-ripple";
+    s.style.cssText = `width:${d}px;height:${d}px;left:${e.clientX - r.left - d / 2}px;top:${e.clientY - r.top - d / 2}px`;
+    b.appendChild(s);
+    s.addEventListener("animationend", () => s.remove());
+  }, { passive: true });
+})();
