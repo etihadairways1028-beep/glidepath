@@ -579,3 +579,6 @@ section, .hero, footer { background: transparent !important; }
   .btn:active { transform: scale(.9) !important; transition-duration: .1s !important; }
 }
 .btn { position: relative; overflow: hidden; }
+/* Live camera card: a real cockpit screenshot from MSFS */
+.cam-mock { background: url(assets/shots/cockpit.webp) center 60% / cover no-repeat !important; }
+.cam-mock::after { display: none !important; }
