@@ -16,11 +16,19 @@
     get() { try { return JSON.parse(localStorage.getItem(KEY) || "null"); } catch (_) { return null; } },
     set(v) { try { v ? localStorage.setItem(KEY, JSON.stringify(v)) : localStorage.removeItem(KEY); } catch (_) { /* blocked */ } },
   };
+  // On Cloudflare Pages the site forwards /acct to the service (some networks block *.workers.dev).
+  let bases = /\.pages\.dev$/.test(location.hostname) ? [location.origin + "/acct", api] : [api];
   async function call(path, method, body, token) {
-    let r;
-    try {
-      r = await fetch(api + path, { method: method || "GET", headers: Object.assign({}, body ? { "Content-Type": "application/json" } : {}, token ? { Authorization: "Bearer " + token } : {}), body: body ? JSON.stringify(body) : undefined });
-    } catch (_) { throw new Error("Couldn't reach the account service. Check your internet connection."); }
+    let r = null;
+    for (const base of bases) {
+      try {
+        r = await fetch(base + path, { method: method || "GET", headers: Object.assign({}, body ? { "Content-Type": "application/json" } : {}, token ? { Authorization: "Bearer " + token } : {}), body: body ? JSON.stringify(body) : undefined });
+        if (r.status === 404 && base !== api) { r = null; continue; }
+        if (bases[0] !== base) bases = [base].concat(bases.filter((b) => b !== base));
+        break;
+      } catch (_) { r = null; }
+    }
+    if (!r) throw new Error("Couldn't reach the account service. Check your internet connection, then try again.");
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(j.error || "The account service said " + r.status + ".");
     return j;
