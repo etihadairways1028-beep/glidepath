@@ -2,20 +2,43 @@
   "name": "Glidepath",
   "short_name": "Glidepath",
   "description": "Your sim flight, live on every screen.",
-  "start_url": "./#/home",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#050914",
-  "theme_color": "#050914",
+  "background_color": "#060818",
+  "theme_color": "#060818",
   "icons": [
-    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ],
   "shortcuts": [
-    { "name": "Live map", "url": "./#/map" },
-    { "name": "Glance mode", "url": "./#/glance" },
-    { "name": "Logbook", "url": "./#/logbook" }
-  ]
+    {
+      "name": "Live map",
+      "url": "./#/map"
+    },
+    {
+      "name": "Glance mode",
+      "url": "./#/glance"
+    },
+    {
+      "name": "Logbook",
+      "url": "./#/logbook"
+    }
+  ],
+  "id": "./"
 }
