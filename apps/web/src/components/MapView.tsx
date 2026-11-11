@@ -157,7 +157,7 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
   const acMarker = useRef<maplibregl.Marker | null>(null);
   const aptMarkers = useRef<maplibregl.Marker[]>([]);
   const atcMarkers = useRef<maplibregl.Marker[]>([]);
-  const acAnim = useRef<{ t0: number; at: (t: number) => [number, number, number] } | null>(null);
+  const acAnim = useRef<{ t0: number; end: number; at: (t: number) => [number, number, number] } | null>(null);
   const acRaf = useRef(0);
   const fitted = useRef(false);
   const [tilesOk, setTilesOk] = useState(true);
@@ -468,6 +468,7 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
       const dh = ((to[2] - from[2] + 540) % 360) - 180;
       acAnim.current = {
         t0: now,
+        end: now + dur,
         at: (t) => { const k = dur ? Math.min(1, (t - now) / dur) : 1; return [from[0] + (to[0] - from[0]) * k, from[1] + (to[1] - from[1]) * k, from[2] + dh * k]; },
       };
       if (!acRaf.current) {
@@ -476,7 +477,8 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
           if (!an || !mk) { acRaf.current = 0; return; }
           const [lo, la, h] = an.at(performance.now());
           mk.setLngLat([lo, la]).setRotation(h);
-          acRaf.current = requestAnimationFrame(step);
+          // Stop when the glide is done, so nothing runs between updates (saves battery on iPad).
+          acRaf.current = performance.now() < an.end + 32 ? requestAnimationFrame(step) : 0;
         };
         acRaf.current = requestAnimationFrame(step);
       }

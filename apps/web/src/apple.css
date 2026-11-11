@@ -319,3 +319,48 @@ input:not([type=checkbox]):not([type=range]):not([type=radio]), select, textarea
 .wall-sw.on { color: var(--a-ink); }
 .wall-sw.on > span { box-shadow: 0 0 0 3px var(--a-blue), 0 8px 20px -10px rgba(0,0,0,.6); }
 @media (hover: hover) { .wall-sw:hover > span { transform: scale(1.05); } }
+
+/* ===================== Performance on iPad and iPhone ===================== */
+.sky::before { filter: none !important; }
+@media (pointer: coarse), (max-width: 1100px) {
+  .sky::before { animation: none !important; transform: none !important; inset: 0 !important; }
+  .glass, :root[data-theme="light"] .glass, .glass.strong, .side, .tabbar, .map-tools .btn, .gs-msg, .map-hud {
+    -webkit-backdrop-filter: blur(16px) saturate(180%) !important; backdrop-filter: blur(16px) saturate(180%) !important;
+  }
+  .btn:not(.primary) { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+  main .glass { animation: none !important; }
+}
+
+/* ===================== Touch screens: steady, no flicker ===================== */
+/* On iPad and iPhone nothing moves, scales or tilts when touched (moving glass flickers in Safari).
+   A press just dims, like iOS buttons. */
+html { -webkit-tap-highlight-color: transparent; }
+@media (hover: none), (pointer: coarse) {
+  *, *::before, *::after { -webkit-tap-highlight-color: transparent; }
+  .btn, .rc-tog, .seg button, .nav-a, .tab, .cl-link, .cl-items button, .ch-list button, .more-tile, .wall-sw > span, .tile, .badge, .rc-target, .tl-card, .welcome-feats li, .map-tools .btn, .map-tools .btn svg, .nav-ic, .nav-ic svg, .rc-steps button, .board-row {
+    transform: none !important; transition: opacity .12s ease, background-color .2s ease !important; animation: none !important;
+  }
+  .btn:hover, .rc-tog:hover, .seg button:hover, .nav-a:hover, .tab:hover, .more-tile:hover, .tile:hover, .badge:hover {
+    transform: none !important; filter: none !important; background-image: none !important;
+  }
+  .btn:not(.primary):hover { background: rgba(255,255,255,.12) !important; }
+  :root[data-theme="light"] .btn:not(.primary):hover { background: rgba(255,255,255,.55) !important; }
+  .btn.primary:hover { background: linear-gradient(180deg, #4AA3FF, #0A6CFF) !important; box-shadow: inset 0 1px 0.5px rgba(255,255,255,.6) !important; }
+  .btn:active, .rc-tog:active, .seg button:active, .nav-a:active, .tab:active, .more-tile:active, .cl-items button:active, .ch-list button:active, .rc-steps button:active, .map-tools .btn:active { opacity: .55 !important; transform: none !important; }
+  .gp-ripple { display: none !important; }
+  /* Screens and messages appear without blur or movement */
+  .page-enter, main .glass, .gs-msg, .welcome-grid, .glass { animation: none !important; filter: none !important; }
+  .gs-msg { animation: gpTouchIn .2s ease both !important; }
+  @keyframes gpTouchIn { from { opacity: 0; } to { opacity: 1; } }
+  .glass::before, .glass::after { display: none !important; }
+}
+/* Selected controls keep the same text weight, so nothing nudges sideways */
+.seg button, .seg button.on { font-weight: 600 !important; }
+.nav-a, .nav-a.on { font-weight: 550 !important; }
+.tab, .tab.on { font-weight: 600 !important; }
+/* Remote result: floats over the page, never pushes the layout */
+.rc-toast { position: fixed !important; z-index: 70; left: 50%; top: calc(14px + env(safe-area-inset-top)); transform: translateX(-50%) !important; max-width: min(560px, calc(100vw - 32px)); padding: 12px 18px !important; font-size: 15px !important;
+  -webkit-backdrop-filter: blur(16px) saturate(180%); backdrop-filter: blur(16px) saturate(180%); box-shadow: 0 12px 30px -12px rgba(0,0,0,.6), inset 0 1px 0.5px rgba(255,255,255,.4); }
+.rc-toast.confirmed { background: rgba(30,120,60,.85) !important; color: #fff !important; }
+.rc-toast.timeout, .rc-toast.disarmed { background: rgba(150,90,0,.85) !important; color: #fff !important; }
+.rc-toast.rejected, .rc-toast.unsupported { background: rgba(160,40,40,.85) !important; color: #fff !important; }
