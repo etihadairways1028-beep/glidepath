@@ -24,6 +24,8 @@ import { Logbook, FlightDetail } from "./screens/Logbook";
 import { Airports, AirportPage } from "./screens/Airports";
 import { SettingsScreen } from "./screens/Settings";
 import { applyGlass } from "./glassLevel";
+import { ScreenGuard } from "./components/ScreenGuard";
+import { BridgeIconTip } from "./components/InstallCard";
 import { Glance } from "./screens/Glance";
 
 /* ---------- hash router (works on GitHub Pages and on the Bridge) ---------- */
@@ -190,11 +192,12 @@ export function App() {
                 <a className={`nav-a${screen === n.id || (!screen && n.id === "home") ? " on" : ""}`} href={`#/${n.id}`}><span className={`nav-ic ic-${n.id}`}>{n.icon()}</span>{n.label}</a>
               </Fragment>
             ))}
-            <div className="side-foot faint">{mode === "demo" ? "Demo flight: synthetic data" : `Glidepath 1.0.6${status?.bridgeVersion && status.bridgeVersion !== "demo" ? ` · Bridge ${status.bridgeVersion}` : ""}`}</div>
+            <div className="side-foot faint">{mode === "demo" ? "Demo flight: synthetic data" : `Glidepath 1.0.7${status?.bridgeVersion && status.bridgeVersion !== "demo" ? ` · Bridge ${status.bridgeVersion}` : ""}`}</div>
           </nav>
         )}
         <main className="main" id="main">
-          <div key={screen || "home"} className={`page page-enter${full ? " full" : ""}`}>{body}</div>
+          <BridgeIconTip />
+          <div key={screen || "home"} className={`page page-enter${full ? " full" : ""}`}><ScreenGuard where={location.hash || "#/home"}>{body}</ScreenGuard></div>
         </main>
       </div>
       {screen !== "glance" && (

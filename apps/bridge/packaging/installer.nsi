@@ -76,6 +76,7 @@ Section "Install"
   nsExec::Exec 'netsh advfirewall firewall delete rule name="Glidepath Bridge"'
   nsExec::Exec 'netsh advfirewall firewall add rule name="Glidepath Bridge" dir=in action=allow program="$INSTDIR\GlidepathBridge.exe" enable=yes profile=any'
   nsExec::Exec 'netsh advfirewall firewall add rule name="Glidepath Bridge" dir=in action=allow protocol=TCP localport=4810 enable=yes profile=any'
+  nsExec::Exec 'netsh advfirewall firewall add rule name="Glidepath Bridge" dir=in action=allow protocol=TCP localport=4811 enable=yes profile=any'
   nsExec::Exec 'netsh advfirewall firewall add rule name="Glidepath Bridge" dir=in action=allow protocol=UDP localport=5353 program="$INSTDIR\GlidepathBridge.exe" enable=yes profile=any'
 
   WriteUninstaller "$INSTDIR\Uninstall.exe"
