@@ -9,7 +9,17 @@
   <link rel="icon" href="assets/mark.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="app/icons/apple-touch-icon.png">
   <meta property="og:title" content="Glidepath">
-  <meta property="og:description" content="Your sim flight, live on the screen beside you. Free for Microsoft Flight Simulator 2020 and 2024.">
+  <meta property="og:description" content="Your sim flight, live on the screen beside you: live map, remote control and a real debrief of every landing. Free for Microsoft Flight Simulator 2020 and 2024.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://glidepath-ad9.pages.dev/">
+  <meta property="og:image" content="https://glidepath-ad9.pages.dev/assets/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Glidepath showing a live flight from London Heathrow to Manchester on an iPad">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Glidepath: your sim flight, live beside you">
+  <meta name="twitter:description" content="Live map, remote control and a real debrief of every landing. Free for MSFS 2020 and 2024.">
+  <meta name="twitter:image" content="https://glidepath-ad9.pages.dev/assets/og.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&display=swap" rel="stylesheet">
@@ -57,8 +67,8 @@
     <!-- HERO -->
     <section class="hero" aria-labelledby="hero-title">
       <div class="hero-copy reveal">
-        <p class="eyebrow glass"><span class="live-dot" aria-hidden="true"></span>Glidepath 1.0 · Free for MSFS 2020 and 2024</p>
-        <h1 id="hero-title">Your flight. Every detail. One screen.</h1>
+        <a class="eyebrow glass new-badge" href="#new"><span class="new-tag">New</span><span><span class="nb-long">Glidepath 1.1: </span>career, live links, share cards</span><span aria-hidden="true">›</span></a>
+        <h1 id="hero-title"><span>Your flight.</span> <span>Every detail.</span> <span>One screen.</span></h1>
         <p class="lede">Glidepath reads your flight straight from Microsoft Flight Simulator and puts it live on your iPad, phone or second screen. When you park, you get a real debrief of the takeoff, the approach and the landing.</p>
         <div class="cta">
           <a class="btn primary" data-download href="#download"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Download for Windows</a>
@@ -129,6 +139,59 @@
       <span class="nl-item"><b class="data" id="nl-ip">…</b> pilots and <b class="data" id="nl-ic">…</b> controllers on IVAO</span>
       <span class="nl-src">Live from the networks' public data. Glidepath shows them all on your map.</span>
     </div>
+
+
+    <!-- NEW IN 1.1 -->
+    <section id="new" class="newin" aria-labelledby="new-title">
+      <div class="section-head reveal">
+        <p class="kicker">New in 1.1</p>
+        <h2 id="new-title">Fly. Land. Show everyone.</h2>
+        <p class="section-lede">Five new things, all free, all built into the app you already have.</p>
+      </div>
+      <div class="new-grid">
+        <article class="new-card glass reveal new-share">
+          <div class="new-copy">
+            <h3>Share your landing</h3>
+            <p>Every debrief has a <b>Share</b> button. You get a story-sized picture of your flight: route, landing rate, grade and air time. Send it to Instagram, WhatsApp or Discord, or save it to Photos.</p>
+            <p class="fine">Made by the app from the demo flight.</p>
+          </div>
+          <img src="assets/shots/share-card.webp" alt="A Glidepath share card: London Heathrow to Manchester, landing at 140 fpm, grade A+" width="540" height="960" loading="lazy" class="new-phone">
+        </article>
+        <article class="new-card glass reveal new-follow">
+          <div class="new-copy">
+            <h3>Follow my flight</h3>
+            <p>Start a live link and send it to friends. They watch your plane move on a map in their browser, with no app and no account. It stops by itself after you park.</p>
+          </div>
+          <div class="follow-mock" aria-hidden="true">
+            <svg viewBox="0 0 320 170" class="fm-map"><path d="M40 140 C 110 120, 170 70, 270 30" class="fm-route"/><path d="M40 140 C 90 126, 130 104, 165 84" class="fm-trail"/><circle cx="40" cy="140" r="5" class="fm-apt"/><circle cx="270" cy="30" r="5" class="fm-apt"/><g transform="translate(165 84) rotate(-30)"><path d="M0 -11 L3 -3 L11 2 L11 4 L3 2 L3 8 L6 10 L6 11 L0 10 L-6 11 L-6 10 L-3 8 L-3 2 L-11 4 L-11 2 L-3 -3 Z" class="fm-plane"/></g></svg>
+            <div class="fm-card"><span class="fm-live"><i></i>Cruising</span><b>EGLL → EGCC</b><span class="fm-row"><span>FL240</span><span>409 kt</span><span>92 nm to go</span></span></div>
+          </div>
+        </article>
+        <article class="new-card glass reveal new-career">
+          <div class="new-copy">
+            <h3>Career mode</h3>
+            <p>A rank that grows with your hours, type ratings you earn by flying an aircraft, a streak for starting where you last landed, and new flights to try each day from wherever you are, one tap into SimBrief.</p>
+          </div>
+          <ol class="ranks" aria-label="Ranks">
+            <li><span>Student Pilot</span><small>0 h</small></li><li><span>Cadet</span><small>5 h</small></li><li><span>Second Officer</span><small>20 h</small></li><li><span>First Officer</span><small>50 h</small></li><li><span>Senior First Officer</span><small>120 h</small></li><li class="gold"><span>Captain</span><small>250 h</small></li><li class="gold"><span>Senior Captain</span><small>500 h</small></li><li class="gold"><span>Training Captain</span><small>1,000 h</small></li><li class="gold"><span>Chief Pilot</span><small>2,000 h</small></li>
+          </ol>
+        </article>
+        <article class="new-card glass reveal new-coach">
+          <div class="new-copy">
+            <h3>Approach coach</h3>
+            <p>Your last 10 nm against a 3° glide path, whether you were stable at 1,000 and 500 ft, and what to work on. During the approach it also tells you, live.</p>
+            <p class="fine">From the demo flight, which floats a little before touchdown. The coach spotted it.</p>
+          </div>
+          <img src="assets/shots/coach.webp" alt="The approach coach: a profile of the last 10 nautical miles against a 3 degree path, with stable gates at 1000 and 500 feet" width="868" height="596" loading="lazy" class="new-shot">
+        </article>
+      </div>
+      <ul class="new-more reveal" aria-label="Also new">
+        <li><b>Monthly landing challenge</b> Opt in and see who lands smoothest.</li>
+        <li><b>Discord status</b> "EGLL → EGCC · A320, cruising at FL360" on your profile.</li>
+        <li><b>Cockpit layout</b> Instruments and live map side by side on an iPad in landscape.</li>
+        <li><b>Emails</b> Your debrief, top of descent and arrival, if you want them.</li>
+      </ul>
+    </section>
 
     <!-- FEATURES -->
     <section id="features" class="features" aria-labelledby="features-title">
@@ -371,7 +434,7 @@
     <section class="how" aria-labelledby="how-title">
       <div class="section-head reveal">
         <p class="kicker">Set up in two minutes</p>
-        <h2 id="how-title">No account. No Community folder. Your flight stays on your Wi-Fi.</h2>
+        <h2 id="how-title">No Community folder. No account needed. Your flight stays on your Wi-Fi.</h2>
       </div>
       <ol class="steps">
         <li class="glass reveal"><span class="n data">1</span><h3>Run the Bridge</h3><p>Run the installer on your sim PC, then open <i>Glidepath Bridge</i> from the desktop. It finds Microsoft Flight Simulator by itself.</p></li>
@@ -424,8 +487,10 @@
       <div class="section-head reveal">
         <p class="kicker">Honest status</p>
         <h2 id="today-title">What works today, and what doesn't yet.</h2>
-        <p class="section-lede">Glidepath is early. If something isn't built, or hasn't been tested with a real simulator, this list says so.</p>
+        <p class="section-lede">Glidepath is new. Everything below is built and checked against a recorded test flight; the first real-simulator flights are happening now. If something isn't built or hasn't been tried in the sim, the list says so.</p>
       </div>
+      <details class="status-more reveal">
+        <summary class="btn glass">See the full list</summary>
       <div class="status-grid">
         <div class="status-col glass reveal">
           <h3><span class="dot ok" aria-hidden="true"></span>Built and tested</h3>
@@ -460,7 +525,8 @@
             <li><b>Messages</b> for top of descent in 10 minutes, 10 and 30 minutes to landing, ATC online at your airports, and a debrief message that opens the debrief. Also as notifications when Glidepath is in the background.</li>
             <li><b>Live airport boards</b> from VATSIM and IVAO, an <b>animated rain radar</b>, and <b>pilot tools</b> (clocks, crosswind, descent, approach path, fuel, converter).</li>
             <li><b>Sharper satellite map</b> from Esri World Imagery near airports and cities, with roads and airport markings on top.</li>
-            <li><b>Accounts:</b> sign up, sign in, several accounts per device, flights synced between devices. Built on Cloudflare and tested locally; live once the service is deployed. The monthly email needs an email service on top.</li>
+            <li><b>Accounts and emails:</b> sign up, sign in, password reset, several accounts per device, flights synced between devices, and emails for your debrief, top of descent, arrival and new sign-ins. Live on Cloudflare.</li>
+            <li><b>New in 1.1:</b> share cards, live "follow my flight" links, career mode, the approach coach, the monthly landing challenge, Discord status and the cockpit layout. Each checked against the demo flight (Discord against a stand-in for the Discord app); not yet with a real flight.</li>
           </ul>
           <h3><span class="dot next" aria-hidden="true"></span>Not built yet</h3>
           <ul>
@@ -471,6 +537,8 @@
           </ul>
         </div>
       </div>
+      </details>
+    
     </section>
 
     <!-- DOWNLOAD -->
@@ -517,9 +585,9 @@
         <details class="glass"><summary>Do I need an App Store app?</summary><p>No. Open the app link in Safari on your iPad or iPhone and add it to your Home Screen. It also works in any browser on Android, Mac and PC.</p></details>
         <details class="glass"><summary>Which simulators work?</summary><p>Microsoft Flight Simulator 2020 and 2024. X-Plane isn't supported yet.</p></details>
         <details class="glass"><summary>Will remote control work with PMDG, Fenix or FSLabs?</summary><p>Partly. Glidepath uses the simulator's standard controls. Default aircraft respond to all of them; study-level add-ons run their own systems and may ignore some. Every button tells you whether the sim actually changed.</p></details>
-        <details class="glass"><summary>Can I watch my flight away from home?</summary><p>Not yet. Today everything runs over your home Wi-Fi. Watching over mobile data needs a small free relay server and is next on the list.</p></details>
+        <details class="glass"><summary>Can I watch my flight away from home?</summary><p>Partly. Start a live link in the app and anyone, including you, can follow your plane on a map from anywhere. The full app, with remote control and the camera, still runs over your home Wi-Fi.</p></details>
         <details class="glass"><summary>Do I need to put anything in my Community folder?</summary><p>No. The Bridge talks to the sim through SimConnect, which is built into Microsoft Flight Simulator.</p></details>
-        <details class="glass"><summary>Is my data private?</summary><p>Live telemetry never leaves your network. If you make an account, only flight summaries are stored, so your logbook follows you between devices. Delete your account in the app and it's all gone.</p></details>
+        <details class="glass"><summary>Is my data private?</summary><p>Live telemetry stays on your network. If you make an account, only flight summaries are stored, so your logbook follows you between devices. A live link shares your position only while you have it on, and only with people who have the link. Delete your account in the app and it's all gone.</p></details>
         <details class="glass"><summary>Windows says it protected my PC. Is that safe?</summary><p>Windows shows that for new apps that aren't code-signed yet. Check the file's SHA-256 against the one on this page, then choose <i>More info</i> and <i>Run</i>. The code is open on GitHub.</p></details>
       </div>
     </section>
