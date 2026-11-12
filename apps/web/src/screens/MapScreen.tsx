@@ -1,9 +1,11 @@
 import { startDemo } from "../data/demo";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { MapView } from "../components/MapView";
 import { Icon } from "../components/ui";
 import { fmt, PHASE_LABEL, useLive } from "../data/derive";
 import { getStands, NETWORK_LABEL, usePoll, type NetworkPilot, type Stand } from "../data/external";
+import { arc, nm, recordTraffic, trackKey, trackOf } from "../data/trafficTracks";
+import { loadAirportDb } from "../data/airports";
 import { getLiveNetwork, getMetarsInView, type MetarDot, type PlacedController } from "../data/networks";
 import { useEffect, useRef } from "react";
 import { BaseMapPicker, TrafficSources } from "../components/MapLayers";
@@ -29,6 +31,26 @@ export function MapScreen() {
   const ivao = usePoll(s.showIvao ? () => getLiveNetwork("ivao") : null, 30_000, [bridge, s.showIvao]);
   const si = usePoll(s.showSayIntentions ? () => getLiveNetwork("sayintentions") : null, 30_000, [bridge, s.showSayIntentions]);
   const traffic = [...(vatsim.data?.pilots ?? []), ...(ivao.data?.pilots ?? []), ...(si.data?.pilots ?? [])].filter((p) => p.callsign !== (L.plan?.callsign ?? L.flight?.callsign));
+  // Remember where every aircraft has been, so tapping one shows its track.
+  useEffect(() => { recordTraffic(traffic); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [vatsim.data, ivao.data, si.data]);
+  const [db, setDb] = useState<Awaited<ReturnType<typeof loadAirportDb>> | null>(null);
+  useEffect(() => { void loadAirportDb().then(setDb).catch(() => undefined); }, []);
+  // Keep the tapped aircraft up to date as new positions arrive.
+  const selLive = sel ? traffic.find((p) => trackKey(p) === trackKey(sel)) ?? sel : null;
+  const selInfo = useMemo(() => {
+    if (!selLive) return null;
+    const { pts, sinceMs } = trackOf(selLive);
+    const dep = selLive.dep && db ? db.get(selLive.dep) : null, arr = selLive.arr && db ? db.get(selLive.arr) : null;
+    const flown = [...pts.map((p) => [p[0], p[1]]), [selLive.lon, selLive.lat]];
+    const first = flown[0]!;
+    const before = dep && nm(dep, { lon: first[0]!, lat: first[1]! }) > 2 ? arc(dep, { lon: first[0]!, lat: first[1]! }) : [];
+    const ahead = arr ? arc(selLive, arr) : [];
+    const toGo = arr ? nm(selLive, arr) : null;
+    const total = dep && arr ? nm(dep, arr) : null;
+    const etaMin = toGo !== null && selLive.gsKt > 60 ? Math.round((toGo / selLive.gsKt) * 60) : null;
+    const climbing = pts.length > 1 ? Math.sign(selLive.altFt - pts[Math.max(0, pts.length - 4)]![2]) : 0;
+    return { track: { key: trackKey(selLive), flown, before, ahead, at: [selLive.lon, selLive.lat] as [number, number] }, dep, arr, toGo, total, etaMin, sinceMs, climbing };
+  }, [selLive, db, vatsim.data, ivao.data, si.data]);
   const atc = s.showAtc ? [...(vatsim.data?.atc ?? []), ...(ivao.data?.atc ?? [])] : [];
   const centres = s.showAtc ? [...(vatsim.data?.controllers ?? []), ...(ivao.data?.controllers ?? [])] : [];
   const [atcSel, setAtcSel] = useState<PlacedController | null>(null);
@@ -72,7 +94,7 @@ export function MapScreen() {
 
   return (
     <div className="map-wrap">
-      <MapView trail={trail} plan={L.plan} aircraft={aircraft} airports={airports} traffic={traffic} atc={atc} centres={centres} metars={metars} radarTiles={s.showRadar ? radar.data ?? null : null} onSelectAtc={(c) => { setAtcSel(c); setSel(null); setWxSel(null); }} onSelectMetar={(w) => { setWxSel(w); setSel(null); setAtcSel(null); }} onView={(bbox, zoom) => setView({ bbox, zoom })} follow={follow} threeD={s.map3d} stands={stands} agl={f?.position.altAglFt ?? null} onGround={!!f?.position.onGround} onSelectTraffic={(p) => { setSel(p); if (p) { setAtcSel(null); setWxSel(null); } }} onUserMove={() => setFollow(false)} />
+      <MapView trail={trail} plan={L.plan} aircraft={aircraft} airports={airports} traffic={traffic} atc={atc} centres={centres} metars={metars} radarTiles={s.showRadar ? radar.data ?? null : null} onSelectAtc={(c) => { setAtcSel(c); setSel(null); setWxSel(null); }} onSelectMetar={(w) => { setWxSel(w); setSel(null); setAtcSel(null); }} onView={(bbox, zoom) => setView({ bbox, zoom })} follow={follow} threeD={s.map3d} stands={stands} agl={f?.position.altAglFt ?? null} onGround={!!f?.position.onGround} onSelectTraffic={(p) => { setSel(p); if (p) { setAtcSel(null); setWxSel(null); } }} onUserMove={() => setFollow(false)} selTrack={selInfo?.track ?? null} />
       <div className="map-hud glass strong pad" style={{ padding: "14px 16px" }}>
         {L.flight ? (
           <>
@@ -139,14 +161,23 @@ export function MapScreen() {
           <a className="btn small" href={`#/airports/${wxSel.icao}`}>Airport page</a>
         </div>
       )}
-      {sel && (
-        <div className="map-sheet glass strong pad">
-          <div className="between"><span className="data" style={{ fontWeight: 700, fontSize: 18 }}>{sel.callsign}</span><button className="btn small" aria-label="Close" onClick={() => setSel(null)}><span style={{ width: 16, height: 16 }}>{Icon.close()}</span></button></div>
-          <div className="muted" style={{ marginTop: 2 }}>{sel.type ?? "Unknown type"} on {NETWORK_LABEL[sel.network]}</div>
-          <div className="grid cols-3" style={{ gap: 8, marginTop: 12 }}>
-            <Mini k="FROM" v={sel.dep ?? "—"} /><Mini k="TO" v={sel.arr ?? "—"} /><Mini k="ALT" v={fmt(sel.altFt)} />
+      {selLive && selInfo && (
+        <div className="map-sheet glass strong pad traffic-sheet">
+          <div className="between"><span className="data" style={{ fontWeight: 800, fontSize: 20 }}>{selLive.callsign}</span><button className="btn small" aria-label="Close" onClick={() => setSel(null)}><span style={{ width: 16, height: 16 }}>{Icon.close()}</span></button></div>
+          <div className="muted" style={{ marginTop: 2 }}>{selLive.type ?? "Unknown type"} on {NETWORK_LABEL[selLive.network]}</div>
+          <div className="ts-route">
+            <div><b className="data">{selLive.dep ?? "—"}</b><small className="faint">{selInfo.dep?.city ?? selInfo.dep?.name ?? ""}</small></div>
+            <div className="ts-bar"><span style={{ width: `${selInfo.total && selInfo.toGo !== null ? Math.max(3, Math.min(100, (1 - selInfo.toGo / selInfo.total) * 100)) : 0}%` }} /><i style={{ left: `${selInfo.total && selInfo.toGo !== null ? Math.max(3, Math.min(97, (1 - selInfo.toGo / selInfo.total) * 100)) : 50}%` }} /></div>
+            <div style={{ textAlign: "right" }}><b className="data">{selLive.arr ?? "—"}</b><small className="faint">{selInfo.arr?.city ?? selInfo.arr?.name ?? ""}</small></div>
           </div>
-          <div className="muted data" style={{ fontSize: 13, marginTop: 10 }}>{fmt(sel.gsKt)} kt, heading {fmt(sel.hdg)}°</div>
+          <div className="grid cols-4" style={{ gap: 8, marginTop: 12 }}>
+            <Mini k="ALT" v={`${selLive.altFt >= 18000 ? `FL${String(Math.round(selLive.altFt / 100)).padStart(3, "0")}` : fmt(selLive.altFt)}${selInfo.climbing > 0 ? " ↑" : selInfo.climbing < 0 ? " ↓" : ""}`} />
+            <Mini k="SPEED" v={`${fmt(selLive.gsKt)} kt`} />
+            <Mini k="TO GO" v={selInfo.toGo !== null ? `${fmt(selInfo.toGo)} nm` : "—"} />
+            <Mini k="ARRIVES" v={selInfo.etaMin !== null ? (selInfo.etaMin >= 60 ? `${Math.floor(selInfo.etaMin / 60)}h ${String(selInfo.etaMin % 60).padStart(2, "0")}m` : `${selInfo.etaMin} min`) : "—"} />
+          </div>
+          <div className="ts-legend faint"><span><i className="l-flown" />Flown{selInfo.sinceMs && selInfo.sinceMs > 60_000 ? ` (seen for ${Math.round(selInfo.sinceMs / 60_000)} min)` : ""}</span>{selInfo.track.before.length ? <span><i className="l-before" />From {selLive.dep}, estimated</span> : null}{selInfo.track.ahead.length ? <span><i className="l-ahead" />To {selLive.arr}</span> : null}</div>
+          <p className="faint" style={{ fontSize: 11.5, margin: "6px 0 0" }}>The networks share only where each aircraft is now, so Glidepath draws the track it has seen since you opened the map.</p>
         </div>
       )}
     </div>

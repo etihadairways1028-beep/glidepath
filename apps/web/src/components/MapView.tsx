@@ -150,9 +150,11 @@ export interface MapViewProps {
   interactive?: boolean;
   /** Past flights as lines ([lon, lat] points each), for "everywhere you've flown". */
   history?: Array<Array<[number, number]>>;
+  /** The other aircraft you tapped: where it has been, the guessed start of its flight, and the way to its destination. */
+  selTrack?: { key: string; flown: number[][]; before: number[][]; ahead: number[][]; at: [number, number] } | null;
 }
 
-export function MapView({ trail, plan, aircraft, airports = [], traffic = [], atc = [], metars = [], radarTiles = null, centres = [], radarFrames = null, radarIndex = 0, onSelectAtc, onSelectMetar, onView, follow, center, zoom: startZoom, threeD = false, stands = [], agl = null, onGround = false, onSelectTraffic, onUserMove, interactive = true, history }: MapViewProps) {
+export function MapView({ trail, plan, aircraft, airports = [], traffic = [], atc = [], metars = [], radarTiles = null, centres = [], radarFrames = null, radarIndex = 0, onSelectAtc, onSelectMetar, onView, follow, center, zoom: startZoom, threeD = false, stands = [], agl = null, onGround = false, onSelectTraffic, onUserMove, interactive = true, history, selTrack }: MapViewProps) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<MLMap | null>(null);
   const [ready, setReady] = useState(false);
@@ -207,6 +209,10 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     m.addSource("stands", { type: "geojson", data: data.current.stands as ReturnType<typeof empty> });
     m.addLayer({ id: "stands", type: "circle", source: "stands", minzoom: 14, paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 14, 2.5, 18, 6], "circle-color": "#64D2FF", "circle-stroke-color": "rgba(0,0,0,.6)", "circle-stroke-width": 1 } });
     m.addLayer({ id: "stands-label", type: "symbol", source: "stands", minzoom: 15, layout: { "text-field": ["get", "ref"], "text-font": ["Noto Sans Bold"], "text-size": ["interpolate", ["linear"], ["zoom"], 15, 10, 18, 14], "text-offset": [0, 1.1], "text-allow-overlap": false }, paint: { "text-color": "#E8F6FF", "text-halo-color": "rgba(0,20,40,.85)", "text-halo-width": 1.6 } });
+    m.addSource("sel-before", { type: "geojson", data: line([]) });
+    m.addSource("sel-flown", { type: "geojson", data: line([]) });
+    m.addSource("sel-ahead", { type: "geojson", data: line([]) });
+    m.addSource("sel-at", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     m.addSource("history", { type: "geojson", data: multi(data.current.history) });
     m.addLayer({ id: "history-glow", type: "line", source: "history", layout: { "line-cap": "round" }, paint: { "line-color": "#64D2FF", "line-width": 6, "line-opacity": 0.18, "line-blur": 3 } });
     m.addLayer({ id: "history", type: "line", source: "history", layout: { "line-cap": "round" }, paint: { "line-color": "#64D2FF", "line-width": 1.8, "line-opacity": 0.85 } });
@@ -236,6 +242,11 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     m.addLayer({ id: "atc-halo", type: "circle", source: "atc", filter: ["==", ["get", "kind"], "app"], paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 2, ["match", ["get", "kind"], "ctr", 14, "app", 8, 4], 9, ["match", ["get", "kind"], "ctr", 46, "app", 34, 18]], "circle-color": ["get", "col"], "circle-opacity": 0.12, "circle-stroke-color": ["get", "col"], "circle-stroke-width": 1.2, "circle-stroke-opacity": 0.55 } });
     m.addLayer({ id: "atc", type: "circle", source: "atc", filter: ["!=", ["get", "kind"], "twr"], paint: { "circle-radius": 4, "circle-color": ["get", "col"], "circle-stroke-color": "#fff", "circle-stroke-width": 1.4 } });
     m.addLayer({ id: "atc-label", type: "symbol", source: "atc", minzoom: 4, filter: ["!=", ["get", "kind"], "twr"], layout: { "text-field": ["concat", ["get", "callsign"], "\n", ["get", "freq"]], "text-font": ["Noto Sans Bold"], "text-size": 10.5, "text-offset": [0, 1.3], "text-anchor": "top", "text-optional": true }, paint: { "text-color": ["get", "col"], "text-halo-color": light ? "rgba(255,255,255,.92)" : "rgba(0,0,0,.8)", "text-halo-width": 1.4 } });
+    m.addLayer({ id: "sel-before", type: "line", source: "sel-before", layout: { "line-cap": "round" }, paint: { "line-color": "#FFD60A", "line-width": 2.5, "line-opacity": 0.55, "line-dasharray": [0.6, 2] } });
+    m.addLayer({ id: "sel-ahead", type: "line", source: "sel-ahead", layout: { "line-cap": "round" }, paint: { "line-color": "#ffffff", "line-width": 2, "line-opacity": 0.7, "line-dasharray": [2, 2] } });
+    m.addLayer({ id: "sel-flown-glow", type: "line", source: "sel-flown", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#FFD60A", "line-width": 9, "line-opacity": 0.25, "line-blur": 4 } });
+    m.addLayer({ id: "sel-flown", type: "line", source: "sel-flown", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#FFD60A", "line-width": 3.5 } });
+    m.addLayer({ id: "sel-at", type: "circle", source: "sel-at", paint: { "circle-radius": 17, "circle-color": "rgba(255,214,10,0.18)", "circle-stroke-color": "#FFD60A", "circle-stroke-width": 2 } });
     m.addLayer({ id: "traffic", type: "symbol", source: "traffic", layout: { "icon-image": ["concat", "traffic-", ["get", "net"]], "icon-rotate": ["get", "hdg"], "icon-rotation-alignment": "map", "icon-allow-overlap": true, "icon-size": ["interpolate", ["linear"], ["zoom"], 2, 0.55, 9, 1] }, paint: { "icon-opacity": 0.95 } });
   };
 
@@ -318,6 +329,27 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     setReady(false);
     m.setStyle(styleFor(wanted));
   }, [wanted]);
+
+  // The aircraft you tapped: its track, and the way to where it's going
+  const selFitted = useRef<string | null>(null);
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !ready) return;
+    (m.getSource("sel-before") as GeoJSONSource | undefined)?.setData(line(selTrack?.before ?? []));
+    (m.getSource("sel-flown") as GeoJSONSource | undefined)?.setData(line(selTrack?.flown ?? []));
+    (m.getSource("sel-ahead") as GeoJSONSource | undefined)?.setData(line(selTrack?.ahead ?? []));
+    (m.getSource("sel-at") as GeoJSONSource | undefined)?.setData({ type: "FeatureCollection", features: selTrack ? [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: selTrack.at } }] : [] });
+    if (selTrack && selFitted.current !== selTrack.key) {
+      selFitted.current = selTrack.key;
+      const pts = [...selTrack.before, ...selTrack.flown, ...selTrack.ahead, selTrack.at] as Array<[number, number]>;
+      if (pts.length > 1) {
+        const b = pts.reduce((bb, p) => bb.extend(p), new maplibregl.LngLatBounds(pts[0], pts[0]));
+        m.fitBounds(b, { padding: { top: 80, bottom: 260, left: 60, right: 60 }, duration: 900, maxZoom: 9 });
+        handlers.current.onUserMove?.();
+      }
+    }
+    if (!selTrack) selFitted.current = null;
+  }, [ready, selTrack]);
 
   // Past flights
   useEffect(() => {

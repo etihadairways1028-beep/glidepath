@@ -519,3 +519,26 @@ label.between > span { min-width: 0; }
 .gc-map { position: relative; overflow: hidden; border-radius: 28px; min-height: 0; }
 .gc-map-tags { position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex; gap: 8px; flex-wrap: wrap; z-index: 3; }
 .gc-map > :first-child { position: absolute !important; inset: 0 !important; width: auto !important; height: auto !important; }
+
+/* Tapped aircraft on the map */
+.traffic-sheet { min-width: min(380px, calc(100vw - 32px)); }
+.ts-route { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; margin-top: 12px; }
+.ts-route > div { display: grid; } .ts-route b { font-size: 20px; } .ts-route small { font-size: 11.5px; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ts-bar { position: relative; height: 4px; border-radius: 4px; background: rgba(127,127,127,.25); }
+.ts-bar span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: linear-gradient(90deg, #FFD60A, #FF9F0A); }
+.ts-bar i { position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%; background: #FFD60A; transform: translate(-50%, -50%); box-shadow: 0 0 0 4px rgba(255,214,10,.25); }
+.ts-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; font-size: 12px; }
+.ts-legend i { display: inline-block; width: 16px; height: 3px; border-radius: 2px; margin-right: 6px; vertical-align: 3px; }
+.l-flown { background: #FFD60A; } .l-before { background: repeating-linear-gradient(90deg, #FFD60A 0 3px, transparent 3px 6px); opacity: .7; } .l-ahead { background: repeating-linear-gradient(90deg, #fff 0 5px, transparent 5px 9px); }
+.grid.cols-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+/* Landing history */
+.landing-history { display: grid; gap: 14px; }
+.lh-chip { text-decoration: none; color: inherit; }
+.lh-chart { position: relative; height: 150px; display: flex; align-items: flex-end; gap: 4px; padding-top: 10px; border-bottom: 1px solid rgba(127,127,127,.25); }
+.lh-bar { flex: 1 1 0; height: 100%; display: flex; align-items: flex-end; min-width: 4px; border-radius: 6px 6px 0 0; }
+.lh-bar span { display: block; width: 100%; border-radius: 6px 6px 2px 2px; opacity: .9; transition: opacity .2s, transform .2s; transform-origin: bottom; }
+@media (hover: hover) { .lh-bar:hover span { opacity: 1; transform: scaleY(1.04); filter: brightness(1.15); } }
+.lh-line { position: absolute; left: 0; right: 0; border-top: 1px dashed rgba(48,209,88,.5); pointer-events: none; }
+.lh-line.hard { border-top-color: rgba(255,69,58,.55); }
+.lh-line em { position: absolute; right: 0; top: -16px; font-size: 10.5px; font-style: normal; color: var(--mist); }
