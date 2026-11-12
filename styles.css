@@ -701,3 +701,66 @@ body::before { filter: none !important; will-change: auto; }
 .t-map .tile-over h3, .t-map .tile-over p { text-shadow: 0 1px 8px rgba(0,0,0,.6); }
 @media (max-width: 520px) { .new-badge { font-size: 13px; } }
 @media (max-width: 520px) { .nb-long { display: none; } }
+
+/* ===== New in 1.1: bento ===== */
+.bento { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 18px; }
+.bx { border-radius: 32px; overflow: hidden; position: relative; display: grid; grid-template-rows: auto 1fr; min-height: 420px; transition: transform .45s cubic-bezier(.2,1,.3,1), box-shadow .45s; }
+@media (hover: hover) { .bx:hover { transform: translateY(-4px); } }
+.bx-copy { padding: 28px 28px 0; position: relative; z-index: 2; }
+.bx-copy h3 { font-size: clamp(22px, 2vw, 28px); letter-spacing: -.02em; line-height: 1.12; margin: 10px 0 10px; }
+.bx-copy p { margin: 0; color: rgba(235,240,255,.74); line-height: 1.55; font-size: 15.5px; max-width: 46ch; }
+.bx-copy p b { color: #fff; }
+.bx-copy .fine { font-size: 12.5px; margin-top: 10px; opacity: .7; }
+.bx-tag { display: inline-block; font-size: 11.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; padding: 5px 11px; border-radius: 999px; background: rgba(100,210,255,.14); color: #64D2FF; box-shadow: inset 0 0 0 .5px rgba(100,210,255,.4); }
+.bx-art { position: relative; min-height: 0; }
+.bx-share { grid-column: span 5; grid-row: span 2; }
+.bx-follow { grid-column: span 7; }
+.bx-career { grid-column: span 4; }
+.bx-challenge { grid-column: span 3; }
+.bx-coach { grid-column: 1 / -1; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); grid-template-rows: auto; align-items: center; min-height: 0; }
+.bx-coach .bx-copy { padding-bottom: 28px; }
+.bx-coach .bx-art { padding: 24px 24px 24px 0; }
+.coach-img { width: 100%; height: auto; display: block; border-radius: 20px; box-shadow: 0 24px 50px -24px rgba(0,0,0,.85), 0 0 0 1px rgba(255,255,255,.14); }
+/* Share: the whole card, standing up, glowing */
+.share-art { display: grid; place-items: end center; padding: 26px 28px 0; }
+.share-art::before { content: ""; position: absolute; left: 50%; bottom: 10%; width: 70%; height: 60%; transform: translateX(-50%); background: radial-gradient(closest-side, rgba(10,132,255,.55), transparent); filter: blur(30px); }
+.share-art img { position: relative; width: min(330px, 86%); height: auto; aspect-ratio: 9 / 16; object-fit: cover; border-radius: 28px 28px 0 0; box-shadow: 0 -10px 60px -20px rgba(100,210,255,.5), 0 0 0 1px rgba(255,255,255,.28); }
+/* Follow: real coastline map */
+.follow-art { margin: 22px 22px 22px; border-radius: 24px; overflow: hidden; background: #0A1530; box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); min-height: 230px; }
+.follow-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.follow-art .fm-card { left: 14px; bottom: 14px; }
+/* Career */
+.career-art { padding: 22px 28px 28px; display: grid; gap: 22px; align-content: end; }
+.epaulettes { display: flex; gap: 12px; align-items: flex-end; }
+.ep { width: 46px; height: 74px; border-radius: 10px 10px 7px 7px; background: linear-gradient(180deg, #1b2648, #0b1226); box-shadow: inset 0 0 0 1px rgba(255,255,255,.16), 0 10px 20px -10px rgba(0,0,0,.7); display: flex; flex-direction: column-reverse; gap: 5px; padding: 9px 7px; }
+.ep span { height: 7px; border-radius: 2px; background: linear-gradient(90deg, #C9CED8, #F4F6FA 50%, #A7AEBB); }
+.ep.gold { height: 86px; } .ep.gold span { background: linear-gradient(90deg, #E9B949, #FFE29A 50%, #C99A2E); box-shadow: 0 0 8px rgba(255,214,102,.5); }
+.rank-track { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); padding-top: 18px; font-size: 11.5px; color: rgba(235,240,255,.7); }
+.rank-track::before { content: ""; position: absolute; left: 0; right: 0; top: 4px; height: 6px; border-radius: 999px; background: rgba(255,255,255,.1); }
+.rank-track i { position: absolute; left: 0; top: 4px; height: 6px; width: calc(var(--p) * 100%); border-radius: 999px; background: linear-gradient(90deg, #0A84FF, #64D2FF); box-shadow: 0 0 12px rgba(100,210,255,.6); }
+.rank-track span { line-height: 1.3; padding-right: 6px; }
+/* Challenge podium */
+.podium { display: flex; align-items: flex-end; justify-content: center; gap: 8px; padding: 18px 24px 0; }
+.pd { width: 30%; border-radius: 14px 14px 0 0; display: grid; place-items: start center; padding-top: 10px; box-shadow: inset 0 1px 0 rgba(255,255,255,.6); }
+.pd b { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 900; }
+.p1 { height: 150px; background: linear-gradient(180deg, rgba(233,185,73,.5), rgba(233,185,73,.08)); } .p1 b { background: linear-gradient(140deg, #FFE29A, #E9B949); color: #3a2a00; }
+.p2 { height: 110px; background: linear-gradient(180deg, rgba(200,206,216,.4), rgba(200,206,216,.06)); } .p2 b { background: linear-gradient(140deg, #F1F3F7, #AEB6C2); color: #222; }
+.p3 { height: 84px; background: linear-gradient(180deg, rgba(192,122,67,.45), rgba(192,122,67,.06)); } .p3 b { background: linear-gradient(140deg, #F2C29B, #C07A43); color: #2b1600; }
+.new-more { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+@media (max-width: 1100px) {
+  .bx-share { grid-column: span 6; grid-row: auto; } .bx-follow { grid-column: span 6; }
+  .bx-career { grid-column: span 7; } .bx-challenge { grid-column: span 5; }
+}
+@media (max-width: 760px) {
+  .bento { grid-template-columns: 1fr; }
+  .bx-share, .bx-follow, .bx-career, .bx-challenge, .bx-coach { grid-column: auto; }
+  .bx { min-height: 0; } .bx-coach { grid-template-columns: 1fr; } .bx-coach .bx-art { padding: 0 20px 22px; }
+  .bx-copy { padding: 22px 22px 0; } .share-art { padding-top: 22px; } .share-art img { width: min(280px, 80%); }
+  .new-more { grid-template-columns: 1fr !important; }
+}
+.rank-track span b { display: block; color: #fff; font-size: 12.5px; }
+@media (max-width: 760px) {
+  .follow-art { min-height: 0; margin: 18px; }
+  .follow-art img { position: relative; height: 230px; object-position: 58% 62%; }
+  .follow-art .fm-card { position: relative; left: auto; bottom: auto; margin: -64px 10px 10px; width: max-content; max-width: calc(100% - 20px); }
+}
