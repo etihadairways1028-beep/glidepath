@@ -13,6 +13,8 @@
  */
 import { createHash } from "node:crypto";
 import { createServer, type Server } from "node:https";
+import { createServer as tlsCreateServer } from "node:tls";
+import { connect as netConnect } from "node:net";
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
@@ -47,6 +49,36 @@ async function loadCert(dir: string, log: Logger): Promise<{ cert: string; key: 
   }
   if (!existsSync(certPath) || !existsSync(keyPath)) return null;
   return { cert: readFileSync(certPath, "utf8"), key: readFileSync(keyPath, "utf8") };
+}
+
+/**
+ * Secure doors for add-on pages (Fenix EFB, FSLabs EFB, GSX remote, SimBridge).
+ * The website version of Glidepath is https, so it can't show plain-http pages
+ * inside itself. Each door takes https on its own port and passes the bytes,
+ * WebSockets included, straight through to the add-on's own port on this PC.
+ * The add-on pages are already open to the home network on their own ports;
+ * this only adds the padlock.
+ */
+export async function startAddonDoors(opts: { dataDir: string; host: string; log: Logger; doors: Array<{ id: string; listen: number; target: number }> }): Promise<Record<string, number>> {
+  const creds = await loadCert(join(opts.dataDir, "tls"), opts.log);
+  const open: Record<string, number> = {};
+  if (!creds) return open;
+  for (const d of opts.doors) {
+    const srv = tlsCreateServer({ cert: creds.cert, key: creds.key }, (client) => {
+      const up = netConnect(d.target, "127.0.0.1");
+      up.on("error", () => client.destroy());
+      client.on("error", () => up.destroy());
+      client.pipe(up).pipe(client);
+    });
+    try {
+      await new Promise<void>((resolve, reject) => { srv.once("error", reject); srv.listen(d.listen, opts.host, () => resolve()); });
+      open[d.id] = d.listen;
+    } catch (e) {
+      opts.log.warn(`Secure door for ${d.id} couldn't open on port ${d.listen}: ${(e as Error).message}`);
+    }
+  }
+  if (Object.keys(open).length) opts.log.info(`Secure doors for add-ons: ${Object.entries(open).map(([k, v]) => `${k} ${v}`).join(", ")}`);
+  return open;
 }
 
 export async function startSecure(opts: {

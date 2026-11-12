@@ -542,3 +542,102 @@ label.between > span { min-width: 0; }
 .lh-line { position: absolute; left: 0; right: 0; border-top: 1px dashed rgba(48,209,88,.5); pointer-events: none; }
 .lh-line.hard { border-top-color: rgba(255,69,58,.55); }
 .lh-line em { position: absolute; right: 0; top: -16px; font-size: 10.5px; font-style: normal; color: var(--mist); }
+
+/* ===================== Launch polish ===================== */
+/* Segmented controls: a soft track with a glass pill for the chosen one (no flat grey block) */
+:root .seg { display: inline-flex !important; gap: 2px; padding: 3px !important; border-radius: 999px !important; background: rgba(118,118,128,.22) !important; box-shadow: inset 0 1px 2px rgba(0,0,0,.25), inset 0 0 0 .5px rgba(255,255,255,.12) !important; max-width: 100%; overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; }
+:root .seg::-webkit-scrollbar { display: none; }
+:root .seg button { border-radius: 999px !important; white-space: nowrap; flex: none; color: var(--ink) !important; opacity: .82; background: transparent !important; box-shadow: none !important; }
+:root .seg button.on, :root:not([data-theme="light"]) .seg button.on { opacity: 1; background: linear-gradient(140deg, rgba(255,255,255,.34), rgba(255,255,255,.14)) !important; box-shadow: inset 1.5px 1.5px 1px -.5px rgba(255,255,255,.9), inset -1px -1px 1px -.5px rgba(255,255,255,.4), 0 6px 14px -6px rgba(0,0,0,.55) !important; }
+:root[data-theme="light"] .seg { background: rgba(118,118,128,.14) !important; box-shadow: inset 0 1px 2px rgba(0,0,0,.08) !important; }
+:root[data-theme="light"] .seg button.on { background: #fff !important; box-shadow: 0 3px 10px rgba(0,0,0,.12), 0 0 0 .5px rgba(0,0,0,.05) !important; }
+
+/* Disabled buttons look switched off, not muddy */
+.btn:disabled, .btn[aria-disabled="true"] { opacity: .38 !important; filter: saturate(.25); box-shadow: none !important; cursor: default; }
+.btn.primary:disabled { background: rgba(118,118,128,.35) !important; color: var(--ink) !important; }
+
+/* Buttons: one consistent size and feel */
+.btn { min-height: 40px; padding: 9px 18px; border-radius: 999px; font-weight: 600; letter-spacing: -.005em; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.btn.small { min-height: 32px; padding: 6px 13px; font-size: 13.5px; }
+.btn.primary { background: linear-gradient(180deg, #3D9BFF, #0A7AFF) !important; color: #fff !important; }
+.btn.ghost { background: transparent !important; box-shadow: none !important; color: var(--a-blue, #0A84FF) !important; }
+@media (pointer: coarse) { .btn { min-height: 44px; } .btn.small { min-height: 36px; } }
+
+/* Notices: links stay inline with the words */
+.notice { display: block !important; }
+.notice a, .notice .linklike { display: inline; white-space: nowrap; font-weight: 600; }
+
+/* Map note: a small pill at the bottom, never a squeezed column */
+.map-note { transform: none !important; left: 12px !important; right: 12px !important; width: auto !important; max-width: 520px; margin: 0 auto; bottom: calc(12px + env(safe-area-inset-bottom)) !important; }
+.map-note .notice { font-size: 13px; line-height: 1.4; padding: 10px 14px; }
+@media (max-width: 760px) { .map-note { bottom: calc(96px + env(safe-area-inset-bottom)) !important; } }
+
+/* ===================== 1.1.1 polish ===================== */
+/* Home: your add-on EFB / GSX, first thing on the page */
+.cockpit-ready { padding: 22px; display: grid; gap: 16px; background-image: radial-gradient(70% 90% at 0% 0%, rgba(48,209,88,.22), transparent 70%) !important; }
+.cr-head h2 { margin: 6px 0 4px; font-size: clamp(24px, 3vw, 32px); letter-spacing: -.02em; }
+.cr-head p { margin: 0; }
+.cr-live { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #30D158; }
+.cr-live i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 0 rgba(48,209,88,.6); animation: livePulse 1.8s infinite; }
+.cr-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.cr-tile { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 20px; text-decoration: none; color: inherit; background: rgba(255,255,255,.08); box-shadow: inset 1.5px 1.5px 1px -.5px rgba(255,255,255,.7), inset 0 0 0 .5px rgba(255,255,255,.22), 0 10px 24px -16px rgba(0,0,0,.6); min-height: 64px; }
+:root[data-theme="light"] .cr-tile { background: rgba(255,255,255,.55); }
+.cr-ic { width: 44px; height: 44px; flex: none; border-radius: 13px; display: grid; place-items: center; box-shadow: inset 1px 1px .5px rgba(255,255,255,.7), 0 6px 14px -6px rgba(0,0,0,.5); }
+.cr-ic svg { width: 24px; height: 24px; fill: none; stroke: #fff; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.cr-t { display: grid; flex: 1; min-width: 0; } .cr-t b { font-size: 16.5px; } .cr-t small { color: var(--mist); font-size: 13px; }
+.cr-go { font-size: 26px; color: var(--mist); }
+@media (hover: hover) and (pointer: fine) { .cr-tile:hover { background: rgba(255,255,255,.14); } }
+
+/* Home: quick actions */
+.quick { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+.quick-a { display: grid; justify-items: center; gap: 8px; padding: 14px 6px 12px; border-radius: 22px !important; text-decoration: none; color: inherit; font-size: 13.5px; font-weight: 600; text-align: center; min-height: 84px; }
+.quick-a .nav-ic { width: 42px !important; height: 42px !important; border-radius: 13px !important; }
+@media (max-width: 700px) { .quick { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+/* Cockpit: the EFB as big as it needs to be */
+.cockpit-frame iframe { height: min(78vh, 1100px) !important; }
+.cockpit-frame.big { position: fixed; inset: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom)) 8px; z-index: 80; }
+.cockpit-frame.big iframe { flex: 1; height: auto !important; }
+.cockpit-frame:fullscreen { padding: 8px; border-radius: 0; background: #000 !important; }
+.cockpit-frame:fullscreen iframe { flex: 1; height: auto !important; border-radius: 10px; }
+.cockpit-frame-off { display: grid; gap: 14px; justify-items: start; padding: 26px; border-radius: 18px; background: rgba(127,127,127,.12); }
+.cockpit-frame-off p { margin: 0 !important; max-width: 60ch; }
+
+/* Remote: no holes in the grid, bigger step buttons, breathing room under the notice */
+.rc-grid { grid-auto-flow: dense; margin-top: 14px; }
+.rc-steps button { width: 36px !important; height: 36px !important; font-size: 17px !important; }
+@media (pointer: coarse) { .rc-steps button { width: 42px !important; height: 42px !important; } .rc-steps { gap: 6px !important; } }
+
+/* Segmented controls never spill out of their card */
+.seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; }
+.seg::-webkit-scrollbar { display: none; }
+.seg button { white-space: nowrap; flex: none; }
+
+/* Big numbers keep their unit inside the tile */
+.tile .v { display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 4px; min-width: 0; }
+.tile .v .unit { white-space: nowrap; }
+
+/* In-flight banners: compact on phones so they don't cover the page title */
+@media (max-width: 700px) {
+  .gs-msg { padding: 10px 14px !important; border-radius: 20px !important; font-size: 14px !important; }
+  .gs-msg .gs-k, .gs-msg small { font-size: 11px !important; }
+}
+/* Words on the dark camera screen stay readable in light mode too */
+.cam-empty { color: #fff !important; text-align: center; padding: 0 24px; line-height: 1.5; }
+.cam-empty .faint { color: rgba(235,240,255,.7) !important; font-size: 14px; }
+.cam-empty b { color: #fff; }
+/* Round close buttons: a proper-size cross */
+.btn.round svg, .btn.small.round svg { width: 16px !important; height: 16px !important; }
+.btn.small.round { width: 34px; height: 34px; padding: 0 !important; display: inline-grid; place-items: center; }
+/* Quick actions get their colour tiles */
+.quick-a .nav-ic { background: linear-gradient(140deg, var(--c1, #64D2FF), var(--c2, #0A84FF)) !important; color: #fff !important; box-shadow: inset 1px 1px .5px rgba(255,255,255,.7), 0 6px 14px -6px rgba(0,0,0,.5); display: grid; place-items: center; }
+.quick-a .nav-ic svg { width: 22px; height: 22px; stroke: #fff !important; }
+/* Phones: autopilot targets one per row, value left and buttons right, so nothing collides */
+@media (max-width: 560px) {
+  .rc-targets { grid-template-columns: 1fr !important; }
+  .rc-target { flex-direction: row !important; justify-content: space-between; padding: 10px 12px 10px 16px !important; }
+  .rc-target > :first-child { text-align: left; }
+  .rc-steps button { width: 40px !important; height: 40px !important; }
+}
+/* Phones: the connection pill sits under the title instead of being cut off */
+@media (max-width: 560px) { .home-head { flex-direction: column; gap: 8px; } .home-head .conn-pill, .home-head .pill { max-width: 100%; white-space: normal; } }

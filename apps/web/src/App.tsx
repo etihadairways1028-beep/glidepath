@@ -178,7 +178,7 @@ export function App() {
     case "reset": body = <ResetPassword token={rest[0]} />; break;
     case "glance": body = <Glance />; break;
     case "copilot": body = <CopilotScreen />; break;
-    case "cockpit": body = <CockpitScreen />; break;
+    case "cockpit": body = <CockpitScreen initial={rest[0]} />; break;
     case "checklists": body = <ChecklistsScreen />; break;
     case "tools": body = <ToolsScreen />; break;
     case "remote": body = <RemoteScreen />; break;
@@ -203,7 +203,7 @@ export function App() {
                 <a className={`nav-a${screen === n.id || (!screen && n.id === "home") ? " on" : ""}`} href={`#/${n.id}`}><span className={`nav-ic ic-${n.id}`}>{n.icon()}</span>{n.label}</a>
               </Fragment>
             ))}
-            <div className="side-foot faint">{mode === "demo" ? "Demo flight: synthetic data" : `Glidepath 1.1.0${status?.bridgeVersion && status.bridgeVersion !== "demo" ? ` · Bridge ${status.bridgeVersion}` : ""}`}</div>
+            <div className="side-foot faint">{mode === "demo" ? "Demo flight: synthetic data" : `Glidepath 1.1.1${status?.bridgeVersion && status.bridgeVersion !== "demo" ? ` · Bridge ${status.bridgeVersion}` : ""}`}</div>
           </nav>
         )}
         <main className="main" id="main">

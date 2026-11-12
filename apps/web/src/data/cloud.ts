@@ -14,6 +14,8 @@ import { useSyncExternalStore } from "react";
 import type { FlightSummary } from "@glidepath/protocol";
 
 const HOSTED_CONFIG = "https://etihadairways1028-beep.github.io/glidepath/cloud.json";
+/** The live accounts service. Used when no cloud.json can be read (offline at start, or a blocked network), so the app never claims accounts are off. */
+const BUILT_IN_API = "https://glidepath-accounts.webeyepagesdev.workers.dev";
 /** The website on Cloudflare Pages forwards /acct to the accounts service. Some networks block *.workers.dev, so try this first. */
 const SITE = "https://glidepath-ad9.pages.dev";
 const PROXY = `${SITE}/acct`;
@@ -94,8 +96,7 @@ async function readConfig(): Promise<string | null> {
 }
 
 export async function initCloud(): Promise<void> {
-  api = await readConfig();
-  if (!api) { set({ status: "off" }); return; }
+  api = (await readConfig()) ?? BUILT_IN_API;
   bases = /^http:\/\/(localhost|127\.0\.0\.1)/.test(api) ? [api] : [location.origin === SITE ? `${SITE}/acct` : PROXY, api];
   const accounts = ls.get<CloudAccount[]>("gp.accounts", []).filter((a) => ls.get<string | null>(tokenKey(a.slot), null));
   const active = ls.get<string | null>("gp.activeAccount", accounts[0]?.slot ?? null);

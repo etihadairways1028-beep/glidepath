@@ -12,8 +12,8 @@
  *    user's account, revocable from Settings.
  */
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { announce, secureHost, startSecure } from "./secure.js";
-import { addonStatus } from "./addons.js";
+import { announce, secureHost, startAddonDoors, startSecure } from "./secure.js";
+import { ADDON_DOORS, ADDONS, addonStatus } from "./addons.js";
 import { networkInterfaces } from "node:os";
 import { randomInt, timingSafeEqual } from "node:crypto";
 import { WebSocketServer, type WebSocket } from "ws";
@@ -81,6 +81,8 @@ export class LanServer {
   discord: DiscordPresence | null = null;
   /** Secure (https) address for this PC, when the secure link is running. */
   secureUrl: string | null = null;
+  /** Secure ports for add-on pages, by add-on id. */
+  addonDoors: Record<string, number> = {};
   private secure: import("node:https").Server | null = null;
   private announceTimer?: NodeJS.Timeout;
 
@@ -126,6 +128,7 @@ export class LanServer {
         this.secure = srv;
         const host = secureHost(ip);
         this.secureUrl = `https://${host}:${port}`;
+        void startAddonDoors({ dataDir: this.cfg.dataDir, host: this.cfg.host, log: this.log, doors: Object.entries(ADDON_DOORS).map(([id, listen]) => ({ id, listen, target: ADDONS.find((a) => a.id === id)!.port })) }).then((d) => { this.addonDoors = d; });
         this.log.info(`Secure address: ${this.secureUrl}`);
         const post = () => void announce(this.pairCode, host, port, this.log);
         post();
@@ -378,7 +381,8 @@ export class LanServer {
     if (p === "/api/status") return json(res, 200, this.getStatus());
     if (p === "/api/addons") {
       const extra = (url.searchParams.get("extra") ?? "").split(",").map(Number).filter(Boolean).slice(0, 6);
-      return json(res, 200, await addonStatus(lanAddresses(), extra));
+      const sh = this.secureUrl ? new URL(this.secureUrl).hostname : null;
+      return json(res, 200, await addonStatus(lanAddresses(), extra, undefined, sh ? { host: sh, doors: this.addonDoors } : null));
     }
     if (p === "/api/lan") return json(res, 200, { bridgeId: this.identity.bridgeId, addresses: lanAddresses(), port: this.cfg.port });
     if (p === "/api/flight") return json(res, 200, this.session.activeFlight);

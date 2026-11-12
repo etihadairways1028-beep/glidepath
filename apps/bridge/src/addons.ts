@@ -22,8 +22,13 @@ export const ADDONS: AddonDef[] = [
   { id: "simbridge", name: "FlyByWire SimBridge", aircraft: "FBW A32NX / A380X", port: 8380, path: "/interfaces/mcdu/", help: "Start SimBridge from the flyPad or the FBW installer." },
 ];
 
+/** Secure (https) ports that pass straight through to each add-on, so the website version can show it. */
+export const ADDON_DOORS: Record<string, number> = { fenix: 4812, fslabs: 4813, gsx: 4814, simbridge: 4815 };
+
 export interface AddonStatus extends AddonDef {
   up: boolean;
+  /** https address through the Bridge's secure link, when it's running. */
+  secureUrl: string | null;
   /** Same-PC address. */
   localUrl: string;
   /** Addresses other devices on the Wi-Fi can open. */
@@ -40,7 +45,7 @@ export function probePort(port: number, host = "127.0.0.1", timeoutMs = 700): Pr
   });
 }
 
-export async function addonStatus(lan: string[], extraPorts: number[] = [], probe = probePort): Promise<AddonStatus[]> {
+export async function addonStatus(lan: string[], extraPorts: number[] = [], probe = probePort, secure: { host: string; doors: Record<string, number> } | null = null): Promise<AddonStatus[]> {
   const defs: AddonDef[] = [...ADDONS];
   for (const port of extraPorts) {
     if (!Number.isInteger(port) || port < 1 || port > 65535 || defs.some((d) => d.port === port)) continue;
@@ -49,6 +54,7 @@ export async function addonStatus(lan: string[], extraPorts: number[] = [], prob
   return Promise.all(defs.map(async (d) => ({
     ...d,
     up: await probe(d.port),
+    secureUrl: secure && secure.doors[d.id] ? `https://${secure.host}:${secure.doors[d.id]}${d.path}` : null,
     localUrl: `http://localhost:${d.port}${d.path}`,
     lanUrls: lan.map((ip) => `http://${ip}:${d.port}${d.path}`),
   })));

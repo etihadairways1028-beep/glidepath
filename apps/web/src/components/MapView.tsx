@@ -93,10 +93,11 @@ const OFFLINE: StyleSpecification = {
   version: 8,
   sources: { land: { type: "geojson", data: "data/land.geojson" }, borders: { type: "geojson", data: "data/borders.geojson", attribution: "Natural Earth" } },
   layers: [
-    { id: "bg", type: "background", paint: { "background-color": "#071226" } },
-    { id: "land", type: "fill", source: "land", paint: { "fill-color": "#132244" } },
-    { id: "land-edge", type: "line", source: "land", paint: { "line-color": "#2a3d6e", "line-width": 0.8 } },
-    { id: "borders", type: "line", source: "borders", paint: { "line-color": "#2f4478", "line-width": 0.7, "line-dasharray": [3, 2] } },
+    { id: "bg", type: "background", paint: { "background-color": "#06102a" } },
+    { id: "land-glow", type: "line", source: "land", paint: { "line-color": "#2f6bff", "line-width": 6, "line-opacity": 0.18, "line-blur": 5 } },
+    { id: "land", type: "fill", source: "land", paint: { "fill-color": "#1a2d5a" } },
+    { id: "land-edge", type: "line", source: "land", paint: { "line-color": "#5b84d6", "line-width": ["interpolate", ["linear"], ["zoom"], 2, 0.6, 8, 1.4], "line-opacity": 0.8 } },
+    { id: "borders", type: "line", source: "borders", paint: { "line-color": "#6f8fd0", "line-width": 0.9, "line-opacity": 0.55, "line-dasharray": [3, 2] } },
   ],
 };
 

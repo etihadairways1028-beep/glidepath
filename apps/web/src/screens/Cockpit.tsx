@@ -4,68 +4,39 @@
  * The Bridge only checks which ports answer; the pages themselves belong to
  * the add-ons and run unchanged.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Icon, Notice, Section } from "../components/ui";
 import { activeBridge } from "../data/bridge";
+import { ADDON_KIND, addonHref, canEmbed, loadExtraPorts, refreshAddons, saveExtraPorts, useAddons, type Addon } from "../data/addons";
 import { useApp } from "../data/store";
 
-interface Addon { id: string; name: string; aircraft: string; port: number; up: boolean; localUrl: string; lanUrls: string[]; help: string }
+/** Kept for older imports. */
+export function addonUrl(a: Addon): string { return addonHref(a); }
 
-const EXTRA_KEY = "glidepath.addonPorts";
-const loadExtra = (): number[] => {
-  try { return (JSON.parse(localStorage.getItem(EXTRA_KEY) ?? "[]") as number[]).filter((n) => Number.isInteger(n)); } catch { return []; }
-};
-
-/** The address of an add-on page as this device should open it. */
-export function addonUrl(a: Addon, bridgeBase: string | null): string {
-  if (!bridgeBase) return a.localUrl;
-  let host = "localhost";
-  try { host = new URL(bridgeBase).hostname; } catch { /* keep localhost */ }
-  return a.localUrl.replace("localhost", host);
-}
-
-export function CockpitScreen() {
+export function CockpitScreen({ initial }: { initial?: string }) {
   const mode = useApp((s) => s.mode);
-  const conn = useApp((s) => s.conn);
   const b = mode === "bridge" ? activeBridge() : null;
-  const [list, setList] = useState<Addon[] | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [open, setOpen] = useState<string | null>(null);
-  const [extra, setExtra] = useState<number[]>(loadExtra);
+  const { list, error: err, busy } = useAddons();
+  const [open, setOpen] = useState<string | null>(initial ?? null);
+  useEffect(() => { if (initial) setOpen(initial); }, [initial]);
+  const [extra, setExtra] = useState<number[]>(loadExtraPorts);
   const [portText, setPortText] = useState("");
-
-  const refresh = async () => {
-    if (!b) return;
-    setBusy(true);
-    try {
-      const l = await b.get<Addon[]>(`/api/addons${extra.length ? `?extra=${extra.join(",")}` : ""}`);
-      setList(l);
-      setErr(null);
-    } catch (e) {
-      setErr(/404/.test(String(e)) ? "Your Bridge is older than this app. Download the latest Bridge to use cockpit tools." : "Couldn't ask the Bridge which add-ons are running.");
-    } finally { setBusy(false); }
-  };
-  useEffect(() => { void refresh(); const t = setInterval(refresh, 15000); return () => clearInterval(t); }, [b, conn, extra.join(",")]);
+  const [big, setBig] = useState(false);
+  const frameRef = useRef<HTMLElement>(null);
+  const refresh = () => void refreshAddons();
 
   const addPort = () => {
     const n = Number(portText);
     if (!Number.isInteger(n) || n < 1 || n > 65535) return;
     const next = [...new Set([...extra, n])].slice(0, 6);
-    setExtra(next);
-    try { localStorage.setItem(EXTRA_KEY, JSON.stringify(next)); } catch { /* ignore */ }
-    setPortText("");
+    setExtra(next); saveExtraPorts(next); setPortText("");
   };
-  const removePort = (n: number) => {
-    const next = extra.filter((p) => p !== n);
-    setExtra(next);
-    try { localStorage.setItem(EXTRA_KEY, JSON.stringify(next)); } catch { /* ignore */ }
-  };
+  const removePort = (n: number) => { const next = extra.filter((p) => p !== n); setExtra(next); saveExtraPorts(next); };
 
-  // An https page (GitHub Pages) can't show http pages from your PC inside it.
-  const canEmbed = location.protocol === "http:";
   const current = list?.find((a) => a.id === open && a.up) ?? null;
-  const base = b?.baseUrl ?? null;
+  const anySecure = !!list?.some((a) => a.secureUrl);
+  const httpsPage = location.protocol === "https:";
+  const goFull = () => { const el = frameRef.current as (HTMLElement & { webkitRequestFullscreen?: () => void }) | null; if (!el) return; if (el.requestFullscreen) void el.requestFullscreen().catch(() => setBig(true)); else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen(); else setBig(true); };
 
   return (
     <div className="stack cockpit">
@@ -81,15 +52,23 @@ export function CockpitScreen() {
       {err && <Notice>{err}</Notice>}
 
       {current && (
-        <section className="glass cockpit-frame">
+        <section ref={frameRef} className={`glass cockpit-frame${big ? " big" : ""}`}>
           <div className="cockpit-frame-h">
-            <strong>{current.name}</strong>
+            <strong>{ADDON_KIND[current.id]?.short ?? current.name}</strong>
             <span className="muted">{current.aircraft}</span>
-            <a className="btn small" href={addonUrl(current, base)} target="_blank" rel="noreferrer">Open in its own tab</a>
-            <button className="btn small round" aria-label="Close" onClick={() => setOpen(null)}>{Icon.close()}</button>
+            <button className="btn small" onClick={() => (big ? setBig(false) : goFull())}>{big ? "Smaller" : "Full screen"}</button>
+            <a className="btn small" href={addonHref(current)} target="_blank" rel="noreferrer">Own tab</a>
+            <button className="btn small round" aria-label="Close" onClick={() => { setOpen(null); setBig(false); if (location.hash.startsWith("#/cockpit/")) history.replaceState(null, "", "#/cockpit"); }}>{Icon.close()}</button>
           </div>
-          <iframe title={current.name} src={addonUrl(current, base)} allow="fullscreen" />
-          <p className="muted small">If this stays blank, the add-on doesn't allow being shown inside other pages. Use "Open in its own tab".</p>
+          {canEmbed(current) ? (
+            <iframe title={current.name} src={addonHref(current)} allow="fullscreen; clipboard-write" />
+          ) : (
+            <div className="cockpit-frame-off">
+              <p>This copy of Glidepath is on a secure (https) address and your Bridge's secure link isn't on, so {current.name} can't show inside it.</p>
+              <a className="btn primary" href={addonHref(current)} target="_blank" rel="noreferrer">Open {ADDON_KIND[current.id]?.short ?? current.name}</a>
+            </div>
+          )}
+          <p className="muted small">If this stays blank, the add-on page didn't load here. Use "Own tab".</p>
         </section>
       )}
 
@@ -105,8 +84,8 @@ export function CockpitScreen() {
                 <>
                   <p className="small">Running on your PC, port {a.port}.</p>
                   <div className="addon-act">
-                    {canEmbed && <button className="btn primary small" onClick={() => setOpen(a.id)}>Show here</button>}
-                    <a className={`btn small${canEmbed ? "" : " primary"}`} href={addonUrl(a, base)} target="_blank" rel="noreferrer">Open</a>
+                    {canEmbed(a) && <button className="btn primary small" onClick={() => setOpen(a.id)}>Show here</button>}
+                    <a className={`btn small${canEmbed(a) ? "" : " primary"}`} href={addonHref(a)} target="_blank" rel="noreferrer">{canEmbed(a) ? "Own tab" : "Open"}</a>
                     {a.id.startsWith("custom-") && <button className="btn small" onClick={() => removePort(a.port)}>Remove</button>}
                   </div>
                 </>
@@ -131,7 +110,7 @@ export function CockpitScreen() {
         </Section>
       )}
 
-      {b && !canEmbed && <Notice info>This copy of the app is on a secure (https) address, so it can only open the add-on pages in a new tab. Open the app from your Bridge's link to show them inside Glidepath.</Notice>}
+      {b && httpsPage && list && !anySecure && <Notice info>To show add-on pages inside Glidepath on this secure address, update the Bridge on your PC to 1.1.1 or newer. Until then they open in their own tab.</Notice>}
 
       <Section title="PMDG 737 and 777">
         <p className="small">PMDG's EFB isn't served as a web page, so it can't be opened here. The CDU can be mirrored in a later version through PMDG's own SDK. To get ready, add this to <code>737_Options.ini</code> or <code>777_Options.ini</code> in the aircraft's work folder:</p>

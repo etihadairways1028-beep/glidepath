@@ -4,6 +4,7 @@ import { LiveCard } from "../components/LiveCard";
 import { MapView } from "../components/MapView";
 import { YourPcs } from "./Account";
 import { InstallCard } from "../components/InstallCard";
+import { CockpitReady } from "../components/CockpitReady";
 import { useCloud } from "../data/cloud";
 import { AircraftHero } from "../components/Imagery";
 import { buildDebrief } from "@glidepath/flight-engine";
@@ -28,11 +29,12 @@ export function Home() {
     <div className="stack">
       <FlightHeading />
       {mode === "none" && <YourPcs />}
-      <InstallCard />
       {mode === "none" && <Onboarding />}
+      <CockpitReady />
       {mode === "bridge" && conn !== "live" && msg && <Notice>{msg} <a href="#/settings">Connection settings</a></Notice>}
       {mode !== "none" && flight?.status === "completed" && <DebriefTeaser />}
       {mode !== "none" && flight && <LiveCard />}
+      {mode !== "none" && <QuickActions />}
       {mode !== "none" && flight && flight.status !== "completed" && <HomeMap />}
       {mode !== "none" && flight && <HomeAircraft />}
       {mode !== "none" && flight && flight.status !== "completed" && <Instruments />}
@@ -46,6 +48,7 @@ export function Home() {
         </section>
       )}
       <Totals />
+      <InstallCard />
     </div>
   );
 }
@@ -268,5 +271,20 @@ function CopilotLine() {
       </span>
       {alerts.length > 1 ? <span className="pill" style={{ marginLeft: "auto" }}>{alerts.length - 1} more</span> : null}
     </a>
+  );
+}
+
+/** The things you reach for most during a flight, one tap away. */
+function QuickActions() {
+  const items: Array<[string, string, () => React.ReactElement, string]> = [
+    ["remote", "Remote", Icon.remote, "ic-remote"], ["map", "Live map", Icon.map, "ic-map"], ["charts", "Charts", Icon.chart, "ic-charts"],
+    ["cockpit", "EFB & GSX", Icon.panel, "ic-cockpit"], ["checklists", "Checklists", Icon.checklist, "ic-checklists"], ["copilot", "Copilot", Icon.headset, "ic-copilot"],
+  ];
+  return (
+    <nav className="quick" aria-label="Quick actions">
+      {items.map(([id, label, ic, cls]) => (
+        <a key={id} href={`#/${id}`} className="quick-a glass"><span className={`nav-ic ${cls}`} aria-hidden="true">{ic()}</span><span>{label}</span></a>
+      ))}
+    </nav>
   );
 }
