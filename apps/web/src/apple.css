@@ -641,3 +641,7 @@ label.between > span { min-width: 0; }
 }
 /* Phones: the connection pill sits under the title instead of being cut off */
 @media (max-width: 560px) { .home-head { flex-direction: column; gap: 8px; } .home-head .conn-pill, .home-head .pill { max-width: 100%; white-space: normal; } }
+
+/* Sidebar items never shrink or pop: the map's first load can freeze them mid-animation. */
+.nav-a, .nav-a.on, .nav-a:active, .nav-a:hover { transform: none !important; animation: none !important; }
+.nav-a { min-height: 38px; flex: none; }

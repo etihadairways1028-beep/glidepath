@@ -110,7 +110,7 @@ export function CockpitScreen({ initial }: { initial?: string }) {
         </Section>
       )}
 
-      {b && httpsPage && list && !anySecure && <Notice info>To show add-on pages inside Glidepath on this secure address, update the Bridge on your PC to 1.1.1 or newer. Until then they open in their own tab.</Notice>}
+      {b && httpsPage && list && !anySecure && <Notice info>To show add-on pages inside Glidepath on this secure address, update the Bridge on your PC to the latest version from the Glidepath website. Until then they open in their own tab.</Notice>}
 
       <Section title="PMDG 737 and 777">
         <p className="small">PMDG's EFB isn't served as a web page, so it can't be opened here. The CDU can be mirrored in a later version through PMDG's own SDK. To get ready, add this to <code>737_Options.ini</code> or <code>777_Options.ini</code> in the aircraft's work folder:</p>

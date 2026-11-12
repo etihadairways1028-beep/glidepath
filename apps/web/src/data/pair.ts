@@ -52,7 +52,7 @@ export async function pairWithCode(rawCode: string, address?: string): Promise<v
     if (!base) throw new Error("That address doesn't look right. It's four numbers like 192.168.1.20, shown in the Bridge window.");
   } else {
     base = await findPc(code);
-    if (!base) throw new Error("Couldn't find your PC from that code. Check the Bridge is open on your PC (version 0.8 or newer) and the code matches, or type your PC's address below.");
+    if (!base) throw new Error("Couldn't find your PC from that code. Check the Bridge is open on your PC and the code matches, or type your PC's address below.");
   }
   let r: Response;
   try {

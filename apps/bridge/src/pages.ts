@@ -16,18 +16,27 @@ import type { BridgeStatus } from "@glidepath/protocol";
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
 const BASE_CSS = `
-:root{--bg:#05080F;--panel:rgba(14,22,38,.72);--line:rgba(148,180,255,.14);--ink:#E8EEF9;--quiet:#8A97AE;--accent:#5AA9FF;--live:#3DDC97;--caution:#FFB547;--warn:#FF5D5D;--route:#E05CFF}
-*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
-body{background:radial-gradient(1200px 600px at 70% -10%,rgba(90,169,255,.12),transparent 60%),var(--bg);min-height:100vh}
-.mono{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px)}
-.label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--quiet)}
-.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--quiet);margin-right:8px;vertical-align:middle}
-.dot.live{background:var(--live);box-shadow:0 0 0 0 rgba(61,220,151,.6);animation:pulse 2s infinite}.dot.warn{background:var(--caution)}.dot.err{background:var(--warn)}
-@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(61,220,151,.5)}70%{box-shadow:0 0 0 8px rgba(61,220,151,0)}100%{box-shadow:0 0 0 0 rgba(61,220,151,0)}}
-.badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;letter-spacing:.06em;border:1px solid var(--line);color:var(--quiet)}
-.badge.replay{color:var(--caution);border-color:rgba(255,181,71,.4)}
-a{color:var(--accent)}
+:root{color-scheme:dark;--bg:#060818;--panel:rgba(30,34,52,.34);--line:rgba(255,255,255,.12);--ink:#fff;--quiet:rgba(235,235,245,.62);--faint:rgba(235,235,245,.38);--accent:#0A84FF;--live:#30D158;--caution:#FF9F0A;--warn:#FF453A;--route:#BF5AF2}
+*{box-sizing:border-box}html{background:var(--bg)}html,body{margin:0;color:var(--ink);font:15px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable Text","Segoe UI",Inter,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+body{min-height:100vh;background:transparent;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:-25%;z-index:-2;pointer-events:none;background:radial-gradient(38% 34% at 18% 22%,#2F5BFF 0%,transparent 70%),radial-gradient(34% 32% at 82% 18%,#8A3FFC 0%,transparent 70%),radial-gradient(40% 36% at 70% 82%,#00BFA6 0%,transparent 70%),radial-gradient(30% 28% at 22% 85%,#FF5E8A 0%,transparent 72%);opacity:.85;filter:blur(30px) saturate(1.2);animation:drift 40s ease-in-out infinite alternate}
+body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(60% 50% at 50% 50%,transparent 40%,rgba(0,0,10,.45) 100%)}
+@keyframes drift{to{transform:translate3d(4vmax,3vmax,0) scale(1.08)}}
+@media (prefers-reduced-motion:reduce){body::before{animation:none}}
+.mono{font-family:"SF Mono",ui-monospace,"Cascadia Mono",Consolas,Menlo,monospace;font-variant-numeric:tabular-nums}
+.panel{position:relative;background:linear-gradient(140deg,rgba(255,255,255,.2) 0%,rgba(255,255,255,0) 28%,rgba(255,255,255,0) 72%,rgba(255,255,255,.13) 100%),var(--panel);border:0;border-radius:24px;-webkit-backdrop-filter:blur(15px) saturate(185%) brightness(1.06);backdrop-filter:blur(15px) saturate(185%) brightness(1.06);box-shadow:inset 1.5px 1.5px 1px -.5px rgba(255,255,255,.9),inset -1.5px -1.5px 1px -.5px rgba(255,255,255,.5),inset 0 0 0 .5px rgba(255,255,255,.3),inset 6px 8px 14px -10px rgba(255,255,255,.42),0 18px 40px -18px rgba(0,0,0,.55)}
+.label{font-size:13px;color:var(--quiet)}
+.cap{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--quiet)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--faint);margin-right:8px;vertical-align:middle}
+.dot.live{background:var(--live);animation:pulse 2s infinite}.dot.warn{background:var(--caution)}.dot.err{background:var(--warn)}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(48,209,88,.55)}70%{box-shadow:0 0 0 8px rgba(48,209,88,0)}100%{box-shadow:0 0 0 0 rgba(48,209,88,0)}}
+.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:rgba(255,255,255,.12);box-shadow:inset 0 .5px 0 rgba(255,255,255,.4);color:var(--quiet)}
+.badge.replay{color:var(--caution)}
+a{color:#64B5FF}
+.btnp{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;border-radius:999px;background:linear-gradient(180deg,#3A9BFF,#0A6CFF);color:#fff!important;font-weight:600;text-decoration:none;border:0;font-size:16px;box-shadow:inset 0 1px .5px rgba(255,255,255,.6),0 10px 24px -10px rgba(10,132,255,.8);cursor:pointer}
+.btnp:active{opacity:.6}
+.ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:none;color:#fff;background:linear-gradient(140deg,var(--c1),var(--c2));box-shadow:inset 1px 1px .5px rgba(255,255,255,.7),0 6px 14px -6px rgba(0,0,0,.5)}
+.ic svg{width:19px;height:19px}
 `;
 
 const LOGO = `<svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true" style="border-radius:6px"> <defs>  <linearGradient id="gp-bg" x1="0.1" y1="0" x2="0.9" y2="1">   <stop offset="0" stop-color="#4FB4FF"/>   <stop offset="0.5" stop-color="#2F6BFF"/>   <stop offset="1" stop-color="#7A3CFF"/>  </linearGradient>  <linearGradient id="gp-sheen" x1="0" y1="0" x2="0" y2="1">   <stop offset="0" stop-color="#fff" stop-opacity="0.42"/>   <stop offset="0.55" stop-color="#fff" stop-opacity="0.04"/>   <stop offset="1" stop-color="#fff" stop-opacity="0"/>  </linearGradient>  <linearGradient id="gp-path" x1="0" y1="0" x2="1" y2="1">   <stop offset="0" stop-color="#fff" stop-opacity="0.55"/>   <stop offset="0.6" stop-color="#fff"/>  </linearGradient> </defs> <rect width="64" height="64" rx="15" fill="url(#gp-bg)"/> <rect x="0.75" y="0.75" width="62.5" height="62.5" rx="14.4" fill="url(#gp-sheen)" stroke="#fff" stroke-opacity="0.28" stroke-width="1.5"/> <path d="M11 16 C 24 16, 31 26, 37 36 C 41.5 43.5, 45 47, 53 47" fill="none" stroke="url(#gp-path)" stroke-width="5.2" stroke-linecap="round"/> <path d="M27 53 H 53" stroke="#fff" stroke-opacity="0.5" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="4.5 4"/> <circle cx="11" cy="16" r="4.2" fill="#fff"/></svg>`;
@@ -49,16 +58,17 @@ export function liveRedirectPage(): string {
 export function pairPage(): string {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Connect to Glidepath</title><style>${BASE_CSS}
-main{max-width:460px;margin:0 auto;padding:56px 22px;text-align:center}h1{font-size:26px;margin:18px 0 6px}p{color:var(--quiet);line-height:1.5}
-.code{display:flex;gap:8px;justify-content:center;margin:26px 0 14px}
-#c{width:100%;max-width:300px;font-size:38px;letter-spacing:.35em;text-align:center;padding:14px 10px 14px 24px;border-radius:18px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:inherit;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-button{margin-top:6px;width:100%;max-width:300px;padding:15px;border:0;border-radius:16px;background:#0A84FF;color:#fff;font-size:17px;font-weight:600}
-#m{min-height:22px;margin-top:14px;color:#FF9F0A}</style></head><body><main>
-<div style="display:flex;justify-content:center">${LOGO}</div>
+main{max-width:440px;margin:0 auto;padding:64px 20px;text-align:center}.card{padding:34px 24px 26px}h1{font-size:28px;font-weight:700;letter-spacing:-.02em;margin:18px 0 6px}p{color:var(--quiet);line-height:1.5;margin:0}
+.code{display:flex;gap:8px;justify-content:center;margin:26px 0 16px}
+#c{width:100%;max-width:300px;font-size:36px;letter-spacing:.35em;text-align:center;padding:14px 10px 14px 24px;border-radius:18px;border:0;background:rgba(255,255,255,.1);box-shadow:inset 0 0 0 .5px rgba(255,255,255,.25),inset 0 2px 6px rgba(0,0,0,.25);color:inherit;font-family:"SF Mono",ui-monospace,Consolas,monospace;outline:none}
+#c:focus{box-shadow:inset 0 0 0 2px #0A84FF}
+button.btnp{width:100%;max-width:300px;padding:15px;font-size:17px}
+#m{min-height:22px;margin-top:14px;color:#FF9F0A}.logo svg{width:64px;height:64px;border-radius:15px;box-shadow:0 14px 30px -12px rgba(47,107,255,.8)}</style></head><body><main>
+<div class="panel card"><div class="logo" style="display:flex;justify-content:center">${LOGO}</div>
 <h1>Connect this iPad</h1>
 <p>Type the 6-digit code shown on your PC, in the Glidepath Bridge window.</p>
 <form id="f"><div class="code"><input id="c" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="000000" autofocus></div>
-<button type="submit">Connect</button></form><div id="m"></div>
+<button class="btnp" type="submit">Connect</button></form><div id="m"></div></div>
 <script>
 document.getElementById("f").onsubmit=async function(e){e.preventDefault();var m=document.getElementById("m");m.textContent="Connecting…";
 try{var r=await fetch("/api/pair",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code:document.getElementById("c").value})});var j=await r.json();
@@ -66,9 +76,17 @@ if(r.ok&&j.token){location.replace("/app/#token="+encodeURIComponent(j.token));}
 </script></main></body></html>`;
 }
 
+const SVG = {
+  sim: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>`,
+  plane: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>`,
+  wave: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4l3-8 4 16 3-8h6"/></svg>`,
+  dev: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="3"/><path d="M11 18h2"/></svg>`,
+};
+
 export function statusPage(p: { local: boolean; pairCode: string; status: BridgeStatus; token: string | null; addresses: string[]; port: number; logs: string[] }): string {
   const s = p.status;
   const stateDot = s.simState === "connected" ? "live" : s.simState === "error" ? "err" : "warn";
+  const code = `${esc(p.pairCode.slice(0, 3))} ${esc(p.pairCode.slice(3))}`;
   const links = p.token
     ? p.addresses.map((ip) => {
         const u = `http://${ip}:${p.port}/app/#token=${encodeURIComponent(p.token!)}`;
@@ -76,33 +94,52 @@ export function statusPage(p: { local: boolean; pairCode: string; status: Bridge
       }).join("")
     : "";
   const here = p.token ? `http://localhost:${p.port}/app/#token=${encodeURIComponent(p.token)}` : null;
+  const tile = (c1: string, c2: string, icon: string, k: string, v: string, sub: string) =>
+    `<div class="panel tile"><div class="tile-h"><span class="ic" style="--c1:${c1};--c2:${c2}">${icon}</span><span class="cap">${k}</span></div><div class="v">${v}</div><div class="label">${sub}</div></div>`;
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Glidepath Bridge</title><meta http-equiv="refresh" content="5"><style>${BASE_CSS}
-main{max-width:860px;margin:0 auto;padding:32px 20px}h1{font-size:20px;font-weight:600;margin:0 0 4px;display:flex;gap:10px;align-items:center}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:20px 0}.panel{padding:16px}.v{font-size:17px;margin-top:4px}
-a.btnp{display:inline-block;padding:10px 16px;border-radius:12px;background:var(--accent);color:#05080F;font-weight:600;text-decoration:none}.pairrow{display:flex;gap:16px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}.pairrow:first-of-type{border-top:0}.qr{width:132px;height:132px;flex:none;background:#fff;border-radius:12px;padding:6px}.qr svg{width:100%;height:100%;display:block}.pairrow a{word-break:break-all}
-.easy .steps{margin:12px 0 14px;padding-left:22px;font-size:17px;line-height:1.6}.easy .steps li{margin:8px 0}.easy .big{display:inline-block;margin-top:4px;font-size:28px;font-weight:700;color:var(--ink,#fff)}.easy .code{letter-spacing:.12em;color:#0A84FF}
-pre{white-space:pre-wrap;font-size:12px;color:var(--quiet);max-height:320px;overflow:auto;padding:16px;margin:0}ul{padding-left:18px}</style></head><body><main>
-<h1>${LOGO} Glidepath Bridge <span class="badge mono">v${esc(s.bridgeVersion)}</span></h1>
-<div class="label">${esc(s.hostname)} · Bridge ${esc(s.bridgeId.slice(0, 8))}</div>
+<title>Glidepath Bridge</title><style>${BASE_CSS}
+main{max-width:900px;margin:0 auto;padding:36px 22px 60px}
+.head{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.head .logo svg{width:52px;height:52px;border-radius:13px;box-shadow:0 12px 26px -12px rgba(47,107,255,.85)}
+h1{font-size:30px;font-weight:700;letter-spacing:-.02em;margin:0;line-height:1.1}.head .label{margin-top:3px}.head .btnp{margin-left:auto}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin:26px 0 14px}
+.tile{padding:16px 16px 15px}.tile-h{display:flex;align-items:center;gap:10px;margin-bottom:12px}.tile .v{font-size:19px;font-weight:600;letter-spacing:-.01em;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:14px}@media(max-width:720px){.two{grid-template-columns:minmax(0,1fr)}.head .btnp{margin-left:0;width:100%}}
+.codecard{padding:26px 22px;text-align:center;display:flex;flex-direction:column;justify-content:center}.bigcode{font-size:clamp(40px,11vw,58px);font-weight:700;letter-spacing:6px;margin:8px 0 6px;background:linear-gradient(180deg,#fff,#B9D6FF);-webkit-background-clip:text;background-clip:text;color:transparent}
+.easy{padding:22px}.steps{list-style:none;margin:14px 0 14px;padding:0;counter-reset:n}.steps li{counter-increment:n;display:flex;gap:14px;align-items:flex-start;margin:0 0 16px;font-size:16px}
+.steps li::before{content:counter(n);flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px;background:linear-gradient(180deg,#3A9BFF,#0A6CFF);box-shadow:inset 0 1px .5px rgba(255,255,255,.6)}
+.big{display:inline-block;margin-top:4px;font-size:clamp(19px,5.4vw,24px);overflow-wrap:anywhere;font-weight:700;color:#fff}.big.code{color:#64B5FF;letter-spacing:.12em}
+.sec{padding:18px 20px;margin-top:14px}.pairrow{display:flex;gap:16px;align-items:center;padding:12px 0;border-top:.5px solid var(--line)}.pairrow:first-of-type{border-top:0}
+.qr{width:128px;height:128px;flex:none;background:#fff;border-radius:16px;padding:7px}.qr svg{width:100%;height:100%;display:block}.pairrow a{word-break:break-all;font-size:13px}
+details.sec summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}details.sec summary::-webkit-details-marker{display:none}details.sec summary::after{content:"›";font-size:22px;color:var(--faint);transition:transform .2s}details[open].sec summary::after{transform:rotate(90deg)}
+pre{white-space:pre-wrap;font-size:12px;color:var(--quiet);max-height:320px;overflow:auto;margin:12px 0 0;padding:14px;border-radius:14px;background:rgba(0,0,0,.28)}
+.foot{margin-top:18px;text-align:center}</style></head><body><main id="root">
+<div class="head"><span class="logo">${LOGO}</span><div><h1>Glidepath Bridge</h1><div class="label">${esc(s.hostname)} · <span class="badge mono">v${esc(s.bridgeVersion)}</span></div></div>${p.local && here ? `<a class="btnp" href="${esc(here)}" target="_blank" rel="noreferrer">Open Glidepath</a>` : ""}</div>
 <div class="grid">
-  <div class="panel"><div class="label">Simulator</div><div class="v"><span class="dot ${stateDot}"></span>${esc(s.simulator?.name ?? "Not connected")}</div><div class="label" style="margin-top:6px">${esc(s.message ?? s.simState)}</div></div>
-  <div class="panel"><div class="label">Aircraft</div><div class="v">${esc(s.aircraft?.title ?? "—")}</div><div class="label" style="margin-top:6px">Profile: ${esc(s.aircraft?.profileId ?? "—")}</div></div>
-  <div class="panel"><div class="label">Telemetry</div><div class="v mono">${s.framesPerSecond.toFixed(1)} fps</div><div class="label" style="margin-top:6px">${s.lastFrameAt ? "last frame " + new Date(s.lastFrameAt).toLocaleTimeString() : "no frames yet"}</div></div>
-  <div class="panel"><div class="label">Connected devices</div><div class="v mono">${s.clients}</div><div class="label" style="margin-top:6px">${s.activeFlightId ? "Recording flight " + esc(s.activeFlightId.slice(0, 8)) : "No active flight"}</div></div>
+${tile("#64D2FF", "#0A84FF", SVG.sim, "Simulator", `<span class="dot ${stateDot}"></span>${esc(s.simulator?.name ?? "Not connected")}`, esc(s.message ?? s.simState))}
+${tile("#FFB340", "#FF7A00", SVG.plane, "Aircraft", esc(s.aircraft?.title ?? "—"), `Profile: ${esc(s.aircraft?.profileId ?? "—")}`)}
+${tile("#5EE07F", "#1FA84A", SVG.wave, "Telemetry", `<span class="mono">${s.framesPerSecond.toFixed(1)} fps</span>`, s.lastFrameAt ? "Last frame " + new Date(s.lastFrameAt).toLocaleTimeString() : "No frames yet")}
+${tile("#D18CFF", "#8A3FFC", SVG.dev, "Devices", `<span class="mono">${s.clients}</span> connected`, s.activeFlightId ? "Recording flight " + esc(s.activeFlightId.slice(0, 8)) : "No active flight")}
 </div>
-${p.local ? `<div class="panel" style="padding:22px;margin-top:12px;text-align:center"><div class="label">Your pairing code</div><div class="mono" style="font-size:56px;font-weight:700;letter-spacing:6px;margin:6px 0">${esc(p.pairCode.slice(0, 3))} ${esc(p.pairCode.slice(3))}</div><div class="label">Type this on the iPad after tapping Connect to my PC. It is also saved on your Desktop as Glidepath code.txt.</div></div>${here ? `<div class="panel" style="padding:16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><div class="label">On this PC</div><div class="v">Open the Glidepath app here</div></div><a class="btnp" href="${esc(here)}" target="_blank" rel="noreferrer">Open Glidepath</a></div>` : ""}
-<div class="panel easy" style="padding:22px;margin-top:12px">
-  <div class="label">Connect your iPad: 2 steps</div>
-  <ol class="steps"><li>On the iPad, open <b>Safari</b> and go to<br><span class="big mono">glidepath.local:${p.port}</span></li>
-  <li>Type this code:<br><span class="big mono code">${esc(p.pairCode.slice(0, 3))} ${esc(p.pairCode.slice(3))}</span></li></ol>
-  <div class="label">Or open the Glidepath website on the iPad, tap Connect and type the same code. Then tap Share, then Add to Home Screen, to keep Glidepath as an app.</div>
-</div>
-<div class="panel" style="padding:16px;margin-top:12px"><div class="label" style="margin-bottom:10px">Or scan with your iPad camera (same Wi-Fi)</div>
-${links || "<p>No network address found. Is this PC connected to Wi-Fi or Ethernet?</p>"}
-<div class="label" style="margin-top:10px">This link contains your pairing key. Only open it on your own devices. If Windows asks, allow Glidepath Bridge on <b>private</b> networks. On iPad, tap Share then Add to Home Screen to keep it as an app.</div></div>
-<h2 class="label" style="margin:24px 0 8px">Recent log</h2><div class="panel"><pre class="mono">${esc(p.logs.join("\n")) || "—"}</pre></div>` : `<p class="label">Pairing details are only shown on the simulator PC itself.</p>`}
-</main></body></html>`;
+${p.local ? `<div class="two">
+<div class="panel codecard"><div class="cap">Your pairing code</div><div class="bigcode mono">${code}</div><div class="label">Also saved on your Desktop as <b>Glidepath code.txt</b>.</div></div>
+<div class="panel easy"><div class="cap">Connect your iPad in 2 steps</div>
+  <ol class="steps"><li><div>On the iPad, open <b>Safari</b> and go to<br><span class="big mono">glidepath.local:${p.port}</span></div></li>
+  <li><div>Type this code:<br><span class="big mono code">${code}</span></div></li></ol>
+  <div class="label">Or open the Glidepath website on the iPad, tap Connect and type the same code. Tap Share, then Add to Home Screen, to keep it as an app.</div>
+</div></div>
+<details class="panel sec"><summary><span class="cap">Or scan a QR code (same Wi-Fi)</span></summary><div style="margin-top:10px">
+${links || "<p class='label'>No network address found. Is this PC connected to Wi-Fi or Ethernet?</p>"}
+<div class="label" style="margin-top:10px">This link contains your pairing key. Only open it on your own devices. If Windows asks, allow Glidepath Bridge on <b>private</b> networks.</div></div></details>
+<details class="panel sec"><summary><span class="cap">Recent log</span></summary><pre class="mono">${esc(p.logs.join("\n")) || "—"}</pre></details>
+<div class="label foot">Keep the Bridge window open while you fly. This page updates by itself.</div>` : `<div class="panel sec"><p class="label" style="margin:0">Pairing details are only shown on the simulator PC itself.</p></div>`}
+</main>
+<script>
+var open=function(){return [].map.call(document.querySelectorAll("details"),function(d){return d.open;});};
+setInterval(function(){if(document.hidden||(window.getSelection&&String(window.getSelection())))return;
+fetch(location.href,{cache:"no-store"}).then(function(r){return r.ok?r.text():null;}).then(function(t){if(!t)return;var m=t.match(/<main id="root">([\\s\\S]*)<\\/main>/);if(!m)return;
+var o=open(),pre=document.querySelector("pre"),sc=pre?pre.scrollTop:0;document.getElementById("root").innerHTML=m[1];
+[].forEach.call(document.querySelectorAll("details"),function(d,i){d.open=!!o[i];});var p2=document.querySelector("pre");if(p2)p2.scrollTop=sc;}).catch(function(){});},5000);
+</script></body></html>`;
 }
 
 export function livePage(): string {
