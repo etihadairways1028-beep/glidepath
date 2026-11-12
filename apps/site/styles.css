@@ -703,7 +703,7 @@ body::before { filter: none !important; will-change: auto; }
 @media (max-width: 520px) { .nb-long { display: none; } }
 
 /* ===== New in 1.1: bento ===== */
-.bento { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 18px; }
+.bento-new { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 18px; }
 .bx { border-radius: 32px; overflow: hidden; position: relative; display: grid; grid-template-rows: auto 1fr; min-height: 420px; transition: transform .45s cubic-bezier(.2,1,.3,1), box-shadow .45s; }
 @media (hover: hover) { .bx:hover { transform: translateY(-4px); } }
 .bx-copy { padding: 28px 28px 0; position: relative; z-index: 2; }
@@ -752,7 +752,7 @@ body::before { filter: none !important; will-change: auto; }
   .bx-career { grid-column: span 7; } .bx-challenge { grid-column: span 5; }
 }
 @media (max-width: 760px) {
-  .bento { grid-template-columns: 1fr; }
+  .bento-new { grid-template-columns: 1fr; }
   .bx-share, .bx-follow, .bx-career, .bx-challenge, .bx-coach { grid-column: auto; }
   .bx { min-height: 0; } .bx-coach { grid-template-columns: 1fr; } .bx-coach .bx-art { padding: 0 20px 22px; }
   .bx-copy { padding: 22px 22px 0; } .share-art { padding-top: 22px; } .share-art img { width: min(280px, 80%); }
