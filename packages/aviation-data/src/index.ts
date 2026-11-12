@@ -88,6 +88,14 @@ export class AirportDb {
     return best ? { ...toAirport(best.a), distanceNm: Math.round(best.d * 10) / 10 } : null;
   }
 
+  /** Every airport of the given sizes (all sizes when none are given). */
+  list(sizes?: Array<Airport["size"]>): Airport[] {
+    const allowed = sizes ? new Set(sizes) : null;
+    const out: Airport[] = [];
+    for (const a of this.byCode.values()) if (!allowed || allowed.has(SIZE[a[8]])) out.push(toAirport(a));
+    return out;
+  }
+
   search(query: string, limit = 20): Airport[] {
     const q = query.trim().toUpperCase();
     if (q.length < 2) return [];

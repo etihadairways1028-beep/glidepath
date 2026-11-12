@@ -1,6 +1,6 @@
 // Offline shell for the hosted app. Live data always comes from the network;
 // only the app's own files are cached, so it opens instantly from the Home Screen.
-const CACHE = "glidepath-v5";
+const CACHE = "glidepath-v6";
 self.addEventListener("install", () => { self.skipWaiting(); });
 self.addEventListener("activate", (e) => e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())));
 

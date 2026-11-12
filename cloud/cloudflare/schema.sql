@@ -58,3 +58,18 @@ CREATE TABLE IF NOT EXISTS password_resets (
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   expires_at INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS live_shares (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  ended_at INTEGER,
+  data TEXT,
+  trail TEXT
+);
+CREATE INDEX IF NOT EXISTS live_shares_user ON live_shares(user_id);
+CREATE TABLE IF NOT EXISTS challenge (
+  user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  joined_at INTEGER NOT NULL
+);

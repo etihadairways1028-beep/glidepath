@@ -3,6 +3,8 @@ import { useApp } from "../data/store";
 
 const P = { fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
 export const Icon = {
+  career: () => <svg viewBox="0 0 24 24" {...P}><path d="M4 7h16v4H4zM4 14h16M4 18h16" /><path d="M9 7V5h6v2" /></svg>,
+  trophy: () => <svg viewBox="0 0 24 24" {...P}><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7M9.5 17h5" /></svg>,
   home: () => <svg viewBox="0 0 24 24" {...P}><path d="M4 11.5 12 5l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z" /></svg>,
   map: () => <svg viewBox="0 0 24 24" {...P}><path d="m9 4-5 2v14l5-2 6 2 5-2V4l-5 2zM9 4v14M15 6v14" /></svg>,
   flight: () => <svg viewBox="0 0 24 24" {...P}><path d="M21 15.5v-1.8l-8-5V4.5a1.5 1.5 0 0 0-3 0v4.2l-8 5v1.8l8-2.4v4.3l-2.2 1.6V21l3.7-1 3.7 1v-2l-2.2-1.6v-4.3z" /></svg>,

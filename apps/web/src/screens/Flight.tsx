@@ -1,3 +1,4 @@
+import { ShareLive } from "../components/ShareLive";
 import { TouchdownDiagram } from "../components/TouchdownDiagram";
 import { useMemo, useState } from "react";
 import type { LandingReport } from "@glidepath/protocol";
@@ -38,6 +39,7 @@ export function FlightScreen() {
   return (
     <div className="stack">
       <div className="between wrap"><h1 className="title">Flight</h1>{mode === "demo" && <span className="pill demo"><span className="dot" />Demo flight: synthetic data</span>}</div>
+      <ShareLive />
       <AircraftHero icaoType={L.flight.aircraft?.icaoType ?? L.plan?.aircraftIcao} title={L.flight.aircraft?.title} tilt={Math.max(-5, Math.min(6, -(f.speed.vsFpm ?? 0) / 450))}>
           <p className="fh-type">{L.flight.aircraft?.icaoType ?? L.plan?.aircraftIcao ?? "Your aircraft"}</p>
           <p className="fh-meta">{[L.plan?.callsign ?? L.flight.callsign, L.flight.aircraft?.registration ?? L.plan?.registration, L.flight.aircraft?.title].filter(Boolean).join(", ") || "Waiting on aircraft details from the sim"}</p>

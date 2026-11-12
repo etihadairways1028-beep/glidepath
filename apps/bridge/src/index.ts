@@ -1,8 +1,10 @@
+import type { FlightPhase, TelemetryFrame } from "@glidepath/protocol";
 /**
  * Glidepath Bridge — entry point.
  *
  *   Simulator adapter → FlightSession (engine + recorder) → LAN server
  */
+import { activityFor, DiscordPresence } from "./discord.js";
 import { PROTOCOL_VERSION, type AircraftInfo, type BridgeStatus, type SimConnectionState, type SimulatorInfo } from "@glidepath/protocol";
 import { BRIDGE_VERSION, HOSTNAME, loadConfig, loadIdentity } from "./config.js";
 import { exec } from "node:child_process";
@@ -121,6 +123,12 @@ async function main(): Promise<void> {
   });
   adapter.on("sessionEnd", () => session.endSession());
   server.setRemote(adapter);
+  // Discord status: what you're flying, on your Discord profile (off until turned on in the app).
+  const discord = new DiscordPresence(cfg.dataDir, log.child("discord"));
+  server.discord = discord;
+  discord.start();
+  session.on("frame", (frame: TelemetryFrame, phase: FlightPhase) => discord.update(activityFor(session.activeFlight, frame, phase)));
+  setInterval(() => { if (!lastFrameAt || Date.now() - lastFrameAt > 120_000) discord.update(null); }, 30_000).unref();
   server.setCharts(new ChartService(join(cfg.dataDir, "charts"), fetch, log.child("charts")));
 
   try {

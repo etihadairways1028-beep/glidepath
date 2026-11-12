@@ -1,3 +1,5 @@
+import { ShareCardButton } from "../components/ShareCard";
+import { ApproachCoach } from "../components/ApproachCoach";
 import { Replay, replayPoints } from "../components/Replay";
 import { DebriefPanel, HandlingCard, TakeoffCard } from "../components/Debrief";
 import { Career } from "../components/Career";
@@ -17,7 +19,7 @@ import { LandingSummary } from "./Flight";
 import { touchdownWords } from "@glidepath/flight-engine";
 import { gradeOf } from "./Home";
 
-function useFlights(): { flights: FlightSummary[] | null; error: string | null; fromCloud: boolean } {
+export function useFlights(): { flights: FlightSummary[] | null; error: string | null; fromCloud: boolean } {
   const mode = useApp((s) => s.mode);
   const cloud = useCloud();
   const [fromCloud, setFromCloud] = useState(false);
@@ -113,7 +115,13 @@ export function FlightDetail({ id }: { id: string }) {
   const [events, setEvents] = useState<FlightEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
-    if (mode === "demo" && liveFlight?.id === id) { setFlight(liveFlight); setTrail(liveTrail); setEvents(liveEvents); return; }
+    if (mode === "demo" && liveFlight?.id === id) {
+      setFlight(liveFlight); setTrail(liveTrail); setEvents(liveEvents);
+      // The demo's recorded frames, up to where the demo has got to (for the approach coach).
+      const until = liveFlight.onBlockAt ?? liveFlight.endedAt ?? liveFlight.wheelsDownAt;
+      if (until) void fetch("data/demo-flight.json").then((r) => r.json()).then((d: { frames: TelemetryFrame[] }) => setFrames(d.frames.filter((f) => f.t <= until + 60_000))).catch(() => undefined);
+      return;
+    }
     setError(null);
     const b = activeBridge();
     if (!b) {
@@ -148,6 +156,7 @@ export function FlightDetail({ id }: { id: string }) {
         <div className="row">
           {flight.simulator.source === "replay" && <span className="pill demo"><span className="dot" />Demo</span>}
           <span className="pill">{flight.status === "completed" ? "Completed" : flight.status === "incomplete" ? "Incomplete" : "In progress"}</span>
+          <ShareCardButton flight={flight} track={trail} />
         </div>
       </div>
       <AircraftHero icaoType={flight.aircraft?.icaoType ?? flight.plan?.aircraftIcao} title={flight.aircraft?.title}>
@@ -156,6 +165,7 @@ export function FlightDetail({ id }: { id: string }) {
           {flight.landings.at(-1) ? <p className="fh-meta" style={{ marginTop: 10 }}>Landed at <b style={{ color: "var(--ink)" }}>{fmt(Math.abs(flight.landings.at(-1)!.touchdownVsFpm ?? 0))} fpm</b>, graded {flight.landings.at(-1)!.grade}</p> : null}
       </AircraftHero>
       <DebriefPanel flight={flight} />
+      <ApproachCoach frames={frames} landing={flight.landings.at(-1)} />
       {trail.length > 1 ? (
         <Replay points={replayPoints(frames, trail)} plan={flight.plan} airports={airports} events={events} />
       ) : (

@@ -65,7 +65,8 @@ async function call<T>(path: string, init: { method?: string; body?: unknown; sl
         headers: { ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
       });
-      if (r.status === 404 && base === PROXY) { r = null; continue; } // site without the forwarder
+      // A site without the forwarder answers 404 with a web page; the service itself answers in JSON.
+      if (r.status === 404 && base === PROXY && !(r.headers.get("content-type") ?? "").includes("json")) { r = null; continue; }
       if (bases[0] !== base) bases = [base, ...bases.filter((b) => b !== base)];
       break;
     } catch { r = null; }
@@ -290,3 +291,20 @@ export async function downloadLink(): Promise<{ url: string | null; error: strin
   if (!a) return { url: null, error: "Sign in to download." };
   try { return { url: (await call<{ url: string }>("/download", { slot: a.slot })).url, error: null }; } catch (e) { return { url: null, error: msg(e) }; }
 }
+
+// ------------------------------------------------------------------ live link and challenge
+
+/** Calls that need the signed-in pilot. */
+export async function authed<T>(path: string, method = "GET", body?: unknown): Promise<T> {
+  const a = activeAccount();
+  if (!a) throw new CloudError("Sign in first (More → Account). It's free.");
+  return call<T>(path, { method, body, slot: a.slot });
+}
+
+export interface ChallengeEntry { name: string; score: number; fpm: number | null; grade: string | null; airport: string | null; aircraft: string | null; at: number; you?: boolean }
+export interface Challenge { month: string; joined: boolean; name: string | null; entries: ChallengeEntry[]; you: (ChallengeEntry & { rank: number }) | null; pilots: number }
+export const getChallenge = (month?: string) => authed<Challenge>(`/challenge${month ? `?month=${month}` : ""}`);
+export const joinChallenge = (name: string) => authed<{ joined: boolean; name: string }>("/challenge/join", "POST", { name });
+export const leaveChallenge = () => authed<{ joined: boolean }>("/challenge/leave", "POST", {});
+/** The public follow page for a live link. */
+export const followUrl = (id: string) => `${SITE}/follow/?f=${id}`;

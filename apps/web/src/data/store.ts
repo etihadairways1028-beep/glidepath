@@ -62,6 +62,8 @@ export interface Settings {
   map3d: boolean;
   /** Glideslope banners at each stage of the flight. */
   flightMessages: boolean;
+  /** Stable-approach check at 1000 ft and 500 ft. */
+  approachCoach: boolean;
   /** Messages when the aircraft lights are switched, plus light reminders. */
   lightMessages: boolean;
   /** Also show Glideslope messages as system notifications (when the app is in the background). */
@@ -73,7 +75,7 @@ export interface Settings {
 }
 
 const DEFAULT_SETTINGS: Settings = {
-  bridgeUrl: "", token: "", simbriefUser: "", showVatsim: true, showIvao: false, showSayIntentions: false, fuelUnit: "kg", accent: "glideslope", theme: "system", wallpaper: "aurora", voiceCallouts: false, reduceTransparency: false, glassLevel: 95, mapStyle: "map", map3d: false, flightMessages: true, systemNotifications: false, atcAlerts: true, lightMessages: true, showAtc: true, showRadar: false, showMetars: false,
+  bridgeUrl: "", token: "", simbriefUser: "", showVatsim: true, showIvao: false, showSayIntentions: false, fuelUnit: "kg", accent: "glideslope", theme: "system", wallpaper: "aurora", voiceCallouts: false, reduceTransparency: false, glassLevel: 95, mapStyle: "map", map3d: false, flightMessages: true, approachCoach: true, systemNotifications: false, atcAlerts: true, lightMessages: true, showAtc: true, showRadar: false, showMetars: false,
 };
 
 const initial: AppState = {

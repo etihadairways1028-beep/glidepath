@@ -13,7 +13,7 @@ import { startDemo } from "./data/demo";
 import { settingsStore, store, useApp, useSettings } from "./data/store";
 import { CockpitScreen } from "./screens/Cockpit";
 import { WeatherScreen } from "./screens/Weather";
-import { GlideslopeBanners, useFlightMessages } from "./components/Glideslope";
+import { GlideslopeBanners, useFlightMessages, useApproachCoach } from "./components/Glideslope";
 import { Account, ForgotPassword, ResetPassword, hasBeenWelcomed, Welcome } from "./screens/Account";
 import { CopilotScreen } from "./screens/Copilot";
 import { useCallouts } from "./data/copilot";
@@ -25,6 +25,12 @@ import { Airports, AirportPage } from "./screens/Airports";
 import { SettingsScreen } from "./screens/Settings";
 import { applyGlass } from "./glassLevel";
 import { ScreenGuard } from "./components/ScreenGuard";
+import { CareerScreen } from "./screens/CareerScreen";
+import { ChallengeScreen } from "./screens/Challenge";
+import { initLive } from "./data/live";
+import { reviewApproach } from "@glidepath/flight-engine";
+initLive();
+if (location.search.includes("gpdebug")) Object.assign(window, { __gpStore: store, __gpReview: reviewApproach });
 import { BridgeIconTip } from "./components/InstallCard";
 import { Glance } from "./screens/Glance";
 
@@ -49,7 +55,7 @@ export function connectFromSettings(): void {
 }
 
 /** Sidebar sections, like the iPad's own apps: the flight first, then tools, then you. */
-const SECTION_BEFORE: Record<string, string> = { copilot: "Tools", account: "You" };
+const SECTION_BEFORE: Record<string, string> = { copilot: "Tools", career: "You" };
 
 const NAV: Array<{ id: string; label: string; icon: () => ReactNode; mobile: boolean }> = [
   { id: "home", label: "Home", icon: Icon.home, mobile: true },
@@ -65,6 +71,8 @@ const NAV: Array<{ id: string; label: string; icon: () => ReactNode; mobile: boo
   { id: "weather", label: "Weather", icon: Icon.cloud, mobile: false },
   { id: "airports", label: "Airports", icon: Icon.tower, mobile: false },
   { id: "glance", label: "Glance mode", icon: Icon.expand, mobile: false },
+  { id: "career", label: "Career", icon: Icon.career, mobile: false },
+  { id: "challenge", label: "Landing challenge", icon: Icon.trophy, mobile: false },
   { id: "account", label: "Account", icon: Icon.person, mobile: false },
   { id: "settings", label: "Settings", icon: Icon.gear, mobile: false },
 ];
@@ -76,6 +84,7 @@ export function App() {
   const status = useApp((st) => st.status);
   useCallouts();
   useFlightMessages();
+  useApproachCoach();
 
   useEffect(() => {
     consumePairingLink();
@@ -164,6 +173,8 @@ export function App() {
     case "settings": body = <SettingsScreen />; break;
     case "account": body = <Account />; break;
     case "forgot": body = <ForgotPassword />; break;
+    case "career": body = <CareerScreen />; break;
+    case "challenge": body = <ChallengeScreen />; break;
     case "reset": body = <ResetPassword token={rest[0]} />; break;
     case "glance": body = <Glance />; break;
     case "copilot": body = <CopilotScreen />; break;
@@ -192,7 +203,7 @@ export function App() {
                 <a className={`nav-a${screen === n.id || (!screen && n.id === "home") ? " on" : ""}`} href={`#/${n.id}`}><span className={`nav-ic ic-${n.id}`}>{n.icon()}</span>{n.label}</a>
               </Fragment>
             ))}
-            <div className="side-foot faint">{mode === "demo" ? "Demo flight: synthetic data" : `Glidepath 1.0.7${status?.bridgeVersion && status.bridgeVersion !== "demo" ? ` · Bridge ${status.bridgeVersion}` : ""}`}</div>
+            <div className="side-foot faint">{mode === "demo" ? "Demo flight: synthetic data" : `Glidepath 1.1.0${status?.bridgeVersion && status.bridgeVersion !== "demo" ? ` · Bridge ${status.bridgeVersion}` : ""}`}</div>
           </nav>
         )}
         <main className="main" id="main">
@@ -205,7 +216,7 @@ export function App() {
           {NAV.filter((n) => n.mobile).map((n) => (
             <a key={n.id} className={`tab${screen === n.id ? " on" : ""}`} href={`#/${n.id}`}>{n.icon()}{n.label === "Live map" ? "Map" : n.label}</a>
           ))}
-          <a className={`tab${["airports", "settings", "glance", "account", "forgot", "reset", "cockpit", "weather", "checklists", "tools", "copilot", "charts"].includes(screen ?? "") ? " on" : ""}`} href="#/settings">{Icon.more()}More</a>
+          <a className={`tab${["airports", "settings", "glance", "account", "forgot", "reset", "career", "challenge", "cockpit", "weather", "checklists", "tools", "copilot", "charts"].includes(screen ?? "") ? " on" : ""}`} href="#/settings">{Icon.more()}More</a>
         </nav>
       )}
     </>

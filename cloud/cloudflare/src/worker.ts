@@ -11,6 +11,7 @@
  */
 import { composeMonthlyBrief } from "../../../packages/flight-engine/src/brief";
 import { sendGmail } from "./gmail";
+import { addTrail, cleanLive, cleanName, leaderboard, monthRange, shareId } from "./social";
 import { debriefMail, deviceName, inflightMail, resetMail, signinMail } from "./mails";
 
 interface Env {
@@ -177,6 +178,15 @@ async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Re
     return json(200, { token: await newSession(env, u!.id), user: publicUser(u!) });
   }
 
+  // Follow my flight: anyone with the link can watch. No email or account details, ever.
+  const lm = /^\/live\/([a-z2-9]{6,16})$/.exec(p);
+  if (lm && req.method === "GET") {
+    const r = await env.DB.prepare("SELECT data, trail, updated_at, ended_at, created_at FROM live_shares WHERE id = ?").bind(lm[1]).first<{ data: string | null; trail: string | null; updated_at: number; ended_at: number | null; created_at: number }>();
+    if (!r) return fail(404, "This flight link doesn't exist or has expired.");
+    const live = !r.ended_at && !!r.data && Date.now() - r.updated_at < 10 * 60_000;
+    return json(200, { live, ended: !!r.ended_at, updatedAt: r.updated_at, startedAt: r.created_at, ...(r.data ? JSON.parse(r.data) : {}), trail: r.trail ? JSON.parse(r.trail) : [] });
+  }
+
   if (p === "/auth/forgot" && req.method === "POST") {
     const b = await body<{ email?: string }>(req);
     const email = (b?.email ?? "").trim().toLowerCase();
@@ -235,7 +245,7 @@ async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Re
     return json(200, { ...publicUser(u!), email_prefs: await prefsOf(env, user.id) });
   }
   if (p === "/me" && req.method === "DELETE") {
-    await env.DB.batch(["sessions", "flights", "bridges", "email_prefs", "password_resets", "email_log"].map((t) => env.DB.prepare(`DELETE FROM ${t} WHERE user_id = ?`).bind(user.id)).concat(env.DB.prepare("DELETE FROM users WHERE id = ?").bind(user.id)));
+    await env.DB.batch(["sessions", "flights", "bridges", "email_prefs", "password_resets", "email_log", "live_shares", "challenge"].map((t) => env.DB.prepare(`DELETE FROM ${t} WHERE user_id = ?`).bind(user.id)).concat(env.DB.prepare("DELETE FROM users WHERE id = ?").bind(user.id)));
     return json(200, { ok: true });
   }
 
@@ -313,6 +323,49 @@ async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Re
     // If it didn't go out, forget it so the next try can send it.
     if (err) await env.DB.prepare("DELETE FROM email_log WHERE user_id = ? AND kind = ? AND period = '1'").bind(user.id, `inflight:${kind}:${String(b?.flight_id ?? "").slice(0, 60)}`).run();
     return json(200, err ? { sent: false, reason: err } : { sent: true });
+  }
+
+  if (p === "/live/start" && req.method === "POST") {
+    const now = Date.now();
+    await env.DB.prepare("UPDATE live_shares SET ended_at = ? WHERE user_id = ? AND ended_at IS NULL").bind(now, user.id).run();
+    await env.DB.prepare("DELETE FROM live_shares WHERE updated_at < ?").bind(now - 3 * 86_400_000).run();
+    const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM live_shares WHERE user_id = ? AND created_at > ?").bind(user.id, now - 86_400_000).first<{ n: number }>();
+    if ((n?.n ?? 0) >= 20) return fail(429, "That's a lot of live links today. Try again tomorrow.");
+    const id = shareId();
+    await env.DB.prepare("INSERT INTO live_shares (id, user_id, created_at, updated_at, data, trail) VALUES (?, ?, ?, ?, NULL, '[]')").bind(id, user.id, now, now - 60_000).run();
+    return json(200, { id });
+  }
+  if (p === "/live/update" && req.method === "POST") {
+    const b = await body<Record<string, unknown>>(req);
+    const id = String(b?.id ?? "");
+    const clean = cleanLive(b);
+    if (!clean) return fail(400, "No position yet.");
+    const r = await env.DB.prepare("SELECT trail, updated_at, ended_at FROM live_shares WHERE id = ? AND user_id = ?").bind(id, user.id).first<{ trail: string | null; updated_at: number; ended_at: number | null }>();
+    if (!r || r.ended_at) return fail(404, "This live link was stopped. Start a new one.");
+    if (Date.now() - r.updated_at < 4000) return json(200, { ok: true, skipped: true });
+    await env.DB.prepare("UPDATE live_shares SET data = ?, trail = ?, updated_at = ? WHERE id = ?").bind(JSON.stringify(clean), addTrail(r.trail, clean.pos), Date.now(), id).run();
+    return json(200, { ok: true });
+  }
+  if (p === "/live/stop" && req.method === "POST") {
+    const b = await body<{ id?: string }>(req);
+    await env.DB.prepare("UPDATE live_shares SET ended_at = ? WHERE id = ? AND user_id = ? AND ended_at IS NULL").bind(Date.now(), String(b?.id ?? ""), user.id).run();
+    return json(200, { ok: true });
+  }
+
+  if (p === "/challenge" && req.method === "GET") {
+    const range = monthRange(url.searchParams.get("month"));
+    const joined = await env.DB.prepare("SELECT name FROM challenge WHERE user_id = ?").bind(user.id).first<{ name: string }>();
+    return json(200, { month: range.key, joined: !!joined, name: joined?.name ?? null, ...(await leaderboard(env.DB, range.from, range.to, user.id)) });
+  }
+  if (p === "/challenge/join" && req.method === "POST") {
+    const b = await body<{ name?: string }>(req);
+    const name = cleanName(b?.name) ?? cleanName(user.display_name) ?? `Pilot ${user.id.slice(0, 4).toUpperCase()}`;
+    await env.DB.prepare("INSERT OR REPLACE INTO challenge (user_id, name, joined_at) VALUES (?, ?, ?)").bind(user.id, name, Date.now()).run();
+    return json(200, { joined: true, name });
+  }
+  if (p === "/challenge/leave" && req.method === "POST") {
+    await env.DB.prepare("DELETE FROM challenge WHERE user_id = ?").bind(user.id).run();
+    return json(200, { joined: false });
   }
 
   if (p === "/download" && req.method === "GET") {

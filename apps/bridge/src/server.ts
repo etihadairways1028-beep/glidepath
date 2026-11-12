@@ -23,6 +23,7 @@ import {
   type BridgeStatus, type FlightPhase, type ServerMessage, type TelemetryFrame,
 } from "@glidepath/protocol";
 import type { BridgeConfig, BridgeIdentity } from "./config.js";
+import type { DiscordConfig, DiscordPresence } from "./discord.js";
 import type { Logger } from "./log.js";
 import type { Recorder } from "./recorder.js";
 import type { FlightSession } from "./session.js";
@@ -76,6 +77,8 @@ export class LanServer {
     this.http.on("upgrade", this.onUpgrade);
   }
 
+  /** Discord status (set by index.ts). */
+  discord: DiscordPresence | null = null;
   /** Secure (https) address for this PC, when the secure link is running. */
   secureUrl: string | null = null;
   private secure: import("node:https").Server | null = null;
@@ -346,7 +349,7 @@ export class LanServer {
 
   private async handle(req: IncomingMessage, res: ServerResponse, url: URL, local: boolean, authed: boolean): Promise<void> {
     const p = url.pathname;
-    const POSTS = ["/api/plan", "/api/ai/config", "/api/ai/chat", "/api/pair"];
+    const POSTS = ["/api/plan", "/api/ai/config", "/api/ai/chat", "/api/pair", "/api/discord"];
     if (req.method !== "GET" && !(req.method === "POST" && POSTS.includes(p))) return text(res, 405, "Method not allowed");
     if (p === "/") {
       if (!local) return html(res, pairPage());
@@ -400,6 +403,13 @@ export class LanServer {
       } catch (e) {
         return json(res, 502, { error: (e as Error).message });
       }
+    }
+    if (p === "/api/discord") {
+      if (!this.discord) return json(res, 503, { error: "Discord status isn't available in this Bridge." });
+      try {
+        if (req.method === "POST") return json(res, 200, this.discord.setConfig((await readBody(req, 2_000)) as Partial<DiscordConfig>));
+        return json(res, 200, this.discord.status());
+      } catch (e) { return json(res, 400, { error: (e as Error).message }); }
     }
     if (p.startsWith("/api/ai/")) {
       if (!this.ai) return json(res, 503, { error: "AI is disabled" });

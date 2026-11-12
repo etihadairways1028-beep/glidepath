@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useLive } from "../data/derive";
 import { settingsStore, store, useSettings } from "../data/store";
 import { notifyByEmail } from "../data/cloud";
+import { gateCrossed, stableCheck } from "@glidepath/flight-engine";
 
 interface Msg { id: number; title: string; body: string; tone: "info" | "good" | "warn"; href?: string }
 let msgs: Msg[] = [];
@@ -242,4 +243,35 @@ export function GlideslopeBanners() {
       ))}
     </div>
   );
+}
+
+/**
+ * Stable-approach coach, live: at 1000 ft and 500 ft above the ground on the way down,
+ * says whether the approach is stable (sink rate, bank, gear, and speed against the
+ * speed set on the autopilot, when there is one).
+ */
+export function useApproachCoach() {
+  const { approachCoach } = useSettings();
+  useEffect(() => {
+    if (!approachCoach) return;
+    let prevAgl: number | null = null;
+    let flightId: string | null = null;
+    const done = new Set<number>();
+    const off = store.subscribe(() => {
+      const s = store.get();
+      const f = s.frame;
+      if (!f) return;
+      if (s.flight?.id !== flightId) { flightId = s.flight?.id ?? null; done.clear(); prevAgl = null; }
+      const agl = f.position.onGround ? 0 : f.position.altAglFt ?? null;
+      const g = ["DESCENT", "APPROACH", "LANDING"].includes(s.phase) ? gateCrossed(prevAgl, agl) : null;
+      prevAgl = agl;
+      if (!g || done.has(g)) return;
+      done.add(g);
+      const ref = f.autopilot.selectedSpeedKt && f.autopilot.selectedSpeedKt < 200 ? f.autopilot.selectedSpeedKt : null;
+      const why = stableCheck({ aglFt: agl ?? g, iasKt: f.speed.iasKt ?? null, vsFpm: f.speed.vsFpm ?? null, bankDeg: f.attitude.bankDeg ?? null, gearDown: f.controls.gearDown ?? null }, ref);
+      if (why.length === 0) postFlightMessage(`Stable at ${g} ft`, `Sink ${Math.round(Math.abs(f.speed.vsFpm ?? 0))} fpm${f.speed.iasKt ? `, ${Math.round(f.speed.iasKt)} kt` : ""}, gear down. Continue.`, "good");
+      else postFlightMessage(`Not stable at ${g} ft`, `${why[0]![0]!.toUpperCase()}${why.join(", ").slice(1)}.${g === 500 ? " Consider a go-around." : " Fix it before 500 ft."}`, "warn");
+    });
+    return () => { off(); };
+  }, [approachCoach]);
 }

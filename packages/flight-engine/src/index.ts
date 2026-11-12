@@ -9,3 +9,5 @@ export * from "./debrief.js";
 export * from "./career.js";
 export * from "./brief.js";
 export * from "./badges.js";
+export * from "./pilotCareer.js";
+export * from "./approach.js";

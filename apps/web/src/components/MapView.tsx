@@ -148,9 +148,11 @@ export interface MapViewProps {
   onSelectTraffic?: (p: NetworkPilot | null) => void;
   onUserMove?: () => void;
   interactive?: boolean;
+  /** Past flights as lines ([lon, lat] points each), for "everywhere you've flown". */
+  history?: Array<Array<[number, number]>>;
 }
 
-export function MapView({ trail, plan, aircraft, airports = [], traffic = [], atc = [], metars = [], radarTiles = null, centres = [], radarFrames = null, radarIndex = 0, onSelectAtc, onSelectMetar, onView, follow, center, zoom: startZoom, threeD = false, stands = [], agl = null, onGround = false, onSelectTraffic, onUserMove, interactive = true }: MapViewProps) {
+export function MapView({ trail, plan, aircraft, airports = [], traffic = [], atc = [], metars = [], radarTiles = null, centres = [], radarFrames = null, radarIndex = 0, onSelectAtc, onSelectMetar, onView, follow, center, zoom: startZoom, threeD = false, stands = [], agl = null, onGround = false, onSelectTraffic, onUserMove, interactive = true, history }: MapViewProps) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<MLMap | null>(null);
   const [ready, setReady] = useState(false);
@@ -164,7 +166,7 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
   const { mapStyle } = useSettings();
   const [theme, setTheme] = useState(themeNow);
   const kindRef = useRef<Kind>("satellite");
-  const data = useRef<{ route: number[][]; trail: number[][]; traffic: unknown; stands: unknown; atc: unknown; metars: unknown; radar: string | null; fixes: unknown; firs?: unknown }>({ route: [], trail: [], traffic: empty(), stands: empty(), atc: empty(), metars: empty(), radar: null, fixes: empty() });
+  const data = useRef<{ route: number[][]; trail: number[][]; traffic: unknown; stands: unknown; atc: unknown; metars: unknown; radar: string | null; fixes: unknown; firs?: unknown; history: number[][][] }>({ history: [], route: [], trail: [], traffic: empty(), stands: empty(), atc: empty(), metars: empty(), radar: null, fixes: empty() });
   const threeDRef = useRef(threeD);
   threeDRef.current = threeD;
   const glideRaf = useRef(0);
@@ -205,6 +207,9 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     m.addSource("stands", { type: "geojson", data: data.current.stands as ReturnType<typeof empty> });
     m.addLayer({ id: "stands", type: "circle", source: "stands", minzoom: 14, paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 14, 2.5, 18, 6], "circle-color": "#64D2FF", "circle-stroke-color": "rgba(0,0,0,.6)", "circle-stroke-width": 1 } });
     m.addLayer({ id: "stands-label", type: "symbol", source: "stands", minzoom: 15, layout: { "text-field": ["get", "ref"], "text-font": ["Noto Sans Bold"], "text-size": ["interpolate", ["linear"], ["zoom"], 15, 10, 18, 14], "text-offset": [0, 1.1], "text-allow-overlap": false }, paint: { "text-color": "#E8F6FF", "text-halo-color": "rgba(0,20,40,.85)", "text-halo-width": 1.6 } });
+    m.addSource("history", { type: "geojson", data: multi(data.current.history) });
+    m.addLayer({ id: "history-glow", type: "line", source: "history", layout: { "line-cap": "round" }, paint: { "line-color": "#64D2FF", "line-width": 6, "line-opacity": 0.18, "line-blur": 3 } });
+    m.addLayer({ id: "history", type: "line", source: "history", layout: { "line-cap": "round" }, paint: { "line-color": "#64D2FF", "line-width": 1.8, "line-opacity": 0.85 } });
     m.addSource("route", { type: "geojson", data: line(data.current.route) });
     m.addSource("trail", { type: "geojson", data: line(data.current.trail), lineMetrics: true });
     m.addSource("traffic", { type: "geojson", data: data.current.traffic as ReturnType<typeof empty> });
@@ -313,6 +318,20 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     setReady(false);
     m.setStyle(styleFor(wanted));
   }, [wanted]);
+
+  // Past flights
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !ready || !history) return;
+    data.current.history = history;
+    (m.getSource("history") as GeoJSONSource | undefined)?.setData(multi(history));
+    const pts = history.flat();
+    if (pts.length > 1 && !fitted.current) {
+      fitted.current = true;
+      const b = pts.reduce((bb, p) => bb.extend(p), new maplibregl.LngLatBounds(pts[0], pts[0]));
+      m.fitBounds(b, { padding: 50, duration: 0, maxZoom: 6 });
+    }
+  }, [ready, history]);
 
   // Route (plan) and trail
   useEffect(() => {
@@ -567,6 +586,9 @@ function addAirportLayers(m: MLMap, kind: Kind) {
 
 function empty() {
   return { type: "FeatureCollection" as const, features: [] };
+}
+function multi(lines: number[][][]) {
+  return { type: "Feature" as const, properties: {}, geometry: { type: "MultiLineString" as const, coordinates: lines } };
 }
 function line(coords: number[][]) {
   return { type: "FeatureCollection" as const, features: coords.length > 1 ? [{ type: "Feature" as const, properties: {}, geometry: { type: "LineString" as const, coordinates: coords } }] : [] };

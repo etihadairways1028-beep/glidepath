@@ -4,6 +4,7 @@ import { connectFromSettings } from "../App";
 import { ConnPill, Icon, Kv, Notice, Section } from "../components/ui";
 import { WallpaperPicker } from "../components/Wallpaper";
 import { EmailSettings } from "./Account";
+import { DiscordStatus } from "../components/DiscordStatus";
 import { useCloud } from "../data/cloud";
 import { activeBridge, setActiveBridge } from "../data/bridge";
 import { startDemo, stopDemo } from "../data/demo";
@@ -37,7 +38,8 @@ export function SettingsScreen() {
         {([
           ["charts", "Charts", Icon.chart], ["copilot", "Copilot", Icon.headset], ["checklists", "Checklists", Icon.checklist],
           ["tools", "Pilot tools", Icon.calc], ["cockpit", "Cockpit tools", Icon.panel], ["weather", "Weather", Icon.cloud],
-          ["airports", "Airports", Icon.tower], ["glance", "Glance mode", Icon.expand], ["account", "Account", Icon.person],
+          ["airports", "Airports", Icon.tower], ["glance", "Glance mode", Icon.expand], ["career", "Career", Icon.career],
+          ["challenge", "Landing challenge", Icon.trophy], ["account", "Account", Icon.person],
         ] as const).map(([id, label, I]) => (
           <a key={id} className="more-tile glass" href={`#/${id}`}><span className={`more-ic ic-${id}`}><I /></span><span>{label}</span><span className="more-chev" aria-hidden="true">›</span></a>
         ))}
@@ -119,6 +121,7 @@ export function SettingsScreen() {
           <Section title="Glideslope messages">
             <label className="between" style={{ padding: "8px 0" }}><span>Messages at each stage of the flight<br /><span className="faint" style={{ fontSize: 12.5 }}>Taxi, take-off, cruise reached, top of descent, approach, touchdown</span></span><input className="switch" type="checkbox" checked={s.flightMessages} onChange={(e) => settingsStore.set({ flightMessages: e.target.checked })} /></label>
             <label className="between" style={{ padding: "8px 0" }}><span>Lights messages and reminders<br /><span className="faint" style={{ fontSize: 12.5 }}>When lights are switched, beacon before engine start, landing lights at 10,000 ft. Some add-ons (like Fenix) run their own lights and may not report them.</span></span><input className="switch" type="checkbox" checked={s.lightMessages} onChange={(e) => settingsStore.set({ lightMessages: e.target.checked })} /></label>
+            <label className="between" style={{ padding: "8px 0" }}><span>Stable-approach coach<br /><span className="faint" style={{ fontSize: 12.5 }}>At 1000 ft and 500 ft on the way down: stable or not, and why (sink rate, bank, gear, speed)</span></span><input className="switch" type="checkbox" checked={s.approachCoach} onChange={(e) => settingsStore.set({ approachCoach: e.target.checked })} /></label>
             <label className="between" style={{ padding: "8px 0" }}><span>Also as notifications<br /><span className="faint" style={{ fontSize: 12.5 }}>Top of descent, 10 minutes to landing, ATC online and your debrief, when Glidepath is in the background. On iPad and iPhone, add Glidepath to your Home Screen first.</span></span><input className="switch" type="checkbox" checked={s.systemNotifications} onChange={async (e) => {
               const on = e.target.checked;
               if (on && "Notification" in window && Notification.permission !== "granted") { const p = await Notification.requestPermission().catch(() => "denied"); if (p !== "granted") { alert("Notifications are blocked for Glidepath. Allow them in your browser or device settings, then try again."); return; } }
@@ -142,6 +145,7 @@ export function SettingsScreen() {
             <label className="between" style={{ padding: "8px 0" }}><span>Reduce transparency</span><input className="switch" type="checkbox" checked={s.reduceTransparency} onChange={(e) => settingsStore.set({ reduceTransparency: e.target.checked })} /></label>
           </Section>
           <EmailsInSettings />
+          <DiscordStatus />
           <Section title="On your Home Screen">
             <ol style={{ margin: 0, paddingLeft: 18, color: "var(--mist)", lineHeight: 1.7 }}>
               <li>In Safari on your iPad or iPhone, go to <b style={{ color: "var(--ink)" }}>glidepath-ad9.pages.dev/app</b> and type the 6-digit code shown on your PC.</li>
@@ -152,7 +156,7 @@ export function SettingsScreen() {
             <p className="faint" style={{ fontSize: 12.5, margin: "10px 0 0" }}>For an iPad on a stand, use <a href="#/glance">Glance mode</a>. Lock Screen and widget cards need the native iPad app, which is planned.</p>
           </Section>
           <Section title="About">
-            <Kv k="Version" v="Glidepath 1.0.7" />
+            <Kv k="Version" v="Glidepath 1.1.0" />
             <Kv k="Airports" v="OurAirports, public domain" />
             <Kv k="Map" v="OpenFreeMap / OpenStreetMap, Natural Earth" />
             <Kv k="Weather" v="aviationweather.gov, via your Bridge" />
