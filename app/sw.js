@@ -1,6 +1,6 @@
 // Offline shell for the hosted app. Live data always comes from the network;
 // only the app's own files are cached, so it opens instantly from the Home Screen.
-const CACHE = "glidepath-v4";
+const CACHE = "glidepath-v5";
 self.addEventListener("install", () => { self.skipWaiting(); });
 self.addEventListener("activate", (e) => e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())));
 
@@ -18,15 +18,25 @@ self.addEventListener("fetch", (e) => {
   // Accounts and live data never go through the cache.
   if (url.pathname.startsWith("/acct") || url.pathname.endsWith("cloud.json")) return;
   const isPage = e.request.mode === "navigate";
-  e.respondWith(
-    fetch(e.request)
-      .then(async (res) => {
-        const out = await clean(res);
-        if (out.ok) { const copy = out.clone(); caches.open(CACHE).then((c) => c.put(isPage ? "./index.html" : e.request, copy)); }
-        return out;
-      })
-      .catch(async () => (await caches.match(isPage ? "./index.html" : e.request)) || (await caches.match("./index.html")) || Response.error()),
-  );
+  const fromCache = async () => (await caches.match(isPage ? "./index.html" : e.request)) || (await caches.match("./index.html")) || Response.error();
+  const fromNet = () => fetch(e.request).then(async (res) => {
+    const out = await clean(res);
+    if (out.ok) { const copy = out.clone(); caches.open(CACHE).then((c) => c.put(isPage ? "./index.html" : e.request, copy)); }
+    return out;
+  });
+  // Built files have their content in the name, so a saved copy is always right: use it straight away.
+  if (/\/assets\/[^/]+-[\w-]{6,}\.\w+$/.test(url.pathname)) {
+    e.respondWith(caches.match(e.request).then((hit) => hit || fromNet()).catch(fromCache));
+    return;
+  }
+  // Everything else: the newest copy if the network answers quickly, otherwise the saved one,
+  // so the Home Screen app always opens, even with bad or no internet.
+  e.respondWith(new Promise((resolve) => {
+    let done = false;
+    const finish = (r) => { if (!done) { done = true; resolve(r); } };
+    const timer = setTimeout(() => fromCache().then((r) => { if (r && r.type !== "error") finish(r); }), isPage ? 2500 : 4000);
+    fromNet().then((r) => { clearTimeout(timer); finish(r); }, () => { clearTimeout(timer); fromCache().then(finish); });
+  }));
 });
 
 // Tapping a Glidepath notification opens the app on the right screen.
