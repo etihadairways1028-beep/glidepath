@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Follow this flight · Glidepath</title>
+  <meta name="description" content="Watch a Glidepath pilot's flight live on a map.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#050B1C">
+  <link rel="icon" href="../assets/mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../vendor/maplibre-gl.css">
+  <style>
+    :root { color-scheme: dark; --ink: #fff; --mist: rgba(235,240,255,.72); --blue: #0A84FF; }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html, body { margin: 0; height: 100%; background: #050B1C; color: var(--ink); font: 15px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    #map { position: fixed; inset: 0; }
+    .glass {
+      background: linear-gradient(140deg, rgba(255,255,255,.2), rgba(255,255,255,0) 30%, rgba(255,255,255,0) 70%, rgba(255,255,255,.12)), rgba(14,18,34,.42);
+      -webkit-backdrop-filter: blur(16px) saturate(1.8); backdrop-filter: blur(16px) saturate(1.8);
+      box-shadow: inset 1.5px 1.5px 1px -.5px rgba(255,255,255,.9), inset -1.5px -1.5px 1px -.5px rgba(255,255,255,.5), inset 0 0 0 .5px rgba(255,255,255,.3), 0 18px 40px -18px rgba(0,0,0,.6);
+      border-radius: 24px;
+    }
+    .card { position: fixed; left: max(14px, env(safe-area-inset-left)); top: max(14px, env(safe-area-inset-top)); width: min(380px, calc(100vw - 28px)); padding: 18px 20px; z-index: 2; }
+    .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px; letter-spacing: .02em; color: var(--mist); text-decoration: none; }
+    .brand img { width: 20px; height: 20px; }
+    .status { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; background: rgba(255,69,58,.18); color: #FF6B60; }
+    .status.off { background: rgba(255,255,255,.1); color: var(--mist); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+    .status:not(.off) .dot { animation: p 1.6s infinite; }
+    @keyframes p { 50% { opacity: .3; } }
+    h1 { font-size: 30px; line-height: 1.1; margin: 12px 0 4px; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+    .sub { color: var(--mist); margin: 0 0 14px; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .grid div { background: rgba(255,255,255,.07); border-radius: 14px; padding: 9px 11px; }
+    .grid span { display: block; font-size: 11px; color: var(--mist); text-transform: uppercase; letter-spacing: .06em; }
+    .grid b { font-size: 17px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    @media (max-width: 420px) { .grid b { font-size: 15px; } .grid { gap: 8px; } }
+    .foot { margin: 14px 0 0; font-size: 12.5px; color: var(--mist); }
+    .foot a { color: #64D2FF; }
+    .plane { width: 34px; height: 34px; filter: drop-shadow(0 2px 6px rgba(0,0,0,.6)); }
+    .apt { font: 700 12px/1 -apple-system, system-ui, sans-serif; color: #fff; padding: 4px 7px; border-radius: 8px; background: rgba(10,132,255,.9); box-shadow: 0 2px 8px rgba(0,0,0,.4); }
+    .msg { position: fixed; inset: 0; display: grid; place-items: center; z-index: 3; padding: 24px; text-align: center; }
+    .msg .glass { padding: 24px 26px; max-width: 420px; }
+    .center { position: fixed; right: max(14px, env(safe-area-inset-right)); bottom: max(24px, env(safe-area-inset-bottom)); z-index: 2; border: 0; color: #fff; font: 600 14px -apple-system, system-ui, sans-serif; padding: 12px 16px; cursor: pointer; }
+    @media (max-width: 600px) { .card { top: auto; bottom: max(14px, env(safe-area-inset-bottom)); } .center { bottom: auto; top: max(14px, env(safe-area-inset-top)); } h1 { font-size: 26px; } }
+  </style>
+</head>
+<body>
+  <div id="map" aria-label="Map"></div>
+  <section class="card glass" id="card" hidden>
+    <a class="brand" href="../"><img src="../assets/mark.svg" alt="">Glidepath</a>
+    <div style="margin-top:12px"><span class="status" id="status"><span class="dot"></span><span id="status-t">Live</span></span></div>
+    <h1 id="route">···· → ····</h1>
+    <p class="sub" id="sub"></p>
+    <div class="grid">
+      <div><span>Altitude</span><b id="alt">—</b></div>
+      <div><span>Speed</span><b id="gs">—</b></div>
+      <div><span>To go</span><b id="togo">—</b></div>
+    </div>
+    <p class="foot" id="foot"></p>
+  </section>
+  <button class="center glass" id="center" hidden>Center on plane</button>
+  <div class="msg" id="msg" hidden><div class="glass"><div style="font-size:20px;font-weight:700;margin-bottom:8px" id="msg-h"></div><div style="color:var(--mist)" id="msg-t"></div><p style="margin:16px 0 0"><a href="../" style="color:#64D2FF">What's Glidepath?</a></p></div></div>
+  <script src="../vendor/maplibre-gl.js"></script>
+  <script src="follow.js"></script>
+</body>
+</html>
