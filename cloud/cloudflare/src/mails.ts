@@ -2,17 +2,37 @@
 const APP = "https://glidepath-ad9.pages.dev/app/";
 export const esc = (s: unknown) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
-export function card(o: { kicker: string; title: string; lead?: string; rows?: Array<[string, string]>; button?: { label: string; url: string }; foot?: string; color?: string }) {
-  const rows = (o.rows ?? []).map(([k, v]) => `<tr><td style="padding:9px 0;color:#667085;border-top:1px solid #eef0f4">${esc(k)}</td><td style="padding:9px 0;text-align:right;font-weight:600;border-top:1px solid #eef0f4">${esc(v)}</td></tr>`).join("");
-  const html = `<div style="background:#f2f3f7;padding:24px 12px;font-family:-apple-system,Segoe UI,Arial,sans-serif;color:#0b1527">
-<div style="max-width:520px;margin:auto;background:#fff;border-radius:20px;overflow:hidden">
-<div style="background:${o.color ?? "#0A84FF"};color:#fff;padding:22px 24px"><div style="font-size:12px;letter-spacing:.12em;font-weight:700;opacity:.85">${esc(o.kicker)}</div><div style="font-size:24px;font-weight:800;margin-top:6px">${esc(o.title)}</div></div>
-<div style="padding:20px 24px">${o.lead ? `<p style="margin:0 0 12px;font-size:15px;line-height:1.5">${esc(o.lead)}</p>` : ""}
-${rows ? `<table style="width:100%;border-collapse:collapse;font-size:14px">${rows}</table>` : ""}
-${o.button ? `<p style="margin:18px 0 4px"><a href="${esc(o.button.url)}" style="display:inline-block;background:#0A84FF;color:#fff;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:600">${esc(o.button.label)}</a></p>` : ""}
-</div></div>
-<p style="max-width:520px;margin:12px auto 0;color:#8a90a0;font-size:12px;text-align:center">${esc(o.foot ?? "You can turn these emails off in Glidepath under Account.")}</p></div>`;
-  const text = [o.title, o.lead ?? "", ...(o.rows ?? []).map(([k, v]) => `${k}: ${v}`), o.button ? `${o.button.label}: ${o.button.url}` : "", "", o.foot ?? "You can turn these emails off in Glidepath under Account."].filter((x) => x !== undefined).join("\n");
+const SITE = "https://glidepath-ad9.pages.dev";
+const FONT = "-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+
+/**
+ * The Glidepath email look: a dark aurora background with clear "glass" panels and bright
+ * edges, like the app. Built from tables and inline styles so Gmail, Apple Mail and Outlook
+ * all show it; where a mail app drops the background image, the dark colour stays.
+ */
+export function card(o: { kicker: string; title: string; lead?: string; rows?: Array<[string, string]>; button?: { label: string; url: string }; foot?: string; color?: string; big?: { value: string; unit?: string; label: string; badge?: string } }) {
+  const accent = o.color ?? "#0A84FF";
+  const glass = "background-color:rgba(255,255,255,0.09);border:1px solid rgba(255,255,255,0.28);border-top-color:rgba(255,255,255,0.6);border-left-color:rgba(255,255,255,0.45);";
+  const tiles = (o.rows ?? []).map(([k, v]) => `<td width="50%" valign="top" style="padding:6px;"><div style="${glass}border-radius:18px;padding:14px 16px;"><div style="font:600 11px/1.2 ${FONT};letter-spacing:.08em;text-transform:uppercase;color:#AEB8D6;">${esc(k)}</div><div style="font:700 17px/1.35 ${FONT};color:#FFFFFF;padding-top:4px;">${esc(v)}</div></div></td>`);
+  const tileRows: string[] = [];
+  for (let i = 0; i < tiles.length; i += 2) tileRows.push(`<tr>${tiles[i]}${tiles[i + 1] ?? '<td width="50%"></td>'}</tr>`);
+  const big = o.big ? `<tr><td colspan="2" style="padding:6px 6px 6px;"><div style="${glass}border-radius:22px;padding:18px 20px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td valign="middle"><div style="font:600 11px/1.2 ${FONT};letter-spacing:.08em;text-transform:uppercase;color:#AEB8D6;">${esc(o.big.label)}</div><div style="font:800 46px/1.05 ${FONT};color:#FFFFFF;padding-top:6px;">${esc(o.big.value)}<span style="font:600 18px ${FONT};color:#C9D2EC;"> ${esc(o.big.unit ?? "")}</span></div></td>${o.big.badge ? `<td align="right" valign="middle" width="84"><div style="width:72px;height:72px;line-height:72px;border-radius:36px;background-color:${accent};color:#06122E;text-align:center;font:900 30px/72px ${FONT};border:2px solid rgba(255,255,255,0.8);">${esc(o.big.badge)}</div></td>` : ""}</tr></table></div></td></tr>` : "";
+  const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><meta name="supported-color-schemes" content="dark light"></head>
+<body style="margin:0;padding:0;background-color:#070B1F;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#070B1F" background="${SITE}/assets/email/aurora.jpg" style="background-color:#070B1F;background-image:url('${SITE}/assets/email/aurora.jpg');background-size:cover;background-position:center top;">
+<tr><td align="center" style="padding:28px 12px 36px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
+<tr><td style="padding:0 6px 18px;"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td valign="middle"><img src="${SITE}/assets/email/icon.png" width="36" height="36" alt="" style="display:block;border-radius:9px;border:0;"></td><td valign="middle" style="padding-left:10px;font:700 18px ${FONT};color:#FFFFFF;">Glidepath</td></tr></table></td></tr>
+<tr><td style="padding:0 6px;"><div style="${glass}border-radius:28px;padding:24px 22px 22px;">
+<div><span style="display:inline-block;padding:5px 11px;border-radius:999px;background-color:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.35);font:800 11px/1 ${FONT};letter-spacing:.1em;text-transform:uppercase;color:${accent === "#0A84FF" ? "#64D2FF" : accent};">${esc(o.kicker)}</span></div>
+<div style="font:800 30px/1.12 ${FONT};color:#FFFFFF;padding-top:14px;letter-spacing:-.5px;">${esc(o.title)}</div>
+${o.lead ? `<div style="font:400 16px/1.55 ${FONT};color:#D3DAEE;padding-top:10px;">${esc(o.lead)}</div>` : ""}
+</div></td></tr>
+${big || tileRows.length ? `<tr><td style="padding:8px 0 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${big}${tileRows.join("")}</table></td></tr>` : ""}
+${o.button ? `<tr><td align="center" style="padding:22px 6px 4px;"><a href="${esc(o.button.url)}" style="display:inline-block;padding:15px 30px;border-radius:999px;background-color:#0A84FF;background-image:linear-gradient(135deg,#0A84FF,#5E5CE6);border:1px solid rgba(255,255,255,0.55);color:#FFFFFF;text-decoration:none;font:700 16px/1 ${FONT};">${esc(o.button.label)}</a></td></tr>` : ""}
+<tr><td align="center" style="padding:24px 18px 0;font:400 12.5px/1.6 ${FONT};color:#9AA5C4;">${esc(o.foot ?? "You can turn these emails off in Glidepath under Account.")}<br><a href="${SITE}" style="color:#9AA5C4;">glidepath-ad9.pages.dev</a> · Free for Microsoft Flight Simulator</td></tr>
+</table></td></tr></table></body></html>`;
+  const text = [o.title, o.lead ?? "", o.big ? `${o.big.label}: ${o.big.value} ${o.big.unit ?? ""}${o.big.badge ? ` (${o.big.badge})` : ""}` : "", ...(o.rows ?? []).map(([k, v]) => `${k}: ${v}`), o.button ? `${o.button.label}: ${o.button.url}` : "", "", o.foot ?? "You can turn these emails off in Glidepath under Account."].filter((x) => x !== "").join("\n");
   return { html, text };
 }
 
@@ -33,16 +53,17 @@ export function debriefMail(f: any) {
     ["Distance", f.distanceNm ? `${Math.round(f.distanceNm).toLocaleString("en-US")} nm` : "—"],
     ["Fuel used", fuel],
   ];
-  if (fpm !== null) rows.push(["Touchdown", `${fpm} fpm${l.grade ? `, grade ${l.grade}` : ""}`]);
   if (l?.runway?.ident) rows.push(["Runway", String(l.runway.ident)]);
+  if (l && Number.isFinite(l.peakG)) rows.push(["Peak G", `${Number(l.peakG).toFixed(2)} G`]);
   return {
     subject: `Your debrief: ${dep} → ${arr}${l?.grade ? ` (${l.grade})` : ""}`,
-    ...card({ kicker: "FLIGHT DEBRIEF", title: `${dep} → ${arr}`, lead: l?.verdict ? String(l.verdict) : "Your flight is saved to your logbook. Here's how it went.", rows, button: { label: "Open the full debrief", url: `${APP}#/logbook/${encodeURIComponent(f.id)}` }, color: "#1E9E5A" }),
+    ...card({ kicker: "FLIGHT DEBRIEF", title: `${dep} → ${arr}`, lead: l?.verdict ? String(l.verdict) : "Your flight is saved to your logbook. Here's how it went.", rows,
+      big: fpm !== null ? { label: "Touchdown", value: String(fpm), unit: "fpm", badge: l.grade ? String(l.grade) : undefined } : undefined, button: { label: "Open the full debrief", url: `${APP}#/logbook/${encodeURIComponent(f.id)}` }, color: "#30D158" }),
   };
 }
 
 export function inflightMail(kind: string, title: string, body: string) {
-  return { subject: `Glidepath: ${title}`, ...card({ kicker: kind === "tod" ? "TOP OF DESCENT" : kind === "arrival" ? "ARRIVAL" : "YOUR FLIGHT", title, lead: body, button: { label: "Open Glidepath", url: APP }, color: kind === "tod" ? "#E08A00" : "#0A84FF" }) };
+  return { subject: `Glidepath: ${title}`, ...card({ kicker: kind === "tod" ? "TOP OF DESCENT" : kind === "arrival" ? "ARRIVAL" : "YOUR FLIGHT", title, lead: body, button: { label: "Open Glidepath", url: APP }, color: kind === "tod" ? "#FFB340" : "#0A84FF" }) };
 }
 
 export function resetMail(link: string) {
@@ -58,4 +79,9 @@ export function deviceName(ua: string): string {
   const os = /iPad/.test(ua) ? "an iPad" : /iPhone/.test(ua) ? "an iPhone" : /Android/.test(ua) ? "an Android device" : /Windows/.test(ua) ? "a Windows PC" : /Macintosh/.test(ua) ? "a Mac (or iPad)" : /Linux/.test(ua) ? "a Linux computer" : "a device";
   const br = /Edg\//.test(ua) ? "Edge" : /Chrome\//.test(ua) ? "Chrome" : /Firefox\//.test(ua) ? "Firefox" : /Safari\//.test(ua) ? "Safari" : "a browser";
   return `${os} (${br})`;
+}
+
+export function welcomeMail(name: string | null) {
+  const hi = name ? `Hi ${name.slice(0, 40)}, your account is ready.` : "Your account is ready.";
+  return { subject: "Welcome to Glidepath", ...card({ kicker: "WELCOME", title: "Welcome aboard.", lead: `${hi} Your logbook now follows you to every device you sign in on.`, rows: [["Step 1", "Install the Bridge on your sim PC"], ["Step 2", "Type the 6-digit code on your iPad"], ["Step 3", "Fly. Your debrief waits at the gate"], ["Cost", "Free. All of it."]], button: { label: "Open Glidepath", url: `${SITE}/app/` }, foot: "One short email on the 1st of each month about your flying. Turn it off any time in the app under Account." }) };
 }

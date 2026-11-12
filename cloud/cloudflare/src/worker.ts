@@ -12,7 +12,7 @@
 import { composeMonthlyBrief } from "../../../packages/flight-engine/src/brief";
 import { sendGmail } from "./gmail";
 import { addTrail, cleanLive, cleanName, leaderboard, monthRange, shareId } from "./social";
-import { debriefMail, deviceName, inflightMail, resetMail, signinMail } from "./mails";
+import { welcomeMail, debriefMail, deviceName, inflightMail, resetMail, signinMail } from "./mails";
 
 interface Env {
   DB: D1Database;
@@ -123,20 +123,8 @@ async function flightsBetween(env: Env, userId: string, from: number, to: number
   return results.map((r) => JSON.parse(r.summary));
 }
 
-/** A short welcome email after sign-up (only when email is switched on). */
-function welcomeEmail(name: string | null) {
-  const hi = name ? `Hi ${name.replace(/[<>&]/g, "")},` : "Hi,";
-  const app = "https://glidepath-ad9.pages.dev/app/";
-  const html = `<div style="font-family:-apple-system,Segoe UI,Arial,sans-serif;max-width:520px;margin:auto;padding:24px;color:#0b1527">
-<h1 style="font-size:24px;margin:0 0 12px">Welcome to Glidepath</h1>
-<p>${hi}</p><p>Your account is ready. Your logbook now follows you to every device you sign in on.</p>
-<ol><li>Install the Bridge on your sim PC from <a href="https://glidepath-ad9.pages.dev/#download">the website</a>.</li>
-<li>Open Glidepath on your iPad or phone and type the 6-digit code from your PC.</li><li>Fly. Your debrief is waiting when you park.</li></ol>
-<p><a href="${app}" style="display:inline-block;background:#0A84FF;color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none;font-weight:600">Open Glidepath</a></p>
-<p style="color:#667;font-size:13px">You'll get one short email on the 1st of each month about your flying. Turn it off any time in the app under Account.</p></div>`;
-  const text = `${hi}\n\nYour Glidepath account is ready.\n1. Install the Bridge on your sim PC: https://glidepath-ad9.pages.dev/#download\n2. Open Glidepath on your iPad and type the 6-digit code from your PC.\n3. Fly.\n\nOpen Glidepath: ${app}`;
-  return { html, text };
-}
+/** A short welcome email after sign-up. */
+function welcomeEmail(name: string | null) { const m = welcomeMail(name); return { html: m.html, text: m.text }; }
 
 async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
   const url = new URL(req.url);
