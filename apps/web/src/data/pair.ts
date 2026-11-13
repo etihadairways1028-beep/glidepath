@@ -26,6 +26,12 @@ export function secureBaseFromAddress(addr: string): string | null {
   return `https://${parts.join("-")}.local-ip.sh:4811`;
 }
 
+/** "https://192-168-1-20.local-ip.sh:4811" -> "192.168.1.20". */
+function plainAddress(base: string): string | null {
+  const m = /\/\/(\d{1,3})-(\d{1,3})-(\d{1,3})-(\d{1,3})\.local-ip\.sh/.exec(base);
+  return m ? m.slice(1, 5).join(".") : null;
+}
+
 async function findPc(code: string): Promise<string | null> {
   try {
     const r = await fetch(`https://ntfy.sh/${await topicFor(code)}/json?poll=1&since=24h`, { cache: "no-store" });
@@ -56,9 +62,16 @@ export async function pairWithCode(rawCode: string, address?: string): Promise<v
   }
   let r: Response;
   try {
-    r = await fetch(`${base}/api/pair`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }) });
+    r = await fetch(`${base}/api/pair`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }), signal: AbortSignal.timeout(6000) });
   } catch {
-    throw new Error("Found your PC but couldn't reach it. Make sure this device is on the same Wi-Fi as the PC. If it still fails, your router may block this: open Safari and go to glidepath.local:4810 instead.");
+    // Many routers block the secure local name (DNS rebinding protection) even on
+    // the same Wi-Fi. The PC's own plain address still works: go there and pair.
+    const ip = plainAddress(base);
+    if (ip) {
+      location.href = `http://${ip}:4810/?code=${code}`;
+      throw new Error("Opening your PC directly…");
+    }
+    throw new Error("Found your PC but couldn't reach it. In Safari, type the address shown in the Bridge window on your PC (like 192.168.1.20:4810).");
   }
   const j = await r.json().catch(() => ({})) as { token?: string; error?: string };
   if (!r.ok || !j.token) throw new Error(j.error ?? "Your PC didn't accept the code. Check it and try again.");

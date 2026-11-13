@@ -70,9 +70,10 @@ button.btnp{width:100%;max-width:300px;padding:15px;font-size:17px}
 <form id="f"><div class="code"><input id="c" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="000000" autofocus></div>
 <button class="btnp" type="submit">Connect</button></form><div id="m"></div></div>
 <script>
-document.getElementById("f").onsubmit=async function(e){e.preventDefault();var m=document.getElementById("m");m.textContent="Connecting…";
+var f=document.getElementById("f");f.onsubmit=async function(e){if(e)e.preventDefault();var m=document.getElementById("m");m.textContent="Connecting…";
 try{var r=await fetch("/api/pair",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code:document.getElementById("c").value})});var j=await r.json();
 if(r.ok&&j.token){location.replace("/app/#token="+encodeURIComponent(j.token));}else{m.textContent=j.error||"That didn't work. Try again.";}}catch(_){m.textContent="Can't reach your PC. Is the Bridge still open?";}};
+var q=new URLSearchParams(location.search).get("code");if(q&&/^\\d{6}$/.test(q)){document.getElementById("c").value=q;f.onsubmit();}
 </script></main></body></html>`;
 }
 
@@ -127,7 +128,7 @@ ${p.local ? `<div class="two">
   <li><div>Type this code:<br><span class="big mono code">${code}</span></div></li></ol>
   <div class="label">Or open the Glidepath website on the iPad, tap Connect and type the same code. Tap Share, then Add to Home Screen, to keep it as an app.</div>
 </div></div>
-<details class="panel sec"><summary><span class="cap">Or scan a QR code (same Wi-Fi)</span></summary><div style="margin-top:10px">
+<details class="panel sec" open><summary><span class="cap">Easiest: scan this with your iPad camera (same Wi-Fi)</span></summary><div style="margin-top:10px">
 ${links || "<p class='label'>No network address found. Is this PC connected to Wi-Fi or Ethernet?</p>"}
 <div class="label" style="margin-top:10px">This link contains your pairing key. Only open it on your own devices. If Windows asks, allow Glidepath Bridge on <b>private</b> networks.</div></div></details>
 <details class="panel sec"><summary><span class="cap">Recent log</span></summary><pre class="mono">${esc(p.logs.join("\n")) || "—"}</pre></details>
