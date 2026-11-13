@@ -46,12 +46,14 @@ export function useAddons(): State {
 }
 
 /** Can this copy of the app show the add-on inside itself? (https pages need the Bridge's secure door.) */
-export const canEmbed = (a: Addon) => location.protocol === "http:" || !!a.secureUrl;
+export const canEmbed = (a: Addon) => !activeBridge()?.isRelay && (location.protocol === "http:" || !!a.secureUrl);
 
 /** The address this device should open. */
 export function addonHref(a: Addon, preferSecure = location.protocol === "https:"): string {
-  if (preferSecure && a.secureUrl) return a.secureUrl;
   const b = activeBridge();
+  // Through the account relay the PC's own pages can only be reached on its Wi-Fi: use its network address.
+  if (b?.isRelay) return a.lanUrls?.[0] ?? a.localUrl;
+  if (preferSecure && a.secureUrl) return a.secureUrl;
   let host = "localhost";
   try { if (b) host = new URL(b.baseUrl).hostname; } catch { /* keep localhost */ }
   // A secure (local-ip.sh) Bridge address is the PC's IP with dashes.

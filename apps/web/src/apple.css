@@ -645,3 +645,20 @@ label.between > span { min-width: 0; }
 /* Sidebar items never shrink or pop: the map's first load can freeze them mid-animation. */
 .nav-a, .nav-a.on, .nav-a:active, .nav-a:hover { transform: none !important; animation: none !important; }
 .nav-a { min-height: 38px; flex: none; }
+
+/* ===================== Connect anywhere (Home) ===================== */
+.onboard { align-items: start !important; }
+.ob-tag { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .02em; padding: 5px 11px; border-radius: 999px; color: #fff; background: linear-gradient(140deg, #64D2FF, #5E5CE6); box-shadow: inset 0 1px .5px rgba(255,255,255,.6); margin-bottom: 12px; }
+.ob-steps { list-style: none; margin: 18px 0 0; padding: 0; counter-reset: ob; display: grid; gap: 14px; }
+.ob-steps li { counter-increment: ob; display: grid; grid-template-columns: 30px 1fr; gap: 12px; align-items: center; color: var(--a-ink2); font-size: 16px; line-height: 1.45; }
+.ob-steps li::before { content: counter(ob); width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 14px; color: #fff; background: linear-gradient(180deg, #3A9BFF, #0A6CFF); box-shadow: inset 0 1px .5px rgba(255,255,255,.6); }
+.ob-steps li.done::before { content: "✓"; background: linear-gradient(180deg, #4ADE80, #1FA84A); }
+.ob-steps b { color: var(--a-ink); }
+.ob-state { margin: 16px 0 0; padding: 11px 14px; border-radius: 14px; background: var(--a-fill2, rgba(120,120,128,.16)); color: var(--a-ink2); font-size: 14px; display: flex; align-items: center; gap: 8px; }
+.ob-state .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--a-ink3); flex: none; }
+.ob-state .dot.live { background: var(--a-green); box-shadow: 0 0 0 4px color-mix(in srgb, var(--a-green) 25%, transparent); }
+.ob-state .dot.warn { background: var(--a-orange); }
+.ob-alt { padding: 20px; border-radius: 22px; background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 .5px rgba(255,255,255,.14); }
+:root[data-theme="light"] .ob-alt { background: rgba(255,255,255,.55); box-shadow: inset 0 0 0 .5px rgba(0,0,0,.06); }
+.ob-alt-h { margin: 0; font-size: 17px; font-weight: 650; color: var(--a-ink); }
+.ob-alt .pair-form .muted { font-size: 14px; }

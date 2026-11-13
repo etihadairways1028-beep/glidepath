@@ -84,7 +84,29 @@ const SVG = {
   dev: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="3"/><path d="M11 18h2"/></svg>`,
 };
 
-export function statusPage(p: { local: boolean; pairCode: string; status: BridgeStatus; token: string | null; addresses: string[]; port: number; logs: string[] }): string {
+export interface CloudCard { signedIn: boolean; email: string | null; online: boolean; error: string | null; devices: number }
+
+const GLOBE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.8 3.9 6 3.9 9.5s-1.3 6.7-3.9 9.5c-2.6-2.8-3.9-6-3.9-9.5s1.3-6.7 3.9-9.5z"/></svg>`;
+
+function cloudCard(c: CloudCard | null): string {
+  if (!c) return "";
+  const head = (title: string, sub: string, dot = "") => `<div class="any-h"><span class="ic big" style="--c1:#64D2FF;--c2:#5E5CE6">${GLOBE}</span><div><div class="any-t">${dot}${title}</div><div class="label">${sub}</div></div></div>`;
+  if (!c.signedIn) {
+    return `<div class="panel sec anywhere">${head("Connect anywhere", "Sign in with your Glidepath account. Your iPad or phone then connects on any Wi-Fi, or even mobile data. No codes.")}
+<form id="cl" class="cl-form" autocomplete="on"><input id="ce" type="email" placeholder="Email" autocomplete="username" required><input id="cp" type="password" placeholder="Password" autocomplete="current-password" required><button class="btnp" type="submit">Sign in</button></form>
+<div id="cm" class="cl-msg">${c.error ? esc(c.error) : ""}</div>
+<div class="label">No account yet? It's free: open <a href="https://glidepath-ad9.pages.dev/app/#/account" target="_blank" rel="noreferrer">Glidepath</a> and tap Create account, then sign in here.</div></div>`;
+  }
+  const state = c.online
+    ? `<span class="dot live"></span>Connect anywhere is on`
+    : `<span class="dot warn"></span>Connect anywhere is connecting…`;
+  const sub = c.online
+    ? `On your iPad or phone, open Glidepath and sign in as <b>${esc(c.email ?? "")}</b>. It connects by itself, on any Wi-Fi or mobile data.${c.devices ? ` ${c.devices === 1 ? "1 device is" : `${c.devices} devices are`} connected this way now.` : ""}`
+    : esc(c.error ?? "Waiting for the internet…") + ` Signed in as <b>${esc(c.email ?? "")}</b>.`;
+  return `<div class="panel sec anywhere on">${head(state, sub)}<div class="any-foot"><button id="co" class="btng" type="button">Sign this PC out</button></div></div>`;
+}
+
+export function statusPage(p: { cloud?: CloudCard | null; local: boolean; pairCode: string; status: BridgeStatus; token: string | null; addresses: string[]; port: number; logs: string[] }): string {
   const s = p.status;
   const stateDot = s.simState === "connected" ? "live" : s.simState === "error" ? "err" : "warn";
   const code = `${esc(p.pairCode.slice(0, 3))} ${esc(p.pairCode.slice(3))}`;
@@ -113,7 +135,13 @@ h1{font-size:30px;font-weight:700;letter-spacing:-.02em;margin:0;line-height:1.1
 .qr{width:128px;height:128px;flex:none;background:#fff;border-radius:16px;padding:7px}.qr svg{width:100%;height:100%;display:block}.pairrow a{word-break:break-all;font-size:13px}
 details.sec summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}details.sec summary::-webkit-details-marker{display:none}details.sec summary::after{content:"›";font-size:22px;color:var(--faint);transition:transform .2s}details[open].sec summary::after{transform:rotate(90deg)}
 pre{white-space:pre-wrap;font-size:12px;color:var(--quiet);max-height:320px;overflow:auto;margin:12px 0 0;padding:14px;border-radius:14px;background:rgba(0,0,0,.28)}
-.foot{margin-top:18px;text-align:center}</style></head><body><main id="root">
+.foot{margin-top:18px;text-align:center}
+.anywhere{margin:0 0 14px;padding:20px}.any-h{display:flex;gap:14px;align-items:flex-start}.ic.big{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;flex:none}.ic.big svg{width:24px;height:24px}
+.any-t{font-size:19px;font-weight:700;letter-spacing:-.01em;margin:1px 0 3px}.anywhere .label{line-height:1.45}
+.cl-form{display:flex;gap:10px;margin:16px 0 8px;flex-wrap:wrap}.cl-form input{flex:1 1 200px;min-width:0;padding:13px 16px;border-radius:14px;border:0;background:rgba(255,255,255,.1);box-shadow:inset 0 0 0 .5px rgba(255,255,255,.25);color:#fff;font:inherit;font-size:16px;outline:none}
+.cl-form input:focus{box-shadow:inset 0 0 0 2px #0A84FF}.cl-form .btnp{flex:0 0 auto;padding:12px 26px}.cl-msg{min-height:20px;margin-bottom:6px;color:#FF9F0A;font-size:14px}.cl-msg.ok{color:#30D158}
+.any-foot{margin-top:14px;display:flex;justify-content:flex-end}.btng{border:0;border-radius:999px;padding:9px 16px;font:inherit;font-size:14px;font-weight:600;color:#fff;background:rgba(255,255,255,.12);box-shadow:inset 0 .5px 0 rgba(255,255,255,.4);cursor:pointer}.btng:active{opacity:.6}
+@media(max-width:720px){.cl-form .btnp{width:100%}}</style></head><body><main id="root">
 <div class="head"><span class="logo">${LOGO}</span><div><h1>Glidepath Bridge</h1><div class="label">${esc(s.hostname)} · <span class="badge mono">v${esc(s.bridgeVersion)}</span></div></div>${p.local && here ? `<a class="btnp" href="${esc(here)}" target="_blank" rel="noreferrer">Open Glidepath</a>` : ""}</div>
 <div class="grid">
 ${tile("#64D2FF", "#0A84FF", SVG.sim, "Simulator", `<span class="dot ${stateDot}"></span>${esc(s.simulator?.name ?? "Not connected")}`, esc(s.message ?? s.simState))}
@@ -121,14 +149,14 @@ ${tile("#FFB340", "#FF7A00", SVG.plane, "Aircraft", esc(s.aircraft?.title ?? "�
 ${tile("#5EE07F", "#1FA84A", SVG.wave, "Telemetry", `<span class="mono">${s.framesPerSecond.toFixed(1)} fps</span>`, s.lastFrameAt ? "Last frame " + new Date(s.lastFrameAt).toLocaleTimeString() : "No frames yet")}
 ${tile("#D18CFF", "#8A3FFC", SVG.dev, "Devices", `<span class="mono">${s.clients}</span> connected`, s.activeFlightId ? "Recording flight " + esc(s.activeFlightId.slice(0, 8)) : "No active flight")}
 </div>
-${p.local ? `<div class="two">
+${p.local ? `${cloudCard(p.cloud ?? null)}<div class="two">
 <div class="panel codecard"><div class="cap">Your pairing code</div><div class="bigcode mono">${code}</div><div class="label">Also saved on your Desktop as <b>Glidepath code.txt</b>.</div></div>
 <div class="panel easy"><div class="cap">Connect your iPad in 2 steps</div>
   <ol class="steps"><li><div>On the iPad, open <b>Safari</b> and go to<br><span class="big mono">glidepath.local:${p.port}</span></div></li>
   <li><div>Type this code:<br><span class="big mono code">${code}</span></div></li></ol>
   <div class="label">Or open the Glidepath website on the iPad, tap Connect and type the same code. Tap Share, then Add to Home Screen, to keep it as an app.</div>
 </div></div>
-<details class="panel sec" open><summary><span class="cap">Easiest: scan this with your iPad camera (same Wi-Fi)</span></summary><div style="margin-top:10px">
+<details class="panel sec" open><summary><span class="cap">Or scan this with your iPad camera (same Wi-Fi)</span></summary><div style="margin-top:10px">
 ${links || "<p class='label'>No network address found. Is this PC connected to Wi-Fi or Ethernet?</p>"}
 <div class="label" style="margin-top:10px">This link contains your pairing key. Only open it on your own devices. If Windows asks, allow Glidepath Bridge on <b>private</b> networks.</div></div></details>
 <details class="panel sec"><summary><span class="cap">Recent log</span></summary><pre class="mono">${esc(p.logs.join("\n")) || "—"}</pre></details>
@@ -136,7 +164,12 @@ ${links || "<p class='label'>No network address found. Is this PC connected to W
 </main>
 <script>
 var open=function(){return [].map.call(document.querySelectorAll("details"),function(d){return d.open;});};
-setInterval(function(){if(document.hidden||(window.getSelection&&String(window.getSelection())))return;
+var busy=false;
+function typing(){var a=document.activeElement;if(a&&a.tagName==="INPUT")return true;var ins=document.querySelectorAll(".cl-form input");for(var i=0;i<ins.length;i++)if(ins[i].value)return true;return false;}
+document.addEventListener("submit",function(e){if(e.target.id!=="cl")return;e.preventDefault();var m=document.getElementById("cm");m.className="cl-msg";m.textContent="Signing in…";busy=true;
+fetch("/api/cloud/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:document.getElementById("ce").value,password:document.getElementById("cp").value})}).then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});}).then(function(x){busy=false;if(x.ok){m.className="cl-msg ok";m.textContent="Signed in.";document.getElementById("cp").value="";document.getElementById("ce").value="";setTimeout(function(){location.reload();},900);}else{m.textContent=x.j.error||"That didn't work. Try again.";}}).catch(function(){busy=false;m.textContent="Couldn't reach the Bridge.";});});
+document.addEventListener("click",function(e){if(!e.target||e.target.id!=="co")return;e.target.textContent="Signing out…";fetch("/api/cloud/logout",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"}).then(function(){location.reload();});});
+setInterval(function(){if(busy||typing()||document.hidden||(window.getSelection&&String(window.getSelection())))return;
 fetch(location.href,{cache:"no-store"}).then(function(r){return r.ok?r.text():null;}).then(function(t){if(!t)return;var m=t.match(/<main id="root">([\\s\\S]*)<\\/main>/);if(!m)return;
 var o=open(),pre=document.querySelector("pre"),sc=pre?pre.scrollTop:0;document.getElementById("root").innerHTML=m[1];
 [].forEach.call(document.querySelectorAll("details"),function(d,i){d.open=!!o[i];});var p2=document.querySelector("pre");if(p2)p2.scrollTop=sc;}).catch(function(){});},5000);

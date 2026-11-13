@@ -10,6 +10,7 @@ import { activeBridge, BridgeClient, consumePairingLink, detectBridgeUrl, setAct
 import { findBridgeOnNetwork, initCloud, saveBridge, syncFlights, useCloud } from "./data/cloud";
 import type { FlightSummary } from "@glidepath/protocol";
 import { startDemo } from "./data/demo";
+import { initAutoConnect, tryRelay } from "./data/connect";
 import { settingsStore, store, useApp, useSettings } from "./data/store";
 import { CockpitScreen } from "./screens/Cockpit";
 import { WeatherScreen } from "./screens/Weather";
@@ -30,7 +31,7 @@ import { ChallengeScreen } from "./screens/Challenge";
 import { initLive } from "./data/live";
 import { reviewApproach } from "@glidepath/flight-engine";
 initLive();
-if (location.search.includes("gpdebug")) Object.assign(window, { __gpStore: store, __gpReview: reviewApproach });
+if (location.search.includes("gpdebug")) Object.assign(window, { __gpStore: store, __gpReview: reviewApproach, __gpBridge: activeBridge });
 import { BridgeIconTip } from "./components/InstallCard";
 import { Glance } from "./screens/Glance";
 
@@ -90,7 +91,7 @@ export function App() {
     consumePairingLink();
     connectFromSettings();
     if (!settingsStore.get().token && new URLSearchParams(location.search).get("demo") === "1") startDemo();
-    void initCloud();
+    void initCloud().then(initAutoConnect);
   }, []);
 
   // Signed in but not paired on this device: look for one of the account's PCs on this Wi-Fi.
@@ -99,7 +100,8 @@ export function App() {
     if (cloud.status !== "ready" || !cloud.active || activeBridge() || store.get().mode === "demo") return;
     let gone = false;
     void findBridgeOnNetwork().then((b) => {
-      if (gone || !b || activeBridge()) return;
+      if (gone || activeBridge()) return;
+      if (!b) { void tryRelay(); return; } // not on this Wi-Fi: connect through the account instead
       settingsStore.set({ bridgeUrl: b.url, token: b.token });
       connectFromSettings();
     });
@@ -112,6 +114,7 @@ export function App() {
     const b = activeBridge();
     if (mode !== "bridge" || !b || cloud.status !== "ready" || !cloud.active || !status) return;
     const { token } = settingsStore.get();
+    if (b.isRelay) { void b.get<FlightSummary[]>("/api/flights?limit=500").then(syncFlights).catch(() => undefined); return; }
     void b.get<{ bridgeId: string; addresses: string[]; port: number }>("/api/lan")
       .then((lan) => saveBridge({ bridgeId: lan.bridgeId, name: status.hostname, addresses: lan.addresses, port: lan.port, token }))
       .catch(() => undefined);

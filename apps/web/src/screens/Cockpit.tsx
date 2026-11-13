@@ -50,6 +50,7 @@ export function CockpitScreen({ initial }: { initial?: string }) {
 
       {!b && <Notice info>Connect to the Glidepath Bridge on your PC first. Cockpit tools are web pages your add-ons run on that PC, and the Bridge checks which ones are on.</Notice>}
       {err && <Notice>{err}</Notice>}
+      {b?.isRelay && <Notice info>You're connected through your account, so this works on any network. Add-on screens (EFB, GSX) run on your PC itself, so they only open when this device is on the same Wi-Fi as the PC.</Notice>}
 
       {current && (
         <section ref={frameRef} className={`glass cockpit-frame${big ? " big" : ""}`}>

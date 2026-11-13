@@ -116,6 +116,9 @@ jobs:
           TOKEN=$(echo "$R" | head -1 | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
           if [ -n "$TOKEN" ]; then curl -s -X DELETE "$U/me" -H "Authorization: Bearer $TOKEN" -o /dev/null -w "Cleanup: %{http_code}\n"; else echo "::warning::Sign-up did not return a session."; fi
 
+      - name: Check Connect anywhere (stand-in PC and iPad through the real relay)
+        run: node scripts/relay-check.mjs "${{ steps.deploy.outputs.url }}"
+
       - name: Check the website forwarder (glidepath-ad9.pages.dev/acct)
         continue-on-error: true
         working-directory: .
@@ -123,6 +126,7 @@ jobs:
           sleep 60
           curl -s -w "  HTTP %{http_code}\n" https://glidepath-ad9.pages.dev/acct/health
           curl -s -o /dev/null -w "Preflight via site: HTTP %{http_code}\n" -X OPTIONS https://glidepath-ad9.pages.dev/acct/auth/signup -H "Origin: http://localhost:4810" -H "Access-Control-Request-Method: POST"
+          node cloud/cloudflare/scripts/relay-check.mjs https://glidepath-ad9.pages.dev/acct
 
       - name: Switch sign-in on for the website and app
         working-directory: .

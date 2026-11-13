@@ -73,3 +73,14 @@ CREATE TABLE IF NOT EXISTS challenge (
   name TEXT NOT NULL,
   joined_at INTEGER NOT NULL
 );
+
+-- Connect anywhere: a PC signed in to an account gets a key (only its SHA-256 is kept).
+CREATE TABLE IF NOT EXISTS relay_keys (
+  key_hash TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  bridge_id TEXT NOT NULL,
+  name TEXT,
+  created_at INTEGER NOT NULL,
+  last_used INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS relay_keys_user ON relay_keys(user_id);

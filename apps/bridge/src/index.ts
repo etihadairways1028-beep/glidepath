@@ -5,6 +5,7 @@ import type { FlightPhase, TelemetryFrame } from "@glidepath/protocol";
  *   Simulator adapter → FlightSession (engine + recorder) → LAN server
  */
 import { activityFor, DiscordPresence } from "./discord.js";
+import { CloudLink } from "./cloudlink.js";
 import { PROTOCOL_VERSION, type AircraftInfo, type BridgeStatus, type SimConnectionState, type SimulatorInfo } from "@glidepath/protocol";
 import { BRIDGE_VERSION, HOSTNAME, loadConfig, loadIdentity } from "./config.js";
 import { exec } from "node:child_process";
@@ -126,6 +127,8 @@ async function main(): Promise<void> {
   // Discord status: what you're flying, on your Discord profile (off until turned on in the app).
   const discord = new DiscordPresence(cfg.dataDir, log.child("discord"));
   server.discord = discord;
+  const cloud = new CloudLink({ dataDir: cfg.dataDir, port: cfg.port, host: cfg.host, bridgeId: identity.bridgeId, version: BRIDGE_VERSION, token: () => identity.pairingToken, log: log.child("cloud") });
+  server.cloud = cloud;
   discord.start();
   session.on("frame", (frame: TelemetryFrame, phase: FlightPhase) => discord.update(activityFor(session.activeFlight, frame, phase)));
   setInterval(() => { if (!lastFrameAt || Date.now() - lastFrameAt > 120_000) discord.update(null); }, 30_000).unref();
@@ -143,6 +146,7 @@ async function main(): Promise<void> {
     }
     throw e;
   }
+  cloud.start();
   await adapter.start();
 
   const statusTimer = setInterval(() => server.broadcastStatus(), 5000);
@@ -154,6 +158,7 @@ async function main(): Promise<void> {
     clearInterval(statusTimer);
     await adapter.stop();
     session.shutdown();
+    cloud.stop();
     await server.stop();
     recorder.close();
     process.exit(0);
@@ -171,7 +176,14 @@ async function main(): Promise<void> {
     "  ============================================================",
     `  On this PC:      http://localhost:${cfg.port}`,
     "",
-    "  CONNECT YOUR iPAD (same Wi-Fi):",
+    cloud.status().signedIn
+      ? `  CONNECT ANYWHERE is on (${cloud.status().email}). On your iPad or phone, open`
+      : `  EASIEST, ANY WI-FI: open http://localhost:${cfg.port} and sign in with your`,
+    cloud.status().signedIn
+      ? "    Glidepath and sign in with the same account. It connects by itself."
+      : "    Glidepath account. Then sign in on your iPad too. No codes needed.",
+    "",
+    "  OR WITH A CODE (same Wi-Fi):",
     `    1. In Safari on the iPad, go to:   glidepath.local:${cfg.port}`,
     `    2. Type this code:                 ${server.pairCode.slice(0, 3)} ${server.pairCode.slice(3)}`,
     "    Or open the Glidepath website on the iPad, tap Connect, and type the same code.",

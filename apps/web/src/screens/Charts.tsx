@@ -27,6 +27,26 @@ function frameUrl(c: Chart, cycle: string, bridge: ReturnType<typeof activeBridg
   return bridge ? `${bridge.authedUrl(`/api/ext/chartpdf?cycle=${cycle}&file=${encodeURIComponent(file)}`)}#view=FitH` : `${c.url}#view=FitH`;
 }
 
+/** Through the account relay the chart is downloaded first, then shown from this device. */
+function ChartFrame({ c, cycle, bridge }: { c: Chart; cycle: string; bridge: ReturnType<typeof activeBridge> }) {
+  const relay = !!bridge?.isRelay;
+  const [src, setSrc] = useState<string | null>(relay ? null : frameUrl(c, cycle, bridge));
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    if (!bridge?.isRelay) { setSrc(frameUrl(c, cycle, bridge)); return; }
+    let url: string | null = null, stop = false;
+    setSrc(null); setErr(null);
+    const file = c.url.split("/").pop() ?? "";
+    bridge.viewUrl(`/api/ext/chartpdf?cycle=${cycle}&file=${encodeURIComponent(file)}`)
+      .then((u) => { url = u; if (stop) URL.revokeObjectURL(u); else setSrc(`${u}#view=FitH`); })
+      .catch((e: Error) => { if (!stop) setErr(e.message); });
+    return () => { stop = true; if (url) URL.revokeObjectURL(url); };
+  }, [c.url, cycle, bridge]);
+  if (err) return <p className="muted" style={{ padding: 20 }}>Couldn't load this chart through your PC: {err}. Try Open full screen.</p>;
+  if (!src) return <p className="muted" style={{ padding: 20 }}>Loading the chart from your PC…</p>;
+  return <iframe src={src} title={c.name} />;
+}
+
 export function ChartsFor({ icao, compact = false }: { icao: string; compact?: boolean }) {
   const mode = useApp((s) => s.mode);
   const bridge = mode === "bridge" ? activeBridge() : null;
@@ -82,7 +102,7 @@ export function ChartsFor({ icao, compact = false }: { icao: string; compact?: b
           <div className="ch-view">
             {open ? (<>
               <div className="between ch-view-top"><b>{open.name}</b><a className="btn small primary" href={open.url} target="_blank" rel="noreferrer">Open full screen</a></div>
-              <iframe key={open.url} src={frameUrl(open, data.cycle, bridge)} title={open.name} />
+              <ChartFrame key={open.url} c={open} cycle={data.cycle} bridge={bridge} />
             </>) : <p className="muted" style={{ padding: 20 }}>Pick a chart.</p>}
           </div>
         </div>

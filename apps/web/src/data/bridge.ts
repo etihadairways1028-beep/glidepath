@@ -60,6 +60,11 @@ function keepPairingForHomeScreen(): void {
   document.querySelector('link[rel="manifest"]')?.remove();
 }
 
+/** Connect anywhere: reach the PC through the account's relay instead of the local network. */
+export interface RelayTarget { urls: string[]; token: string }
+
+interface Pending { resolve: (r: Response) => void; reject: (e: Error) => void; ctrl?: ReadableStreamDefaultController<Uint8Array>; timer: number }
+
 export class BridgeClient {
   private ws: WebSocket | null = null;
   private retry = 1000;
@@ -68,7 +73,72 @@ export class BridgeClient {
   private lastSeq: number | null = null;
   private trailFor: string | null = null;
 
-  constructor(private readonly base: string, private readonly token: string) {}
+  constructor(private readonly base: string, private readonly token: string, private readonly relay: RelayTarget | null = null) {}
+
+  /** True when this connection goes through the account relay (any network). */
+  get isRelay(): boolean { return !!this.relay; }
+  private relayAt = 0;
+  private relayOnline = false;
+  private reqs = new Map<string, Pending>();
+  private pingTimer: number | null = null;
+
+  /** fetch() to the Bridge, directly or through the relay. */
+  private fetchBridge(path: string, init: { method?: string; body?: string; signal?: AbortSignal } = {}): Promise<Response> {
+    if (!this.relay) {
+      return fetch(this.base + path, {
+        method: init.method ?? "GET", signal: init.signal, body: init.body,
+        headers: { Authorization: `Bearer ${this.token}`, ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}) },
+      });
+    }
+    return new Promise<Response>((resolve, reject) => {
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.relayOnline) { reject(new Error("Your PC isn't connected right now.")); return; }
+      const id = `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+      const timer = window.setTimeout(() => { this.reqs.delete(id); reject(new Error("Your PC didn't answer in time.")); }, 30_000);
+      this.reqs.set(id, { resolve, reject, timer });
+      init.signal?.addEventListener("abort", () => { const q = this.reqs.get(id); if (q) { window.clearTimeout(q.timer); this.reqs.delete(id); q.ctrl?.close(); reject(new DOMException("Aborted", "AbortError")); } });
+      this.ws.send(JSON.stringify({ $: "req", id, method: init.method ?? "GET", path, body: init.body !== undefined ? JSON.parse(init.body) : undefined }));
+    });
+  }
+
+  /** A relay control message (request answers, PC online/offline). */
+  private onRelayControl(m: { $: string; id?: string; online?: boolean; status?: number; ct?: string; text?: string; b64?: string; t?: string; stream?: boolean }): void {
+    if (m.$ === "bridge") {
+      this.relayOnline = !!m.online;
+      if (m.online) {
+        this.ws?.send(JSON.stringify({ type: "hello", protocolVersion: 1, client: "glidepath-app", lastSeq: this.lastSeq }));
+      } else {
+        store.set({ conn: "unreachable", connMessage: "Your PC isn't online. Open Glidepath Bridge on the PC; it connects by itself once it's signed in to this account." });
+        for (const [id, q] of this.reqs) { window.clearTimeout(q.timer); q.reject(new Error("Your PC went offline.")); this.reqs.delete(id); }
+      }
+      return;
+    }
+    const q = m.id ? this.reqs.get(m.id) : undefined;
+    if (!q) return;
+    const bytes = (b64: string) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    if (m.$ === "res") {
+      window.clearTimeout(q.timer);
+      const headers = { "Content-Type": m.ct ?? "application/octet-stream" };
+      if (m.stream) {
+        const body = new ReadableStream<Uint8Array>({ start: (c) => { q.ctrl = c; } });
+        q.timer = window.setTimeout(() => { this.reqs.delete(m.id!); try { q.ctrl?.error(new Error("Your PC stopped answering.")); } catch { /* closed */ } }, 120_000);
+        q.resolve(new Response(body, { status: m.status ?? 200, headers }));
+      } else {
+        this.reqs.delete(m.id!);
+        q.resolve(new Response(m.b64 !== undefined ? bytes(m.b64) : (m.text ?? ""), { status: m.status ?? 200, headers }));
+      }
+      return;
+    }
+    if (m.$ === "chunk") { try { q.ctrl?.enqueue(m.b64 !== undefined ? bytes(m.b64) : new TextEncoder().encode(m.t ?? "")); } catch { /* reader gone */ } return; }
+    if (m.$ === "end") { window.clearTimeout(q.timer); this.reqs.delete(m.id!); try { q.ctrl?.close(); } catch { /* closed */ } }
+  }
+
+  /** Something the browser should show itself (a chart PDF): a link on the local network, or a downloaded copy through the relay. */
+  async viewUrl(path: string): Promise<string> {
+    if (!this.relay) return this.authedUrl(path);
+    const r = await this.fetchBridge(path);
+    if (!r.ok) throw new Error(`Your PC answered ${r.status}`);
+    return URL.createObjectURL(await r.blob());
+  }
 
   /* ---- Remote control ---- */
   private cmdWaiters = new Map<string, (r: { state: string; detail: string | null }) => void>();
@@ -104,6 +174,7 @@ export class BridgeClient {
     this.stopped = true;
     document.removeEventListener("visibilitychange", this.onVisible);
     if (this.timer) clearTimeout(this.timer);
+    if (this.pingTimer) clearInterval(this.pingTimer);
     this.ws?.close();
   }
 
@@ -111,7 +182,7 @@ export class BridgeClient {
   authedUrl(path: string): string { return `${this.base}${path}${path.includes("?") ? "&" : "?"}token=${encodeURIComponent(this.token)}`; }
 
   async get<T>(path: string): Promise<T> {
-    const res = await fetch(this.base + path, { headers: { Authorization: `Bearer ${this.token}` } });
+    const res = await this.fetchBridge(path);
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error((body as { error?: string }).error ?? `Bridge returned HTTP ${res.status}`);
     return body as T;
@@ -119,9 +190,7 @@ export class BridgeClient {
 
   /** POST and read a server-sent-event stream of {"t": text} chunks. */
   async stream(path: string, data: unknown, onText: (t: string) => void, signal?: AbortSignal): Promise<void> {
-    const res = await fetch(this.base + path, {
-      method: "POST", headers: { Authorization: `Bearer ${this.token}`, "Content-Type": "application/json" }, body: JSON.stringify(data), signal,
-    });
+    const res = await this.fetchBridge(path, { method: "POST", body: JSON.stringify(data), signal });
     if (!res.ok || !res.body) {
       let msg = `Bridge answered ${res.status}`;
       try { msg = ((await res.json()) as { error?: string }).error ?? msg; } catch { /* not JSON */ }
@@ -147,9 +216,7 @@ export class BridgeClient {
   }
 
   async post<T>(path: string, data: unknown): Promise<T> {
-    const res = await fetch(this.base + path, {
-      method: "POST", headers: { Authorization: `Bearer ${this.token}`, "Content-Type": "application/json" }, body: JSON.stringify(data),
-    });
+    const res = await this.fetchBridge(path, { method: "POST", body: JSON.stringify(data) });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error((body as { error?: string }).error ?? `Bridge returned HTTP ${res.status}`);
     return body as T;
@@ -166,6 +233,7 @@ export class BridgeClient {
   private connect(): void {
     if (this.stopped) return;
     store.set({ conn: store.get().conn === "live" ? "reconnecting" : "connecting", connMessage: null });
+    if (this.relay) { this.connectRelay(); return; }
     const url = this.base.replace(/^http/, "ws") + `/ws?client=glidepath-app&token=${encodeURIComponent(this.token)}`;
     let ws: WebSocket;
     try {
@@ -195,6 +263,40 @@ export class BridgeClient {
         store.set({ conn: "reconnecting", connMessage: "Connection dropped. Reconnecting…" });
       }
       this.timer = window.setTimeout(() => this.connect(), this.retry);
+      this.retry = Math.min(this.retry * 2, 15000);
+    };
+  }
+
+  private connectRelay(): void {
+    const r = this.relay!;
+    const base = r.urls[this.relayAt % r.urls.length]!;
+    let ws: WebSocket;
+    try { ws = new WebSocket(`${base.replace(/^http/, "ws")}/relay/app?token=${encodeURIComponent(r.token)}`); }
+    catch { store.set({ conn: "unreachable", connMessage: "Couldn't reach Glidepath. Check your internet connection." }); return; }
+    this.ws = ws;
+    let opened = false;
+    ws.onopen = () => {
+      opened = true;
+      this.retry = 1000;
+      if (this.pingTimer) clearInterval(this.pingTimer);
+      this.pingTimer = window.setInterval(() => { if (ws.readyState === WebSocket.OPEN) ws.send("ping"); }, 25_000);
+    };
+    ws.onmessage = (ev) => {
+      const d = String(ev.data);
+      if (d === "pong") return;
+      if (d.startsWith('{"$"')) { try { this.onRelayControl(JSON.parse(d)); } catch { /* ignore */ } return; }
+      this.onMessage(d);
+    };
+    ws.onclose = (ev) => {
+      if (this.pingTimer) { clearInterval(this.pingTimer); this.pingTimer = null; }
+      this.relayOnline = false;
+      for (const [id, q] of this.reqs) { window.clearTimeout(q.timer); q.reject(new Error("Connection dropped.")); this.reqs.delete(id); }
+      if (this.stopped) return;
+      if (!opened) this.relayAt++; // try the other address next time (some networks block one)
+      store.set(opened
+        ? { conn: "reconnecting", connMessage: "Connection dropped. Reconnecting…" }
+        : { conn: "unreachable", connMessage: ev.code === 1006 && this.relayAt >= r.urls.length ? "Couldn't reach Glidepath. Check your internet connection." : "Connecting through your account…" });
+      this.timer = window.setTimeout(() => this.connect(), opened ? 1000 : this.retry);
       this.retry = Math.min(this.retry * 2, 15000);
     };
   }

@@ -17,6 +17,7 @@ import { ADDON_DOORS, ADDONS, addonStatus } from "./addons.js";
 import { networkInterfaces } from "node:os";
 import { randomInt, timingSafeEqual } from "node:crypto";
 import { WebSocketServer, type WebSocket } from "ws";
+import { RELAY_HEADER, type CloudLink } from "./cloudlink.js";
 import { Bonjour } from "bonjour-service";
 import {
   ClientMessage, PROTOCOL_VERSION,
@@ -77,6 +78,8 @@ export class LanServer {
     this.http.on("upgrade", this.onUpgrade);
   }
 
+  /** Connect anywhere (set by index.ts). */
+  cloud: CloudLink | null = null;
   /** Discord status (set by index.ts). */
   discord: DiscordPresence | null = null;
   /** Secure (https) address for this PC, when the secure link is running. */
@@ -328,7 +331,8 @@ export class LanServer {
 
   private route(req: IncomingMessage, res: ServerResponse): void {
     const url = new URL(req.url ?? "/", "http://x");
-    const local = isLocal(req);
+    // Requests the Bridge makes for Connect anywhere come from 127.0.0.1 but stand for a remote device.
+    const local = isLocal(req) && !req.headers[RELAY_HEADER];
     const origin = req.headers.origin;
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Referrer-Policy", "no-referrer");
@@ -344,19 +348,19 @@ export class LanServer {
     // A request from the hosted app on this PC must still carry the token: being "local" is not enough when a website made the request.
     const fromWebsite = !!origin && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) && origin !== `http://${req.headers.host}`;
     const authed = (local && !fromWebsite) || this.tokenOk(url.searchParams.get("token") ?? bearer(req));
-    void this.handle(req, res, url, local, authed).catch((e) => {
+    void this.handle(req, res, url, local, authed, local && !fromWebsite).catch((e) => {
       this.log.error(`HTTP ${url.pathname} failed`, e);
       if (!res.headersSent) json(res, 500, { error: "Internal error" });
     });
   }
 
-  private async handle(req: IncomingMessage, res: ServerResponse, url: URL, local: boolean, authed: boolean): Promise<void> {
+  private async handle(req: IncomingMessage, res: ServerResponse, url: URL, local: boolean, authed: boolean, atThisPc = false): Promise<void> {
     const p = url.pathname;
-    const POSTS = ["/api/plan", "/api/ai/config", "/api/ai/chat", "/api/pair", "/api/discord"];
+    const POSTS = ["/api/plan", "/api/ai/config", "/api/ai/chat", "/api/pair", "/api/discord", "/api/cloud/login", "/api/cloud/logout"];
     if (req.method !== "GET" && !(req.method === "POST" && POSTS.includes(p))) return text(res, 405, "Method not allowed");
     if (p === "/") {
       if (!local) return html(res, pairPage());
-      return html(res, statusPage({ local, pairCode: this.pairCode, status: this.getStatus(), token: local ? this.identity.pairingToken : null, addresses: lanAddresses(), port: this.cfg.port, logs: local ? this.log.recent().slice(-60) : [] }));
+      return html(res, statusPage({ cloud: this.cloud?.status() ?? null, local, pairCode: this.pairCode, status: this.getStatus(), token: local ? this.identity.pairingToken : null, addresses: lanAddresses(), port: this.cfg.port, logs: local ? this.log.recent().slice(-60) : [] }));
     }
     if (p === "/api/pair" && req.method === "POST") {
       if (this.pairFails >= 10) return json(res, 429, { error: "Too many wrong codes. Restart the Bridge on your PC for a new code." });
@@ -376,6 +380,20 @@ export class LanServer {
     if (p === "/healthz") return json(res, 200, { ok: true, bridgeId: this.identity.bridgeId, protocolVersion: PROTOCOL_VERSION });
     if (p === "/app") { res.writeHead(302, { Location: "/app/" }); res.end(); return; }
     if (p.startsWith("/app/")) return this.serveApp(res, p.slice(5) || "index.html");
+    if (p.startsWith("/api/cloud")) {
+      // Signing this PC in or out is only for someone sitting at this PC.
+      if (!atThisPc) return json(res, 403, { error: "Sign in on the PC itself, at localhost:4810." });
+      if (!this.cloud) return json(res, 503, { error: "Connect anywhere isn't available in this Bridge." });
+      try {
+        if (p === "/api/cloud") return json(res, 200, this.cloud.status());
+        if (p === "/api/cloud/login" && req.method === "POST") {
+          const b = (await readBody(req, 2_000)) as { email?: string; password?: string };
+          return json(res, 200, await this.cloud.signIn(String(b?.email ?? ""), String(b?.password ?? "")));
+        }
+        if (p === "/api/cloud/logout" && req.method === "POST") return json(res, 200, await this.cloud.signOut());
+      } catch (e) { return json(res, 400, { error: (e as Error).message }); }
+      return json(res, 404, { error: "Not found" });
+    }
     if (!authed) return json(res, 401, { error: "Pairing token required" });
 
     if (p === "/api/status") return json(res, 200, this.getStatus());

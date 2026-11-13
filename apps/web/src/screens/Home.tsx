@@ -5,7 +5,8 @@ import { MapView } from "../components/MapView";
 import { YourPcs } from "./Account";
 import { InstallCard } from "../components/InstallCard";
 import { CockpitReady } from "../components/CockpitReady";
-import { useCloud } from "../data/cloud";
+import { relayStatus, useCloud, type RelayStatus } from "../data/cloud";
+import { tryRelay } from "../data/connect";
 import { AircraftHero } from "../components/Imagery";
 import { buildDebrief } from "@glidepath/flight-engine";
 import { TimingsStrip } from "../components/Timings";
@@ -74,21 +75,53 @@ function FlightHeading() {
 
 function Onboarding() {
   const cloud = useCloud();
+  const signedIn = cloud.status === "ready" && !!cloud.active;
+  const email = cloud.accounts.find((a) => a.slot === cloud.active)?.email ?? null;
+  const [pc, setPc] = useState<RelayStatus | null>(null);
+  // Signed in: watch for the PC signing in too, and connect the moment it does.
+  useEffect(() => {
+    if (!signedIn) { setPc(null); return; }
+    let stop = false;
+    const look = () => void relayStatus().then((st) => {
+      if (stop) return;
+      setPc(st);
+      if (st?.linked && !activeBridge()) void tryRelay();
+    });
+    look();
+    const t = window.setInterval(look, 5000);
+    return () => { stop = true; window.clearInterval(t); };
+  }, [signedIn, cloud.active]);
   return (
     <section className="glass strong onboard">
-      <div>
-        <h2 className="onboard-h">Connect to your PC</h2>
-        <PairWithCode />
-        <div className="row wrap" style={{ marginTop: 18 }}>
+      <div className="ob-main">
+        <span className="ob-tag">Easiest · any Wi-Fi or mobile data</span>
+        <h2 className="onboard-h">Connect with your account</h2>
+        <ol className="ob-steps">
+          <li className={signedIn ? "done" : ""}>
+            {signedIn
+              ? <span>Signed in here as <b>{email}</b>.</span>
+              : <span><a className="btn primary" href="#/account">Sign in or create a free account</a></span>}
+          </li>
+          <li className={pc?.linked ? "done" : ""}>
+            <span>On your PC, open <b>Glidepath Bridge</b>. Its page opens by itself (or go to <b>localhost:4810</b>). Sign in there with the <b>same account</b>.</span>
+          </li>
+          <li className={pc?.online ? "done" : ""}><span>That's it. This device connects by itself, wherever you are.</span></li>
+        </ol>
+        {signedIn && pc && (
+          <p className="ob-state">
+            {pc.online ? <><span className="dot live" />Your PC{pc.name ? ` (${pc.name})` : ""} is online. Connecting…</>
+              : pc.linked ? <><span className="dot warn" />Your PC is signed in but not online. Open Glidepath Bridge on it.</>
+              : <><span className="dot" />Waiting for your PC to sign in…</>}
+          </p>
+        )}
+        <div className="row wrap" style={{ marginTop: 16 }}>
           <button className="btn" onClick={() => startDemo()}>Watch a demo flight</button>
-          {cloud.status === "ready" && !cloud.active && <a className="btn" href="#/account">Sign in</a>}
         </div>
       </div>
-      <ol className="onboard-steps">
-        <li><span>Open <b>Glidepath Bridge</b> on the PC you fly on, on the same Wi-Fi as this device.</span></li>
-        <li><span>Find the <b>6-digit code</b>: it is in the black Bridge window, at the top of the Bridge page on your PC (localhost:4810), and in <b>Glidepath code.txt</b> on your PC Desktop.</span></li>
-        <li><span>Type it here and tap <b>Connect</b>. Done.</span></li>
-      </ol>
+      <div className="ob-alt">
+        <h3 className="ob-alt-h">Or use the code (same Wi-Fi)</h3>
+        <PairWithCode />
+      </div>
     </section>
   );
 }

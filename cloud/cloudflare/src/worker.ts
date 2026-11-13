@@ -12,10 +12,12 @@
 import { composeMonthlyBrief } from "../../../packages/flight-engine/src/brief";
 import { sendGmail } from "./gmail";
 import { addTrail, cleanLive, cleanName, leaderboard, monthRange, shareId } from "./social";
+import { Relay } from "./relay";
 import { welcomeMail, debriefMail, deviceName, inflightMail, resetMail, signinMail } from "./mails";
 
 interface Env {
   DB: D1Database;
+  RELAY: DurableObjectNamespace;
   PEPPER: string;
   BREVO_API_KEY?: string;
   BREVO_SENDER_EMAIL?: string;
@@ -57,10 +59,10 @@ const fail = (status: number, error: string) => json(status, { error });
 
 interface User { id: string; email: string; display_name: string | null; monthly_email: number }
 
-async function userFrom(req: Request, env: Env): Promise<User | null> {
-  const m = /^Bearer\s+([a-f0-9]{64})$/i.exec(req.headers.get("Authorization") ?? "");
-  if (!m) return null;
-  const th = await sha256(m[1]!);
+async function userFrom(req: Request, env: Env, tokenParam?: string | null): Promise<User | null> {
+  const token = /^Bearer\s+([a-f0-9]{64})$/i.exec(req.headers.get("Authorization") ?? "")?.[1] ?? /^[a-f0-9]{64}$/i.exec(tokenParam ?? "")?.[0];
+  if (!token) return null;
+  const th = await sha256(token);
   const row = await env.DB.prepare("SELECT u.id, u.email, u.display_name, u.monthly_email, s.last_used FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?").bind(th).first<User & { last_used: number }>();
   if (!row) return null;
   if (Date.now() - row.last_used > 3600_000) await env.DB.prepare("UPDATE sessions SET last_used = ? WHERE token_hash = ?").bind(Date.now(), th).run();
@@ -125,6 +127,16 @@ async function flightsBetween(env: Env, userId: string, from: number, to: number
 
 /** A short welcome email after sign-up. */
 function welcomeEmail(name: string | null) { const m = welcomeMail(name); return { html: m.html, text: m.text }; }
+
+const relayStub = (env: Env, userId: string) => env.RELAY.get(env.RELAY.idFromName(userId));
+/** Pass the WebSocket upgrade on to the relay, saying who is connecting (set here only; never trusted from outside). */
+function withRole(req: Request, role: "bridge" | "app", name?: string | null): Request {
+  const h = new Headers(req.headers);
+  h.delete("x-gp-role"); h.delete("x-gp-name");
+  h.set("x-gp-role", role);
+  if (name) h.set("x-gp-name", name);
+  return new Request(req.url, { method: req.method, headers: h });
+}
 
 async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
   const url = new URL(req.url);
@@ -211,8 +223,45 @@ async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Re
     return json(200, { token: await newSession(env, r.user_id), user: publicUser(u!) });
   }
 
+  // Connect anywhere: the Bridge and signed-in devices meet in the account's relay.
+  if (p === "/relay/bridge") {
+    const key = url.searchParams.get("key") ?? "";
+    if (!/^[a-f0-9]{64}$/.test(key)) return fail(401, "This PC isn't signed in.");
+    const k = await env.DB.prepare("SELECT user_id, name, last_used FROM relay_keys WHERE key_hash = ?").bind(await sha256(key)).first<{ user_id: string; name: string | null; last_used: number }>();
+    if (!k) return fail(401, "This PC was signed out. Sign in again on the Bridge page.");
+    if (Date.now() - k.last_used > 3600_000) await env.DB.prepare("UPDATE relay_keys SET last_used = ? WHERE key_hash = ?").bind(Date.now(), await sha256(key)).run();
+    return relayStub(env, k.user_id).fetch(withRole(req, "bridge", k.name));
+  }
+  if (p === "/relay/app") {
+    const u = await userFrom(req, env, url.searchParams.get("token"));
+    if (!u) return fail(401, "Sign in first.");
+    return relayStub(env, u.id).fetch(withRole(req, "app"));
+  }
+  if (p === "/relay/unlink" && req.method === "POST") {
+    const b = await body<{ key?: string }>(req);
+    if (b?.key) await env.DB.prepare("DELETE FROM relay_keys WHERE key_hash = ?").bind(await sha256(String(b.key))).run();
+    return json(200, { ok: true });
+  }
+
   const user = await userFrom(req, env);
   if (!user) return fail(401, "Sign in first.");
+
+  if (p === "/relay/link" && req.method === "POST") {
+    const b = await body<{ bridge_id?: string; name?: string }>(req);
+    const key = rand(32);
+    const bid = String(b?.bridge_id ?? "").slice(0, 64) || rand(8);
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM relay_keys WHERE user_id = ? AND bridge_id = ?").bind(user.id, bid),
+      env.DB.prepare("INSERT INTO relay_keys (key_hash, user_id, bridge_id, name, created_at, last_used) VALUES (?, ?, ?, ?, ?, ?)").bind(await sha256(key), user.id, bid, String(b?.name ?? "").slice(0, 80) || null, Date.now(), Date.now()),
+    ]);
+    return json(200, { key, user: publicUser(user) });
+  }
+  if (p === "/relay/status" && req.method === "GET") {
+    const linked = await env.DB.prepare("SELECT name FROM relay_keys WHERE user_id = ? ORDER BY last_used DESC LIMIT 1").bind(user.id).first<{ name: string | null }>();
+    if (!linked) return json(200, { linked: false, online: false, name: null });
+    const st = await relayStub(env, user.id).fetch(new Request("https://relay/status", { headers: { "x-gp-role": "status" } })).then((r) => r.json<{ online: boolean; name: string | null }>());
+    return json(200, { linked: true, online: st.online, name: st.name ?? linked.name });
+  }
 
   if (p === "/auth/logout" && req.method === "POST") {
     const t = (req.headers.get("Authorization") ?? "").split(/\s+/)[1] ?? "";
@@ -233,7 +282,7 @@ async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Re
     return json(200, { ...publicUser(u!), email_prefs: await prefsOf(env, user.id) });
   }
   if (p === "/me" && req.method === "DELETE") {
-    await env.DB.batch(["sessions", "flights", "bridges", "email_prefs", "password_resets", "email_log", "live_shares", "challenge"].map((t) => env.DB.prepare(`DELETE FROM ${t} WHERE user_id = ?`).bind(user.id)).concat(env.DB.prepare("DELETE FROM users WHERE id = ?").bind(user.id)));
+    await env.DB.batch(["sessions", "flights", "bridges", "relay_keys", "email_prefs", "password_resets", "email_log", "live_shares", "challenge"].map((t) => env.DB.prepare(`DELETE FROM ${t} WHERE user_id = ?`).bind(user.id)).concat(env.DB.prepare("DELETE FROM users WHERE id = ?").bind(user.id)));
     return json(200, { ok: true });
   }
 
@@ -376,6 +425,8 @@ async function monthly(env: Env): Promise<void> {
     await env.DB.prepare("INSERT OR IGNORE INTO email_log (user_id, kind, period, sent_at) VALUES (?, 'monthly', ?, ?)").bind(u.id, period, Date.now()).run();
   }
 }
+
+export { Relay };
 
 export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {

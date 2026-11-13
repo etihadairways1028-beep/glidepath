@@ -309,3 +309,20 @@ export const joinChallenge = (name: string) => authed<{ joined: boolean; name: s
 export const leaveChallenge = () => authed<{ joined: boolean }>("/challenge/leave", "POST", {});
 /** The public follow page for a live link. */
 export const followUrl = (id: string) => `${SITE}/follow/?f=${id}`;
+
+/* ---------------- Connect anywhere ---------------- */
+
+/** Where this device reaches the account relay, as the signed-in account (null when signed out). */
+export function relayTarget(): { urls: string[]; token: string } | null {
+  if (!api || !state.active) return null;
+  const token = ls.get<string | null>(tokenKey(state.active), null);
+  if (!token) return null;
+  return { urls: [...(bases.length ? bases : [api])], token };
+}
+
+export interface RelayStatus { linked: boolean; online: boolean; name: string | null }
+/** Is a PC signed in to this account (linked), and is it connected now (online)? */
+export async function relayStatus(): Promise<RelayStatus | null> {
+  if (!state.active) return null;
+  try { return await call<RelayStatus>("/relay/status", { slot: state.active }); } catch { return null; }
+}
