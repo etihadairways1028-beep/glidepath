@@ -129,7 +129,7 @@ export async function signIn(email: string, password: string): Promise<string | 
   try {
     const existing = state.accounts.find((a) => a.email.toLowerCase() === email.trim().toLowerCase());
     const r = await call<AuthReply>("/auth/login", { method: "POST", body: { email: email.trim(), password } });
-    addSignedIn(r, existing?.slot ?? crypto.randomUUID().slice(0, 8));
+    addSignedIn(r, existing?.slot ?? newSlot());
     return null;
   } catch (e) { return msg(e); }
 }
@@ -138,7 +138,7 @@ export async function signIn(email: string, password: string): Promise<string | 
 export async function signUp(name: string, email: string, password: string): Promise<{ error: string | null; confirm: boolean }> {
   try {
     const r = await call<AuthReply>("/auth/signup", { method: "POST", body: { name: name.trim(), email: email.trim(), password } });
-    addSignedIn(r, crypto.randomUUID().slice(0, 8));
+    addSignedIn(r, newSlot());
     return { error: null, confirm: false };
   } catch (e) { return { error: msg(e), confirm: false }; }
 }
@@ -188,7 +188,7 @@ export async function resetPassword(token: string, password: string): Promise<st
   try {
     const r = await call<AuthReply>("/auth/reset", { method: "POST", body: { token, password } });
     const existing = state.accounts.find((a) => a.userId === r.user.id);
-    addSignedIn(r, existing?.slot ?? crypto.randomUUID().slice(0, 8));
+    addSignedIn(r, existing?.slot ?? newSlot());
     return null;
   } catch (e) { return msg(e); }
 }
@@ -325,4 +325,11 @@ export interface RelayStatus { linked: boolean; online: boolean; name: string | 
 export async function relayStatus(): Promise<RelayStatus | null> {
   if (!state.active) return null;
   try { return await call<RelayStatus>("/relay/status", { slot: state.active }); } catch { return null; }
+}
+
+/** A short random id. crypto.randomUUID only exists on https pages, and the app also runs from the PC's http address. */
+function newSlot(): string {
+  const b = new Uint8Array(4);
+  crypto.getRandomValues(b);
+  return Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
 }
