@@ -16,6 +16,7 @@
  *    value is sent as null. One bad variable never breaks the stream.
  */
 import { EventEmitter } from "node:events";
+import { collectProcedures, PROCEDURE_DEFINITION, type AirportProcedures, type FacilityRecord } from "../procedures.js";
 import {
   open,
   Protocol,
@@ -145,6 +146,10 @@ export interface MsfsAdapterOptions {
 export class MsfsAdapter extends EventEmitter implements SimAdapter {
   readonly id = "msfs";
   private handle: SimConnectConnection | null = null;
+  /** Procedure lists from the sim's navdata: one definition per connection, requests by id. */
+  private procDefined = false;
+  private procReq = 9500;
+  private procWaiting = new Map<number, { icao: string; records: FacilityRecord[]; done: (r: AirportProcedures | Error) => void }>();
   private stopped = false;
   private retryTimer: NodeJS.Timeout | null = null;
   private generation = 0;
@@ -186,6 +191,7 @@ export class MsfsAdapter extends EventEmitter implements SimAdapter {
   }
 
   private async connectLoop(): Promise<void> {
+    this.procDefined = false;
     if (this.stopped || this.handle) return;
     this.emit("state", "searching", "Waiting for Microsoft Flight Simulator…");
     try {
@@ -226,6 +232,37 @@ export class MsfsAdapter extends EventEmitter implements SimAdapter {
       }
     });
     h.on("simObjectData", (d: RecvSimObjectData) => this.onData(d));
+    h.on("facilityData", (d) => {
+      const w = this.procWaiting.get(d.userRequestId as number);
+      if (w) w.records.push({ type: d.type as number, id: d.uniqueRequestId as number, parent: d.parentUniqueRequestId as number, data: d.data });
+    });
+    h.on("facilityDataEnd", (d) => {
+      const id = d.userRequestId as number;
+      const w = this.procWaiting.get(id);
+      if (!w) return;
+      this.procWaiting.delete(id);
+      try { w.done(collectProcedures(w.icao, w.records)); } catch (e) { w.done(e as Error); }
+    });
+  }
+
+  /** SIDs, STARs and approaches for an airport, from the simulator's own navigation data. */
+  procedures(icao: string): Promise<AirportProcedures> {
+    const h = this.handle;
+    if (!h) return Promise.reject(new Error("Procedure lists come from Microsoft Flight Simulator. Start the sim, then try again."));
+    const code = icao.trim().toUpperCase();
+    if (!/^[A-Z0-9]{3,4}$/.test(code)) return Promise.reject(new Error("That isn't an airport code."));
+    const DEF = 9400;
+    if (!this.procDefined) {
+      for (const f of PROCEDURE_DEFINITION) h.addToFacilityDefinition(DEF as never, f);
+      this.procDefined = true;
+    }
+    const id = ++this.procReq;
+    return new Promise<AirportProcedures>((resolve, reject) => {
+      const timer = setTimeout(() => { this.procWaiting.delete(id); reject(new Error(`The simulator didn't send procedures for ${code}.`)); }, 12_000);
+      this.procWaiting.set(id, { icao: code, records: [], done: (r) => { clearTimeout(timer); if (r instanceof Error) reject(r); else if (!r.departures.length && !r.arrivals.length && !r.approaches.length) reject(new Error(`The simulator has no procedures for ${code}.`)); else resolve(r); } });
+      try { h.requestFacilityData(DEF as never, id as never, code); }
+      catch (e) { clearTimeout(timer); this.procWaiting.delete(id); reject(e as Error); }
+    });
   }
 
   private subscribe(h: SimConnectConnection): void {

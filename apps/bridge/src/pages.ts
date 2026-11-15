@@ -106,7 +106,39 @@ function cloudCard(c: CloudCard | null): string {
   return `<div class="panel sec anywhere on">${head(state, sub)}<div class="any-foot"><button id="co" class="btng" type="button">Sign this PC out</button></div></div>`;
 }
 
-export function statusPage(p: { cloud?: CloudCard | null; local: boolean; pairCode: string; status: BridgeStatus; token: string | null; addresses: string[]; port: number; logs: string[] }): string {
+export interface UpdateCard { current: string; latest: string | null; state: string; progress: number; notes: string | null; message: string | null; canInstall: boolean }
+
+/** Top view of an airliner pointing right, drawn for the update flight. */
+export const PLANE_PATH = "M15 0C15-1.3 13.4-2.2 11.5-2.2H3L-5.5-14h-3l4 11.8H-11L-14.5-7h-2l1.6 4.8V2.2L-16.5 7h2L-11 2.2h6.5l-4 11.8h3L3 2.2h8.5C13.4 2.2 15 1.3 15 0z";
+
+function updateCard(u: UpdateCard | null): string {
+  if (!u || u.state !== "available" && !(u.state === "error" && u.latest && u.latest !== u.current)) return "";
+  return `<div class="panel sec upd-avail"><div class="any-h"><span class="ic big" style="--c1:#5EE07F;--c2:#1FA84A"><svg viewBox="-17 -15 34 30" fill="currentColor" style="transform:rotate(-30deg)"><path d="${PLANE_PATH}"/></svg></span>
+<div style="flex:1;min-width:0"><div class="any-t">Bridge ${esc(u.latest ?? "")} is ready</div><div class="label">${u.notes ? esc(u.notes) : `You have ${esc(u.current)}. The update takes about a minute, and Windows asks once to allow it.`}</div>${u.message ? `<div class="cl-msg">${esc(u.message)}</div>` : ""}</div>
+${u.canInstall ? `<button class="btnp" id="upgo" type="button">Update</button>` : `<a class="btnp" href="https://glidepath-ad9.pages.dev/#download" target="_blank" rel="noreferrer">Download</a>`}</div></div>`;
+}
+
+/** The update flight: shared by the Bridge page (here) and the app (its own copy in React). */
+function updateOverlay(): string {
+  return `<div id="upd" class="upd" hidden><div class="upd-card panel">
+<div class="cap" id="upd-cap">Updating Glidepath Bridge</div>
+<svg class="upd-map" viewBox="0 0 640 210" aria-hidden="true">
+<defs><linearGradient id="updg" x1="0" x2="1"><stop offset="0" stop-color="#5E5CE6"/><stop offset="1" stop-color="#64D2FF"/></linearGradient>
+<pattern id="updd" width="22" height="22" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="rgba(255,255,255,.07)"/></pattern></defs>
+<rect width="640" height="210" fill="url(#updd)"/>
+<path id="upd-route" d="M70 160C210 20 430 20 570 160" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="2" stroke-linecap="round" stroke-dasharray="1 9"/>
+<path id="upd-flown" d="M70 160C210 20 430 20 570 160" fill="none" stroke="url(#updg)" stroke-width="3.5" stroke-linecap="round" pathLength="1" stroke-dasharray="0 1"/>
+<circle cx="70" cy="160" r="7" fill="#fff"/><circle cx="570" cy="160" r="7" fill="none" stroke="#64D2FF" stroke-width="3" id="upd-dest"/>
+<text x="70" y="192" text-anchor="middle" class="upd-v" id="upd-from">1.0.0</text><text x="570" y="192" text-anchor="middle" class="upd-v" id="upd-to">1.0.1</text>
+<g id="upd-plane"><path d="${PLANE_PATH}" fill="#fff" transform="scale(1.25)"/></g>
+</svg>
+<div class="upd-row"><span id="upd-title">Downloading</span><span id="upd-pct" class="mono"></span></div>
+<div class="upd-steps"><span data-s="0">Download</span><span data-s="1">Check</span><span data-s="2">Install</span><span data-s="3">Restart</span></div>
+<p id="upd-msg" class="label"></p>
+</div></div>`;
+}
+
+export function statusPage(p: { update?: UpdateCard | null; cloud?: CloudCard | null; local: boolean; pairCode: string; status: BridgeStatus; token: string | null; addresses: string[]; port: number; logs: string[] }): string {
   const s = p.status;
   const stateDot = s.simState === "connected" ? "live" : s.simState === "error" ? "err" : "warn";
   const code = `${esc(p.pairCode.slice(0, 3))} ${esc(p.pairCode.slice(3))}`;
@@ -141,7 +173,15 @@ pre{white-space:pre-wrap;font-size:12px;color:var(--quiet);max-height:320px;over
 .cl-form{display:flex;gap:10px;margin:16px 0 8px;flex-wrap:wrap}.cl-form input{flex:1 1 200px;min-width:0;padding:13px 16px;border-radius:14px;border:0;background:rgba(255,255,255,.1);box-shadow:inset 0 0 0 .5px rgba(255,255,255,.25);color:#fff;font:inherit;font-size:16px;outline:none}
 .cl-form input:focus{box-shadow:inset 0 0 0 2px #0A84FF}.cl-form .btnp{flex:0 0 auto;padding:12px 26px}.cl-msg{min-height:20px;margin-bottom:6px;color:#FF9F0A;font-size:14px}.cl-msg.ok{color:#30D158}
 .any-foot{margin-top:14px;display:flex;justify-content:flex-end}.btng{border:0;border-radius:999px;padding:9px 16px;font:inherit;font-size:14px;font-weight:600;color:#fff;background:rgba(255,255,255,.12);box-shadow:inset 0 .5px 0 rgba(255,255,255,.4);cursor:pointer}.btng:active{opacity:.6}
-@media(max-width:720px){.cl-form .btnp{width:100%}}</style></head><body><main id="root">
+@media(max-width:720px){.cl-form .btnp{width:100%}}
+.upd-avail .any-h{align-items:center}.upd-avail .btnp{flex:none}
+.upd{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:20px;background:rgba(2,4,14,.55);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}.upd[hidden]{display:none}
+.upd-card{width:min(720px,100%);padding:30px 32px 26px}.upd-map{width:100%;height:auto;display:block;margin:16px 0 6px;border-radius:16px;background:rgba(0,0,0,.22)}
+.upd-v{font:600 13px/1 "SF Mono",ui-monospace,Consolas,monospace;fill:rgba(235,235,245,.7)}
+.upd-row{display:flex;justify-content:space-between;align-items:baseline;margin-top:20px;font-size:24px;font-weight:700;letter-spacing:-.01em}.upd-row .mono{font-size:17px;color:var(--quiet)}
+.upd-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}.upd-steps span{text-align:center;font-size:13px;font-weight:600;padding:9px 6px;border-radius:999px;color:var(--faint);background:rgba(255,255,255,.06)}
+.upd-steps span.on{color:#fff;background:linear-gradient(180deg,#3A9BFF,#0A6CFF)}.upd-steps span.done{color:#30D158;background:rgba(48,209,88,.12)}
+#upd-msg{min-height:20px;margin:16px 0 0;line-height:1.5}.upd.ok #upd-dest{fill:#30D158;stroke:#30D158}</style></head><body><main id="root">
 <div class="head"><span class="logo">${LOGO}</span><div><h1>Glidepath Bridge</h1><div class="label">${esc(s.hostname)} · <span class="badge mono">v${esc(s.bridgeVersion)}</span></div></div>${p.local && here ? `<a class="btnp" href="${esc(here)}" target="_blank" rel="noreferrer">Open Glidepath</a>` : ""}</div>
 <div class="grid">
 ${tile("#64D2FF", "#0A84FF", SVG.sim, "Simulator", `<span class="dot ${stateDot}"></span>${esc(s.simulator?.name ?? "Not connected")}`, esc(s.message ?? s.simState))}
@@ -149,7 +189,7 @@ ${tile("#FFB340", "#FF7A00", SVG.plane, "Aircraft", esc(s.aircraft?.title ?? "�
 ${tile("#5EE07F", "#1FA84A", SVG.wave, "Telemetry", `<span class="mono">${s.framesPerSecond.toFixed(1)} fps</span>`, s.lastFrameAt ? "Last frame " + new Date(s.lastFrameAt).toLocaleTimeString() : "No frames yet")}
 ${tile("#D18CFF", "#8A3FFC", SVG.dev, "Devices", `<span class="mono">${s.clients}</span> connected`, s.activeFlightId ? "Recording flight " + esc(s.activeFlightId.slice(0, 8)) : "No active flight")}
 </div>
-${p.local ? `${cloudCard(p.cloud ?? null)}<div class="two">
+${p.local ? `${updateCard(p.update ?? null)}${cloudCard(p.cloud ?? null)}<div class="two">
 <div class="panel codecard"><div class="cap">Your pairing code</div><div class="bigcode mono">${code}</div><div class="label">Also saved on your Desktop as <b>Glidepath code.txt</b>.</div></div>
 <div class="panel easy"><div class="cap">Connect your iPad in 2 steps</div>
   <ol class="steps"><li><div>On the iPad, open <b>Safari</b> and go to<br><span class="big mono">glidepath.local:${p.port}</span></div></li>
@@ -161,10 +201,30 @@ ${links || "<p class='label'>No network address found. Is this PC connected to W
 <div class="label" style="margin-top:10px">This link contains your pairing key. Only open it on your own devices. If Windows asks, allow Glidepath Bridge on <b>private</b> networks.</div></div></details>
 <details class="panel sec"><summary><span class="cap">Recent log</span></summary><pre class="mono">${esc(p.logs.join("\n")) || "—"}</pre></details>
 <div class="label foot">Keep the Bridge window open while you fly. This page updates by itself.</div>` : `<div class="panel sec"><p class="label" style="margin:0">Pairing details are only shown on the simulator PC itself.</p></div>`}
-</main>
+</main>${p.local ? updateOverlay() : ""}
 <script>
 var open=function(){return [].map.call(document.querySelectorAll("details"),function(d){return d.open;});};
 var busy=false;
+(function(){
+var L=0,route,flown,plane,shown=0,target=0,bob=0,from="",to="",gone=0,done=false;
+function el(i){return document.getElementById(i);}
+function put(t){if(!route){route=el("upd-route");flown=el("upd-flown");plane=el("upd-plane");L=route.getTotalLength();}
+ var a=route.getPointAtLength(Math.max(0,Math.min(1,t))*L),b=route.getPointAtLength(Math.min(1,t+0.004)*L+0.01),c=route.getPointAtLength(Math.max(0,t-0.004)*L);
+ var ang=Math.atan2(b.y-c.y,b.x-c.x)*180/Math.PI;plane.setAttribute("transform","translate("+a.x+","+a.y+") rotate("+ang+")");flown.setAttribute("stroke-dasharray",t+" 1");}
+function frame(){bob+=0.03;var goal=target+(target>0.75&&target<0.99?Math.sin(bob)*0.012:0);shown+=(goal-shown)*0.06;put(shown);if(!done||Math.abs(shown-1)>0.002)requestAnimationFrame(frame);}
+function stage(i,title,pct,msg){var s=document.querySelectorAll(".upd-steps span");for(var k=0;k<s.length;k++){s[k].className=k<i?"done":k===i?"on":"";}
+ el("upd-title").textContent=title;el("upd-pct").textContent=pct||"";if(msg!==undefined)el("upd-msg").textContent=msg;}
+function show(u){var o=el("upd");if(o.hidden){o.hidden=false;from=u.current;to=u.latest||"";el("upd-from").textContent=from;el("upd-to").textContent=to;requestAnimationFrame(frame);}}
+function poll(){fetch("/api/update",{cache:"no-store"}).then(function(r){return r.json();}).then(function(u){gone=0;
+ if(u.current===to&&to){done=true;target=1;el("upd").className="upd ok";stage(4,"Updated to "+to,"","Welcome aboard. This page will refresh.");setTimeout(function(){location.reload();},2500);return;}
+ if(u.state==="downloading"){target=0.04+0.56*u.progress;stage(0,"Downloading",Math.round(u.progress*100)+"%","");}
+ else if(u.state==="verifying"){target=0.64;stage(1,"Checking the download","","Making sure it's exactly the file we published.");}
+ else if(u.state==="installing"){target=0.8;stage(2,"Installing","",u.message||"");}
+ else if(u.state==="error"){stage(0,"Update stopped","",u.message||"Something went wrong.");el("upd").onclick=function(){location.reload();};return;}
+ setTimeout(poll,700);}).catch(function(){gone++;target=0.93;stage(3,"Restarting the Bridge","","Windows may ask on this PC to allow it. Click Yes.");setTimeout(poll,1200);});}
+document.addEventListener("click",function(e){if(!e.target||e.target.id!=="upgo")return;busy=true;e.target.textContent="Starting…";
+ fetch("/api/update/install",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"}).then(function(r){return r.json();}).then(function(u){show(u);poll();}).catch(function(){busy=false;});});
+})();
 function typing(){var a=document.activeElement;if(a&&a.tagName==="INPUT")return true;var ins=document.querySelectorAll(".cl-form input");for(var i=0;i<ins.length;i++)if(ins[i].value)return true;return false;}
 document.addEventListener("submit",function(e){if(e.target.id!=="cl")return;e.preventDefault();var m=document.getElementById("cm");m.className="cl-msg";m.textContent="Signing in…";busy=true;
 fetch("/api/cloud/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:document.getElementById("ce").value,password:document.getElementById("cp").value})}).then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});}).then(function(x){busy=false;if(x.ok){m.className="cl-msg ok";m.textContent="Signed in.";document.getElementById("cp").value="";document.getElementById("ce").value="";setTimeout(function(){location.reload();},900);}else{m.textContent=x.j.error||"That didn't work. Try again.";}}).catch(function(){busy=false;m.textContent="Couldn't reach the Bridge.";});});

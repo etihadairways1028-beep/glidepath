@@ -7,6 +7,7 @@ import { useMemo } from "react";
 import type { TrailPoint } from "../data/store";
 import { useApp } from "../data/store";
 import { altText, countdown, dur, fmt, PHASE_LABEL, useLive, zulu } from "../data/derive";
+import { useChoice, useChosenArrivalRunway } from "./Procedures";
 
 const BARS = 34;
 
@@ -14,13 +15,20 @@ export function LiveCard({ big }: { big?: boolean }) {
   const L = useLive();
   const trail = useApp((s) => s.trail);
   const { frame, flight, plan, phase } = L;
-  const bars = useBars(L.plan, trail, L.progress, L.completed);
+  const est = phaseProgress(L.phase, L.progress, !!L.plan || L.toGoNm !== null, L.completed);
+  const bars = useBars(L.plan, trail, est, L.completed);
+  const choice = useChoice(flight?.departureIcao ?? plan?.origin.icao, flight?.arrivalIcao ?? plan?.destination.icao);
+  const chosenArr = choice.arrRunway ?? null;
+  // Where top of descent falls along the bars (from the time to TOD against the time to the gate).
+  const T0 = L.timings;
+  const todFrac = L.airborne && T0?.toTopOfDescentMs != null && T0.toGateMs != null && T0.toGateMs > 0
+    ? Math.min(0.98, est + (T0.toTopOfDescentMs / T0.toGateMs) * (1 - est)) : null;
 
   if (!flight) return null;
   const callsign = plan?.callsign ?? flight.callsign ?? flight.aircraft?.registration ?? null;
   const type = plan?.aircraftIcao ?? flight.aircraft?.icaoType ?? flight.aircraft?.title ?? "";
   const dep = flight.departureIcao ?? plan?.origin.icao ?? "····";
-  const arr = flight.arrivalIcao ?? plan?.destination.icao ?? "····";
+  const arr = flight.arrivalIcao ?? plan?.destination.icao ?? choice.arr ?? "····";
 
   // Departure side: actual off-block vs schedule.
   const offDelta = flight.offBlockAt && plan?.scheduledOut ? Math.round((flight.offBlockAt - plan.scheduledOut * 1000) / 60000) : null;
@@ -76,7 +84,7 @@ export function LiveCard({ big }: { big?: boolean }) {
     <article className={`glass strong live-card${big ? " big" : ""}`} aria-label="Live flight">
       <div className="lc-top">
         <div className="lc-id">{callsign ? <span>{callsign}</span> : null}<span className={callsign ? "faint" : ""}>{type}</span></div>
-        <span className="pill phase">{PHASE_LABEL[phase]}</span>
+        <span className={`lc-phase ph-${phase.toLowerCase()}`}>{PHASE_LABEL[phase]}</span>
       </div>
       <div className="lc-route">
         <div className="lc-apt">
@@ -85,8 +93,13 @@ export function LiveCard({ big }: { big?: boolean }) {
           <div className="s">{depNote}</div>
         </div>
         <div>
-          <div className="profile-bars" aria-hidden="true">
-            {bars.map((b, i) => <i key={i} className={b.cls} style={{ height: `${b.h}px` }} />)}
+          <div className="lc-bars">
+            {todFrac !== null && T0?.toTopOfDescentMs != null && (
+              <span className="lc-tod" style={{ left: `${todFrac * 100}%` }}>TOD in {countdown(T0.toTopOfDescentMs)}</span>
+            )}
+            <div className="profile-bars" aria-hidden="true">
+              {bars.map((b, i) => <i key={i} className={`${b.cls}${todFrac !== null && i === Math.round(todFrac * (BARS - 1)) ? " tod" : ""}`} style={{ height: `${b.h}px` }} />)}
+            </div>
           </div>
           <div className="lc-mid">
             <div className="over">{over}</div>
@@ -95,16 +108,16 @@ export function LiveCard({ big }: { big?: boolean }) {
           </div>
         </div>
         <div className="lc-apt r">
-          <div className="code">{arr}</div>
+          <div className={`code${arr === "····" ? " unknown" : ""}`}>{arr === "····" ? "—" : arr}</div>
           <div className={`t ${cls(arrDelta)}`}>{zulu(arrMs)}{!flight.onBlockAt && L.etaOnBlock ? <span className="est"> est</span> : null}</div>
-          <div className="s">{arrNote}</div>
+          <div className="s">{arr === "····" && !plan ? <a href="#/flight">Add your plan</a> : arrNote}</div>
         </div>
       </div>
       <div className="lc-foot">
-        <span className="data">{frame ? `${altText(frame.position.altMslFt)}, ${fmt(frame.speed.gsKt)} kt` : "—"}</span>
+        <span className="data">{frame ? `${altText(frame.position.altMslFt)} · ${fmt(frame.speed.gsKt)} kts` : "—"}</span>
         <span className="row" style={{ gap: 6 }}>
-          {(flight.departureRunway || plan?.origin.runway) && !flight.wheelsUpAt ? <span className="chip" title="Departure runway">↗ {flight.departureRunway ?? plan?.origin.runway}</span> : null}
-          {flight.wheelsUpAt && (flight.arrivalRunway || plan?.destination.runway) ? <span className="chip" title="Arrival runway">↘ {flight.arrivalRunway ?? plan?.destination.runway}</span> : null}
+          {(flight.departureRunway || plan?.origin.runway) ? <span className={`chip rw${!flight.wheelsUpAt ? " now" : ""}`} title="Departure runway">↗ {flight.departureRunway ?? plan?.origin.runway}</span> : null}
+          {(flight.arrivalRunway || chosenArr || plan?.destination.runway) ? <span className={`chip rw${flight.wheelsUpAt ? " now" : ""}`} title="Arrival runway">↘ {flight.arrivalRunway ?? chosenArr ?? plan?.destination.runway}</span> : null}
           {flight.departureStand && !flight.offBlockAt ? <span className="chip accent" title="Departure stand (OpenStreetMap)">Stand {flight.departureStand}</span> : null}
           {flight.arrivalStand ? <span className="chip accent" title="Arrival stand (OpenStreetMap)">Stand {flight.arrivalStand}</span> : null}
         </span>
@@ -122,22 +135,92 @@ function cls(deltaMin: number | null): string {
   return Math.abs(deltaMin) <= 2 ? "on-time" : deltaMin < 0 ? "early" : "late";
 }
 
-/** Bars: planned altitude profile when there is a plan, else the altitudes actually flown. */
-function useBars(plan: ReturnType<typeof useLive>["plan"], trail: TrailPoint[], progress: number, completed: boolean) {
+/** How far along the flight is: the real figure with a plan, else a fair guess from the phase. */
+function phaseProgress(phase: string, progress: number, known: boolean, completed: boolean): number {
+  if (completed) return 1;
+  if (known) return progress;
+  const by: Record<string, number> = { PREFLIGHT: 0, PUSHBACK: 0.01, TAXI_OUT: 0.02, TAKEOFF: 0.04, CLIMB: 0.14, CRUISE: 0.5, DESCENT: 0.8, APPROACH: 0.92, LANDING: 0.97, TAXI_IN: 0.99, ARRIVED: 1 };
+  return by[phase] ?? 0;
+}
+
+/** Bars: the planned altitude profile with a plan; otherwise the usual climb, cruise and descent shape. */
+function useBars(plan: ReturnType<typeof useLive>["plan"], _trail: TrailPoint[], progress: number, completed: boolean) {
   return useMemo(() => {
-    let alts: number[] = [];
-    let lit = 0;
-    if (plan && plan.fixes.length > 1) {
-      const pts = [plan.origin.elevationFt ?? 0, ...plan.fixes.map((f) => f.altitudeFt ?? 0), plan.destination.elevationFt ?? 0];
+    let alts: number[];
+    // Plan altitudes, with gaps (fixes without one) filled in between their neighbours.
+    const raw = plan && plan.fixes.length > 1 ? [plan.origin.elevationFt ?? 0, ...plan.fixes.map((f) => f.altitudeFt ?? null), plan.destination.elevationFt ?? 0] : [];
+    const known = raw.filter((v) => v != null).length;
+    if (raw.length > 3 && known >= Math.max(3, raw.length * 0.5)) {
+      const pts = raw.map((v, i) => {
+        if (v != null) return v;
+        let a = i - 1; while (a > 0 && raw[a] == null) a--;
+        let b = i + 1; while (b < raw.length - 1 && raw[b] == null) b++;
+        const va = raw[a] ?? 0, vb = raw[b] ?? 0;
+        return va + ((vb - va) * (i - a)) / Math.max(1, b - a);
+      });
       alts = Array.from({ length: BARS }, (_, i) => pts[Math.min(pts.length - 1, Math.round((i / (BARS - 1)) * (pts.length - 1)))]!);
-      lit = completed ? BARS : Math.round(progress * BARS);
-    } else if (trail.length > 1) {
-      alts = Array.from({ length: BARS }, (_, i) => trail[Math.min(trail.length - 1, Math.floor((i / BARS) * trail.length))]!.alt);
-      lit = BARS;
     } else {
-      alts = Array.from({ length: BARS }, (_, i) => Math.sin((i / (BARS - 1)) * Math.PI) * 10);
+      // Climb over the first fifth, cruise, descend over the last quarter.
+      alts = Array.from({ length: BARS }, (_, i) => { const x = i / (BARS - 1); return x < 0.2 ? 0.12 + 0.88 * Math.sin((x / 0.2) * Math.PI / 2) : x > 0.75 ? 0.12 + 0.88 * Math.cos(((x - 0.75) / 0.25) * Math.PI / 2) : 1; });
     }
     const max = Math.max(1, ...alts);
-    return alts.map((a, i) => ({ h: 5 + 46 * Math.max(0, a / max), cls: i === lit - 1 && !completed && plan ? "here" : i < lit ? "on" : "" }));
-  }, [plan, trail.length, Math.round(progress * BARS), completed]);
+    const lit = Math.round(progress * BARS);
+    return alts.map((a, i) => ({ h: 6 + 44 * Math.max(0, a / max), cls: i === lit - 1 && !completed && lit > 0 ? "here" : i < lit ? "on" : "" }));
+  }, [plan, Math.round(progress * BARS), completed]);
+}
+
+type Ev = { type: string; altMslFt: number | null };
+type Ctx = { depRw?: string | null; arrRw?: string | null; fpm?: number | null };
+const flAlt = (ft: number | null) => ft == null ? undefined : ft >= 18000 ? `FL${Math.round(ft / 1000) * 10}` : `${(Math.round(ft / 500) * 500).toLocaleString()} ft`;
+const EVENT_TEXT: Record<string, (e: Ev, c: Ctx) => [string, string?]> = {
+  OFF_BLOCK: () => ["Off block", "Doors closed, brakes off."],
+  PUSHBACK_START: () => ["Pushback"],
+  TAXI_START: (_e, c) => ["Taxiing out", c.depRw ? `For runway ${c.depRw}.` : undefined],
+  TAKEOFF_ROLL: (_e, c) => ["Take-off roll", c.depRw ? `Runway ${c.depRw}.` : undefined],
+  WHEELS_UP: (_e, c) => ["Airborne", c.depRw ? `Off runway ${c.depRw}.` : undefined],
+  TOP_OF_CLIMB: (e) => ["Top of climb", flAlt(e.altMslFt) ? `Level at ${flAlt(e.altMslFt)}.` : undefined],
+  TOP_OF_DESCENT: (e) => ["Top of descent", flAlt(e.altMslFt) ? `Leaving ${flAlt(e.altMslFt)}.` : undefined],
+  APPROACH_START: (_e, c) => ["On approach", c.arrRw ? `Runway ${c.arrRw}.` : undefined],
+  GO_AROUND: () => ["Go-around", "Climbing away for another try."],
+  TOUCHDOWN: (_e, c) => ["Touchdown", c.fpm != null ? `${Math.round(Math.abs(c.fpm))} fpm${c.arrRw ? ` on ${c.arrRw}` : ""}.` : c.arrRw ? `Runway ${c.arrRw}.` : undefined],
+  TOUCH_AND_GO: () => ["Touch and go"],
+  RUNWAY_EXIT: () => ["Off the runway"],
+  ON_BLOCK: () => ["On block", "Arrived at the gate."],
+  ENGINES_OFF: () => ["Flight complete", "Engines off."],
+};
+
+/** What's next and what just happened, like a phone's flight notifications. */
+export function FlightFeed() {
+  const L = useLive();
+  const events = useApp((s) => s.events);
+  const landing = useApp((s) => s.landing);
+  const chosenArr = useChosenArrivalRunway(L.flight?.departureIcao ?? L.plan?.origin.icao, L.flight?.arrivalIcao ?? L.plan?.destination.icao);
+  if (!L.flight) return null;
+  const ctx: Ctx = { depRw: L.flight.departureRunway ?? L.plan?.origin.runway, arrRw: L.flight.arrivalRunway ?? chosenArr ?? L.plan?.destination.runway, fpm: landing?.touchdownVsFpm ?? null };
+  const items: { k: string; title: string; sub?: string; when?: string; next?: boolean }[] = [];
+  const T = L.timings;
+  if (L.airborne && T?.toTopOfDescentMs != null && T.toTopOfDescentMs < 15 * 60_000) {
+    const rw = ctx.arrRw;
+    items.push({ k: "tod", next: true, title: `Top of descent in ${countdown(T.toTopOfDescentMs)}`, sub: rw ? `Expect runway ${rw}${L.plan?.destination.icao ? ` at ${L.plan.destination.icao}` : ""}.` : undefined });
+  } else if (L.airborne && T?.toTopOfClimbMs != null) {
+    items.push({ k: "toc", next: true, title: `Top of climb in ${countdown(T.toTopOfClimbMs)}` });
+  }
+  for (const e of [...events].reverse()) {
+    const f = EVENT_TEXT[e.type];
+    if (!f) continue;
+    const [title, sub] = f(e, ctx);
+    items.push({ k: `${e.type}-${e.seq}`, title, sub, when: zulu(e.t) });
+    if (items.length >= 3) break;
+  }
+  if (!items.length) return null;
+  return (
+    <div className="lc-feed" aria-label="Flight updates">
+      {items.map((it) => (
+        <div key={it.k} className={`lc-note${it.next ? " next" : ""}`}>
+          <div className="lc-note-h"><b>{it.title}</b>{it.when && <span>{it.when}</span>}</div>
+          {it.sub && <div className="lc-note-s">{it.sub}</div>}
+        </div>
+      ))}
+    </div>
+  );
 }

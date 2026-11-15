@@ -18,6 +18,7 @@ import { networkInterfaces } from "node:os";
 import { randomInt, timingSafeEqual } from "node:crypto";
 import { WebSocketServer, type WebSocket } from "ws";
 import { RELAY_HEADER, type CloudLink } from "./cloudlink.js";
+import type { Updater } from "./updater.js";
 import { Bonjour } from "bonjour-service";
 import {
   ClientMessage, PROTOCOL_VERSION,
@@ -78,6 +79,8 @@ export class LanServer {
     this.http.on("upgrade", this.onUpgrade);
   }
 
+  /** Bridge updates (set by index.ts). */
+  updater: Updater | null = null;
   /** Connect anywhere (set by index.ts). */
   cloud: CloudLink | null = null;
   /** Discord status (set by index.ts). */
@@ -356,11 +359,11 @@ export class LanServer {
 
   private async handle(req: IncomingMessage, res: ServerResponse, url: URL, local: boolean, authed: boolean, atThisPc = false): Promise<void> {
     const p = url.pathname;
-    const POSTS = ["/api/plan", "/api/ai/config", "/api/ai/chat", "/api/pair", "/api/discord", "/api/cloud/login", "/api/cloud/logout"];
+    const POSTS = ["/api/plan", "/api/ai/config", "/api/ai/chat", "/api/pair", "/api/discord", "/api/cloud/login", "/api/cloud/logout", "/api/update/check", "/api/update/install", "/api/flight/complete"];
     if (req.method !== "GET" && !(req.method === "POST" && POSTS.includes(p))) return text(res, 405, "Method not allowed");
     if (p === "/") {
       if (!local) return html(res, pairPage());
-      return html(res, statusPage({ cloud: this.cloud?.status() ?? null, local, pairCode: this.pairCode, status: this.getStatus(), token: local ? this.identity.pairingToken : null, addresses: lanAddresses(), port: this.cfg.port, logs: local ? this.log.recent().slice(-60) : [] }));
+      return html(res, statusPage({ update: this.updater?.status() ?? null, cloud: this.cloud?.status() ?? null, local, pairCode: this.pairCode, status: this.getStatus(), token: local ? this.identity.pairingToken : null, addresses: lanAddresses(), port: this.cfg.port, logs: local ? this.log.recent().slice(-60) : [] }));
     }
     if (p === "/api/pair" && req.method === "POST") {
       if (this.pairFails >= 10) return json(res, 429, { error: "Too many wrong codes. Restart the Bridge on your PC for a new code." });
@@ -380,6 +383,15 @@ export class LanServer {
     if (p === "/healthz") return json(res, 200, { ok: true, bridgeId: this.identity.bridgeId, protocolVersion: PROTOCOL_VERSION });
     if (p === "/app") { res.writeHead(302, { Location: "/app/" }); res.end(); return; }
     if (p.startsWith("/app/")) return this.serveApp(res, p.slice(5) || "index.html");
+    if (p === "/api/update" || p.startsWith("/api/update/")) {
+      // Paired devices and the PC itself can check and start an update; Windows still asks on the PC.
+      if (!authed && !atThisPc) return json(res, 401, { error: "Pairing token required" });
+      if (!this.updater) return json(res, 503, { error: "Updates aren't available in this Bridge." });
+      if (p === "/api/update" && req.method === "GET") return json(res, 200, this.updater.status());
+      if (p === "/api/update/check" && req.method === "POST") return json(res, 200, await this.updater.check());
+      if (p === "/api/update/install" && req.method === "POST") return json(res, 200, await this.updater.install());
+      return json(res, 404, { error: "Not found" });
+    }
     if (p.startsWith("/api/cloud")) {
       // Signing this PC in or out is only for someone sitting at this PC.
       if (!atThisPc) return json(res, 403, { error: "Sign in on the PC itself, at localhost:4810." });
@@ -403,7 +415,18 @@ export class LanServer {
       return json(res, 200, await addonStatus(lanAddresses(), extra, undefined, sh ? { host: sh, doors: this.addonDoors } : null));
     }
     if (p === "/api/lan") return json(res, 200, { bridgeId: this.identity.bridgeId, addresses: lanAddresses(), port: this.cfg.port });
+    const pm = /^\/api\/procedures\/([A-Za-z0-9]{3,4})$/.exec(p);
+    if (pm && req.method === "GET") {
+      const a = this.remoteAdapter;
+      if (!a?.procedures) return json(res, 503, { error: "Procedure lists come from Microsoft Flight Simulator, so they're only here while the Bridge is connected to the sim." });
+      try { return json(res, 200, await a.procedures(pm[1]!)); }
+      catch (e) { return json(res, 502, { error: (e as Error).message }); }
+    }
     if (p === "/api/flight") return json(res, 200, this.session.activeFlight);
+    if (p === "/api/flight/complete" && req.method === "POST") {
+      const f = this.session.completeNow();
+      return f ? json(res, 200, f) : json(res, 409, { error: "The flight can be completed once you've landed." });
+    }
     if (p === "/api/flights") return json(res, 200, this.recorder.listFlights(Number(url.searchParams.get("limit") ?? 50)));
     const m = /^\/api\/flights\/([0-9a-f-]{36})(\/frames|\/events)?$/.exec(p);
     if (m) {

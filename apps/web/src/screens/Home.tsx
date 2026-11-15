@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { FlightSummary } from "@glidepath/protocol";
-import { LiveCard } from "../components/LiveCard";
+import { FlightFeed, LiveCard } from "../components/LiveCard";
 import { MapView } from "../components/MapView";
 import { YourPcs } from "./Account";
 import { InstallCard } from "../components/InstallCard";
@@ -34,7 +34,7 @@ export function Home() {
       <CockpitReady />
       {mode === "bridge" && conn !== "live" && msg && <Notice>{msg} <a href="#/settings">Connection settings</a></Notice>}
       {mode !== "none" && flight?.status === "completed" && <DebriefTeaser />}
-      {mode !== "none" && flight && <LiveCard />}
+      {mode !== "none" && flight && <><LiveCard /><FlightFeed /></>}
       {mode !== "none" && <QuickActions />}
       {mode !== "none" && flight && flight.status !== "completed" && <HomeMap />}
       {mode !== "none" && flight && <HomeAircraft />}

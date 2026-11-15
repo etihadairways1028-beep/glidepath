@@ -1,3 +1,4 @@
+import { Procedures } from "../components/Procedures";
 import { ShareLive } from "../components/ShareLive";
 import { TouchdownDiagram } from "../components/TouchdownDiagram";
 import { useMemo, useState } from "react";
@@ -47,6 +48,7 @@ export function FlightScreen() {
       </AircraftHero>
       {L.completed && <DebriefPanel flight={L.flight} />}
       <LiveCard />
+      <Procedures />
 
       <div className="grid cols-4">
         <Tile k="Altitude" v={fmt(f.position.altMslFt)} unit="ft" />

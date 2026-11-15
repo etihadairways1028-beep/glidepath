@@ -1,4 +1,5 @@
 import { ShareCardButton } from "../components/ShareCard";
+import { ReviewScore } from "../components/FlightReview";
 import { LandingHistory } from "../components/LandingHistory";
 import { ApproachCoach } from "../components/ApproachCoach";
 import { Replay, replayPoints } from "../components/Replay";
@@ -104,7 +105,7 @@ export function Logbook() {
   );
 }
 
-export function FlightDetail({ id }: { id: string }) {
+export function FlightDetail({ id, review }: { id: string; review?: boolean }) {
   const mode = useApp((s) => s.mode);
   const liveFlight = useApp((s) => s.lastFlight ?? s.flight);
   const liveTrail = useApp((s) => s.trail);
@@ -149,6 +150,7 @@ export function FlightDetail({ id }: { id: string }) {
   return (
     <div className="stack">
       <a href="#/logbook" className="btn small" style={{ alignSelf: "flex-start" }}><span style={{ width: 16, height: 16 }}>{Icon.back()}</span>Logbook</a>
+      {review && <ReviewScore flight={flight} frames={frames} />}
       <div className="between wrap">
         <div>
           <h1 className="title data">{flight.departureIcao ?? "····"} → {flight.arrivalIcao ?? "····"}</h1>
@@ -165,6 +167,7 @@ export function FlightDetail({ id }: { id: string }) {
           <p className="fh-meta">{[flight.plan?.callsign ?? flight.callsign, flight.aircraft?.registration, flight.aircraft?.title].filter(Boolean).join(", ")}</p>
           {flight.landings.at(-1) ? <p className="fh-meta" style={{ marginTop: 10 }}>Landed at <b style={{ color: "var(--ink)" }}>{fmt(Math.abs(flight.landings.at(-1)!.touchdownVsFpm ?? 0))} fpm</b>, graded {flight.landings.at(-1)!.grade}</p> : null}
       </AircraftHero>
+      {!review && flight.status === "completed" && <ReviewScore flight={flight} frames={frames} />}
       <DebriefPanel flight={flight} />
       <ApproachCoach frames={frames} landing={flight.landings.at(-1)} />
       {trail.length > 1 ? (

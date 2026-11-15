@@ -3,6 +3,7 @@
 ; so iPads and phones on your Wi-Fi can reach it. Needs one admin prompt.
 Unicode true
 !include "MUI2.nsh"
+!include "FileFunc.nsh"
 !ifndef VERSION
   !define VERSION "0.0.0"
 !endif
@@ -90,6 +91,14 @@ Section "Install"
   WriteRegStr HKCU "${UNKEY}" "UninstallString" '"$INSTDIR\Uninstall.exe"'
   WriteRegDWORD HKCU "${UNKEY}" "NoModify" 1
   WriteRegDWORD HKCU "${UNKEY}" "NoRepair" 1
+
+  ; Started by the Bridge's own Update button (/S /UPDATE): open the new Bridge again.
+  ; explorer.exe starts it as the signed-in user, not as admin.
+  ${GetParameters} $R0
+  ClearErrors
+  ${GetOptions} $R0 "/UPDATE" $R1
+  IfErrors +2 0
+    Exec '"$WINDIR\explorer.exe" "$INSTDIR\GlidepathBridge.exe"'
 SectionEnd
 
 Section "Uninstall"

@@ -6,6 +6,7 @@ import type { FlightPhase, TelemetryFrame } from "@glidepath/protocol";
  */
 import { activityFor, DiscordPresence } from "./discord.js";
 import { CloudLink } from "./cloudlink.js";
+import { Updater } from "./updater.js";
 import { PROTOCOL_VERSION, type AircraftInfo, type BridgeStatus, type SimConnectionState, type SimulatorInfo } from "@glidepath/protocol";
 import { BRIDGE_VERSION, HOSTNAME, loadConfig, loadIdentity } from "./config.js";
 import { exec } from "node:child_process";
@@ -129,6 +130,12 @@ async function main(): Promise<void> {
   server.discord = discord;
   const cloud = new CloudLink({ dataDir: cfg.dataDir, port: cfg.port, host: cfg.host, bridgeId: identity.bridgeId, version: BRIDGE_VERSION, token: () => identity.pairingToken, log: log.child("cloud") });
   server.cloud = cloud;
+  const updater = new Updater({
+    version: BRIDGE_VERSION, dataDir: cfg.dataDir, log: log.child("update"),
+    // Test only: pretend to run the installer (used to check the update flow off Windows).
+    ...(process.env.GLIDEPATH_UPDATE_FAKE_RUN === "1" ? { run: (f: string) => { log.info(`(test) would run ${f}`); setTimeout(() => process.exit(0), 1500); } } : {}),
+  });
+  server.updater = updater;
   discord.start();
   session.on("frame", (frame: TelemetryFrame, phase: FlightPhase) => discord.update(activityFor(session.activeFlight, frame, phase)));
   setInterval(() => { if (!lastFrameAt || Date.now() - lastFrameAt > 120_000) discord.update(null); }, 30_000).unref();
@@ -147,6 +154,7 @@ async function main(): Promise<void> {
     throw e;
   }
   cloud.start();
+  if (process.env.GLIDEPATH_UPDATES !== "0") updater.start();
   await adapter.start();
 
   const statusTimer = setInterval(() => server.broadcastStatus(), 5000);
@@ -159,6 +167,7 @@ async function main(): Promise<void> {
     await adapter.stop();
     session.shutdown();
     cloud.stop();
+    updater.stop();
     await server.stop();
     recorder.close();
     process.exit(0);

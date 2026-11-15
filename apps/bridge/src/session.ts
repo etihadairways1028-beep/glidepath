@@ -35,6 +35,8 @@ export interface SessionEvents {
 export class FlightSession extends EventEmitter {
   private seq: number;
   private flight: FlightSummary | null = null;
+  /** After the pilot completes a flight by hand: don't start a new one while still taxiing in. */
+  private holdUntilParked = false;
   private detector = new PhaseDetector();
   private analyzer = new LandingAnalyzer({ profile: landingProfileFor(null) });
   private reviewer = new FlightReviewer();
@@ -121,6 +123,12 @@ export class FlightSession extends EventEmitter {
     const frame = this.aircraft ? applyProfile(raw as TelemetryFrame, profileForTitle(this.aircraft.title)) : (raw as TelemetryFrame);
     frame.seq = ++this.seq;
 
+    if (this.holdUntilParked) {
+      const parked = frame.position.onGround && (frame.speed.gsKt ?? 0) < 2 && (frame.controls.parkingBrake === true || (frame.engines.length > 0 && frame.engines.every((e) => e.running === false)));
+      const moved = !frame.position.onGround; // taking off again: a new flight after all
+      if (!parked && !moved) { this.emit("frame", frame, "TAXI_IN"); return; }
+      this.holdUntilParked = false;
+    }
     if (!this.flight) this.startFlight(frame);
     else if (this.lastFrame === null) this.maybeResume(frame);
     const flight = this.flight!;
@@ -322,6 +330,16 @@ export class FlightSession extends EventEmitter {
     this.recorder.saveLanding(flight.id, report);
     this.log.info(`Landing graded ${report.grade} (${report.score}) — ${report.touchdownVsFpm ?? "?"} fpm, ${report.peakG ?? "?"} g`);
     this.emit("landing", report);
+  }
+
+  /** The pilot says the flight is over (after landing). Returns the finished flight, or null if it can't be completed yet. */
+  completeNow(): FlightSummary | null {
+    const f = this.flight;
+    if (!f || !f.wheelsDownAt || this.detector.isAirborne) return null;
+    if (!f.onBlockAt && this.lastFrame && (this.lastFrame.speed.gsKt ?? 99) < 2) f.onBlockAt = this.lastFrame.t;
+    this.finish("completed");
+    this.holdUntilParked = true;
+    return f;
   }
 
   private finish(status: "completed" | "incomplete"): void {

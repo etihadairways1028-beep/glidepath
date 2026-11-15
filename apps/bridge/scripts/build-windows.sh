@@ -52,7 +52,7 @@ rm -f "$OUT/GlidepathBridge-windows-x64.zip"
 sha256sum "$OUT/GlidepathBridge-windows-x64.zip" | tee "$OUT/GlidepathBridge-windows-x64.zip.sha256"
 # Installer (needs makensis: apt-get install nsis).
 if command -v makensis >/dev/null; then
-  VER=$(grep -o 'BRIDGE_VERSION = "[^"]*"' "$HERE/src/config.ts" | cut -d'"' -f2)
+  VER=$(grep 'BRIDGE_VERSION =' "$HERE/src/config.ts" | grep -o '"[0-9]*\.[0-9]*\.[0-9]*"' | tail -1 | tr -d '"')
   cp "$HERE/packaging/installer.nsi" "$HERE/packaging/glidepath.ico" "$WORK/"
   rm -f "$OUT/GlidepathBridge-Setup.exe"
   (cd "$WORK" && makensis -V2 -DVERSION="$VER" -DSRC="Glidepath Bridge" -DOUTFILE="$OUT/GlidepathBridge-Setup.exe" installer.nsi)

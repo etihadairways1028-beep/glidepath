@@ -19,6 +19,8 @@ export interface SimAdapter extends EventEmitter {
   stop(): Promise<void>;
   /** Remote control: send steps to the simulator. Error message, or null when sent. Absent = not supported. */
   command?(steps: import("../remote.js").Step[]): string | null;
+  /** SIDs, STARs and approaches from the sim's navigation data. Absent = not available (replay). */
+  procedures?(icao: string): Promise<import("../procedures.js").AirportProcedures>;
   on<E extends keyof AdapterEvents>(event: E, listener: AdapterEvents[E]): this;
   emit<E extends keyof AdapterEvents>(event: E, ...args: Parameters<AdapterEvents[E]>): boolean;
 }
