@@ -25,6 +25,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <script src="config.js"></script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Glidepath","applicationCategory":"GameApplication","operatingSystem":"Windows 10, Windows 11, iPadOS, iOS, Android, macOS","description":"A free companion for Microsoft Flight Simulator 2020 and 2024: your flight live on your iPad, phone or second screen, with a review after every landing.","url":"https://glidepath-ad9.pages.dev/","image":"https://glidepath-ad9.pages.dev/assets/og.jpg","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
@@ -186,7 +187,7 @@
     <!-- WHAT'S IN 1.0 -->
     <section id="new" class="newin" aria-labelledby="new-title">
       <div class="section-head reveal">
-        <p class="kicker">New in 1.0</p>
+        <p class="kicker">What's new</p>
         <h2 id="new-title">Fly. Land. Show everyone.</h2>
         <p class="section-lede">All free, all in the app you already have.</p>
       </div>
@@ -474,7 +475,7 @@
           <ul class="ticks">
             <li>Sign in on as many devices, and as many accounts, as you like.</li>
             <li>Signed-in devices find your PC on your Wi-Fi by themselves.</li>
-            <li>Only flight summaries go to your account. Live telemetry stays on your PC.</li>
+            <li>Only flight summaries are stored in your account. Live data passes through to your devices and isn't kept.</li>
           </ul>
         </div>
         <div class="mail glass strong reveal" aria-label="Example monthly email">
@@ -498,11 +499,11 @@
     <section class="how" aria-labelledby="how-title">
       <div class="section-head reveal">
         <p class="kicker">Set up in two minutes</p>
-        <h2 id="how-title">No Community folder. No account needed. Your flight stays on your Wi-Fi.</h2>
+        <h2 id="how-title">Three steps and you're flying.</h2>
       </div>
       <ol class="steps">
-        <li class="glass reveal"><span class="n data">1</span><h3>Run the Bridge</h3><p>Run the installer on your sim PC, then open <i>Glidepath Bridge</i> from the desktop. It finds Microsoft Flight Simulator by itself.</p></li>
-        <li class="glass reveal"><span class="n data">2</span><h3>Type the code</h3><p>Open the Glidepath app on your iPad and type the 6-digit code shown on your PC. That's it: you're connected over your Wi-Fi.</p></li>
+        <li class="glass reveal"><span class="n data">1</span><h3>Install the Bridge</h3><p>Run the installer on your sim PC and leave <i>Start Glidepath Bridge now</i> ticked at the end. It finds Microsoft Flight Simulator on its own.</p></li>
+        <li class="glass reveal"><span class="n data">2</span><h3>Sign in on both</h3><p>Sign in to your free account on the Bridge page and in the app on your iPad. They connect on any network. No account? On the same Wi-Fi, type the 6-digit code instead.</p></li>
         <li class="glass reveal"><span class="n data">3</span><h3>Fly</h3><p>Recording starts when you push back. When you park, your debrief is waiting.</p></li>
       </ol>
     </section>
@@ -567,7 +568,7 @@
             <li><b>Recording and logbook</b> on your PC, resumed after a sim restart, with career totals.</li>
             <li><b>The app</b> on iPad, iPhone, Android, Mac and PC, in dark and light mode.</li>
             <li><b>Glideslope messages</b> at each stage: cruise reached, top of descent, approach, touchdown.</li>
-            <li><b>Connecting by code:</b> type the 6-digit code from your PC into the app.</li>
+            <li><b>Connecting:</b> sign in on both and connect on any network, or type the 6-digit code on the same Wi-Fi.</li>
             <li><b>Flight replay</b> of any recorded flight, on the map and in 3D, with speed control.</li>
             <li><b>Checklists</b> for Airbus and Boeing style flying, the right one opening for your phase. Simplified for sim use, not copied from any manual.</li>
             <li><b>Badges</b> earned from your own logbook: butter landings, long haul, night landings, airports visited and more.</li>
@@ -692,16 +693,16 @@
           <h3>Installing, step by step</h3>
           <ol>
             <li><b>Run the installer.</b> Windows asks for permission once: the installer lets your iPad reach the Bridge through Windows Firewall.</li>
-            <li><b>If Windows shows “Windows protected your PC”:</b> that's SmartScreen. It appears for new apps that aren't code-signed yet (signing is coming). You can check the file first: its SHA-256 should match the one on this page. Then choose <i>More info</i> and <i>Run</i>.</li>
-            <li><b>Open Glidepath Bridge</b> from the desktop. It shows a 6-digit code.</li>
-            <li><b>On your iPad,</b> open the Glidepath app and type the code.</li>
+            <li><b>If Windows shows “Windows protected your PC”:</b> that's SmartScreen. It appears for new apps that aren't code-signed. You can check the file first: its SHA-256 should match the one on this page. Then choose <i>More info</i> and <i>Run anyway</i>.</li>
+            <li><b>Sign in on the Bridge page</b> that opens on your PC, with your free Glidepath account (or make one there).</li>
+            <li><b>On your iPad,</b> open the Glidepath app and sign in with the same account. It connects by itself, on any network. No account? On the same Wi-Fi, type the 6-digit code from the Bridge page.</li>
           </ol>
           <details class="trouble">
             <summary>Something not working?</summary>
             <ul>
-              <li><b>The iPad can't connect:</b> make sure it's on the same Wi-Fi as the PC. If the code isn't found, tap <i>Type my PC's address instead</i> and enter the numbers from the Bridge window, or open <i>glidepath.local:4810</i> in Safari.</li>
-              <li><b>The sim isn't found:</b> start MSFS and load into a flight, then run <i>Test MSFS connection</i> from the Start menu and send the report.</li>
-              <li><b>Anything else:</b> Start menu › Glidepath › Bridge logs, and send the newest log file.</li>
+              <li><b>The iPad can't connect:</b> check you're signed in to the same account on the Bridge page and in the app. Using a code instead? The iPad must be on the same Wi-Fi as the PC; if the code isn't found, tap <i>Type my PC's address instead</i> and enter the numbers from the Bridge window, or open <i>glidepath.local:4810</i> in Safari.</li>
+              <li><b>The sim isn't found:</b> start MSFS and load into a flight, then run <i>Test MSFS connection</i> from the Start menu and <a data-issues-link href="#">report a problem</a> with the result.</li>
+              <li><b>Anything else:</b> <a data-issues-link href="#">report a problem</a> and attach the newest file from Start menu › Glidepath › Bridge logs. Every report is read.</li>
             </ul>
           </details>
         </div>
@@ -734,7 +735,7 @@
   <footer class="foot">
     <div class="foot-brand"><img src="assets/mark.svg" alt="" width="24" height="24"><b>Glidepath</b></div>
     <p>An independent project, not affiliated with Microsoft, Laminar Research, VATSIM, IVAO, Navigraph, SimBrief, or any airline or aircraft maker. Not for real-world navigation.</p>
-    <p><a href="privacy.html">Privacy policy</a> · <a data-repo-link href="#">Source code on GitHub</a> · <a href="app/">Open the app</a></p>
+    <p><a href="privacy.html">Privacy policy</a> · <a data-issues-link href="#">Report a problem</a> · <a data-repo-link href="#">Source code on GitHub</a> · <a href="app/">Open the app</a></p>
   </footer>
 
   <script src="app.js" defer></script>
