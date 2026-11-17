@@ -337,7 +337,7 @@ export type FlightStats = z.infer<typeof FlightStats>;
 /* Flight plan (from SimBrief, via the Bridge)                         */
 /* ------------------------------------------------------------------ */
 
-export const PlanFix = z.object({ ident: z.string(), lat: z.number(), lon: z.number(), altitudeFt: z.number().nullable() });
+export const PlanFix = z.object({ ident: z.string(), lat: z.number(), lon: z.number(), altitudeFt: z.number().nullable(), /** Part of the plan's SID or STAR (SimBrief marks these). */ proc: z.enum(["sid", "star"]).nullable().optional() });
 
 export const FlightPlan = z.object({
   source: z.literal("simbrief"),
@@ -351,6 +351,9 @@ export const FlightPlan = z.object({
   destination: z.object({ icao: z.string(), name: z.string().nullable(), runway: z.string().nullable(), lat: z.number(), lon: z.number(), elevationFt: z.number().nullable() }),
   alternate: z.string().nullable(),
   route: z.string(),
+  /** SID and STAR names from the plan, when it has them (e.g. "CPT3G", "ROSUN2B"). */
+  sid: z.string().nullable().optional(),
+  star: z.string().nullable().optional(),
   fixes: z.array(PlanFix),
   cruiseAltitudeFt: z.number().nullable(),
   distanceNm: z.number().nullable(),

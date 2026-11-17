@@ -41,6 +41,22 @@ describe("external data parsers (documented response shapes)", () => {
     expect(p.fixes).toHaveLength(1);
     expect(p.callsign).toBe("BAW123");
   });
+  it("SimBrief: the SID and STAR are found from the flagged fixes at each end", () => {
+    const fx = (ident: string, via: string, sidStar: string, lat: number, type = "wpt") => ({ ident, via_airway: via, is_sid_star: sidStar, pos_lat: String(lat), pos_long: "-1", altitude_feet: "5000", type });
+    const p = parseSimbrief({
+      fetch: { status: "Success" }, general: { route: "CPT L9 KENET UL9 ROSUN" }, atc: { callsign: "BAW1" },
+      origin: { icao_code: "EGLL", pos_lat: "51.47", pos_long: "-0.46" }, destination: { icao_code: "EGCC", pos_lat: "53.35", pos_long: "-2.27" },
+      navlog: { fix: [fx("D254F", "CPT3G", "1", 51.4), fx("CPT", "CPT3G", "1", 51.5), fx("KENET", "L9", "0", 51.8), fx("ROSUN", "UL9", "0", 52.5), fx("MIRSI", "ROSUN2B", "1", 53.0), fx("DAYNE", "ROSUN2B", "1", 53.2), fx("EGCC", "DCT", "0", 53.35, "apt")] },
+    });
+    expect(p.sid).toBe("CPT3G");
+    expect(p.star).toBe("ROSUN2B");
+    expect(p.fixes.map((f) => f.proc ?? "-")).toEqual(["sid", "sid", "-", "-", "star", "star", "-"]);
+  });
+  it("SimBrief: no SID or STAR when the plan has none", () => {
+    const p = parseSimbrief({ fetch: { status: "Success" }, origin: { icao_code: "EGLL", pos_lat: "51", pos_long: "0" }, destination: { icao_code: "EGCC", pos_lat: "53", pos_long: "-2" },
+      navlog: { fix: [{ ident: "A", via_airway: "DCT", is_sid_star: "0", pos_lat: "52", pos_long: "-1" }] } });
+    expect(p.sid).toBeNull(); expect(p.star).toBeNull(); expect(p.fixes[0]!.proc).toBeNull();
+  });
   it("SimBrief error status is reported, not swallowed", () => {
     expect(() => parseSimbrief({ fetch: { status: "Error: Unknown UserID" } })).toThrow(/Unknown UserID/);
   });

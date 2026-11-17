@@ -1129,3 +1129,7 @@ button, .btn, .seg, .tabbar { -webkit-user-select: none; user-select: none; }
   .side .nav-a { min-height: 26px !important; padding-top: 2px !important; padding-bottom: 2px !important; font-size: 14px !important; }
   .side .nav-sec { margin: 4px 12px 0 !important; font-size: 11.5px !important; }
 }
+/* Procedures from the SimBrief plan */
+.pr-plan { display: block; font-style: normal; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #7CF29A; margin-top: 2px; }
+.pr-row.t-star .pr-plan { color: #FFC266; }
+.pr-drawn b.t-sid { color: #34C759; } .pr-drawn b.t-star { color: #FF9F0A; }

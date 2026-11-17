@@ -130,7 +130,7 @@ export type ArtKind = "narrow" | "wide" | "turboprop" | "light";
 
 export function artKindFor(icaoType: string | null | undefined, title = ""): ArtKind {
   const p = landingProfileFor(icaoType ?? null, title).id;
-  return p === "widebody-jet" ? "wide" : p === "turboprop" ? "turboprop" : p === "light-aircraft" ? "light" : "narrow";
+  return p === "widebody-jet" || p === "a330-a350" || p === "b777-b787" ? "wide" : p === "turboprop" ? "turboprop" : p === "light-aircraft" ? "light" : "narrow";
 }
 
 /** Original side-view artwork. `tilt` (degrees, + = nose down) gives a slight climb/descent attitude. */

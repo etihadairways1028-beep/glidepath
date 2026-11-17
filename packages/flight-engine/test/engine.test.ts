@@ -90,10 +90,12 @@ describe("top of descent", () => {
 describe("landing scoring", () => {
   const nb = LANDING_PROFILES["narrowbody-jet"]!;
   it("profiles are chosen from ICAO type or title", () => {
-    expect(landingProfileFor("A20N").id).toBe("narrowbody-jet");
-    expect(landingProfileFor("B77W").id).toBe("widebody-jet");
+    expect(landingProfileFor("A20N").id).toBe("a320");
+    expect(landingProfileFor("B77W").id).toBe("b777-b787");
     expect(landingProfileFor("C172").id).toBe("light-aircraft");
-    expect(landingProfileFor(null, "PMDG 737-800 BW").id).toBe("narrowbody-jet");
+    expect(landingProfileFor("MD82").id).toBe("narrowbody-jet");
+    expect(landingProfileFor("B744").id).toBe("widebody-jet");
+    expect(landingProfileFor(null, "PMDG 737-800 BW").id).toBe("b737");
     expect(landingProfileFor(null, "Some glider").id).toBe("generic");
   });
   it("sink-rate curve: ideal band full marks, hard is low", () => {

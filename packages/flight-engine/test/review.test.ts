@@ -98,3 +98,34 @@ describe("debrief", () => {
     expect(d.sections.find((s) => s.id === "landing")).toBeUndefined();
   });
 });
+
+import { landingProfileFor as profileFor, LANDING_PROFILES as PROFILES } from "../src/landing";
+import { TAKEOFF_BANDS as BANDS } from "../src/review";
+describe("aircraft references", () => {
+  it("picks the specific type from the ICAO code", () => {
+    const cases: Array<[string, string]> = [["A320", "a320"], ["A20N", "a320"], ["A321", "a321"], ["A21N", "a321"], ["B738", "b737"], ["B38M", "b737"], ["B739", "b737-long"], ["B39M", "b737-long"],
+      ["A333", "a330-a350"], ["A359", "a330-a350"], ["B77W", "b777-b787"], ["B789", "b777-b787"], ["E190", "regional-jet"], ["CRJ9", "regional-jet"], ["BCS3", "regional-jet"],
+      ["AT76", "turboprop"], ["DH8D", "turboprop"], ["C172", "light-aircraft"], ["B744", "widebody-jet"], ["ZZZZ", "generic"]];
+    for (const [t, id] of cases) expect(profileFor(t).id, t).toBe(id);
+  });
+  it("falls back to the aircraft title when there's no ICAO code", () => {
+    expect(profileFor(null, "PMDG 737-800").id).toBe("b737");
+    expect(profileFor(null, "Boeing 737 MAX 9").id).toBe("b737-long");
+    expect(profileFor(null, "iniBuilds A350-900").id).toBe("a330-a350");
+    expect(profileFor(null, "Fenix A321neo").id).toBe("a321");
+    expect(profileFor(null, "Cessna 172 Skyhawk").id).toBe("light-aircraft");
+  });
+  it("has take-off references for every landing profile, with sensible numbers", () => {
+    for (const p of Object.values(PROFILES)) {
+      const b = BANDS[p.id];
+      expect(b, p.id).toBeDefined();
+      expect(p.idealVsFpm[0]).toBeLessThan(p.idealVsFpm[1]);
+      expect(p.firmVsFpm).toBeLessThan(p.hardVsFpm);
+      expect(b!.climbPitch[1]).toBeLessThan(b!.excessivePitch);
+      expect(p.touchdownZoneFt[0]).toBeLessThan(p.touchdownZoneFt[1]);
+    }
+    // Long-bodied types have less tail clearance than their shorter siblings.
+    expect(PROFILES.a321!.tailStrikePitchDeg).toBeLessThan(PROFILES.a320!.tailStrikePitchDeg);
+    expect(PROFILES["b737-long"]!.tailStrikePitchDeg).toBeLessThan(PROFILES.b737!.tailStrikePitchDeg);
+  });
+});

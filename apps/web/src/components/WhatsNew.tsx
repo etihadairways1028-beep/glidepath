@@ -5,7 +5,7 @@
  */
 import { useEffect, useState } from "react";
 
-export const APP_VERSION = "1.0.4";
+export const APP_VERSION = "1.0.0";
 const KEY = "glidepath.seenVersion";
 
 export const WHATS_NEW: { t: string; d: string }[] = [

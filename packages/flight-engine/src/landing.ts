@@ -50,6 +50,42 @@ export const LANDING_PROFILES: Record<string, LandingProfile> = {
     idealVsFpm: [40, 250], firmVsFpm: 450, hardVsFpm: 700, gFirm: 1.4, gHard: 2.0,
     maxBankDeg: 10, tailStrikePitchDeg: 13, touchdownZoneFt: [200, 1200],
   },
+  // Type-specific references (approximate, for simulation). Tail-strike pitch is with the main gear on the runway.
+  a320: {
+    id: "a320", label: "Airbus A318, A319, A320 (and neo)",
+    idealVsFpm: [60, 180], firmVsFpm: 360, hardVsFpm: 600, gFirm: 1.3, gHard: 1.7,
+    maxBankDeg: 7, tailStrikePitchDeg: 11, touchdownZoneFt: [1000, 2000],
+  },
+  a321: {
+    id: "a321", label: "Airbus A321 (and neo)",
+    idealVsFpm: [60, 180], firmVsFpm: 360, hardVsFpm: 600, gFirm: 1.3, gHard: 1.7,
+    maxBankDeg: 7, tailStrikePitchDeg: 9.5, touchdownZoneFt: [1000, 2000],
+  },
+  b737: {
+    id: "b737", label: "Boeing 737-700, -800, MAX 8",
+    idealVsFpm: [60, 200], firmVsFpm: 380, hardVsFpm: 600, gFirm: 1.3, gHard: 1.7,
+    maxBankDeg: 7, tailStrikePitchDeg: 10.5, touchdownZoneFt: [1000, 2000],
+  },
+  "b737-long": {
+    id: "b737-long", label: "Boeing 737-900, MAX 9, MAX 10",
+    idealVsFpm: [60, 200], firmVsFpm: 380, hardVsFpm: 600, gFirm: 1.3, gHard: 1.7,
+    maxBankDeg: 7, tailStrikePitchDeg: 9, touchdownZoneFt: [1000, 2000],
+  },
+  "a330-a350": {
+    id: "a330-a350", label: "Airbus A330, A350",
+    idealVsFpm: [80, 220], firmVsFpm: 400, hardVsFpm: 600, gFirm: 1.3, gHard: 1.7,
+    maxBankDeg: 6, tailStrikePitchDeg: 10, touchdownZoneFt: [1000, 2500],
+  },
+  "b777-b787": {
+    id: "b777-b787", label: "Boeing 777, 787",
+    idealVsFpm: [80, 220], firmVsFpm: 400, hardVsFpm: 600, gFirm: 1.3, gHard: 1.7,
+    maxBankDeg: 6, tailStrikePitchDeg: 8.5, touchdownZoneFt: [1000, 2500],
+  },
+  "regional-jet": {
+    id: "regional-jet", label: "Regional jets (E-Jets, CRJ, A220)",
+    idealVsFpm: [60, 200], firmVsFpm: 380, hardVsFpm: 620, gFirm: 1.3, gHard: 1.75,
+    maxBankDeg: 7, tailStrikePitchDeg: 10, touchdownZoneFt: [800, 1800],
+  },
   generic: {
     id: "generic", label: "Generic aircraft",
     idealVsFpm: [60, 220], firmVsFpm: 400, hardVsFpm: 650, gFirm: 1.35, gHard: 1.8,
@@ -63,9 +99,28 @@ const TURBOPROP = /^(AT[4-7]|DH8|Q400|JS4|SF34|D328|C208)/;
 const LIGHT = /^(C1[5-8]|C17|C182|SR2|DA4|DA6|PA2|PA3|PA4|BE3|BE5|M20|TBM|PC12|DV20|C42|A5|DR40)/;
 
 /** Choose a landing profile from the ICAO type or, failing that, the title. */
+/** Specific types first; the broad groups below catch everything else. */
+const TYPE_PROFILES: Array<[RegExp, string]> = [
+  [/^(A321|A21N)/, "a321"],
+  [/^(A318|A319|A320|A19N|A20N)/, "a320"],
+  [/^(B739|B39M|B3XM|B3JM)/, "b737-long"],
+  [/^(B736|B737|B738|B37M|B38M)/, "b737"],
+  [/^(A33|A35)/, "a330-a350"],
+  [/^(B77|B78)/, "b777-b787"],
+  [/^(E17|E19|E29|E75|CRJ|BCS|A22)/, "regional-jet"],
+];
+const TITLE_PROFILES: Array<[RegExp, string]> = [
+  [/A321|A21N/, "a321"], [/A318|A319|A320|A32N/, "a320"],
+  [/737[- ]?(900|9|MAX ?9|MAX ?10)\b|B739|B39M/, "b737-long"], [/737/, "b737"],
+  [/A330|A350|A339|A359/, "a330-a350"], [/777|787/, "b777-b787"],
+  [/E1[79]5|E190|E2\b|CRJ|A220|CS300/, "regional-jet"],
+];
+
 export function landingProfileFor(icaoType: string | null, title = ""): LandingProfile {
   const t = (icaoType ?? "").toUpperCase().trim();
   const name = title.toUpperCase();
+  if (t) for (const [re, id] of TYPE_PROFILES) if (re.test(t)) return LANDING_PROFILES[id]!;
+  if (!t) for (const [re, id] of TITLE_PROFILES) if (re.test(name)) return LANDING_PROFILES[id]!;
   if (t) {
     if (WIDEBODY.test(t)) return LANDING_PROFILES["widebody-jet"]!;
     if (NARROWBODY.test(t)) return LANDING_PROFILES["narrowbody-jet"]!;

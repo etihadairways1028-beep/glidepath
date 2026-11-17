@@ -30,6 +30,14 @@ export const TAKEOFF_BANDS: Record<string, TakeoffBands> = {
   turboprop: { rotate: [2, 4], climbPitch: [8, 14], excessivePitch: 17, tailDeg: 9, bank: [30, 35], retractableGear: true },
   "light-aircraft": { rotate: [1, 5], climbPitch: [5, 12], excessivePitch: 15, tailDeg: 14, bank: [45, 60], retractableGear: false },
   generic: { rotate: [1.5, 4], climbPitch: [8, 18], excessivePitch: 21, tailDeg: 11, bank: [30, 35], retractableGear: true },
+  // Type-specific (approximate, for simulation): about 3°/s rotation to around 15° in the A320 and 737; gentler in the long-bodied and wide-body types.
+  a320: { rotate: [2, 3.5], climbPitch: [12, 18], excessivePitch: 20, tailDeg: 11, bank: [30, 35], retractableGear: true },
+  a321: { rotate: [2, 3.2], climbPitch: [12, 17], excessivePitch: 19, tailDeg: 9.5, bank: [30, 35], retractableGear: true },
+  b737: { rotate: [2, 3.5], climbPitch: [12, 18], excessivePitch: 20, tailDeg: 10.5, bank: [30, 35], retractableGear: true },
+  "b737-long": { rotate: [2, 3], climbPitch: [12, 17], excessivePitch: 19, tailDeg: 9, bank: [30, 35], retractableGear: true },
+  "a330-a350": { rotate: [1.5, 3], climbPitch: [11, 17], excessivePitch: 19, tailDeg: 10, bank: [30, 35], retractableGear: true },
+  "b777-b787": { rotate: [1.5, 3], climbPitch: [11, 17], excessivePitch: 19, tailDeg: 8.5, bank: [30, 35], retractableGear: true },
+  "regional-jet": { rotate: [2, 4], climbPitch: [10, 17], excessivePitch: 20, tailDeg: 10, bank: [30, 35], retractableGear: true },
 };
 
 export function takeoffBandsFor(profileId: string): TakeoffBands {

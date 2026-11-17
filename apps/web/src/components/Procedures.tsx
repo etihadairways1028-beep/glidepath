@@ -56,13 +56,13 @@ function useProcs(icao: string | null | undefined, enabled: boolean) {
   return { data, err, loading };
 }
 
-function Pick({ label, tone, value, options, onChange, empty }: { label: string; tone: string; value: string | undefined; options: string[]; onChange: (v: string) => void; empty: string }) {
+function Pick({ label, tone, value, options, onChange, empty, plan }: { label: string; tone: string; value: string | undefined; options: string[]; onChange: (v: string) => void; empty: string; plan?: string | null }) {
   return (
     <label className={`pr-row t-${tone}`}>
-      <span className="pr-k">{label}</span>
+      <span className="pr-k">{label}{plan && value === plan ? <em className="pr-plan">From your SimBrief plan</em> : null}</span>
       <select value={value ?? ""} onChange={(e) => onChange(e.target.value)} disabled={!options.length}>
         <option value="">{options.length ? empty : "None"}</option>
-        {options.map((o) => <option key={o} value={o}>{o}</option>)}
+        {options.map((o) => <option key={o} value={o}>{o}{plan === o ? " (plan)" : ""}</option>)}
       </select>
     </label>
   );
@@ -80,7 +80,8 @@ export function Procedures() {
   useEffect(() => {
     const saved = loadChoice(dep, arr);
     // First time on this route: start from the plan's runways.
-    setC({ depRunway: L.plan?.origin.runway ?? undefined, arrRunway: L.plan?.destination.runway ?? undefined, ...saved });
+    // First time on this route: start from the plan's runways, SID and STAR (SimBrief). Your own picks always win.
+    setC({ depRunway: L.plan?.origin.runway ?? undefined, arrRunway: L.plan?.destination.runway ?? undefined, sid: L.plan?.sid ?? undefined, star: L.plan?.star ?? undefined, ...saved });
   }, [dep, arr]);
   const set = (patch: Partial<ProcChoice>) => { const n = { ...c, ...patch, arr: arr ?? undefined }; setC(n); if (dep) saveChoice(dep, n); };
 
@@ -88,6 +89,8 @@ export function Procedures() {
   const serves = (p: Proc, rw?: string) => !rw || !p.runways.length || p.runways.includes(rw);
   const sids = D.data?.departures.filter((p) => serves(p, c.depRunway)) ?? [];
   const stars = A.data?.arrivals.filter((p) => serves(p, c.arrRunway)) ?? [];
+  const planSid = L.plan?.sid ?? null, planStar = L.plan?.star ?? null;
+  const withPlan = (names: string[], plan: string | null) => plan && !names.includes(plan) ? [plan, ...names] : names;
   const apps = A.data?.approaches.filter((a) => !c.arrRunway || a.runway === c.arrRunway) ?? [];
   const sid = D.data?.departures.find((p) => p.name === c.sid);
   const star = A.data?.arrivals.find((p) => p.name === c.star);
@@ -122,20 +125,26 @@ export function Procedures() {
         {side("Origin", dep, D, D.data && (
           <>
             <Pick label="Runway" tone="rw" value={c.depRunway} options={D.data.runways} empty="Choose runway" onChange={(v) => set({ depRunway: v || undefined, sid: undefined, sidTrans: undefined })} />
-            <Pick label="Departure" tone="sid" value={c.sid} options={sids.map((p) => p.name)} empty="No SID (vectors)" onChange={(v) => set({ sid: v || undefined, sidTrans: undefined })} />
+            <Pick label="Departure" tone="sid" value={c.sid} options={withPlan(sids.map((p) => p.name), planSid)} plan={planSid} empty="No SID (vectors)" onChange={(v) => set({ sid: v || undefined, sidTrans: undefined })} />
             <Pick label="Transition" tone="sid" value={c.sidTrans} options={sid?.transitions ?? []} empty="None" onChange={(v) => set({ sidTrans: v || undefined })} />
           </>
         ))}
         {side("Destination", arr, A, A.data && (
           <>
             <Pick label="Runway" tone="rw" value={c.arrRunway} options={A.data.runways} empty="Choose runway" onChange={(v) => set({ arrRunway: v || undefined, star: undefined, starTrans: undefined, approach: undefined, appTrans: undefined })} />
-            <Pick label="Arrival" tone="star" value={c.star} options={stars.map((p) => p.name)} empty="No STAR" onChange={(v) => set({ star: v || undefined, starTrans: undefined })} />
+            <Pick label="Arrival" tone="star" value={c.star} options={withPlan(stars.map((p) => p.name), planStar)} plan={planStar} empty="No STAR" onChange={(v) => set({ star: v || undefined, starTrans: undefined })} />
             <Pick label="Transition" tone="star" value={c.starTrans} options={star?.transitions ?? []} empty="None" onChange={(v) => set({ starTrans: v || undefined })} />
             <Pick label="Approach" tone="app" value={c.approach} options={apps.map((a) => a.name)} empty="Choose approach" onChange={(v) => set({ approach: v || undefined, appTrans: undefined })} />
             <Pick label="Transition" tone="app" value={c.appTrans} options={app?.transitions ?? []} empty="Vectors" onChange={(v) => set({ appTrans: v || undefined })} />
           </>
         ), typedDest ? destInput : undefined)}
       </div>
+      {(planSid || planStar) && (
+        <p className="pr-note pr-drawn">
+          The live map draws your plan's {[planSid ? <b key="s" className="t-sid">{planSid}</b> : null, planSid && planStar ? " and " : null, planStar ? <b key="r" className="t-star">{planStar}</b> : null]}
+          {(c.sid && planSid && c.sid !== planSid) || (c.star && planStar && c.star !== planStar) ? ". You've picked a different procedure; the map shows the planned one, as only SimBrief gives the waypoints." : "."}
+        </p>
+      )}
       {(c.sid || c.star || c.approach) && (
         <p className="pr-sum data">
           {[dep && c.depRunway ? `${dep} ${c.depRunway}` : dep, c.sid ? `${c.sid}${c.sidTrans ? `.${c.sidTrans}` : ""}` : null, "…", c.star ? `${c.starTrans ? `${c.starTrans}.` : ""}${c.star}` : null, c.approach ? `${c.appTrans ? `${c.appTrans} ` : ""}${c.approach}` : null, arr].filter(Boolean).join("  ")}

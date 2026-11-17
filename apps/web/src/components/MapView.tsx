@@ -170,7 +170,7 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
   const { mapStyle } = useSettings();
   const [theme, setTheme] = useState(themeNow);
   const kindRef = useRef<Kind>("satellite");
-  const data = useRef<{ route: number[][]; trail: number[][]; traffic: unknown; stands: unknown; atc: unknown; metars: unknown; radar: string | null; fixes: unknown; firs?: unknown; history: number[][][]; trailGradient: unknown }>({ trailGradient: altGradient([]), history: [], route: [], trail: [], traffic: empty(), stands: empty(), atc: empty(), metars: empty(), radar: null, fixes: empty() });
+  const data = useRef<{ route: number[][]; trail: number[][]; traffic: unknown; stands: unknown; atc: unknown; metars: unknown; radar: string | null; fixes: unknown; firs?: unknown; history: number[][][]; trailGradient: unknown; procs?: unknown }>({ trailGradient: altGradient([]), history: [], route: [], trail: [], traffic: empty(), stands: empty(), atc: empty(), metars: empty(), radar: null, fixes: empty() });
   const threeDRef = useRef(threeD);
   threeDRef.current = threeD;
   const glideRaf = useRef(0);
@@ -227,6 +227,11 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     m.addLayer({ id: "fixes", type: "circle", source: "fixes", minzoom: 4.5, paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 4.5, 2.2, 9, 4], "circle-color": light ? "#fff" : "#1B1030", "circle-stroke-color": "#E05CFF", "circle-stroke-width": 1.6 } });
     m.addLayer({ id: "fixes-label", type: "symbol", source: "fixes", minzoom: 5.5, layout: { "text-field": ["get", "ident"], "text-font": ["Noto Sans Bold"], "text-size": 10.5, "text-offset": [0, 0.95], "text-anchor": "top", "text-letter-spacing": 0.04 }, paint: { "text-color": light ? "#9B2FC2" : "#F0A6FF", "text-halo-color": light ? "rgba(255,255,255,.95)" : "rgba(10,6,20,.85)", "text-halo-width": 1.4 } });
     m.addLayer({ id: "route", type: "line", source: "route", layout: { "line-cap": "round" }, paint: { "line-color": "#E05CFF", "line-width": 2, "line-dasharray": [2.2, 1.6], "line-opacity": 0.95 } });
+    // The plan's SID (green) and STAR (orange), from SimBrief's waypoints, with their names along the line.
+    m.addSource("procs", { type: "geojson", data: (data.current.procs ?? empty()) as ReturnType<typeof empty> });
+    m.addLayer({ id: "procs-casing", type: "line", source: "procs", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": light ? "rgba(255,255,255,.95)" : "rgba(0,0,0,.5)", "line-width": 6.5 } });
+    m.addLayer({ id: "procs", type: "line", source: "procs", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": ["match", ["get", "kind"], "sid", "#34C759", "#FF9F0A"], "line-width": 3.6, "line-opacity": 0.95 } });
+    m.addLayer({ id: "procs-label", type: "symbol", source: "procs", minzoom: 6, layout: { "symbol-placement": "line", "text-field": ["get", "name"], "text-font": ["Noto Sans Bold"], "text-size": 12, "text-letter-spacing": 0.06, "symbol-spacing": 320 }, paint: { "text-color": ["match", ["get", "kind"], "sid", "#7CF29A", "#FFC266"], "text-halo-color": light ? "rgba(255,255,255,.95)" : "rgba(5,8,14,.9)", "text-halo-width": 1.8 } });
     // The trail, coloured by altitude along its length (like flight trackers), with a matching soft glow.
     m.addLayer({ id: "trail-casing", type: "line", source: "trail", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": light ? "rgba(255,255,255,.95)" : "rgba(0,0,0,.55)", "line-width": 6.2 } });
     m.addLayer({ id: "trail-glow", type: "line", source: "trail", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-gradient": data.current.trailGradient as never, "line-width": 11, "line-opacity": light ? 0.35 : 0.42, "line-blur": 6 } });
@@ -379,6 +384,12 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     const fx = { type: "FeatureCollection" as const, features: (plan?.fixes ?? []).filter((f) => !/^T\/[CD]$|^TOC$|^TOD$/.test(f.ident)).map((f) => ({ type: "Feature" as const, properties: { ident: f.ident }, geometry: { type: "Point" as const, coordinates: [f.lon, f.lat] } })) };
     data.current.fixes = fx;
     (m.getSource("fixes") as GeoJSONSource | undefined)?.setData(fx);
+    // SID from the origin through its fixes; STAR through its fixes to the destination.
+    const feats: Array<{ type: "Feature"; properties: { kind: string; name: string }; geometry: { type: "LineString"; coordinates: number[][] } }> = [];
+    if (plan?.sid) { const c = [[plan.origin.lon, plan.origin.lat], ...plan.fixes.filter((f) => f.proc === "sid").map((f) => [f.lon, f.lat])]; if (c.length > 1) feats.push({ type: "Feature", properties: { kind: "sid", name: plan.sid }, geometry: { type: "LineString", coordinates: c } }); }
+    if (plan?.star) { const c = [...plan.fixes.filter((f) => f.proc === "star").map((f) => [f.lon, f.lat]), [plan.destination.lon, plan.destination.lat]]; if (c.length > 1) feats.push({ type: "Feature", properties: { kind: "star", name: plan.star }, geometry: { type: "LineString", coordinates: c } }); }
+    data.current.procs = { type: "FeatureCollection", features: feats };
+    (m.getSource("procs") as GeoJSONSource | undefined)?.setData(data.current.procs as never);
     if (!fitted.current && route.length > 1 && !aircraft) {
       fitted.current = true;
       const b = (route as Array<[number, number]>).reduce((bb, p) => bb.extend(p), new maplibregl.LngLatBounds(route[0] as [number, number], route[0] as [number, number]));
