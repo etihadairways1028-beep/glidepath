@@ -14,7 +14,7 @@ import { sendGmail } from "./gmail";
 import { addTrail, cleanLive, cleanName, leaderboard, monthRange, shareId } from "./social";
 import { Relay } from "./relay";
 import { welcomeMail, debriefMail, deviceName, inflightMail, resetMail, signinMail } from "./mails";
-import { aiChat, aiLeft, PER_USER_DAILY } from "./ai";
+import { aiChat, aiChatStream, aiLeft, PER_USER_DAILY } from "./ai";
 
 interface Env {
   DB: D1Database;
@@ -266,7 +266,12 @@ async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Re
   }
 
   if (p === "/ai/chat" && req.method === "POST") {
-    const body = await req.json().catch(() => null);
+    const body = await req.json().catch(() => null) as { stream?: boolean } | null;
+    if (body?.stream) {
+      const r = await aiChatStream(env, user.id, body);
+      if ("stream" in r) return new Response(r.stream, { headers: { ...CORS, "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-store", "X-Accel-Buffering": "no" } });
+      return json(r.status, r.body);
+    }
     const r = await aiChat(env, user.id, body);
     return json(r.status, r.body);
   }

@@ -131,6 +131,10 @@ jobs:
             echo "Not live yet (try $i), waiting..."; sleep 10
           done
           echo "$A" | head -c 900; echo
+          echo "Streaming (first words, then the rest):"
+          curl -sN -o /tmp/stream.txt -w "HTTP %{http_code}, first byte after %{time_starttransfer}s, done after %{time_total}s\n" -X POST "$U/ai/chat" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"messages":[{"role":"user","content":"Give me three short tips for a smooth landing."}],"facts":{},"stream":true}'
+          head -c 400 /tmp/stream.txt; echo; tail -c 120 /tmp/stream.txt
+          grep -q '"t":' /tmp/stream.txt && grep -q '\[DONE\]' /tmp/stream.txt && echo "Streaming works." || echo "::warning::Streaming didn't return text."
           curl -s -X DELETE "$U/me" -H "Authorization: Bearer $TOKEN" -o /dev/null -w "Cleanup: %{http_code}\n"
           echo "$A" | grep -q '"answer"' && echo "Glidepath AI works." || echo "::warning::Glidepath AI did not answer (see above)."
 

@@ -339,5 +339,46 @@ function newSlot(): string {
 export interface AiReply { answer: string; model: string; left: number }
 /** Ask Glidepath AI (Cloudflare Workers AI through the account service). Needs a signed-in pilot. */
 export const askGlidepathAi = (messages: Array<{ role: "user" | "assistant"; content: string }>, facts: unknown) => authed<AiReply>("/ai/chat", "POST", { messages, facts });
+/**
+ * Ask Glidepath AI and get the answer word by word (server-sent events: data: {"t":"…"} … data: [DONE]).
+ * Resolves with the questions left today.
+ */
+export async function streamGlidepathAi(messages: Array<{ role: "user" | "assistant"; content: string }>, facts: unknown, onText: (t: string) => void): Promise<{ left: number | null }> {
+  const a = activeAccount();
+  if (!a) throw new CloudError("Sign in first (More → Account). It's free.");
+  if (!api) throw new CloudError("Accounts aren't set up yet.");
+  const token = ls.get<string | null>(tokenKey(a.slot), null);
+  let r: Response | null = null;
+  for (const base of bases.length ? bases : [api]) {
+    try {
+      r = await fetch(`${base}/ai/chat`, { method: "POST", headers: { "Content-Type": "application/json", Accept: "text/event-stream", ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ messages, facts, stream: true }) });
+      if (r.status === 404 && base === PROXY && !(r.headers.get("content-type") ?? "").includes("json")) { r = null; continue; }
+      break;
+    } catch { r = null; }
+  }
+  if (!r) throw new CloudError("Couldn't reach Glidepath AI. Check your internet connection, then try again.");
+  if (!r.ok || !(r.headers.get("content-type") ?? "").includes("event-stream") || !r.body) {
+    const j = await r.json().catch(() => ({})) as { error?: string };
+    if (r.status === 401) dropAccount(a.slot);
+    throw new CloudError(j.error ?? `Glidepath AI said ${r.status}.`);
+  }
+  const reader = r.body.getReader(); const dec = new TextDecoder();
+  let buf = "", left: number | null = null, got = false;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let i: number;
+    while ((i = buf.indexOf("\n\n")) >= 0) {
+      const ev = buf.slice(0, i).trim(); buf = buf.slice(i + 2);
+      if (!ev.startsWith("data:")) continue;
+      const payload = ev.slice(5).trim();
+      if (payload === "[DONE]") return { left };
+      try { const j = JSON.parse(payload) as { t?: string; left?: number }; if (j.t) { got = true; onText(j.t); } if (typeof j.left === "number") left = j.left; } catch { /* partial or keep-alive */ }
+    }
+  }
+  if (!got) throw new CloudError("Glidepath AI stopped before answering. Try again.");
+  return { left };
+}
 export const glidepathAiStatus = () => authed<{ available: boolean; left: number; perDay: number }>("/ai/status");
 export const signedIn = () => !!activeAccount();

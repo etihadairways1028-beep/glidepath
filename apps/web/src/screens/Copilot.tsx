@@ -13,7 +13,7 @@ import { Icon, Notice, Section } from "../components/ui";
 import { activeBridge } from "../data/bridge";
 import { factsFor, speakTest, useCopilot } from "../data/copilot";
 import { settingsStore, useApp, useSettings } from "../data/store";
-import { askGlidepathAi, glidepathAiStatus, useCloud } from "../data/cloud";
+import { glidepathAiStatus, streamGlidepathAi, useCloud } from "../data/cloud";
 
 interface Msg { role: "user" | "assistant"; content: string; by: "copilot" | "ai" | "error"; /** What the AI gets, when it differs from the shown text. */ send?: string }
 interface AiStatus { configured: boolean; provider: "ollama" | "openai" | null; baseUrl: string | null; model: string | null; hasKey: boolean; reachable: boolean | null; models: string[]; message: string | null }
@@ -30,6 +30,15 @@ const PRESETS = [
 const AI_FLIGHT_PROMPTS = ["Brief my arrival", "What should I do next?", "How do I fly a smooth landing here?"];
 const AI_HELP_PROMPTS = ["How do I connect my iPad?", "How is my landing graded?", "What can Remote do?"];
 
+/** One saved conversation per flight (and one for "no flight"), for this session. */
+const chatKey = (flightId: string | null) => `glidepath.copilot.${flightId ?? "none"}`;
+function loadChat(flightId: string | null): Msg[] {
+  try { const v = JSON.parse(sessionStorage.getItem(chatKey(flightId)) ?? "[]") as Msg[]; return Array.isArray(v) ? v : []; } catch { return []; }
+}
+function saveChat(flightId: string | null, msgs: Msg[]) {
+  try { sessionStorage.setItem(chatKey(flightId), JSON.stringify(msgs.filter((m) => m.content).slice(-40))); } catch { /* private mode or full */ }
+}
+
 function guessQuestion(q: string): QuickQuestion {
   const t = q.toLowerCase();
   if (/descen|tod|top of|start down/.test(t)) return "descent";
@@ -45,7 +54,15 @@ export function CopilotScreen() {
   const { snapshot, alerts, live } = useCopilot();
   const mode = useApp((s) => s.mode);
   const s = useSettings();
-  const [msgs, setMsgs] = useState<Msg[]>([]);
+  // The conversation survives switching screens (for this session and this flight).
+  const flightKey = live.flight?.id ?? null;
+  const [msgs, setMsgs] = useState<Msg[]>(() => loadChat(flightKey));
+  const chatFor = useRef(flightKey);
+  useEffect(() => {
+    // When the flight changes (or appears after connecting), show that flight's conversation instead of saving over it.
+    if (chatFor.current !== flightKey) { chatFor.current = flightKey; setMsgs(loadChat(flightKey)); return; }
+    saveChat(flightKey, msgs);
+  }, [msgs, flightKey]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [ai, setAi] = useState<AiStatus | null>(null);
@@ -58,7 +75,7 @@ export function CopilotScreen() {
   }, [mode]);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [msgs]);
   useEffect(() => {
-    if (msgs.length === 0 && live.flight) setMsgs([{ role: "assistant", content: copilotAnswer("status", snapshot), by: "copilot" }]);
+    if (live.flight) setMsgs((m) => (m.length === 0 ? [{ role: "assistant", content: copilotAnswer("status", snapshot), by: "copilot" }] : m));
   }, [live.flight?.id]);
 
   const ownAi = !!(bridge && ai?.configured && ai.reachable);
@@ -96,12 +113,12 @@ export function CopilotScreen() {
     const convo = history.filter((m) => m.by !== "error").map((m) => ({ role: m.role, content: m.send ?? m.content }));
     if (gpReady) {
       try {
-        const r = await askGlidepathAi(convo, facts());
-        setGpLeft(r.left);
-        setMsgs([...history, { role: "assistant", content: r.answer, by: "ai" }]);
+        const r = await streamGlidepathAi(convo, facts(), (t) => { acc += t; setMsgs([...history, { role: "assistant", content: acc, by: "ai" }]); });
+        if (r.left != null) setGpLeft(r.left);
       } catch (e) {
         const fallback = live.flight ? ` Here's what I can tell from the data: ${copilotAnswer(guessQuestion(q), snapshot)}` : "";
-        setMsgs([...history, { role: "assistant", content: `${(e as Error).message}${fallback}`, by: "error" }]);
+        // Keep any words that already arrived; add why it stopped.
+        setMsgs([...history, { role: "assistant", content: acc ? `${acc}\n\n(${(e as Error).message})` : `${(e as Error).message}${fallback}`, by: acc ? "ai" : "error" }]);
       } finally { setBusy(false); }
       return;
     }
@@ -134,7 +151,10 @@ export function CopilotScreen() {
           <h1 className="title">Copilot</h1>
           <p className="muted" style={{ margin: "4px 0 0" }}>Your right seat. Ask it anything about this flight.</p>
         </div>
+        <div className="row" style={{ gap: 8, alignItems: "center" }}>
+        {msgs.length > 1 && !busy && <button className="btn small ghost" onClick={() => setMsgs(live.flight ? [{ role: "assistant", content: copilotAnswer("status", snapshot), by: "copilot" }] : [])}>New chat</button>}
         <span className={`pill ${aiReady ? "live" : ""}`}><span className="dot" />{ownAi ? `AI: ${ai!.model}` : gpReady ? `Glidepath AI${gpLeft != null ? ` · ${gpLeft} left today` : ""}` : "Built-in copilot"}</span>
+        </div>
       </div>
 
       <div className="copilot-grid">
@@ -149,7 +169,7 @@ export function CopilotScreen() {
             {msgs.map((m, i) => (
               <div key={i} className={`bubble ${m.role} ${m.by}`}>
                 {m.role === "assistant" && <span className="who">{m.by === "ai" ? "Copilot (AI)" : "Copilot"}</span>}
-                <p>{m.content || <span className="typing" aria-label="Thinking"><i /><i /><i /></span>}</p>
+                <p>{m.content ? <>{m.content}{busy && i === msgs.length - 1 && m.by === "ai" && <span className="ai-caret" aria-hidden="true" />}</> : <span className="typing" aria-label="Thinking"><i /><i /><i /></span>}</p>
               </div>
             ))}
             <div ref={endRef} />

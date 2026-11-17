@@ -946,3 +946,6 @@ button, .btn, .seg, .tabbar { -webkit-user-select: none; user-select: none; }
 :root[data-theme="light"] .chips .chip-btn.ai span { color: #4b6cff; }
 .rv-ask { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .rv-ask .faint { font-size: 12.5px; }
+.ai-caret { display: inline-block; width: 8px; height: 1.05em; margin-left: 3px; vertical-align: -0.15em; border-radius: 2px; background: currentColor; opacity: .55; animation: aiCaret 1s steps(2, start) infinite; }
+@keyframes aiCaret { to { visibility: hidden; } }
+@media (prefers-reduced-motion: reduce) { .ai-caret { animation: none; } }

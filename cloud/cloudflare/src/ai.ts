@@ -43,21 +43,17 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 interface Msg { role: "user" | "assistant"; content: string }
 
-/** How many questions this pilot has left today. */
-export async function aiLeft(env: AiEnv, userId: string): Promise<number> {
-  const r = await env.DB.prepare("SELECT n FROM ai_usage WHERE day = ? AND user_id = ?").bind(today(), userId).first<{ n: number }>();
-  return Math.max(0, PER_USER_DAILY - (r?.n ?? 0));
-}
 
-export async function aiChat(env: AiEnv, userId: string, body: unknown): Promise<{ status: number; body: Record<string, unknown> }> {
-  if (!env.AI) return { status: 503, body: { error: "Glidepath AI isn't switched on yet." } };
+type Prepared = { messages: Array<{ role: string; content: string }>; used: number };
+
+/** Checks the question and the daily caps, and builds the messages for the model. */
+async function prepare(env: AiEnv, userId: string, body: unknown): Promise<Prepared | { status: number; body: Record<string, unknown> }> {
   const b = (body ?? {}) as { messages?: unknown; facts?: unknown };
   const clean: Msg[] = (Array.isArray(b.messages) ? b.messages : [])
     .filter((m): m is Msg => !!m && typeof m === "object" && ((m as Msg).role === "user" || (m as Msg).role === "assistant") && typeof (m as Msg).content === "string" && (m as Msg).content.trim() !== "")
     .slice(-10)
     .map((m) => ({ role: m.role, content: m.content.slice(0, 1500) }));
   if (!clean.length || clean.at(-1)!.role !== "user") return { status: 400, body: { error: "Send a question." } };
-
   // Caps: per pilot, and for everyone together, so the service stays inside the free allowance.
   const day = today();
   const [mine, all] = await Promise.all([
@@ -66,9 +62,32 @@ export async function aiChat(env: AiEnv, userId: string, body: unknown): Promise
   ]);
   if ((mine?.n ?? 0) >= PER_USER_DAILY) return { status: 429, body: { error: `That's today's ${PER_USER_DAILY} AI questions. They reset at midnight UTC; built-in answers still work.`, left: 0 } };
   if ((all?.n ?? 0) >= GLOBAL_DAILY) return { status: 429, body: { error: "Glidepath AI has reached today's free limit for everyone. It resets at midnight UTC; built-in answers still work.", left: 0 } };
-
   const facts = JSON.stringify(b.facts ?? {}).slice(0, 6000);
-  const messages = [{ role: "system", content: `${SYSTEM_PROMPT}\n\nFLIGHT FACTS (live, JSON; empty if no flight is running):\n${facts}` }, ...clean];
+  return { messages: [{ role: "system", content: `${SYSTEM_PROMPT}\n\nFLIGHT FACTS (live, JSON; empty if no flight is running):\n${facts}` }, ...clean], used: mine?.n ?? 0 };
+}
+
+/** One more question used today (for this pilot and for everyone); old days are cleared. */
+async function count(env: AiEnv, userId: string) {
+  const day = today();
+  await env.DB.batch([
+    env.DB.prepare("INSERT INTO ai_usage (day, user_id, n) VALUES (?, ?, 1) ON CONFLICT(day, user_id) DO UPDATE SET n = n + 1").bind(day, userId),
+    env.DB.prepare("INSERT INTO ai_usage (day, user_id, n) VALUES (?, '*', 1) ON CONFLICT(day, user_id) DO UPDATE SET n = n + 1").bind(day),
+    env.DB.prepare("DELETE FROM ai_usage WHERE day < ?").bind(new Date(Date.now() - 3 * 86_400_000).toISOString().slice(0, 10)),
+  ]);
+}
+
+/** How many questions this pilot has left today. */
+export async function aiLeft(env: AiEnv, userId: string): Promise<number> {
+  const r = await env.DB.prepare("SELECT n FROM ai_usage WHERE day = ? AND user_id = ?").bind(today(), userId).first<{ n: number }>();
+  return Math.max(0, PER_USER_DAILY - (r?.n ?? 0));
+}
+
+export async function aiChat(env: AiEnv, userId: string, body: unknown): Promise<{ status: number; body: Record<string, unknown> }> {
+  if (!env.AI) return { status: 503, body: { error: "Glidepath AI isn't switched on yet." } };
+  const pre = await prepare(env, userId, body);
+  if ("status" in pre) return pre;
+  const messages = pre.messages;
+  const mine = { n: pre.used };
 
   let answer = "";
   let used = "";
@@ -83,11 +102,7 @@ export async function aiChat(env: AiEnv, userId: string, body: unknown): Promise
   }
   if (!answer) return { status: 502, body: { error: "Glidepath AI didn't answer just now. Try again in a moment." } };
 
-  await env.DB.batch([
-    env.DB.prepare("INSERT INTO ai_usage (day, user_id, n) VALUES (?, ?, 1) ON CONFLICT(day, user_id) DO UPDATE SET n = n + 1").bind(day, userId),
-    env.DB.prepare("INSERT INTO ai_usage (day, user_id, n) VALUES (?, '*', 1) ON CONFLICT(day, user_id) DO UPDATE SET n = n + 1").bind(day),
-    env.DB.prepare("DELETE FROM ai_usage WHERE day < ?").bind(new Date(Date.now() - 3 * 86_400_000).toISOString().slice(0, 10)),
-  ]);
+  await count(env, userId);
   return { status: 200, body: { answer, model: used, left: Math.max(0, PER_USER_DAILY - (mine?.n ?? 0) - 1) } };
 }
 
@@ -100,4 +115,105 @@ function pickText(out: unknown): string {
     : "";
   t = t.replace(/<think>[\s\S]*?<\/think>/gi, "").replace(/^<think>[\s\S]*$/i, "").trim();
   return t.slice(0, 4000);
+}
+
+/** One piece of streamed text from a Workers AI SSE line (both the classic and the chat-completions shape). */
+export function pieceOf(line: string): string | null | "done" {
+  const l = line.trim();
+  if (!l.startsWith("data:")) return null;
+  const payload = l.slice(5).trim();
+  if (payload === "[DONE]") return "done";
+  try {
+    const j = JSON.parse(payload) as { response?: unknown; choices?: Array<{ delta?: { content?: unknown }; text?: unknown }> };
+    if (typeof j.response === "string") return j.response;
+    const d = j.choices?.[0]?.delta?.content ?? j.choices?.[0]?.text;
+    return typeof d === "string" ? d : null;
+  } catch { return null; }
+}
+
+/** Drops <think>…</think> reasoning from a stream of pieces, even when the tags are split across pieces. */
+export function thinkFilter() {
+  let buf = "", inside = false;
+  return (piece: string, end = false): string => {
+    buf += piece;
+    let out = "";
+    for (;;) {
+      if (inside) {
+        const c = buf.indexOf("</think>");
+        if (c < 0) { buf = buf.slice(-8); if (end) buf = ""; return out; }
+        buf = buf.slice(c + 8); inside = false;
+      } else {
+        const o = buf.indexOf("<think>");
+        if (o >= 0) { out += buf.slice(0, o); buf = buf.slice(o + 7); inside = true; continue; }
+        // Keep a possible partial "<think" at the end until the next piece.
+        const keep = end ? 0 : Math.min(buf.length, (() => { for (let k = 6; k > 0; k--) if ("<think>".startsWith(buf.slice(-k))) return k; return 0; })());
+        out += buf.slice(0, buf.length - keep); buf = buf.slice(buf.length - keep);
+        return out;
+      }
+    }
+  };
+}
+
+/**
+ * Streamed answer, as server-sent events the app already understands: data: {"t":"…"} … data: [DONE].
+ * Waits for the first words before answering, so a model that fails or says nothing falls through to the next one.
+ */
+export async function aiChatStream(env: AiEnv, userId: string, body: unknown): Promise<{ status: number; body: Record<string, unknown> } | { stream: ReadableStream<Uint8Array>; left: number }> {
+  if (!env.AI) return { status: 503, body: { error: "Glidepath AI isn't switched on yet." } };
+  const pre = await prepare(env, userId, body);
+  if ("status" in pre) return pre;
+  const enc = new TextEncoder(), dec = new TextDecoder();
+  for (const model of MODELS) {
+    let reader: ReadableStreamDefaultReader<Uint8Array>;
+    try {
+      const s = (await env.AI.run(model as Parameters<Ai["run"]>[0], { messages: pre.messages, max_tokens: 420, temperature: 0.3, stream: true } as never)) as unknown as ReadableStream<Uint8Array>;
+      reader = s.getReader();
+    } catch (e) { console.warn(`AI model ${model} failed: ${(e as Error).message}`); continue; }
+    const filter = thinkFilter();
+    let buf = "", first = "", finished = false;
+    // Read until there's real text (or the model gives up).
+    const deadline = Date.now() + 25_000;
+    try {
+      while (!first && !finished && Date.now() < deadline) {
+        const { done, value } = await reader.read();
+        if (done) { finished = true; break; }
+        buf += dec.decode(value, { stream: true });
+        let nl: number;
+        while ((nl = buf.indexOf("\n")) >= 0) {
+          const p = pieceOf(buf.slice(0, nl)); buf = buf.slice(nl + 1);
+          if (p === "done") { finished = true; break; }
+          if (p) first += filter(p);
+        }
+      }
+    } catch (e) { console.warn(`AI model ${model} stream failed: ${(e as Error).message}`); first = ""; }
+    if (!first.trim()) { try { await reader.cancel(); } catch { /* already closed */ } continue; }
+
+    await count(env, userId);
+    const left = Math.max(0, PER_USER_DAILY - pre.used - 1);
+    const send = (c: ReadableStreamDefaultController<Uint8Array>, t: string) => { if (t) c.enqueue(enc.encode(`data: ${JSON.stringify({ t })}\n\n`)); };
+    const stream = new ReadableStream<Uint8Array>({
+      async start(c) {
+        send(c, first.replace(/^\s+/, ""));
+        try {
+          while (!finished) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buf += dec.decode(value, { stream: true });
+            let nl: number;
+            while ((nl = buf.indexOf("\n")) >= 0) {
+              const p = pieceOf(buf.slice(0, nl)); buf = buf.slice(nl + 1);
+              if (p === "done") { finished = true; break; }
+              if (p) send(c, filter(p));
+            }
+          }
+          send(c, filter("", true));
+        } catch (e) { console.warn(`AI stream cut off: ${(e as Error).message}`); }
+        c.enqueue(enc.encode(`data: ${JSON.stringify({ left, model })}\n\ndata: [DONE]\n\n`));
+        c.close();
+      },
+      cancel() { void reader.cancel().catch(() => undefined); },
+    });
+    return { stream, left };
+  }
+  return { status: 502, body: { error: "Glidepath AI didn't answer just now. Try again in a moment." } };
 }
