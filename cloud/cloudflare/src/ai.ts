@@ -14,6 +14,15 @@ export interface AiEnv {
 
 /** Tried in order: retired or failing models fall through to the next one. */
 const MODELS = ["@cf/google/gemma-4-26b-a4b-it", "@cf/qwen/qwen3-30b-a3b-fp8", "@cf/meta/llama-3.2-3b-instruct"];
+/**
+ * Gemma 4 and Qwen 3 "think" before answering (minutes of hidden reasoning in the worst case).
+ * Copilot answers short questions, so thinking is switched off: first words in about half a second.
+ * Measured on Workers AI with the deploy workflow's diagnostic, November 2026.
+ */
+const NO_THINKING: Record<string, Record<string, unknown>> = {
+  "@cf/google/gemma-4-26b-a4b-it": { chat_template_kwargs: { enable_thinking: false } },
+  "@cf/qwen/qwen3-30b-a3b-fp8": { chat_template_kwargs: { enable_thinking: false } },
+};
 export const PER_USER_DAILY = 40;
 export const GLOBAL_DAILY = 450;
 
@@ -93,7 +102,7 @@ export async function aiChat(env: AiEnv, userId: string, body: unknown): Promise
   let used = "";
   for (const model of MODELS) {
     try {
-      const out = (await env.AI.run(model as Parameters<Ai["run"]>[0], { messages, max_tokens: 420, temperature: 0.3 } as never)) as unknown;
+      const out = (await env.AI.run(model as Parameters<Ai["run"]>[0], { messages, max_tokens: 420, temperature: 0.3, ...NO_THINKING[model] } as never)) as unknown;
       answer = pickText(out);
       if (answer) { used = model; break; }
     } catch (e) {
@@ -166,13 +175,13 @@ export async function aiChatStream(env: AiEnv, userId: string, body: unknown): P
   for (const model of MODELS) {
     let reader: ReadableStreamDefaultReader<Uint8Array>;
     try {
-      const s = (await env.AI.run(model as Parameters<Ai["run"]>[0], { messages: pre.messages, max_tokens: 420, temperature: 0.3, stream: true } as never)) as unknown as ReadableStream<Uint8Array>;
+      const s = (await env.AI.run(model as Parameters<Ai["run"]>[0], { messages: pre.messages, max_tokens: 420, temperature: 0.3, stream: true, ...NO_THINKING[model] } as never)) as unknown as ReadableStream<Uint8Array>;
       reader = s.getReader();
     } catch (e) { console.warn(`AI model ${model} failed: ${(e as Error).message}`); continue; }
     const filter = thinkFilter();
     let buf = "", first = "", finished = false;
     // Read until there's real text (or the model gives up).
-    const deadline = Date.now() + 25_000;
+    const deadline = Date.now() + 12_000;
     try {
       while (!first && !finished && Date.now() < deadline) {
         const { done, value } = await reader.read();
@@ -216,32 +225,4 @@ export async function aiChatStream(env: AiEnv, userId: string, body: unknown): P
     return { stream, left };
   }
   return { status: 502, body: { error: "Glidepath AI didn't answer just now. Try again in a moment." } };
-}
-
-/**
- * Diagnostic for the deploy check only: the raw start of one model's stream for a fixed prompt.
- * Works only while the workflow has set a one-off PROBE_KEY (it deletes it straight after).
- */
-export async function aiProbe(env: AiEnv & { PROBE_KEY?: string }, key: string | null, model: string, extra: Record<string, unknown> = {}): Promise<{ status: number; body: Record<string, unknown> }> {
-  if (!env.AI || !env.PROBE_KEY || env.PROBE_KEY.length < 32 || key !== env.PROBE_KEY) return { status: 404, body: { error: "Not found." } };
-  if (!MODELS.includes(model)) return { status: 400, body: { error: "Unknown model." } };
-  const t0 = Date.now();
-  try {
-    const s = (await env.AI.run(model as Parameters<Ai["run"]>[0], { messages: [{ role: "system", content: "Be brief." }, { role: "user", content: "Say hello in five words." }], max_tokens: 160, stream: true, ...pick(extra) } as never)) as unknown as ReadableStream<Uint8Array>;
-    const r = s.getReader(); const dec = new TextDecoder(); let raw = ""; let firstAt: number | null = null; let contentAt: number | null = null; let text = "";
-    while (Date.now() - t0 < 40_000) { const { done, value } = await r.read(); if (done) break; firstAt ??= Date.now() - t0; const chunk = dec.decode(value, { stream: true }); if (raw.length < 1200) raw += chunk;
-      for (const line of chunk.split("\n")) { const p = pieceOf(line); if (typeof p === "string" && p && p !== "done") { contentAt ??= Date.now() - t0; text += p; } } }
-    void r.cancel().catch(() => undefined);
-    return { status: 200, body: { model, extra: pick(extra), firstChunkMs: firstAt, firstContentMs: contentAt, totalMs: Date.now() - t0, text: text.slice(0, 300), raw: raw.slice(0, 1200) } };
-    while (raw.length < 2500 && Date.now() - t0 < 40_000) { const { done, value } = await r.read(); if (done) break; firstAt ??= Date.now() - t0; raw += dec.decode(value, { stream: true }); }
-    void r.cancel().catch(() => undefined);
-    return { status: 200, body: { model, firstChunkMs: firstAt, totalMs: Date.now() - t0, raw: raw.slice(0, 2500) } };
-  } catch (e) { return { status: 200, body: { model, error: (e as Error).message, totalMs: Date.now() - t0 } }; }
-}
-
-/** Only the switches being tried for turning off a model's thinking. */
-function pick(x: Record<string, unknown>) {
-  const o: Record<string, unknown> = {};
-  for (const k of ["chat_template_kwargs", "reasoning_effort", "reasoning", "enable_thinking"]) if (k in x) o[k] = x[k];
-  return o;
 }

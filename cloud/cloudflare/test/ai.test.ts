@@ -110,4 +110,11 @@ describe("Glidepath AI streaming", () => {
     const capped = await aiChatStream({ DB: DB as never, AI: { run: async () => sse(['data: {"response":"x"}']) } as never }, "u1", ask("hi"));
     expect("status" in capped && capped.status).toBe(429);
   });
+  it("switches thinking off for the models that think first", async () => {
+    const DB = fakeD1(); const seen: Array<{ model: string; input: Record<string, unknown> }> = [];
+    const AI = { run: async (model: string, input: Record<string, unknown>) => { seen.push({ model, input }); return sse(['data: {"response":"Hi."}', "data: [DONE]"]); } };
+    await aiChatStream({ DB: DB as never, AI: AI as never }, "u1", ask("hi"));
+    expect(seen[0]!.model).toContain("gemma");
+    expect(seen[0]!.input.chat_template_kwargs).toEqual({ enable_thinking: false });
+  });
 });

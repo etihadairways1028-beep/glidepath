@@ -138,22 +138,6 @@ jobs:
           curl -s -X DELETE "$U/me" -H "Authorization: Bearer $TOKEN" -o /dev/null -w "Cleanup: %{http_code}\n"
           echo "$A" | grep -q '"answer"' && echo "Glidepath AI works." || echo "::warning::Glidepath AI did not answer (see above)."
 
-      - name: Probe the AI models' raw streams (manual runs only)
-        if: github.event_name == 'workflow_dispatch'
-        working-directory: cloud/cloudflare
-        run: |
-          U="${{ steps.deploy.outputs.url }}"
-          K=$(openssl rand -hex 24)
-          printf '%s' "$K" | npx wrangler secret put PROBE_KEY >/dev/null
-          sleep 20
-          for M in @cf/google/gemma-4-26b-a4b-it @cf/qwen/qwen3-30b-a3b-fp8; do
-            for X in '{}' '{"chat_template_kwargs":{"enable_thinking":false}}' '{"reasoning_effort":"none"}' '{"reasoning_effort":"low"}' '{"reasoning":{"effort":"low"}}'; do
-              echo "===== $M $X"
-              curl -s -m 60 -X POST "$U/ai/probe" -H "x-probe-key: $K" -H "Content-Type: application/json" -d "{\"model\":\"$M\",\"extra\":$X}" | python3 -c 'import json,sys; d=json.load(sys.stdin); d.pop("raw",None) if d.get("firstContentMs") else None; print(json.dumps(d)[:900])'
-            done
-          done
-          echo y | npx wrangler secret delete PROBE_KEY >/dev/null && echo "Probe key deleted."
-
       - name: Check Connect anywhere (stand-in PC and iPad through the real relay)
         run: node scripts/relay-check.mjs "${{ steps.deploy.outputs.url }}"
 

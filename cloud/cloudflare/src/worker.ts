@@ -14,13 +14,12 @@ import { sendGmail } from "./gmail";
 import { addTrail, cleanLive, cleanName, leaderboard, monthRange, shareId } from "./social";
 import { Relay } from "./relay";
 import { welcomeMail, debriefMail, deviceName, inflightMail, resetMail, signinMail } from "./mails";
-import { aiChat, aiChatStream, aiLeft, aiProbe, PER_USER_DAILY } from "./ai";
+import { aiChat, aiChatStream, aiLeft, PER_USER_DAILY } from "./ai";
 
 interface Env {
   DB: D1Database;
   RELAY: DurableObjectNamespace;
   AI?: Ai;
-  PROBE_KEY?: string;
   PEPPER: string;
   BREVO_API_KEY?: string;
   BREVO_SENDER_EMAIL?: string;
@@ -147,11 +146,6 @@ async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Re
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (p === "/" || p === "/health") return json(200, { ok: true, service: "glidepath-accounts" });
 
-  if (p === "/ai/probe" && req.method === "POST") {
-    const b = await req.json().catch(() => ({})) as { model?: string; extra?: Record<string, unknown> };
-    const r = await aiProbe(env, req.headers.get("x-probe-key"), String(b.model ?? ""), b.extra ?? {});
-    return json(r.status, r.body);
-  }
   if (p === "/auth/signup" && req.method === "POST") {
     const b = await body<{ name?: string; email?: string; password?: string }>(req);
     const email = (b?.email ?? "").trim().toLowerCase(), pw = b?.password ?? "", name = (b?.name ?? "").trim().slice(0, 60) || null;
