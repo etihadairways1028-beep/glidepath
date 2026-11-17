@@ -131,15 +131,29 @@
     const halo = el("circle", { r: 11, fill: "#6FB6FF", opacity: 0.18 });
     const dot = el("circle", { r: 5, fill: "#EAF0FB", stroke: "#6FB6FF", "stroke-width": 2.5 });
 
-    // Altitude-profile bars on the card: the shape of the whole flight, lit up to the current position.
-    const BARS = 28, barsEl = $("bars");
-    for (let i = 0; i < BARS; i++) {
-      const d = ((i + 0.5) / BARS) * total;
-      const f = F.reduce((b, c) => (Math.abs(c.d - d) < Math.abs(b.d - d) ? c : b), F[0]);
-      const bar = document.createElement("i");
-      bar.style.height = 4 + 44 * (f.alt / maxAlt) + "px";
-      barsEl.appendChild(bar);
+    // The flight profile on the card, as in the app: the whole flight dashed, the flown part lit, the aircraft riding it.
+    const barsEl = $("bars"), SVGNS = "http://www.w3.org/2000/svg";
+    const prof = [];
+    for (let i = 0; i <= 64; i++) {
+      const d = (i / 64) * total;
+      const f = F.reduce((b2, c) => (Math.abs(c.d - d) < Math.abs(b2.d - d) ? c : b2), F[0]);
+      prof.push([(i / 64) * 100, 27 - 23 * (f.alt / maxAlt)]);
     }
+    const profD = prof.map((q, i) => (i ? "L" : "M") + q[0].toFixed(2) + " " + q[1].toFixed(2)).join(" ");
+    const psvg = document.createElementNS(SVGNS, "svg");
+    psvg.setAttribute("viewBox", "0 0 100 30"); psvg.setAttribute("preserveAspectRatio", "none");
+    psvg.innerHTML = '<defs><linearGradient id="mpG" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#5AB0FF" stop-opacity=".45"/><stop offset="1" stop-color="#5AB0FF" stop-opacity="0"/></linearGradient><clipPath id="mpC"><rect id="mpR" x="0" y="0" width="0" height="30"/></clipPath></defs>' +
+      '<path class="mp-all" d="' + profD + '"/><g clip-path="url(#mpC)"><path class="mp-area" d="' + profD + ' L100 30 L0 30Z"/><path class="mp-fly" d="' + profD + '"/></g>';
+    const plane = document.createElement("i"); plane.className = "mp-plane";
+    barsEl.className = "mini-prof"; barsEl.append(psvg, plane);
+    const mpR = psvg.querySelector("#mpR");
+    const setProf = (frac) => {
+      const xx = Math.max(0, Math.min(100, frac * 100)), j = Math.min(prof.length - 2, Math.floor(xx / (100 / 64)));
+      const k2 = (xx - prof[j][0]) / (prof[j + 1][0] - prof[j][0] || 1), yy = prof[j][1] + (prof[j + 1][1] - prof[j][1]) * k2;
+      mpR.setAttribute("width", xx.toFixed(2));
+      plane.style.left = xx + "%"; plane.style.top = (yy / 30) * 100 + "%";
+    };
+    setProf(0);
 
     // Landing table
     renderWeights(D);
@@ -185,8 +199,7 @@
       $("phase").textContent = PHASE[f.phase] || f.phase;
       $("dep-time").textContent = offBlock && t >= offBlock.s ? "Off block " + zulu(offBlock.s) : "Heathrow";
       $("arr-time").textContent = onBlock && t >= onBlock.s ? "On block " + zulu(onBlock.s) : "Manchester";
-      const lit = Math.round((d / total) * BARS);
-      [...barsEl.children].forEach((b, j) => b.classList.toggle("on", j < lit));
+      setProf(d / total);
       if (onBlock && t >= onBlock.s) {
         $("mid-big").textContent = fmtDur(td.s - wheelsUp.s);
         $("mid-sub").textContent = "Airborne time, " + Math.round(total) + " nm flown";
