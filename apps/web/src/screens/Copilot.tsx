@@ -7,6 +7,7 @@
  *  - Or your own model through the Bridge (Ollama on your PC, or your own key), which
  *    takes priority when it is set up. All grounded in the same live facts.
  */
+
 import { useEffect, useRef, useState } from "react";
 import { copilotAnswer, QUICK_QUESTIONS, type QuickQuestion } from "@glidepath/flight-engine";
 import { Icon, Notice, Section } from "../components/ui";
@@ -39,7 +40,7 @@ function saveChat(flightId: string | null, msgs: Msg[]) {
   try { sessionStorage.setItem(chatKey(flightId), JSON.stringify(msgs.filter((m) => m.content).slice(-40))); } catch { /* private mode or full */ }
 }
 
-function guessQuestion(q: string): QuickQuestion {
+function guessQuestion(q: string): QuickQuestion | null {
   const t = q.toLowerCase();
   if (/descen|tod|top of|start down/.test(t)) return "descent";
   if (/fuel|burn|reserve/.test(t)) return "fuel";
@@ -47,7 +48,8 @@ function guessQuestion(q: string): QuickQuestion {
   if (/weather|metar|wind|vis|cloud|qnh|temperature/.test(t)) return "weather";
   if (/landing|touchdown|butter|grade/.test(t)) return "landing";
   if (/eta|arriv|on time|late|early|when.*(land|gate)|how long/.test(t)) return "arrival";
-  return "status";
+  if (/status|how.?s it going|how is (the|my) flight|where are we|progress/.test(t)) return "status";
+  return null;
 }
 
 export function CopilotScreen() {
@@ -92,18 +94,39 @@ export function CopilotScreen() {
   const aiReady = ownAi || gpReady;
   const facts = () => (live.flight ? factsFor(snapshot, { aircraft: live.flight?.aircraft?.icaoType ?? live.flight?.aircraft?.title, callsign: live.plan?.callsign ?? live.flight?.callsign, route: live.plan?.route }) : {});
 
-  const ask = async (text: string, quick?: QuickQuestion, send?: string) => {
+  const ask = async (text: string, quick?: QuickQuestion, send?: string, builtin?: string) => {
     const q = text.trim();
     if (!q || busy) return;
     setInput("");
     const history: Msg[] = [...msgs, { role: "user" as const, content: q, by: "copilot" as const, ...(send ? { send } : {}) }];
     setMsgs(history);
     if (quick || !aiReady) {
+      if (!quick && builtin) {
+        // Prepared from real data (e.g. the review's coaching); AI can say more when signed in.
+        setMsgs([...history, { role: "assistant", content: builtin + (signed ? "" : "\n\nSign in (free) and Glidepath AI can go into more detail and answer follow-ups."), by: "copilot" }]);
+        return;
+      }
+      if (!quick && /improve|better|tips?\b|coach|work on|mistake|how did i (do|fly)|feedback/i.test(q)) {
+        const fl = live.flight;
+        let cached: string | null = null;
+        try { cached = fl ? sessionStorage.getItem(`glidepath.coach.${fl.id}`) : null; } catch { /* private mode */ }
+        const fpm = fl?.landings?.at(-1)?.touchdownVsFpm;
+        const text = cached ?? (fpm != null ? `Your touchdown was ${Math.round(Math.abs(fpm))} fpm (about 60 to 180 is smooth in an airliner). ` : "") + `For smoother landings in the sim:\n• Be stable by 1,000 ft: configured, on speed, on the 3° path (about 5 × groundspeed in fpm).\n• Keep the descent rate steady to about 30 ft, then a small 2 to 3° flare.\n• Aim 1,000 to 2,000 ft past the threshold, and lower the nose gently after touchdown.`;
+        setMsgs([...history, { role: "assistant", content: text + (signed ? "" : "\n\nSign in (free) and Glidepath AI can go into more detail and answer follow-ups."), by: "copilot" }]);
+        return;
+      }
+      const g = quick ?? guessQuestion(q);
+      if (!quick && !g) {
+        setMsgs([...history, { role: "assistant", content: live.flight
+          ? `Built in, I can answer these straight from the sim: when to start down, fuel, arrival time, weather at arrival, the runway, your landing and how the flight is going.${signed ? "" : " Sign in (free) and Glidepath AI answers anything else, in plain words."}`
+          : signed ? "Glidepath AI isn't available right now. Built-in answers need a flight running." : "Sign in (Account, it's free) and Glidepath AI can answer anything: how to use Glidepath, procedures, technique. Built-in answers need a flight running.", by: "copilot" }]);
+        return;
+      }
       if (!live.flight && !quick) {
         setMsgs([...history, { role: "assistant", content: signed ? "Glidepath AI isn't available right now. Built-in answers need a flight running." : "Sign in (Account, it's free) and Glidepath AI can answer anything: how to use Glidepath, procedures, technique. Built-in answers need a flight running.", by: "copilot" }]);
         return;
       }
-      const answer = copilotAnswer(quick ?? guessQuestion(q), snapshot);
+      const answer = copilotAnswer(g!, snapshot);
       setMsgs([...history, { role: "assistant", content: answer, by: "copilot" }]);
       return;
     }
@@ -116,7 +139,7 @@ export function CopilotScreen() {
         const r = await streamGlidepathAi(convo, facts(), (t) => { acc += t; setMsgs([...history, { role: "assistant", content: acc, by: "ai" }]); });
         if (r.left != null) setGpLeft(r.left);
       } catch (e) {
-        const fallback = live.flight ? ` Here's what I can tell from the data: ${copilotAnswer(guessQuestion(q), snapshot)}` : "";
+        const fallback = live.flight ? ` Here's what I can tell from the data: ${copilotAnswer(guessQuestion(q) ?? "status", snapshot)}` : "";
         // Keep any words that already arrived; add why it stopped.
         setMsgs([...history, { role: "assistant", content: acc ? `${acc}\n\n(${(e as Error).message})` : `${(e as Error).message}${fallback}`, by: acc ? "ai" : "error" }]);
       } finally { setBusy(false); }
@@ -129,7 +152,7 @@ export function CopilotScreen() {
       }, (t) => { acc += t; setMsgs([...history, { role: "assistant", content: acc, by: "ai" }]); });
       if (!acc) setMsgs([...history, { role: "assistant", content: "The model returned an empty answer.", by: "error" }]);
     } catch (e) {
-      setMsgs([...history, { role: "assistant", content: `${(e as Error).message} Here's what I can tell from the data: ${copilotAnswer(guessQuestion(q), snapshot)}`, by: "error" }]);
+      setMsgs([...history, { role: "assistant", content: `${(e as Error).message} Here's what I can tell from the data: ${copilotAnswer(guessQuestion(q) ?? "status", snapshot)}`, by: "error" }]);
     } finally {
       setBusy(false);
     }
@@ -139,9 +162,9 @@ export function CopilotScreen() {
   const handed = useRef(false);
   useEffect(() => {
     if (handed.current || (signed && gpLeft === null && !gpOff)) return; // wait until we know which AI answers
-    let q: { show: string; send: string } | null = null;
+    let q: { show: string; send: string; builtin?: string } | null = null;
     try { const v = sessionStorage.getItem("glidepath.ask"); sessionStorage.removeItem("glidepath.ask"); if (v) q = JSON.parse(v); } catch { /* private mode or old value */ }
-    if (q?.show) { handed.current = true; void ask(q.show, undefined, q.send); }
+    if (q?.show) { handed.current = true; void ask(q.show, undefined, q.send, q.builtin); }
   }, [signed, gpLeft, gpOff, ai]);
 
   return (

@@ -90,14 +90,33 @@ function coachQuestion(f: FlightSummary, r: ReturnType<typeof scoreFlight>): str
   return `Coach me on my ${f.departureIcao ?? ""}-${f.arrivalIcao ?? ""} flight${f.aircraft?.icaoType ? ` in the ${f.aircraft.icaoType}` : ""}. Score ${r.score}/100. ${parts}.${work} What should I do differently next time? Give me 2-3 concrete tips.`;
 }
 
-/** Open Copilot and ask a question there. */
-export function askCopilot(show: string, send: string) {
-  try { sessionStorage.setItem("glidepath.ask", JSON.stringify({ show, send })); } catch { /* private mode */ }
+/** Concrete technique for each part of the review (for simulation), the way an instructor would put it. */
+const TIPS: Record<string, string[]> = {
+  takeoff: ["Rotate smoothly at about 2 to 3° a second; don't snatch the nose up.", "Hold the take-off attitude (around 15° in an airliner) and let the speed settle before chasing it."],
+  handling: ["Stay at or below 250 kt under 10,000 ft, and keep the bank within about 25 to 30°.", "Taxi at 20 kt or less on straight taxiways and about 10 kt in turns."],
+  approach: ["Be fully configured and on speed by 1,000 ft: that's a stable approach.", "Follow a 3° path: about 300 ft per nautical mile, so a descent rate of roughly 5 × your groundspeed (140 kt ≈ 700 fpm).", "If you're low, level off and let the path come to you rather than diving at it."],
+  landing: ["Keep the descent rate steady down to about 30 ft, then a small flare of 2 to 3°.", "Aim for the touchdown zone, 1,000 to 2,000 ft past the threshold.", "After touchdown, lower the nose gently; don't push it down."],
+  time: ["Push back on time and allow for a normal taxi; the plan's times assume one."],
+  fuel: ["Load the plan's block fuel, then check fuel at top of descent against the planned landing fuel."],
+};
+/** Coaching from the real review, without any AI: the weakest parts first, with what to do differently. */
+export function builtinCoach(r: ReturnType<typeof scoreFlight>): string {
+  const weak = [...r.parts].filter((p) => (p.score ?? 100) < 95).sort((a, b) => (a.score ?? 100) - (b.score ?? 100)).slice(0, 2);
+  if (!weak.length) return `Score ${r.score}: a very tidy flight, nothing below 95. To keep improving, try a crosswind, a shorter runway or a manual approach from 3,000 ft.`;
+  const lines = weak.map((p) => `${p.label} (${p.score}/100): ${p.line}.\n${(TIPS[p.id] ?? []).map((t) => `• ${t}`).join("\n")}`);
+  return `Score ${r.score}. The most to gain here:\n\n${lines.join("\n\n")}${r.work.length ? `\n\nFrom your review: ${r.work.join(" ")}` : ""}`;
+}
+
+/** Open Copilot and ask a question there. `builtin` answers it if no AI is available. */
+export function askCopilot(show: string, send: string, builtin?: string) {
+  try { sessionStorage.setItem("glidepath.ask", JSON.stringify({ show, send, builtin })); } catch { /* private mode */ }
   location.hash = "#/copilot";
 }
 
 export function ReviewScore({ flight, frames }: { flight: FlightSummary; frames: TelemetryFrame[] | null }) {
   const r = useMemo(() => scoreFlight(flight, frames), [flight, frames]);
+  // Copilot coaches from exactly this review (same numbers), even when the question is typed there later.
+  useEffect(() => { if (r.score !== null) try { sessionStorage.setItem(`glidepath.coach.${flight.id}`, builtinCoach(r)); } catch { /* private mode */ } }, [r, flight.id]);
   if (r.score === null) return null;
   const C = 2 * Math.PI * 52;
   return (
@@ -132,7 +151,7 @@ export function ReviewScore({ flight, frames }: { flight: FlightSummary; frames:
         </div>
       )}
       <div className="rv-ask">
-        <button className="btn" onClick={() => askCopilot("How do I improve on this flight?", coachQuestion(flight, r))}><span aria-hidden="true">✦ </span>How do I improve?</button>
+        <button className="btn" onClick={() => askCopilot("How do I improve on this flight?", coachQuestion(flight, r), builtinCoach(r))}><span aria-hidden="true">✦ </span>How do I improve?</button>
         <span className="faint">Copilot coaches you through this flight's weakest part.</span>
       </div>
     </section>

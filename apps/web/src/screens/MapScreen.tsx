@@ -87,7 +87,7 @@ export function MapScreen() {
     standsAt.current = here;
     getStands(here.lat, here.lon).then(setStands).catch(() => undefined);
   }, [bridge, nearGround, f ? Math.round(f.position.lat * 50) : 0, f ? Math.round(f.position.lon * 50) : 0]);
-  const aircraft = f && f.attitude.headingTrueDeg !== null ? { lat: f.position.lat, lon: f.position.lon, hdg: f.attitude.headingTrueDeg } : null;
+  const aircraft = f && f.attitude.headingTrueDeg !== null ? { lat: f.position.lat, lon: f.position.lon, hdg: f.attitude.headingTrueDeg, alt: f.position.altMslFt } : null;
   const airports = [
     ...(L.plan ? [{ code: L.plan.origin.icao, lat: L.plan.origin.lat, lon: L.plan.origin.lon, role: "dep" as const }, { code: L.plan.destination.icao, lat: L.plan.destination.lat, lon: L.plan.destination.lon, role: "arr" as const }] : []),
   ];

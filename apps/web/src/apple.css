@@ -1100,3 +1100,32 @@ button, .btn, .seg, .tabbar { -webkit-user-select: none; user-select: none; }
   .side .sc-v { font-size: 15px; } .side .sc-v.loc { font-size: 13.5px; }
   .side .brand { margin-bottom: 6px !important; }
 }
+
+/* ===================== Live map: smooth on any PC (even with MSFS running) ===================== */
+/* Panels on top of a moving map: a solid tint instead of a live blur. The browser would otherwise re-blur them on every map frame. */
+:root :is(.map-wrap, .gc-map) :is(.glass, .btn, .tm-pill), :root :is(.map-hud, .map-sheet, .layers-pop, .lp-sheet, .map-tools .btn) {
+  -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+}
+:root :is(.map-hud, .map-sheet, .layers-pop, .lp-sheet) { background: rgba(20,24,34,.9) !important; }
+:root :is(.map-tools .btn, .gc-map .tm-pill) { background: rgba(24,30,44,.86) !important; }
+:root[data-theme="light"] :is(.map-hud, .map-sheet, .layers-pop, .lp-sheet) { background: rgba(250,250,253,.94) !important; }
+:root[data-theme="light"] :is(.map-tools .btn, .gc-map .tm-pill) { background: rgba(255,255,255,.92) !important; }
+/* Your aircraft: a still halo. A pulsing ring over the map forced a full redraw every frame. */
+:root .own-ac-pulse { animation: none !important; opacity: 1 !important; transform: none !important; background: radial-gradient(circle, rgba(10,132,255,.32) 0%, rgba(10,132,255,.12) 45%, transparent 70%) !important; box-shadow: 0 0 0 1px rgba(100,181,255,.35) !important; }
+
+/* Trail key: what the colours mean */
+.trail-key { position: absolute; left: 12px; bottom: 34px; z-index: 3; display: grid; gap: 4px; padding: 7px 10px 6px; border-radius: 12px; background: rgba(14,18,28,.82); box-shadow: inset 0 0 0 .5px rgba(255,255,255,.14); pointer-events: none; }
+.tk-bar { display: block; width: 168px; height: 5px; border-radius: 3px; background: linear-gradient(90deg, #FFB020 0%, #F7E04B 7.5%, #4ADE80 25%, #22D3EE 50%, #3B82F6 75%, #A855F7 100%); }
+.tk-l { display: flex; justify-content: space-between; width: 168px; font: 650 10px/1 var(--data, ui-monospace, monospace); color: rgba(235,240,255,.75); }
+.tk-l b { font-weight: 650; }
+:root[data-theme="light"] .trail-key { background: rgba(255,255,255,.9); box-shadow: inset 0 0 0 .5px rgba(0,0,0,.1); }
+:root[data-theme="light"] .tk-l { color: rgba(20,30,50,.75); }
+@media (max-width: 640px) { .trail-key { bottom: 96px; } }
+
+/* Sidebar: scrolls quietly on short windows (no grey scrollbar), with a soft fade at the bottom */
+.side { scrollbar-width: none; }
+.side::-webkit-scrollbar { display: none; }
+@media (min-width: 901px) and (max-height: 720px) {
+  .side .nav-a { min-height: 26px !important; padding-top: 2px !important; padding-bottom: 2px !important; font-size: 14px !important; }
+  .side .nav-sec { margin: 4px 12px 0 !important; font-size: 11.5px !important; }
+}

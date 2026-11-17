@@ -175,7 +175,7 @@ function HomeMap() {
   const L = useLive();
   const trail = useApp((s) => s.trail);
   const f = L.frame;
-  const aircraft = f && f.attitude.headingTrueDeg !== null ? { lat: f.position.lat, lon: f.position.lon, hdg: f.attitude.headingTrueDeg } : null;
+  const aircraft = f && f.attitude.headingTrueDeg !== null ? { lat: f.position.lat, lon: f.position.lon, hdg: f.attitude.headingTrueDeg, alt: f.position.altMslFt } : null;
   if (!aircraft) return null;
   return (
     <a className="glass home-map" href="#/map" aria-label="Open the live map">

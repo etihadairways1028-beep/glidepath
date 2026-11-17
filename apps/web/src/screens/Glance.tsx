@@ -37,7 +37,7 @@ export function Glance() {
   useEffect(() => { const mq = window.matchMedia("(orientation: landscape) and (min-width: 1000px)"); const h = () => setWide(mq.matches); mq.addEventListener("change", h); return () => mq.removeEventListener("change", h); }, []);
   const cockpit = layout === "cockpit" || (layout === "auto" && wide);
   const pick = (v: "card" | "cockpit") => { const next = (v === "cockpit") === wide ? "auto" : v; setLayout(next); try { localStorage.setItem("glidepath.glanceLayout", next); } catch { /* ignore */ } };
-  const aircraft = f && f.attitude.headingTrueDeg !== null ? { lat: f.position.lat, lon: f.position.lon, hdg: f.attitude.headingTrueDeg } : null;
+  const aircraft = f && f.attitude.headingTrueDeg !== null ? { lat: f.position.lat, lon: f.position.lon, hdg: f.attitude.headingTrueDeg, alt: f.position.altMslFt } : null;
 
   if (cockpit) {
     return (

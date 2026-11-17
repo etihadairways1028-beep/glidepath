@@ -117,7 +117,7 @@ function themeNow(): "dark" | "light" {
 export interface MapViewProps {
   trail: TrailPoint[];
   plan?: FlightPlan | null;
-  aircraft?: { lat: number; lon: number; hdg: number } | null;
+  aircraft?: { lat: number; lon: number; hdg: number; alt?: number | null } | null;
   airports?: Array<{ code: string; lat: number; lon: number; role: "dep" | "arr" }>;
   traffic?: NetworkPilot[];
   /** Air traffic controllers with a position, per network. */
@@ -166,10 +166,11 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
   const acRaf = useRef(0);
   const fitted = useRef(false);
   const [tilesOk, setTilesOk] = useState(true);
+  const [trailShown, setTrailShown] = useState(false);
   const { mapStyle } = useSettings();
   const [theme, setTheme] = useState(themeNow);
   const kindRef = useRef<Kind>("satellite");
-  const data = useRef<{ route: number[][]; trail: number[][]; traffic: unknown; stands: unknown; atc: unknown; metars: unknown; radar: string | null; fixes: unknown; firs?: unknown; history: number[][][] }>({ history: [], route: [], trail: [], traffic: empty(), stands: empty(), atc: empty(), metars: empty(), radar: null, fixes: empty() });
+  const data = useRef<{ route: number[][]; trail: number[][]; traffic: unknown; stands: unknown; atc: unknown; metars: unknown; radar: string | null; fixes: unknown; firs?: unknown; history: number[][][]; trailGradient: unknown }>({ trailGradient: altGradient([]), history: [], route: [], trail: [], traffic: empty(), stands: empty(), atc: empty(), metars: empty(), radar: null, fixes: empty() });
   const threeDRef = useRef(threeD);
   threeDRef.current = threeD;
   const glideRaf = useRef(0);
@@ -226,9 +227,11 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     m.addLayer({ id: "fixes", type: "circle", source: "fixes", minzoom: 4.5, paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 4.5, 2.2, 9, 4], "circle-color": light ? "#fff" : "#1B1030", "circle-stroke-color": "#E05CFF", "circle-stroke-width": 1.6 } });
     m.addLayer({ id: "fixes-label", type: "symbol", source: "fixes", minzoom: 5.5, layout: { "text-field": ["get", "ident"], "text-font": ["Noto Sans Bold"], "text-size": 10.5, "text-offset": [0, 0.95], "text-anchor": "top", "text-letter-spacing": 0.04 }, paint: { "text-color": light ? "#9B2FC2" : "#F0A6FF", "text-halo-color": light ? "rgba(255,255,255,.95)" : "rgba(10,6,20,.85)", "text-halo-width": 1.4 } });
     m.addLayer({ id: "route", type: "line", source: "route", layout: { "line-cap": "round" }, paint: { "line-color": "#E05CFF", "line-width": 2, "line-dasharray": [2.2, 1.6], "line-opacity": 0.95 } });
-    m.addLayer({ id: "trail-glow", type: "line", source: "trail", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": light ? "#FFFFFF" : "#0A84FF", "line-width": 7, "line-opacity": light ? 0.9 : 0.25, "line-blur": light ? 0 : 3 } });
+    // The trail, coloured by altitude along its length (like flight trackers), with a matching soft glow.
+    m.addLayer({ id: "trail-casing", type: "line", source: "trail", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": light ? "rgba(255,255,255,.95)" : "rgba(0,0,0,.55)", "line-width": 6.2 } });
+    m.addLayer({ id: "trail-glow", type: "line", source: "trail", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-gradient": data.current.trailGradient as never, "line-width": 11, "line-opacity": light ? 0.35 : 0.42, "line-blur": 6 } });
     m.addLayer({ id: "trail", type: "line", source: "trail", layout: { "line-cap": "round", "line-join": "round" },
-      paint: { "line-width": 3.4, "line-color": "#0A84FF" } });
+      paint: { "line-width": 3.8, "line-gradient": data.current.trailGradient as never } });
     // Weather radar under everything we draw.
     if (data.current.radar) addRadar(m, data.current.radar);
     m.addSource("metars", { type: "geojson", data: data.current.metars as ReturnType<typeof empty> });
@@ -366,25 +369,49 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     }
   }, [ready, history]);
 
-  // Route (plan) and trail
+  // Route (plan): only when the plan changes.
   useEffect(() => {
     const m = map.current;
     if (!m || !ready) return;
     const route = plan ? [[plan.origin.lon, plan.origin.lat], ...plan.fixes.map((f) => [f.lon, f.lat]), [plan.destination.lon, plan.destination.lat]] : [];
     data.current.route = route;
-    data.current.trail = trail.map((p) => [p.lon, p.lat]);
     (m.getSource("route") as GeoJSONSource | undefined)?.setData(line(route));
     const fx = { type: "FeatureCollection" as const, features: (plan?.fixes ?? []).filter((f) => !/^T\/[CD]$|^TOC$|^TOD$/.test(f.ident)).map((f) => ({ type: "Feature" as const, properties: { ident: f.ident }, geometry: { type: "Point" as const, coordinates: [f.lon, f.lat] } })) };
     data.current.fixes = fx;
     (m.getSource("fixes") as GeoJSONSource | undefined)?.setData(fx);
-    (m.getSource("trail") as GeoJSONSource | undefined)?.setData(line(data.current.trail));
-    if (!fitted.current && (route.length > 1 || trail.length > 1) && !aircraft) {
+    if (!fitted.current && route.length > 1 && !aircraft) {
       fitted.current = true;
-      const pts = (route.length > 1 ? route : trail.map((p) => [p.lon, p.lat])) as Array<[number, number]>;
-      const b = pts.reduce((bb, p) => bb.extend(p), new maplibregl.LngLatBounds(pts[0], pts[0]));
+      const b = (route as Array<[number, number]>).reduce((bb, p) => bb.extend(p), new maplibregl.LngLatBounds(route[0] as [number, number], route[0] as [number, number]));
       m.fitBounds(b, { padding: 60, duration: 0, maxZoom: 9 });
     }
-  }, [ready, plan, trail, aircraft === null || aircraft === undefined]);
+  }, [ready, plan]);
+
+  // Trail: smoothed, coloured by altitude, joined to the aircraft. At most about once a second (the map re-tiles the line each time).
+  const trailTimer = useRef(0);
+  const trailAt = useRef(0);
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !ready) return;
+    const draw = () => {
+      trailAt.current = performance.now(); trailTimer.current = 0;
+      const t = trailDisplay(trail, aircraft ? { lon: aircraft.lon, lat: aircraft.lat, alt: aircraft.alt ?? null } : null);
+      data.current.trail = t.coords;
+      data.current.trailGradient = t.gradient;
+      (m.getSource("trail") as GeoJSONSource | undefined)?.setData(line(t.coords));
+      for (const id of ["trail", "trail-glow"]) if (m.getLayer(id)) m.setPaintProperty(id, "line-gradient", t.gradient as never);
+      setTrailShown(t.coords.length > 1);
+      if (!fitted.current && t.coords.length > 1 && !aircraft && !plan) {
+        fitted.current = true;
+        const pts = t.coords as Array<[number, number]>;
+        const b = pts.reduce((bb, p) => bb.extend(p), new maplibregl.LngLatBounds(pts[0], pts[0]));
+        m.fitBounds(b, { padding: 60, duration: 0, maxZoom: 9 });
+      }
+    };
+    const since = performance.now() - trailAt.current;
+    if (since > 900) draw();
+    else if (!trailTimer.current) trailTimer.current = window.setTimeout(draw, 900 - since);
+  }, [ready, trail, aircraft?.lat, aircraft?.lon]);
+  useEffect(() => () => window.clearTimeout(trailTimer.current), []);
 
   // Traffic
   useEffect(() => {
@@ -571,6 +598,12 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     <>
       <div ref={el} className="map" />
       <div className="map-vignette" aria-hidden="true" />
+      {trailShown && (
+        <div className="trail-key" aria-label="Trail colour shows altitude">
+          <span className="tk-bar" aria-hidden="true" />
+          <span className="tk-l"><b>0</b><b>10k</b><b>20k</b><b>30k</b><b>40k ft</b></span>
+        </div>
+      )}
       {!tilesOk && <div className="map-note"><div className="notice info">The map couldn't load, so you're seeing coastlines only. Your flight, trail and traffic are still live. <button className="linklike" onClick={() => setTilesOk(true)}>Try again</button></div></div>}
     </>
   );
@@ -623,6 +656,67 @@ function empty() {
 function multi(lines: number[][][]) {
   return { type: "Feature" as const, properties: {}, geometry: { type: "MultiLineString" as const, coordinates: lines } };
 }
+/** Altitude colours, the way flight trackers draw them: amber on the ground, through yellow, green and cyan, to blue and violet up high. */
+const ALT_STOPS: Array<[number, string]> = [[0, "#FFB020"], [3000, "#F7E04B"], [10000, "#4ADE80"], [20000, "#22D3EE"], [30000, "#3B82F6"], [40000, "#A855F7"]];
+function altColor(ft: number): string {
+  const a = Math.max(0, ft);
+  for (let i = 1; i < ALT_STOPS.length; i++) {
+    const [h, c] = ALT_STOPS[i]!, [l, d] = ALT_STOPS[i - 1]!;
+    if (a <= h) { const k = (a - l) / (h - l); return mix(d, c, k); }
+  }
+  return ALT_STOPS.at(-1)![1];
+}
+function mix(a: string, b: string, k: number): string {
+  const p = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const x = p(a), y = p(b);
+  return `rgb(${x.map((v, i) => Math.round(v + (y[i]! - v) * k)).join(",")})`;
+}
+/** A line-gradient along the trail: one colour stop per stretch, by the altitude flown there. */
+function altGradient(pts: Array<{ lon: number; lat: number; alt: number }>): unknown[] {
+  if (pts.length < 2) return ["interpolate", ["linear"], ["line-progress"], 0, "#0A84FF", 1, "#0A84FF"];
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1]!, b = pts[i]!, k = Math.cos((a.lat * Math.PI) / 180);
+    cum.push(cum[i - 1]! + Math.hypot((b.lon - a.lon) * k, b.lat - a.lat));
+  }
+  const total = cum.at(-1)! || 1;
+  const N = Math.min(48, pts.length);
+  const expr: unknown[] = ["interpolate", ["linear"], ["line-progress"]];
+  let j = 0, lastF = -1;
+  for (let s = 0; s < N; s++) {
+    const f = s / (N - 1), d = f * total;
+    while (j < cum.length - 2 && cum[j + 1]! < d) j++;
+    const seg = cum[j + 1]! - cum[j]! || 1, r = Math.min(1, Math.max(0, (d - cum[j]!) / seg));
+    const alt = pts[j]!.alt + (pts[j + 1]!.alt - pts[j]!.alt) * r;
+    if (f <= lastF) continue;
+    expr.push(f, altColor(alt)); lastF = f;
+  }
+  return expr;
+}
+/** The trail as drawn: corners smoothed (Chaikin), joined to where the aircraft is now, plus its altitude gradient. */
+function trailDisplay(trail: TrailPoint[], ac: { lon: number; lat: number; alt: number | null } | null): { coords: number[][]; gradient: unknown[] } {
+  let pts = trail.map((p) => ({ lon: p.lon, lat: p.lat, alt: p.alt }));
+  if (ac && pts.length) {
+    const last = pts.at(-1)!;
+    if (Math.abs(last.lon - ac.lon) + Math.abs(last.lat - ac.lat) > 1e-5) pts.push({ lon: ac.lon, lat: ac.lat, alt: ac.alt ?? last.alt });
+  }
+  // Long trails: thin evenly before smoothing so the line stays light to draw.
+  if (pts.length > 2500) { const k = Math.ceil(pts.length / 2500); pts = pts.filter((_, i) => i % k === 0 || i === pts.length - 1); }
+  if (pts.length > 2) {
+    const sm = [pts[0]!];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i]!, b = pts[i + 1]!;
+      // Don't round off big jumps (a slew or a gap in the recording).
+      if (Math.abs(a.lon - b.lon) + Math.abs(a.lat - b.lat) > 0.6) { sm.push(b); continue; }
+      sm.push({ lon: a.lon * 0.75 + b.lon * 0.25, lat: a.lat * 0.75 + b.lat * 0.25, alt: a.alt * 0.75 + b.alt * 0.25 });
+      sm.push({ lon: a.lon * 0.25 + b.lon * 0.75, lat: a.lat * 0.25 + b.lat * 0.75, alt: a.alt * 0.25 + b.alt * 0.75 });
+    }
+    sm.push(pts.at(-1)!);
+    pts = sm;
+  }
+  return { coords: pts.map((p) => [p.lon, p.lat]), gradient: altGradient(pts) };
+}
+
 function line(coords: number[][]) {
   return { type: "FeatureCollection" as const, features: coords.length > 1 ? [{ type: "Feature" as const, properties: {}, geometry: { type: "LineString" as const, coordinates: coords } }] : [] };
 }
