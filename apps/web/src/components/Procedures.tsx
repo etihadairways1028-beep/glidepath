@@ -24,9 +24,12 @@ export function loadChoice(dep: string | null | undefined, arr?: string | null):
     return arr && c.arr && c.arr !== arr.toUpperCase() ? {} : c;
   } catch { return {}; }
 }
+// Another tab or window changed a procedure pick: update this one too.
+try { window.addEventListener("storage", (e) => { if (e.key?.startsWith("glidepath.procs.")) window.dispatchEvent(new Event("glidepath-procs")); }); } catch { /* no window */ }
 function saveChoice(dep: string, c: ProcChoice) {
   try { localStorage.setItem(KEY(dep), JSON.stringify(c)); } catch { /* private mode */ }
   window.dispatchEvent(new Event("glidepath-procs"));
+  window.dispatchEvent(new Event("glidepath-procs-local"));
 }
 /** The pilot's choices for the current departure (destination, runways, procedures). */
 export function useChoice(dep: string | null | undefined, arr: string | null | undefined): ProcChoice {

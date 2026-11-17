@@ -15,6 +15,7 @@ import { UpdateCenter } from "./components/UpdateCenter";
 import { FlightCompletePrompt } from "./components/FlightReview";
 import { APP_VERSION, WhatsNew } from "./components/WhatsNew";
 import { SideClock } from "./components/Clock";
+import { initSync } from "./data/sync";
 import { settingsStore, store, useApp, useSettings } from "./data/store";
 import { CockpitScreen } from "./screens/Cockpit";
 import { WeatherScreen } from "./screens/Weather";
@@ -114,7 +115,7 @@ export function App() {
     consumePairingLink();
     connectFromSettings();
     if (!settingsStore.get().token && new URLSearchParams(location.search).get("demo") === "1") startDemo();
-    void initCloud().then(initAutoConnect);
+    void initCloud().then(() => { initAutoConnect(); initSync(); });
   }, []);
 
   // Signed in but not paired on this device: look for one of the account's PCs on this Wi-Fi.

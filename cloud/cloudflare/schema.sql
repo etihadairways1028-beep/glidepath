@@ -92,3 +92,10 @@ CREATE TABLE IF NOT EXISTS ai_usage (
   n INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (day, user_id)
 );
+
+-- Settings and choices that follow the pilot across devices (map style, units, procedure picks…).
+CREATE TABLE IF NOT EXISTS user_sync (
+  user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  data TEXT NOT NULL,
+  updated_at INTEGER NOT NULL
+);

@@ -265,6 +265,22 @@ async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Re
     return json(200, { linked: true, online: st.online, name: st.name ?? linked.name });
   }
 
+  // Settings sync: the newest copy wins, so a change on any device shows up on the others.
+  if (p === "/me/sync" && req.method === "GET") {
+    const r = await env.DB.prepare("SELECT data, updated_at FROM user_sync WHERE user_id = ?").bind(user.id).first<{ data: string; updated_at: number }>();
+    return json(200, r ? { data: JSON.parse(r.data), updatedAt: r.updated_at } : { data: null, updatedAt: 0 });
+  }
+  if (p === "/me/sync" && req.method === "PUT") {
+    const b = await req.json().catch(() => null) as { data?: unknown; updatedAt?: number } | null;
+    if (!b || typeof b.data !== "object" || b.data === null || typeof b.updatedAt !== "number") return fail(400, "Send data and updatedAt.");
+    const text = JSON.stringify(b.data);
+    if (text.length > 32_000) return fail(413, "Too much to sync.");
+    const at = Math.min(Date.now() + 60_000, Math.floor(b.updatedAt));
+    await env.DB.prepare("INSERT INTO user_sync (user_id, data, updated_at) VALUES (?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at WHERE excluded.updated_at > user_sync.updated_at").bind(user.id, text, at).run();
+    const r = await env.DB.prepare("SELECT updated_at FROM user_sync WHERE user_id = ?").bind(user.id).first<{ updated_at: number }>();
+    return json(200, { ok: true, updatedAt: r?.updated_at ?? at });
+  }
+
   if (p === "/ai/chat" && req.method === "POST") {
     const body = await req.json().catch(() => null) as { stream?: boolean } | null;
     if (body?.stream) {
@@ -296,7 +312,7 @@ async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Re
     return json(200, { ...publicUser(u!), email_prefs: await prefsOf(env, user.id) });
   }
   if (p === "/me" && req.method === "DELETE") {
-    await env.DB.batch(["sessions", "flights", "bridges", "relay_keys", "email_prefs", "password_resets", "email_log", "live_shares", "challenge", "ai_usage"].map((t) => env.DB.prepare(`DELETE FROM ${t} WHERE user_id = ?`).bind(user.id)).concat(env.DB.prepare("DELETE FROM users WHERE id = ?").bind(user.id)));
+    await env.DB.batch(["sessions", "flights", "bridges", "relay_keys", "email_prefs", "password_resets", "email_log", "live_shares", "challenge", "ai_usage", "user_sync"].map((t) => env.DB.prepare(`DELETE FROM ${t} WHERE user_id = ?`).bind(user.id)).concat(env.DB.prepare("DELETE FROM users WHERE id = ?").bind(user.id)));
     return json(200, { ok: true });
   }
 

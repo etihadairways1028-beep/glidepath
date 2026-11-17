@@ -125,9 +125,11 @@ try {
   /* private mode or storage disabled: defaults */
 }
 
+const localChangeListeners = new Set<(patch: Partial<Settings>) => void>();
 export const settingsStore = {
   get: () => settings,
-  set(patch: Partial<Settings>) {
+  /** `remote`: the change came from another device (don't send it back). */
+  set(patch: Partial<Settings>, opts?: { remote?: boolean }) {
     settings = { ...settings, ...patch };
     try {
       localStorage.setItem("glidepath.settings", JSON.stringify(settings));
@@ -135,12 +137,25 @@ export const settingsStore = {
       /* ignore */
     }
     settingsListeners.forEach((l) => l());
+    if (!opts?.remote) localChangeListeners.forEach((l) => l(patch));
   },
   subscribe(l: Listener) {
     settingsListeners.add(l);
     return () => settingsListeners.delete(l);
   },
+  /** Changes made on this device (for syncing to the pilot's other devices). */
+  onLocalChange(l: (patch: Partial<Settings>) => void) {
+    localChangeListeners.add(l);
+    return () => localChangeListeners.delete(l);
+  },
 };
+// Another Glidepath tab or window on this device changed a setting: show it here straight away.
+try {
+  window.addEventListener("storage", (e) => {
+    if (e.key !== "glidepath.settings" || !e.newValue) return;
+    try { settings = { ...DEFAULT_SETTINGS, ...JSON.parse(e.newValue) }; settingsListeners.forEach((l) => l()); } catch { /* ignore a half-written value */ }
+  });
+} catch { /* no window (tests) */ }
 
 export function useSettings(): Settings {
   return useSyncExternalStore(settingsStore.subscribe, settingsStore.get, () => DEFAULT_SETTINGS);
