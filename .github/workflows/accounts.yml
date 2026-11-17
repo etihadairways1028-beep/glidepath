@@ -71,6 +71,10 @@ jobs:
 
       - name: Set the password pepper (first run only)
         run: |
+          # Web Push: Glidepath's signing key (VAPID), made once and kept as a secret. Never printed.
+          if ! npx wrangler secret list 2>/dev/null | grep -q '"VAPID_JWK"'; then
+            node -e 'crypto.subtle.generateKey({name:"ECDSA",namedCurve:"P-256"},true,["sign"]).then(k=>crypto.subtle.exportKey("jwk",k.privateKey)).then(j=>process.stdout.write(JSON.stringify({kty:j.kty,crv:j.crv,x:j.x,y:j.y,d:j.d})))' | npx wrangler secret put VAPID_JWK >/dev/null && echo "Created the notifications signing key."
+          fi
           if ! npx wrangler secret list 2>/dev/null | grep -q '"PEPPER"'; then
             openssl rand -hex 32 | npx wrangler secret put PEPPER
           fi
@@ -115,6 +119,11 @@ jobs:
           echo "Sign-up:"; R=$(curl -s -w "\n%{http_code} %{time_total}s" -X POST "$U/auth/signup" -H "Origin: https://glidepath-ad9.pages.dev" -H "Content-Type: application/json" -d "{\"email\":\"$E\",\"password\":\"test-password-123\",\"name\":\"CI\"}"); echo "$R" | head -c 400; echo
           TOKEN=$(echo "$R" | head -1 | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
           if [ -n "$TOKEN" ]; then curl -s -X DELETE "$U/me" -H "Authorization: Bearer $TOKEN" -o /dev/null -w "Cleanup: %{http_code}\n"; else echo "::warning::Sign-up did not return a session."; fi
+
+      - name: Check notifications are ready
+        run: |
+          sleep 8
+          curl -s "${{ steps.deploy.outputs.url }}/push/key" | grep -q '"key"' && echo "Notifications: signing key is live." || echo "::warning::Notifications key not available yet."
 
       - name: Ask Glidepath AI a real question
         working-directory: .

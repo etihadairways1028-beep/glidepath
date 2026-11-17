@@ -4,7 +4,9 @@
   "version": "0.1.0",
   "description": "Glidepath flight simulator companion platform (monorepo)",
   "packageManager": "pnpm@10.28.0",
-  "engines": { "node": ">=22.13" },
+  "engines": {
+    "node": ">=22.13"
+  },
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -15,6 +17,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "http_ece": "1.2.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"

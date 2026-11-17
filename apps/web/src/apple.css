@@ -1223,3 +1223,5 @@ button, .btn, .seg, .tabbar { -webkit-user-select: none; user-select: none; }
 /* Pressing always wins over hovering (the ring and the sink show on a laptop too). */
 html:root :is(.btn, .chip-btn, .rc-tog, .radar-play, .wn-go):not(:disabled):hover:active { transform: scale(.91) !important; box-shadow: 0 0 0 5px var(--press-ring), 0 6px 18px -8px rgba(10,132,255,.7) !important; }
 html:root :is(.quick-a, .more-tile, .cr-tile):hover:active { transform: scale(.95) !important; box-shadow: 0 0 0 4px var(--press-ring) !important; }
+.push-note { font-size: 13px; margin: 4px 0 2px; line-height: 1.45; }
+.push-note.ok { color: #30D158; } .push-note.warn { color: #FF9F0A; }

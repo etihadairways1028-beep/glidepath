@@ -48,3 +48,18 @@ self.addEventListener("notificationclick", (e) => {
     return self.clients.openWindow(target);
   }));
 });
+
+// A push from your Glidepath account (sent by your Bridge): show it on the lock screen and home screen.
+self.addEventListener("push", (e) => {
+  let m = { title: "Glidepath", body: "", url: "/app/", tag: "glidepath" };
+  try { m = { ...m, ...(e.data ? e.data.json() : {}) }; } catch { if (e.data) m.body = e.data.text(); }
+  const scope = self.registration.scope;
+  e.waitUntil(self.registration.showNotification(m.title, {
+    body: m.body,
+    tag: m.tag,
+    renotify: true,
+    icon: new URL("icons/icon-192.png", scope).href,
+    badge: new URL("icons/badge-72.png", scope).href,
+    data: { url: m.url },
+  }));
+});

@@ -15,11 +15,13 @@ import { addTrail, cleanLive, cleanName, leaderboard, monthRange, shareId } from
 import { Relay } from "./relay";
 import { welcomeMail, debriefMail, deviceName, inflightMail, resetMail, signinMail } from "./mails";
 import { aiChat, aiChatStream, aiLeft, PER_USER_DAILY } from "./ai";
+import { allowedEndpoint, publicKeyOf, pushToUser, sendPush, vapidKey } from "./push";
 
 interface Env {
   DB: D1Database;
   RELAY: DurableObjectNamespace;
   AI?: Ai;
+  VAPID_JWK?: string;
   PEPPER: string;
   BREVO_API_KEY?: string;
   BREVO_SENDER_EMAIL?: string;
@@ -145,6 +147,27 @@ async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Re
   const p = url.pathname.replace(/\/+$/, "") || "/";
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (p === "/" || p === "/health") return json(200, { ok: true, service: "glidepath-accounts" });
+
+  // Web Push: the public key devices subscribe with.
+  if (p === "/push/key" && req.method === "GET") {
+    const k = vapidKey(env);
+    return k ? json(200, { key: publicKeyOf(k) }) : fail(503, "Notifications aren't switched on yet.");
+  }
+  // The Bridge (signed in with its PC key) tells the pilot's devices about the flight.
+  if (p === "/relay/notify" && req.method === "POST") {
+    const key = req.headers.get("x-relay-key") ?? "";
+    if (!/^[a-f0-9]{64}$/.test(key)) return fail(401, "This PC isn't signed in.");
+    const k = await env.DB.prepare("SELECT user_id FROM relay_keys WHERE key_hash = ?").bind(await sha256(key)).first<{ user_id: string }>();
+    if (!k) return fail(401, "This PC isn't signed in.");
+    const b = await req.json().catch(() => null) as { kind?: string; flight_id?: string; title?: string; body?: string; url?: string } | null;
+    const kind = ["tod", "landed", "review", "test"].includes(String(b?.kind)) ? String(b!.kind) : null;
+    const title = String(b?.title ?? "").slice(0, 80), text = String(b?.body ?? "").slice(0, 240);
+    if (!kind || !title) return fail(400, "Missing message.");
+    // One of each kind per flight, however often the Bridge asks.
+    if (kind !== "test" && !(await once(env, k.user_id, `push:${kind}:${String(b?.flight_id ?? "").slice(0, 60)}`, "1"))) return json(200, { sent: 0, reason: "Already sent for this flight." });
+    const url = typeof b?.url === "string" && b.url.startsWith("/") ? b.url.slice(0, 200) : "/app/";
+    return json(200, await pushToUser(env, k.user_id, { title, body: text, url, tag: `gp-${kind}` }));
+  }
 
   if (p === "/auth/signup" && req.method === "POST") {
     const b = await body<{ name?: string; email?: string; password?: string }>(req);
@@ -281,6 +304,30 @@ async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Re
     return json(200, { ok: true, updatedAt: r?.updated_at ?? at });
   }
 
+  // This device's notifications: subscribe, unsubscribe, test.
+  if (p === "/push/subscribe" && req.method === "POST") {
+    const b = await req.json().catch(() => null) as { endpoint?: string; keys?: { p256dh?: string; auth?: string }; label?: string } | null;
+    const ep = String(b?.endpoint ?? ""), p256dh = String(b?.keys?.p256dh ?? ""), auth = String(b?.keys?.auth ?? "");
+    if (!allowedEndpoint(ep) || !/^[A-Za-z0-9_-]{80,100}$/.test(p256dh) || !/^[A-Za-z0-9_-]{16,32}$/.test(auth)) return fail(400, "That isn't a push subscription this service can use.");
+    const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM push_subs WHERE user_id = ?").bind(user.id).first<{ n: number }>();
+    if ((n?.n ?? 0) >= 12) await env.DB.prepare("DELETE FROM push_subs WHERE endpoint IN (SELECT endpoint FROM push_subs WHERE user_id = ? ORDER BY created_at ASC LIMIT 1)").bind(user.id).run();
+    await env.DB.prepare("INSERT INTO push_subs (endpoint, user_id, p256dh, auth, label, created_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(endpoint) DO UPDATE SET user_id = excluded.user_id, p256dh = excluded.p256dh, auth = excluded.auth, label = excluded.label")
+      .bind(ep, user.id, p256dh, auth, String(b?.label ?? "").slice(0, 60) || null, Date.now()).run();
+    return json(200, { ok: true });
+  }
+  if (p === "/push/unsubscribe" && req.method === "POST") {
+    const b = await req.json().catch(() => null) as { endpoint?: string } | null;
+    await env.DB.prepare("DELETE FROM push_subs WHERE endpoint = ? AND user_id = ?").bind(String(b?.endpoint ?? ""), user.id).run();
+    return json(200, { ok: true });
+  }
+  if (p === "/push/test" && req.method === "POST") {
+    const b = await req.json().catch(() => null) as { endpoint?: string } | null;
+    const sub = await env.DB.prepare("SELECT endpoint, p256dh, auth FROM push_subs WHERE endpoint = ? AND user_id = ?").bind(String(b?.endpoint ?? ""), user.id).first<{ endpoint: string; p256dh: string; auth: string }>();
+    if (!sub) return fail(404, "This device isn't set up for notifications yet.");
+    const r = await sendPush(env, sub, { title: "Glidepath notifications are on", body: "You'll hear about top of descent, your landing and your review, even with the app closed.", url: "/app/#/settings", tag: "gp-test" });
+    return r === "ok" ? json(200, { ok: true }) : fail(502, r === "gone" ? "This device's subscription has expired. Turn notifications off and on again." : "The push service didn't accept the test. Try again in a minute.");
+  }
+
   if (p === "/ai/chat" && req.method === "POST") {
     const body = await req.json().catch(() => null) as { stream?: boolean } | null;
     if (body?.stream) {
@@ -312,7 +359,7 @@ async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Re
     return json(200, { ...publicUser(u!), email_prefs: await prefsOf(env, user.id) });
   }
   if (p === "/me" && req.method === "DELETE") {
-    await env.DB.batch(["sessions", "flights", "bridges", "relay_keys", "email_prefs", "password_resets", "email_log", "live_shares", "challenge", "ai_usage", "user_sync"].map((t) => env.DB.prepare(`DELETE FROM ${t} WHERE user_id = ?`).bind(user.id)).concat(env.DB.prepare("DELETE FROM users WHERE id = ?").bind(user.id)));
+    await env.DB.batch(["sessions", "flights", "bridges", "relay_keys", "email_prefs", "password_resets", "email_log", "live_shares", "challenge", "ai_usage", "user_sync", "push_subs"].map((t) => env.DB.prepare(`DELETE FROM ${t} WHERE user_id = ?`).bind(user.id)).concat(env.DB.prepare("DELETE FROM users WHERE id = ?").bind(user.id)));
     return json(200, { ok: true });
   }
 

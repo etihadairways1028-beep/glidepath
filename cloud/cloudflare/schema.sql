@@ -99,3 +99,14 @@ CREATE TABLE IF NOT EXISTS user_sync (
   data TEXT NOT NULL,
   updated_at INTEGER NOT NULL
 );
+
+-- Web Push subscriptions: one per device that turned on notifications.
+CREATE TABLE IF NOT EXISTS push_subs (
+  endpoint TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  label TEXT,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS push_subs_user ON push_subs(user_id);

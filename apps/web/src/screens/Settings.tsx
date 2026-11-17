@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { disablePush, enablePush, pushState, testPush, type PushState } from "../data/push";
 import { APP_VERSION, showWhatsNew } from "../components/WhatsNew";
 import { BaseMapPicker, TrafficSources } from "../components/MapLayers";
 import { connectFromSettings } from "../App";
@@ -119,6 +120,7 @@ export function SettingsScreen() {
           <Section title="Units">
             <div className="between"><span>Fuel</span><div className="seg">{(["kg", "lb"] as const).map((u) => <button key={u} className={s.fuelUnit === u ? "on" : ""} onClick={() => settingsStore.set({ fuelUnit: u })}>{u}</button>)}</div></div>
           </Section>
+          <Section title="Lock screen notifications"><PushSetup /></Section>
           <Section title="Glideslope messages">
             <label className="between" style={{ padding: "8px 0" }}><span>Messages at each stage of the flight<br /><span className="faint" style={{ fontSize: 12.5 }}>Taxi, take-off, cruise reached, top of descent, approach, touchdown</span></span><input className="switch" type="checkbox" checked={s.flightMessages} onChange={(e) => settingsStore.set({ flightMessages: e.target.checked })} /></label>
             <label className="between" style={{ padding: "8px 0" }}><span>Lights messages and reminders<br /><span className="faint" style={{ fontSize: 12.5 }}>When lights are switched, beacon before engine start, landing lights at 10,000 ft. Some add-ons (like Fenix) run their own lights and may not report them.</span></span><input className="switch" type="checkbox" checked={s.lightMessages} onChange={(e) => settingsStore.set({ lightMessages: e.target.checked })} /></label>
@@ -188,4 +190,36 @@ function EmailsInSettings() {
     </Section>
   );
   return <EmailSettings />;
+}
+
+/** This device's lock screen notifications (Web Push through the account; sent by the Bridge). */
+function PushSetup() {
+  const cloud = useCloud();
+  const signed = !!(cloud.active && cloud.accounts.some((a) => a.slot === cloud.active));
+  const [st, setSt] = useState<PushState | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  useEffect(() => { void pushState().then(setSt); }, []);
+  const on = st === "on";
+  const toggle = async () => {
+    setBusy(true); setMsg(null);
+    if (on) { await disablePush(); setSt(await pushState()); }
+    else { const err = await enablePush(); setSt(await pushState()); if (err) setMsg({ ok: false, text: err }); else { const t = await testPush(); setMsg(t ? { ok: false, text: t } : { ok: true, text: "Done. A test notification is on its way." }); } }
+    setBusy(false);
+  };
+  return (
+    <div className="push-setup">
+      <label className="between" style={{ padding: "8px 0" }}>
+        <span>On this {st === null ? "device" : /iPad|iPhone/.test(navigator.userAgent) ? (/iPad/.test(navigator.userAgent) ? "iPad" : "iPhone") : "device"}<br />
+          <span className="faint" style={{ fontSize: 12.5 }}>Top of descent, landed (with your touchdown), and your flight review, even with Glidepath closed. Sent by the Bridge on your PC through your account.</span></span>
+        <input className="switch" type="checkbox" checked={on} disabled={busy || !signed || st === "unsupported" || st === "needs-home-screen"} onChange={() => void toggle()} />
+      </label>
+      {!signed && <p className="faint push-note">Sign in (Account) on this device and on the Bridge page on your PC to get them.</p>}
+      {signed && st === "needs-home-screen" && <p className="faint push-note">On iPhone and iPad, Apple allows these for apps on the Home Screen: in Safari, tap Share, then <b>Add to Home Screen</b>, open Glidepath from there and turn this on.</p>}
+      {signed && st === "blocked" && <p className="faint push-note">Notifications are blocked for Glidepath. Allow them in your device or browser settings.</p>}
+      {signed && st === "unsupported" && <p className="faint push-note">This browser can't show notifications from websites.</p>}
+      {on && <div className="row" style={{ gap: 8, marginTop: 4 }}><button className="btn small" disabled={busy} onClick={async () => { setBusy(true); const t = await testPush(); setMsg(t ? { ok: false, text: t } : { ok: true, text: "Test sent. It should arrive in a few seconds." }); setBusy(false); }}>Send a test</button></div>}
+      {msg && <p className={`push-note ${msg.ok ? "ok" : "warn"}`}>{msg.text}</p>}
+    </div>
+  );
 }

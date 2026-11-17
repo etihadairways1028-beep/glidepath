@@ -66,14 +66,26 @@ export class CloudLink {
   private get ua(): string { return `GlidepathBridge/${this.o.version} (${process.platform === "win32" ? "Windows" : process.platform})`; }
 
   /** Calls the accounts service, trying the website's address first (some networks block workers.dev). */
-  private async call<T>(path: string, init: { method?: string; token?: string; body?: unknown }): Promise<{ base: string; status: number; data: T & { error?: string } }> {
+  /**
+   * Tell the pilot's devices (lock screen notifications) about the flight. Best effort: never throws.
+   * The account sends each kind once per flight, so repeats are harmless.
+   */
+  async notify(kind: "tod" | "landed" | "review", flightId: string, title: string, body: string, url = "/app/"): Promise<void> {
+    if (!this.saved?.key) return;
+    try {
+      const r = await this.call<{ sent?: number }>("/relay/notify", { method: "POST", headers: { "x-relay-key": this.saved.key }, body: { kind, flight_id: flightId, title, body, url } });
+      this.o.log.info(`Notification "${title}": ${r.status === 200 ? `${r.data.sent ?? 0} device(s)` : `not sent (${r.data.error ?? r.status})`}`);
+    } catch (e) { this.o.log.warn(`Notification "${title}" not sent: ${(e as Error).message}`); }
+  }
+
+  private async call<T>(path: string, init: { method?: string; token?: string; body?: unknown; headers?: Record<string, string> }): Promise<{ base: string; status: number; data: T & { error?: string } }> {
     let last: Error | null = null;
     const bases = this.saved?.base ? [this.saved.base, ...CLOUD_BASES.filter((b) => b !== this.saved!.base)] : CLOUD_BASES;
     for (const base of bases) {
       try {
         const r = await fetch(base + path, {
           method: init.method ?? "GET",
-          headers: { "User-Agent": this.ua, ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}), ...(init.token ? { Authorization: `Bearer ${init.token}` } : {}) },
+          headers: { "User-Agent": this.ua, ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}), ...(init.token ? { Authorization: `Bearer ${init.token}` } : {}), ...(init.headers ?? {}) },
           body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
           signal: AbortSignal.timeout(15_000),
         });

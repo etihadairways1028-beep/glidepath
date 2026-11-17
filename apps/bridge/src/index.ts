@@ -1,4 +1,4 @@
-import type { FlightPhase, TelemetryFrame } from "@glidepath/protocol";
+import type { FlightEvent, FlightPhase, FlightSummary, LandingReport, TelemetryFrame } from "@glidepath/protocol";
 /**
  * Glidepath Bridge — entry point.
  *
@@ -137,6 +137,28 @@ async function main(): Promise<void> {
   });
   server.updater = updater;
   discord.start();
+  // Lock screen notifications on the pilot's devices (through the account, when this PC is signed in).
+  const apt = (f: FlightSummary | null, side: "arr" | "dep") => (side === "arr" ? f?.arrivalIcao ?? f?.plan?.destination.icao : f?.departureIcao ?? f?.plan?.origin.icao) ?? null;
+  session.on("event", (e: FlightEvent) => {
+    const f = session.activeFlight;
+    if (!f) return;
+    if (e.type === "TOP_OF_DESCENT") {
+      const to = apt(f, "arr");
+      void cloud.notify("tod", f.id, "Top of descent", `Time to start down${to ? ` for ${to}` : ""}. Brief the arrival and set up the approach.`);
+    }
+  });
+  session.on("landing", (r: LandingReport) => {
+    const f = session.activeFlight;
+    if (!f) return;
+    const to = f.arrivalIcao ?? apt(f, "arr");
+    const fpm = r.touchdownVsFpm != null ? `${Math.round(Math.abs(r.touchdownVsFpm))} fpm` : null;
+    void cloud.notify("landed", f.id, `Landed${to ? ` at ${to}` : ""}`, [fpm, r.grade ? `grade ${r.grade}` : null, f.arrivalRunway ? `runway ${f.arrivalRunway}` : null].filter(Boolean).join(" · ") || "Welcome in.");
+  });
+  session.on("flight", (f: FlightSummary) => {
+    if (f.status !== "completed") return;
+    const route = [apt(f, "dep"), apt(f, "arr")].filter(Boolean).join(" → ");
+    void cloud.notify("review", f.id, "Your flight review is ready", `${route ? `${route}: ` : ""}see your scores and one thing to work on.`, `/app/#/review/${encodeURIComponent(f.id)}`);
+  });
   session.on("frame", (frame: TelemetryFrame, phase: FlightPhase) => discord.update(activityFor(session.activeFlight, frame, phase)));
   setInterval(() => { if (!lastFrameAt || Date.now() - lastFrameAt > 120_000) discord.update(null); }, 30_000).unref();
   server.setCharts(new ChartService(join(cfg.dataDir, "charts"), fetch, log.child("charts")));
