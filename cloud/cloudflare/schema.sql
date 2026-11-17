@@ -84,3 +84,11 @@ CREATE TABLE IF NOT EXISTS relay_keys (
   last_used INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS relay_keys_user ON relay_keys(user_id);
+
+-- Glidepath AI: questions asked per day (per pilot, and '*' for everyone), for the free-allowance caps.
+CREATE TABLE IF NOT EXISTS ai_usage (
+  day TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  n INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (day, user_id)
+);

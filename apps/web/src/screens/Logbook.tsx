@@ -1,5 +1,5 @@
 import { ShareCardButton } from "../components/ShareCard";
-import { ReviewScore } from "../components/FlightReview";
+import { ReviewPending, ReviewScore } from "../components/FlightReview";
 import { LandingHistory } from "../components/LandingHistory";
 import { ApproachCoach } from "../components/ApproachCoach";
 import { Replay, replayPoints } from "../components/Replay";
@@ -114,6 +114,8 @@ export function FlightDetail({ id, review }: { id: string; review?: boolean }) {
   const [flight, setFlight] = useState<FlightSummary | null>(null);
   const [trail, setTrail] = useState<TrailPoint[]>([]);
   const [frames, setFrames] = useState<TelemetryFrame[] | null>(null);
+  // True while the recorded frames are still on their way, so the score is worked out once, from everything.
+  const [framesLoading, setFramesLoading] = useState(false);
   const [events, setEvents] = useState<FlightEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
@@ -121,7 +123,10 @@ export function FlightDetail({ id, review }: { id: string; review?: boolean }) {
       setFlight(liveFlight); setTrail(liveTrail); setEvents(liveEvents);
       // The demo's recorded frames, up to where the demo has got to (for the approach coach).
       const until = liveFlight.onBlockAt ?? liveFlight.endedAt ?? liveFlight.wheelsDownAt;
-      if (until) void fetch("data/demo-flight.json").then((r) => r.json()).then((d: { frames: TelemetryFrame[] }) => setFrames(d.frames.filter((f) => f.t <= until + 60_000))).catch(() => undefined);
+      if (until) {
+        setFramesLoading(true);
+        void fetch("data/demo-flight.json").then((r) => r.json()).then((d: { frames: TelemetryFrame[] }) => setFrames(d.frames.filter((f) => f.t <= until + 60_000))).catch(() => undefined).finally(() => setFramesLoading(false));
+      }
       return;
     }
     setError(null);
@@ -150,7 +155,7 @@ export function FlightDetail({ id, review }: { id: string; review?: boolean }) {
   return (
     <div className="stack">
       <a href="#/logbook" className="btn small" style={{ alignSelf: "flex-start" }}><span style={{ width: 16, height: 16 }}>{Icon.back()}</span>Logbook</a>
-      {review && <ReviewScore flight={flight} frames={frames} />}
+      {review && (framesLoading ? <ReviewPending /> : <ReviewScore flight={flight} frames={frames} />)}
       <div className="between wrap">
         <div>
           <h1 className="title data">{flight.departureIcao ?? "····"} → {flight.arrivalIcao ?? "····"}</h1>
@@ -167,7 +172,7 @@ export function FlightDetail({ id, review }: { id: string; review?: boolean }) {
           <p className="fh-meta">{[flight.plan?.callsign ?? flight.callsign, flight.aircraft?.registration, flight.aircraft?.title].filter(Boolean).join(", ")}</p>
           {flight.landings.at(-1) ? <p className="fh-meta" style={{ marginTop: 10 }}>Landed at <b style={{ color: "var(--ink)" }}>{fmt(Math.abs(flight.landings.at(-1)!.touchdownVsFpm ?? 0))} fpm</b>, graded {flight.landings.at(-1)!.grade}</p> : null}
       </AircraftHero>
-      {!review && flight.status === "completed" && <ReviewScore flight={flight} frames={frames} />}
+      {!review && flight.status === "completed" && (framesLoading ? <ReviewPending /> : <ReviewScore flight={flight} frames={frames} />)}
       <DebriefPanel flight={flight} />
       <ApproachCoach frames={frames} landing={flight.landings.at(-1)} />
       {trail.length > 1 ? (

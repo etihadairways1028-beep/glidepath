@@ -13,6 +13,7 @@ import { startDemo } from "./data/demo";
 import { initAutoConnect, tryRelay } from "./data/connect";
 import { UpdateCenter } from "./components/UpdateCenter";
 import { FlightCompletePrompt } from "./components/FlightReview";
+import { APP_VERSION, WhatsNew } from "./components/WhatsNew";
 import { settingsStore, store, useApp, useSettings } from "./data/store";
 import { CockpitScreen } from "./screens/Cockpit";
 import { WeatherScreen } from "./screens/Weather";
@@ -233,13 +234,14 @@ export function App() {
                 <a className={`nav-a${screen === n.id || (!screen && n.id === "home") ? " on" : ""}`} href={`#/${n.id}`}><span className={`nav-ic ic-${n.id}`}>{n.icon()}</span>{n.label}</a>
               </Fragment>
             ))}
-            <div className="side-foot faint">{mode === "demo" ? "Demo flight: synthetic data" : `Glidepath 1.0.2${status?.bridgeVersion && status.bridgeVersion !== "demo" ? ` · Bridge ${status.bridgeVersion}` : ""}`}</div>
+            <div className="side-foot faint">{mode === "demo" ? "Demo flight: synthetic data" : `Glidepath ${APP_VERSION}${status?.bridgeVersion && status.bridgeVersion !== "demo" ? ` · Bridge ${status.bridgeVersion}` : ""}`}</div>
           </nav>
         )}
         <main className="main" id="main">
           <BridgeIconTip />
           <UpdateCenter />
           <FlightCompletePrompt />
+          <WhatsNew />
           <div key={screen || "home"} className={`page page-enter${full ? " full" : ""}`}><ScreenGuard where={location.hash || "#/home"}>{body}</ScreenGuard></div>
         </main>
       </div>

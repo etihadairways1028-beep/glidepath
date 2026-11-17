@@ -116,6 +116,19 @@ jobs:
           TOKEN=$(echo "$R" | head -1 | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
           if [ -n "$TOKEN" ]; then curl -s -X DELETE "$U/me" -H "Authorization: Bearer $TOKEN" -o /dev/null -w "Cleanup: %{http_code}\n"; else echo "::warning::Sign-up did not return a session."; fi
 
+      - name: Ask Glidepath AI a real question
+        working-directory: .
+        run: |
+          U="${{ steps.deploy.outputs.url }}"
+          E="ci-ai-$(date +%s)-$RANDOM@example.com"
+          R=$(curl -s -X POST "$U/auth/signup" -H "Content-Type: application/json" -d "{\"email\":\"$E\",\"password\":\"test-password-123\",\"name\":\"CI\"}")
+          TOKEN=$(echo "$R" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+          if [ -z "$TOKEN" ]; then echo "::warning::No session for the AI check."; exit 0; fi
+          A=$(curl -s -w "\nHTTP %{http_code} in %{time_total}s" -X POST "$U/ai/chat" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"messages":[{"role":"user","content":"In one sentence: what vertical speed makes a smooth airliner landing?"}],"facts":{}}')
+          echo "$A" | head -c 900; echo
+          curl -s -X DELETE "$U/me" -H "Authorization: Bearer $TOKEN" -o /dev/null -w "Cleanup: %{http_code}\n"
+          echo "$A" | grep -q '"answer"' && echo "Glidepath AI works." || echo "::warning::Glidepath AI did not answer (see above)."
+
       - name: Check Connect anywhere (stand-in PC and iPad through the real relay)
         run: node scripts/relay-check.mjs "${{ steps.deploy.outputs.url }}"
 

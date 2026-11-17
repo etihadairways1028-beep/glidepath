@@ -2,8 +2,10 @@
  * Copilot: a first officer that watches the flight with you.
  *  - Built-in (no AI needed): alerts, quick answers and spoken callouts,
  *    all computed from live data.
- *  - Optional AI model through the Bridge (Ollama on your PC for free, or your
- *    own key with a hosted provider) for any question, grounded in the same facts.
+ *  - Glidepath AI for any question, free for signed-in pilots (Cloudflare Workers AI
+ *    through the account service, capped to the free daily allowance).
+ *  - Or your own model through the Bridge (Ollama on your PC, or your own key), which
+ *    takes priority when it is set up. All grounded in the same live facts.
  */
 import { useEffect, useRef, useState } from "react";
 import { copilotAnswer, QUICK_QUESTIONS, type QuickQuestion } from "@glidepath/flight-engine";
@@ -11,8 +13,9 @@ import { Icon, Notice, Section } from "../components/ui";
 import { activeBridge } from "../data/bridge";
 import { factsFor, speakTest, useCopilot } from "../data/copilot";
 import { settingsStore, useApp, useSettings } from "../data/store";
+import { askGlidepathAi, glidepathAiStatus, useCloud } from "../data/cloud";
 
-interface Msg { role: "user" | "assistant"; content: string; by: "copilot" | "ai" | "error" }
+interface Msg { role: "user" | "assistant"; content: string; by: "copilot" | "ai" | "error"; /** What the AI gets, when it differs from the shown text. */ send?: string }
 interface AiStatus { configured: boolean; provider: "ollama" | "openai" | null; baseUrl: string | null; model: string | null; hasKey: boolean; reachable: boolean | null; models: string[]; message: string | null }
 
 const PRESETS = [
@@ -22,6 +25,10 @@ const PRESETS = [
   { id: "openrouter", label: "OpenRouter", note: "Many models, some free, with your own key.", provider: "openai" as const, baseUrl: "https://openrouter.ai/api/v1", needsKey: true },
   { id: "custom", label: "Other", note: "Any OpenAI-compatible endpoint (LM Studio, vLLM…).", provider: "openai" as const, baseUrl: "", needsKey: false },
 ];
+
+/** One-tap questions for the AI: about the flight in progress, or about Glidepath itself. */
+const AI_FLIGHT_PROMPTS = ["Brief my arrival", "What should I do next?", "How do I fly a smooth landing here?"];
+const AI_HELP_PROMPTS = ["How do I connect my iPad?", "How is my landing graded?", "What can Remote do?"];
 
 function guessQuestion(q: string): QuickQuestion {
   const t = q.toLowerCase();
@@ -54,15 +61,31 @@ export function CopilotScreen() {
     if (msgs.length === 0 && live.flight) setMsgs([{ role: "assistant", content: copilotAnswer("status", snapshot), by: "copilot" }]);
   }, [live.flight?.id]);
 
-  const aiReady = !!(bridge && ai?.configured && ai.reachable);
+  const ownAi = !!(bridge && ai?.configured && ai.reachable);
+  // Glidepath AI: free for signed-in pilots.
+  const cloud = useCloud();
+  const signed = !!(cloud.active && cloud.accounts.some((a) => a.slot === cloud.active));
+  const [gpLeft, setGpLeft] = useState<number | null>(null);
+  const [gpOff, setGpOff] = useState(false);
+  useEffect(() => {
+    if (!signed) { setGpLeft(null); return; }
+    glidepathAiStatus().then((st) => { setGpOff(!st.available); setGpLeft(st.left); }).catch(() => setGpOff(false));
+  }, [signed, cloud.active]);
+  const gpReady = signed && !gpOff && !ownAi;
+  const aiReady = ownAi || gpReady;
+  const facts = () => (live.flight ? factsFor(snapshot, { aircraft: live.flight?.aircraft?.icaoType ?? live.flight?.aircraft?.title, callsign: live.plan?.callsign ?? live.flight?.callsign, route: live.plan?.route }) : {});
 
-  const ask = async (text: string, quick?: QuickQuestion) => {
+  const ask = async (text: string, quick?: QuickQuestion, send?: string) => {
     const q = text.trim();
     if (!q || busy) return;
     setInput("");
-    const history = [...msgs, { role: "user" as const, content: q, by: "copilot" as const }];
+    const history: Msg[] = [...msgs, { role: "user" as const, content: q, by: "copilot" as const, ...(send ? { send } : {}) }];
     setMsgs(history);
     if (quick || !aiReady) {
+      if (!live.flight && !quick) {
+        setMsgs([...history, { role: "assistant", content: signed ? "Glidepath AI isn't available right now. Built-in answers need a flight running." : "Sign in (Account, it's free) and Glidepath AI can answer anything: how to use Glidepath, procedures, technique. Built-in answers need a flight running.", by: "copilot" }]);
+        return;
+      }
       const answer = copilotAnswer(quick ?? guessQuestion(q), snapshot);
       setMsgs([...history, { role: "assistant", content: answer, by: "copilot" }]);
       return;
@@ -70,10 +93,22 @@ export function CopilotScreen() {
     setBusy(true);
     let acc = "";
     setMsgs([...history, { role: "assistant", content: "", by: "ai" }]);
+    const convo = history.filter((m) => m.by !== "error").map((m) => ({ role: m.role, content: m.send ?? m.content }));
+    if (gpReady) {
+      try {
+        const r = await askGlidepathAi(convo, facts());
+        setGpLeft(r.left);
+        setMsgs([...history, { role: "assistant", content: r.answer, by: "ai" }]);
+      } catch (e) {
+        const fallback = live.flight ? ` Here's what I can tell from the data: ${copilotAnswer(guessQuestion(q), snapshot)}` : "";
+        setMsgs([...history, { role: "assistant", content: `${(e as Error).message}${fallback}`, by: "error" }]);
+      } finally { setBusy(false); }
+      return;
+    }
     try {
       await bridge!.stream("/api/ai/chat", {
-        messages: history.filter((m) => m.by !== "error").map((m) => ({ role: m.role, content: m.content })),
-        facts: factsFor(snapshot, { aircraft: live.flight?.aircraft?.icaoType ?? live.flight?.aircraft?.title, callsign: live.plan?.callsign ?? live.flight?.callsign, route: live.plan?.route }),
+        messages: convo,
+        facts: facts(),
       }, (t) => { acc += t; setMsgs([...history, { role: "assistant", content: acc, by: "ai" }]); });
       if (!acc) setMsgs([...history, { role: "assistant", content: "The model returned an empty answer.", by: "error" }]);
     } catch (e) {
@@ -83,6 +118,15 @@ export function CopilotScreen() {
     }
   };
 
+  // A question handed over from elsewhere (the flight review's "How do I improve?").
+  const handed = useRef(false);
+  useEffect(() => {
+    if (handed.current || (signed && gpLeft === null && !gpOff)) return; // wait until we know which AI answers
+    let q: { show: string; send: string } | null = null;
+    try { const v = sessionStorage.getItem("glidepath.ask"); sessionStorage.removeItem("glidepath.ask"); if (v) q = JSON.parse(v); } catch { /* private mode or old value */ }
+    if (q?.show) { handed.current = true; void ask(q.show, undefined, q.send); }
+  }, [signed, gpLeft, gpOff, ai]);
+
   return (
     <div className="stack">
       <div className="between wrap">
@@ -90,7 +134,7 @@ export function CopilotScreen() {
           <h1 className="title">Copilot</h1>
           <p className="muted" style={{ margin: "4px 0 0" }}>Your right seat. Ask it anything about this flight.</p>
         </div>
-        <span className={`pill ${aiReady ? "live" : ""}`}><span className="dot" />{aiReady ? `AI: ${ai!.model}` : "Built-in copilot"}</span>
+        <span className={`pill ${aiReady ? "live" : ""}`}><span className="dot" />{ownAi ? `AI: ${ai!.model}` : gpReady ? `Glidepath AI${gpLeft != null ? ` · ${gpLeft} left today` : ""}` : "Built-in copilot"}</span>
       </div>
 
       <div className="copilot-grid">
@@ -98,8 +142,8 @@ export function CopilotScreen() {
           <div className="chat-log" role="log" aria-live="polite">
             {msgs.length === 0 && (
               <div className="chat-empty">
-                                <div className="h2">{live.flight ? "What do you need?" : "Nobody to talk about yet"}</div>
-                <p className="muted">{live.flight ? "Tap a question or type one." : "Start a flight, or run the demo from Home."}</p>
+                                <div className="h2">{live.flight || aiReady ? "What do you need?" : "Nobody to talk about yet"}</div>
+                <p className="muted">{live.flight ? "Tap a question or type one." : aiReady ? "Ask about Glidepath, procedures or technique. Start a flight and I'll answer about it too." : "Start a flight, or run the demo from Home."}</p>
               </div>
             )}
             {msgs.map((m, i) => (
@@ -114,12 +158,16 @@ export function CopilotScreen() {
             {QUICK_QUESTIONS.map((q) => (
               <button key={q.id} className="chip-btn" onClick={() => void ask(q.label, q.id)} disabled={!live.flight}>{q.label}</button>
             ))}
+            {aiReady && (live.flight ? AI_FLIGHT_PROMPTS : AI_HELP_PROMPTS).map((t) => (
+              <button key={t} className="chip-btn ai" onClick={() => void ask(t)} disabled={busy}><span aria-hidden="true">✦ </span>{t}</button>
+            ))}
           </div>
           <form className="composer" onSubmit={(e) => { e.preventDefault(); void ask(input); }}>
-            <input className="input" value={input} onChange={(e) => setInput(e.target.value)} placeholder={aiReady ? "When do we start down?" : "Descent, fuel, weather, runway…"} aria-label="Your question" disabled={!live.flight} />
+            <input className="input" value={input} onChange={(e) => setInput(e.target.value)} placeholder={aiReady ? (live.flight ? "When do we start down?" : "How do I connect my iPad?") : "Descent, fuel, weather, runway…"} aria-label="Your question" disabled={!live.flight && !aiReady} />
             <button className="btn primary send" type="submit" disabled={busy || !input.trim()} aria-label="Send">{Icon.send()}</button>
           </form>
-          {!aiReady && live.flight ? <p className="faint" style={{ fontSize: 12, margin: "8px 4px 0" }}>Answers come straight from the sim. Hook up a model on the right for free-form questions.</p> : null}
+          {!aiReady && !signed ? <p className="faint" style={{ fontSize: 12, margin: "8px 4px 0" }}>Answers come straight from the sim. <a href="#/account">Sign in</a> (free) and Glidepath AI answers anything, in plain words.</p> : null}
+          {gpReady ? <p className="faint" style={{ fontSize: 12, margin: "8px 4px 0" }}>Glidepath AI sees your question and this flight's numbers, not your account. Glidepath doesn't store them. Free: {gpLeft ?? 40} questions a day.</p> : null}
         </section>
 
         <div className="stack">
@@ -161,8 +209,8 @@ function AiSetup({ ai, setAi, bridge }: { ai: AiStatus | null; setAi: (s: AiStat
 
   if (!bridge) {
     return (
-      <Section title="AI model (optional)">
-        <p className="muted" style={{ margin: 0 }}>For open questions, plug a model into your Bridge: Ollama on your PC (free, stays local) or a free Gemini or Groq key. The key stays on your PC. Connect the Bridge first.</p>
+      <Section title="Your own AI model (optional)">
+        <p className="muted" style={{ margin: 0 }}>Signed in, Copilot already uses Glidepath AI for free. Prefer your own? Plug a model into your Bridge: Ollama on your PC (free, stays on your PC) or your own Gemini or Groq key. Connect the Bridge first.</p>
       </Section>
     );
   }
@@ -176,7 +224,7 @@ function AiSetup({ ai, setAi, bridge }: { ai: AiStatus | null; setAi: (s: AiStat
     } catch (e) { setErr((e as Error).message); } finally { setSaving(false); }
   };
   return (
-    <Section title="AI model (optional)" right={ai?.reachable ? <span className="pill live"><span className="dot" />Connected</span> : ai?.reachable === false ? <span className="pill bad"><span className="dot" />Not reachable</span> : undefined}>
+    <Section title="Your own AI model (optional)" right={ai?.reachable ? <span className="pill live"><span className="dot" />Connected</span> : ai?.reachable === false ? <span className="pill bad"><span className="dot" />Not reachable</span> : undefined}>
       <div className="stack" style={{ gap: 12 }}>
         <div className="seg wrap-seg">{PRESETS.map((x) => <button key={x.id} className={preset === x.id ? "on" : ""} onClick={() => { setPreset(x.id); setBaseUrl(x.baseUrl); }}>{x.label}</button>)}</div>
         <p className="faint" style={{ fontSize: 12.5, margin: 0 }}>{p.note}</p>

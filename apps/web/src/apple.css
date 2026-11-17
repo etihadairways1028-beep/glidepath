@@ -916,3 +916,33 @@ button, .btn, .seg, .tabbar { -webkit-user-select: none; user-select: none; }
   transition: left .6s cubic-bezier(.34, 1.3, .64, 1) !important; }
 :root[data-theme="light"] .tabbar.glass::before { background: linear-gradient(180deg, #fff, rgba(255,255,255,.8)) !important; box-shadow: inset 0 0 0 .5px rgba(0,0,0,.06), 0 6px 16px -8px rgba(30,40,70,.35) !important; }
 :root .tabbar.glass::after { display: none !important; }
+
+/* ===================== What's new (once per version) ===================== */
+.wn-scrim { position: fixed; inset: 0; z-index: 400; display: grid; place-items: center; padding: 20px; background: rgba(4,8,16,.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); animation: wnFade .25s ease; }
+@keyframes wnFade { from { opacity: 0; } }
+.wn-sheet { width: min(480px, 100%); padding: 26px 26px 22px !important; border-radius: 30px !important; animation: wnIn .45s cubic-bezier(.2,.9,.3,1.15); }
+@keyframes wnIn { from { transform: translateY(26px) scale(.97); opacity: 0; } }
+.wn-badge { display: inline-block; padding: 4px 10px; border-radius: 99px; font-size: 12px; font-weight: 700; letter-spacing: .02em; color: #fff; background: linear-gradient(140deg, #64B5FF, #0A6CFF); box-shadow: inset 0 1px .5px rgba(255,255,255,.6); }
+.wn-sheet h2 { margin: 12px 0 14px; font-size: 28px; letter-spacing: -.025em; color: var(--a-ink); }
+.wn-list { list-style: none; margin: 0 0 20px; padding: 0; display: grid; gap: 14px; }
+.wn-list li { display: flex; gap: 12px; animation: wnItem .4s both cubic-bezier(.2,.9,.3,1); }
+@keyframes wnItem { from { opacity: 0; transform: translateY(8px); } }
+.wn-dot { flex: none; width: 10px; height: 10px; margin-top: 6px; border-radius: 50%; background: #30D158; box-shadow: 0 0 0 4px rgba(48,209,88,.18); }
+.wn-list b { display: block; font-size: 15.5px; color: var(--a-ink); }
+.wn-list span { display: block; font-size: 14px; line-height: 1.45; color: var(--a-ink2); margin-top: 2px; }
+.wn-go { width: 100%; min-height: 48px; font-size: 16px; }
+@media (prefers-reduced-motion: reduce) { .wn-scrim, .wn-sheet, .wn-list li { animation: none; } }
+.rv-pending { display: flex; align-items: center; gap: 22px; min-height: 180px; }
+.rv-pending b { display: block; font-size: 24px; letter-spacing: -.02em; color: var(--a-ink); margin: 4px 0; }
+.rv-pending .kicker { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #0A84FF; }
+.rv-pend-ring { width: 96px; height: 96px; flex: none; border-radius: 50%; border: 10px solid var(--a-fill2, rgba(120,120,128,.18)); border-top-color: #0A84FF; animation: rvSpin 1s linear infinite; }
+@keyframes rvSpin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .rv-pend-ring { animation-duration: 3s; } }
+
+/* Glidepath AI suggestions in Copilot */
+.chips .chip-btn.ai { color: #fff; background: linear-gradient(135deg, rgba(100,181,255,.28), rgba(124,92,255,.28)); box-shadow: inset 0 0 0 .5px rgba(160,190,255,.45); }
+.chips .chip-btn.ai span { color: #9FD0FF; }
+:root[data-theme="light"] .chips .chip-btn.ai { color: #1b2a55; }
+:root[data-theme="light"] .chips .chip-btn.ai span { color: #4b6cff; }
+.rv-ask { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.rv-ask .faint { font-size: 12.5px; }

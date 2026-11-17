@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { APP_VERSION, showWhatsNew } from "../components/WhatsNew";
 import { BaseMapPicker, TrafficSources } from "../components/MapLayers";
 import { connectFromSettings } from "../App";
 import { ConnPill, Icon, Kv, Notice, Section } from "../components/ui";
@@ -148,7 +149,7 @@ export function SettingsScreen() {
           <DiscordStatus />
           <Section title="On your Home Screen">
             <ol style={{ margin: 0, paddingLeft: 18, color: "var(--mist)", lineHeight: 1.7 }}>
-              <li>In Safari on your iPad or iPhone, go to <b style={{ color: "var(--ink)" }}>glidepath-ad9.pages.dev/app</b> and type the 6-digit code shown on your PC.</li>
+              <li>In Safari on your iPad or iPhone, go to <b style={{ color: "var(--ink)" }}>glidepath-ad9.pages.dev/app</b> and sign in with the same Glidepath account as the Bridge page on your PC. No account? On the same Wi-Fi, type the 6-digit code instead.</li>
               <li>Tap Share, then <b style={{ color: "var(--ink)" }}>Add to Home Screen</b>. On Android, use Chrome's menu, then <b style={{ color: "var(--ink)" }}>Install app</b>.</li>
               <li>Open it from the icon. It launches full screen, straight to your flight.</li>
             </ol>
@@ -156,7 +157,12 @@ export function SettingsScreen() {
             <p className="faint" style={{ fontSize: 12.5, margin: "10px 0 0" }}>For an iPad on a stand, use <a href="#/glance">Glance mode</a>. Lock Screen and widget cards need the native iPad app, which is planned.</p>
           </Section>
           <Section title="About">
-            <Kv k="Version" v="Glidepath 1.0.2" />
+            <Kv k="Version" v={`Glidepath ${APP_VERSION}`} />
+            <div className="row" style={{ gap: 8, flexWrap: "wrap", margin: "6px 0 10px" }}>
+              <button className="btn" onClick={showWhatsNew}>What's new</button>
+              <a className="btn" href="https://github.com/etihadairways1028-beep/glidepath/issues/new" target="_blank" rel="noopener">Report a problem</a>
+              <a className="btn" href="https://glidepath-ad9.pages.dev/privacy.html" target="_blank" rel="noopener">Privacy</a>
+            </div>
             <Kv k="Airports" v="OurAirports, public domain" />
             <Kv k="Map" v="OpenFreeMap / OpenStreetMap, Natural Earth" />
             <Kv k="Weather" v="aviationweather.gov, via your Bridge" />

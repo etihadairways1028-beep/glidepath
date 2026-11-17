@@ -333,3 +333,11 @@ function newSlot(): string {
   crypto.getRandomValues(b);
   return Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
 }
+
+// ------------------------------------------------------------------ Glidepath AI (Copilot)
+
+export interface AiReply { answer: string; model: string; left: number }
+/** Ask Glidepath AI (Cloudflare Workers AI through the account service). Needs a signed-in pilot. */
+export const askGlidepathAi = (messages: Array<{ role: "user" | "assistant"; content: string }>, facts: unknown) => authed<AiReply>("/ai/chat", "POST", { messages, facts });
+export const glidepathAiStatus = () => authed<{ available: boolean; left: number; perDay: number }>("/ai/status");
+export const signedIn = () => !!activeAccount();

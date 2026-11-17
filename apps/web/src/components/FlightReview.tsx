@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { FlightSummary, TelemetryFrame } from "@glidepath/protocol";
 import { gradeFor, reviewApproach } from "@glidepath/flight-engine";
 import { activeBridge } from "../data/bridge";
+import { activeDemo } from "../data/demo";
 import { useLive } from "../data/derive";
 import { useApp } from "../data/store";
 
@@ -72,6 +73,29 @@ export function scoreFlight(f: FlightSummary, frames: TelemetryFrame[] | null) {
 
 const VERDICT: Record<string, string> = { "A+": "Outstanding flight", A: "Excellent flight", B: "Good flight", C: "Solid, with things to tidy up", D: "Room to improve", F: "A tough one" };
 
+/** Shown for the moment the flight's recording is still loading, so the score never changes in front of you. */
+export function ReviewPending() {
+  return (
+    <div className="glass strong review rv-pending" role="status" aria-live="polite">
+      <div className="rv-pend-ring" aria-hidden="true" />
+      <div><span className="kicker">Flight review</span><b>Scoring your flight…</b><span className="faint">Going through take-off, handling, approach and landing.</span></div>
+    </div>
+  );
+}
+
+/** The coaching question for Copilot, built from the real review (scores and notes). */
+function coachQuestion(f: FlightSummary, r: ReturnType<typeof scoreFlight>): string {
+  const parts = r.parts.map((p) => `${p.label} ${p.score}/100 (${p.line})`).join("; ");
+  const work = r.work.length ? ` To work on: ${r.work.join(" ")}` : "";
+  return `Coach me on my ${f.departureIcao ?? ""}-${f.arrivalIcao ?? ""} flight${f.aircraft?.icaoType ? ` in the ${f.aircraft.icaoType}` : ""}. Score ${r.score}/100. ${parts}.${work} What should I do differently next time? Give me 2-3 concrete tips.`;
+}
+
+/** Open Copilot and ask a question there. */
+export function askCopilot(show: string, send: string) {
+  try { sessionStorage.setItem("glidepath.ask", JSON.stringify({ show, send })); } catch { /* private mode */ }
+  location.hash = "#/copilot";
+}
+
 export function ReviewScore({ flight, frames }: { flight: FlightSummary; frames: TelemetryFrame[] | null }) {
   const r = useMemo(() => scoreFlight(flight, frames), [flight, frames]);
   if (r.score === null) return null;
@@ -107,6 +131,10 @@ export function ReviewScore({ flight, frames }: { flight: FlightSummary; frames:
           {r.work.length > 0 && <div><h3>To work on</h3><ul>{r.work.map((t) => <li key={t} className="w">{t}</li>)}</ul></div>}
         </div>
       )}
+      <div className="rv-ask">
+        <button className="btn" onClick={() => askCopilot("How do I improve on this flight?", coachQuestion(flight, r))}><span aria-hidden="true">✦ </span>How do I improve?</button>
+        <span className="faint">Copilot coaches you through this flight's weakest part.</span>
+      </div>
     </section>
   );
 }
@@ -132,6 +160,8 @@ export function FlightCompletePrompt() {
       try { await activeBridge()?.post("/api/flight/complete", {}); }
       catch (e) { setBusy(false); setErr((e as Error).message); return; }
     }
+    // The demo has no Bridge to end the flight: run the rest of the recording (taxi in, on block) so it completes for real.
+    if (mode === "demo") activeDemo()?.seek(1);
     remember();
     location.hash = `#/review/${f.id}`;
   };

@@ -14,10 +14,12 @@ import { sendGmail } from "./gmail";
 import { addTrail, cleanLive, cleanName, leaderboard, monthRange, shareId } from "./social";
 import { Relay } from "./relay";
 import { welcomeMail, debriefMail, deviceName, inflightMail, resetMail, signinMail } from "./mails";
+import { aiChat, aiLeft, PER_USER_DAILY } from "./ai";
 
 interface Env {
   DB: D1Database;
   RELAY: DurableObjectNamespace;
+  AI?: Ai;
   PEPPER: string;
   BREVO_API_KEY?: string;
   BREVO_SENDER_EMAIL?: string;
@@ -263,6 +265,13 @@ async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Re
     return json(200, { linked: true, online: st.online, name: st.name ?? linked.name });
   }
 
+  if (p === "/ai/chat" && req.method === "POST") {
+    const body = await req.json().catch(() => null);
+    const r = await aiChat(env, user.id, body);
+    return json(r.status, r.body);
+  }
+  if (p === "/ai/status" && req.method === "GET") return json(200, { available: !!env.AI, left: await aiLeft(env, user.id), perDay: PER_USER_DAILY });
+
   if (p === "/auth/logout" && req.method === "POST") {
     const t = (req.headers.get("Authorization") ?? "").split(/\s+/)[1] ?? "";
     await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(await sha256(t)).run();
@@ -282,7 +291,7 @@ async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Re
     return json(200, { ...publicUser(u!), email_prefs: await prefsOf(env, user.id) });
   }
   if (p === "/me" && req.method === "DELETE") {
-    await env.DB.batch(["sessions", "flights", "bridges", "relay_keys", "email_prefs", "password_resets", "email_log", "live_shares", "challenge"].map((t) => env.DB.prepare(`DELETE FROM ${t} WHERE user_id = ?`).bind(user.id)).concat(env.DB.prepare("DELETE FROM users WHERE id = ?").bind(user.id)));
+    await env.DB.batch(["sessions", "flights", "bridges", "relay_keys", "email_prefs", "password_resets", "email_log", "live_shares", "challenge", "ai_usage"].map((t) => env.DB.prepare(`DELETE FROM ${t} WHERE user_id = ?`).bind(user.id)).concat(env.DB.prepare("DELETE FROM users WHERE id = ?").bind(user.id)));
     return json(200, { ok: true });
   }
 

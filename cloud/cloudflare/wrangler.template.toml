@@ -21,3 +21,7 @@ class_name = "Relay"
 [[migrations]]
 tag = "relay-v1"
 new_sqlite_classes = ["Relay"]
+
+# Glidepath AI (Copilot answers). Workers AI's free daily allowance; src/ai.ts caps use to stay inside it.
+[ai]
+binding = "AI"
