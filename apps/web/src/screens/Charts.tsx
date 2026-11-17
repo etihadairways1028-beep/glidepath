@@ -11,7 +11,11 @@ import { useEffect, useMemo, useState } from "react";
 import { activeBridge } from "../data/bridge";
 import { useApp } from "../data/store";
 import { useLive } from "../data/derive";
-import { Notice } from "../components/ui";
+import { Kv, Notice } from "../components/ui";
+import { MapView } from "../components/MapView";
+import { RunwayDiagram } from "../components/Imagery";
+import { loadChoice, useProcs } from "../components/Procedures";
+import { airportDetail, type AirportDetail } from "../data/airports";
 
 type Kind = "airport" | "departure" | "arrival" | "approach" | "minimums" | "other";
 interface Chart { name: string; kind: Kind; code: string; url: string }
@@ -111,6 +115,62 @@ export function ChartsFor({ icao, compact = false }: { icao: string; compact?: b
   );
 }
 
+/**
+ * The airport sheet: what Glidepath can show for any airport in the world, from open data.
+ * Not an official chart: the map is OpenStreetMap, runways and frequencies are OurAirports,
+ * procedures are the ones in your simulator's navigation data.
+ */
+function AirportSheet({ code, dep }: { code: string; dep: string | null }) {
+  const mode = useApp((s) => s.mode);
+  const [apt, setApt] = useState<AirportDetail | null | undefined>(undefined);
+  useEffect(() => { let off = false; setApt(undefined); airportDetail(code).then((a) => { if (!off) setApt(a); }).catch(() => { if (!off) setApt(null); }); return () => { off = true; }; }, [code]);
+  const live = mode === "bridge";
+  const P = useProcs(code, live);
+  const choice = loadChoice(dep, null);
+  const picked = new Set([choice.sid, choice.star, choice.approach].filter(Boolean) as string[]);
+  if (apt === undefined) return <div className="skeleton" style={{ height: 320 }} />;
+  if (apt === null) return <Notice>No airport with the code {code}.</Notice>;
+  const freqs = apt.frequencies.slice(0, 12);
+  const group = (title: string, tone: string, names: string[]) => names.length ? (
+    <div className="as-procs">
+      <div className={`as-proc-h t-${tone}`}>{title} <small>{names.length}</small></div>
+      <div className="as-proc-list">{names.map((n) => <span key={n} className={`as-proc t-${tone}${picked.has(n) ? " on" : ""}`}>{n}</span>)}</div>
+    </div>
+  ) : null;
+  return (
+    <div className="as">
+      <div className="as-map glass">
+        <MapView key={apt.code} trail={[]} center={[apt.lon, apt.lat]} zoom={apt.size === "small" ? 14.6 : apt.size === "medium" ? 14 : 13.4} interactive />
+        <span className="as-map-tag">Airport map · OpenStreetMap · not for navigation</span>
+      </div>
+      <div className="as-side">
+        <section className="glass pad">
+          <div className="between"><h3 className="h3" style={{ margin: 0 }}>Runways</h3><span className="faint" style={{ fontSize: 12 }}>to scale, OurAirports</span></div>
+          {apt.runways.length === 0 ? <p className="muted">No runway data for this airport.</p> : (<>
+            <div className="as-rwy"><RunwayDiagram runways={apt.runways} label={apt.code} /></div>
+            <table className="as-rwy-t"><tbody>{apt.runways.map((r) => (
+              <tr key={r.ends.map((e) => e.ident).join("/")}><td><b>{r.ends.map((e) => e.ident).join(" / ")}</b></td><td>{r.lengthFt ? `${r.lengthFt.toLocaleString()} ft` : "—"}</td><td>{r.ends.map((e) => `${Math.round(e.headingTrueDeg).toString().padStart(3, "0")}°`).join(" / ")}</td></tr>
+            ))}</tbody></table>
+          </>)}
+        </section>
+        {freqs.length > 0 && (
+          <section className="glass pad">
+            <h3 className="h3" style={{ margin: "0 0 6px" }}>Frequencies</h3>
+            <div className="as-freqs">{freqs.map((f, i) => <Kv key={i} k={f.type} v={<span className="data">{f.mhz.toFixed(3)}</span>} />)}</div>
+          </section>
+        )}
+        <section className="glass pad">
+          <div className="between"><h3 className="h3" style={{ margin: 0 }}>Procedures in your sim</h3>{picked.size > 0 && <span className="faint" style={{ fontSize: 12 }}>yours highlighted</span>}</div>
+          {!live ? <p className="muted" style={{ margin: "6px 0 0" }}>Connect your Bridge with the sim running to list {apt.code}'s SIDs, STARs and approaches.</p>
+            : P.loading ? <p className="muted" style={{ margin: "6px 0 0" }}>Reading {apt.code} from the simulator…</p>
+            : P.err ? <p className="muted" style={{ margin: "6px 0 0" }}>{P.err}</p>
+            : P.data ? (<>{group("SIDs", "sid", P.data.departures.map((d) => d.name))}{group("STARs", "star", P.data.arrivals.map((d) => d.name))}{group("Approaches", "app", P.data.approaches.map((d) => d.name))}</>) : null}
+        </section>
+      </div>
+    </div>
+  );
+}
+
 export function ChartsScreen() {
   const L = useLive();
   const flights = useApp((s) => s.lastFlight);
@@ -120,6 +180,10 @@ export function ChartsScreen() {
   const [pick, setPick] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const code = pick ?? arr ?? dep ?? null;
+  // Official charts first where they're free to show (US, with the Bridge); the airport sheet everywhere else.
+  const mode = useApp((s) => s.mode);
+  const [view, setView] = useState<"sheet" | "official">("sheet");
+  useEffect(() => { setView(code && isUS(code) && mode === "bridge" ? "official" : "sheet"); }, [code, mode]);
 
   return (
     <>
@@ -137,7 +201,13 @@ export function ChartsScreen() {
           {pick && pick !== dep && pick !== arr && <button className="on">{pick}</button>}
         </div>
       )}
-      {code ? <section className="glass pad"><ChartsFor icao={code} /></section> : <p className="muted">No airport yet.</p>}
+      {code && (
+        <div className="seg ch-mode" role="tablist" aria-label="What to show">
+          <button className={view === "sheet" ? "on" : ""} onClick={() => setView("sheet")}>Airport sheet</button>
+          <button className={view === "official" ? "on" : ""} onClick={() => setView("official")}>Official charts</button>
+        </div>
+      )}
+      {code ? (view === "sheet" ? <AirportSheet code={code} dep={dep} /> : <section className="glass pad"><ChartsFor icao={code} /></section>) : <p className="muted">No airport yet.</p>}
     </>
   );
 }

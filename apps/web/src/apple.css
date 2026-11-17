@@ -1133,3 +1133,53 @@ button, .btn, .seg, .tabbar { -webkit-user-select: none; user-select: none; }
 .pr-plan { display: block; font-style: normal; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #7CF29A; margin-top: 2px; }
 .pr-row.t-star .pr-plan { color: #FFC266; }
 .pr-drawn b.t-sid { color: #34C759; } .pr-drawn b.t-star { color: #FF9F0A; }
+
+/* ===================== Weather radar ===================== */
+:root .wx-radar { height: clamp(340px, 60vh, 680px) !important; }
+@media (orientation: portrait) and (min-width: 700px) { :root .wx-radar { height: clamp(380px, 46vh, 620px) !important; } }
+:root .radar-bar { gap: 8px !important; padding: 7px 10px 7px 7px !important; background: rgba(18,22,32,.9) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+:root[data-theme="light"] .radar-bar { background: rgba(255,255,255,.94) !important; }
+.radar-play svg, .radar-btn svg { width: 18px; height: 18px; }
+:root .radar-play { width: 40px !important; height: 40px !important; }
+.radar-btn { all: unset; cursor: pointer; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--a-ink, #fff); background: rgba(255,255,255,.08); flex: none; transition: transform .4s cubic-bezier(.2,1.7,.4,1), background .2s; }
+.radar-btn:active { transform: scale(.86); background: rgba(255,255,255,.16); transition: transform .06s; }
+.radar-track { position: relative; flex: 1; min-width: 80px; height: 30px; display: grid; align-items: center; }
+.radar-track input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border-radius: 3px; margin: 0; background: linear-gradient(90deg, #0A84FF var(--p, 100%), rgba(255,255,255,.16) var(--p, 100%)); outline: none; }
+.radar-track input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.45), 0 0 0 4px rgba(10,132,255,.35); cursor: grab; transition: transform .2s cubic-bezier(.2,1.7,.4,1); }
+.radar-track input[type=range]:active::-webkit-slider-thumb { transform: scale(1.18); }
+.radar-track input[type=range]::-moz-range-thumb { width: 20px; height: 20px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.45), 0 0 0 4px rgba(10,132,255,.35); }
+.radar-ticks { position: absolute; left: 10px; right: 10px; top: 24px; display: flex; justify-content: space-between; pointer-events: none; }
+.radar-ticks i { width: 2px; height: 4px; border-radius: 1px; background: rgba(255,255,255,.25); }
+.radar-ticks i.now { background: #30D158; height: 6px; } .radar-ticks i.on { background: #fff; height: 6px; }
+:root .radar-time { display: grid; justify-items: end; font-size: 14px; font-weight: 700; min-width: 60px; }
+:root .radar-time small { font-size: 11px; font-weight: 600; opacity: .65; }
+.radar-str { all: unset; cursor: pointer; padding: 7px 12px; border-radius: 99px; font-size: 13px; font-weight: 650; color: var(--a-ink, #fff); background: rgba(255,255,255,.08); flex: none; transition: transform .4s cubic-bezier(.2,1.7,.4,1); }
+.radar-str:active { transform: scale(.9); transition: transform .06s; }
+.radar-key { position: absolute; right: 14px; top: 14px; z-index: 4; display: grid; gap: 4px; padding: 7px 10px 6px; border-radius: 12px; background: rgba(14,18,28,.86); box-shadow: inset 0 0 0 .5px rgba(255,255,255,.14); pointer-events: none; }
+.rk-bar { display: block; width: 190px; height: 6px; border-radius: 3px; background: linear-gradient(90deg, #88DDEE 0%, #0099CC 18%, #00A700 36%, #FFEE00 56%, #FF7700 72%, #D40000 86%, #FF00FF 100%); }
+.rk-l { display: flex; justify-content: space-between; width: 190px; font-size: 10.5px; font-weight: 650; color: rgba(235,240,255,.78); }
+.rk-l b { font-weight: 650; }
+:root[data-theme="light"] .radar-key { background: rgba(255,255,255,.92); } :root[data-theme="light"] .rk-l { color: rgba(20,30,50,.75); }
+@media (max-width: 640px) { .radar-key { top: auto; bottom: 74px; right: 10px; } .rk-bar, .rk-l { width: 150px; } .radar-str { display: none; } .radar-btn { display: none; } }
+
+/* ===================== Charts: airport sheet ===================== */
+.ch-mode { margin: 0 0 14px; align-self: flex-start; }
+.as { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(300px, 1fr); gap: 14px; align-items: start; }
+@media (max-width: 980px) { .as { grid-template-columns: 1fr; } }
+.as-map { position: relative; height: clamp(360px, 62vh, 720px); padding: 0 !important; overflow: hidden; border-radius: 28px !important; }
+.as-map > :first-child { position: absolute !important; inset: 0 !important; }
+.as-map-tag { position: absolute; left: 12px; bottom: 12px; z-index: 3; padding: 5px 10px; border-radius: 99px; font-size: 11.5px; font-weight: 600; color: rgba(235,240,255,.85); background: rgba(14,18,28,.82); pointer-events: none; }
+.as-side { display: grid; gap: 14px; }
+.as-rwy { max-width: 260px; margin: 8px auto 4px; }
+.as-rwy-t { width: 100%; border-collapse: collapse; font-size: 14px; }
+.as-rwy-t td { padding: 7px 4px; border-top: .5px solid rgba(255,255,255,.1); font-variant-numeric: tabular-nums; }
+.as-rwy-t td:not(:first-child) { text-align: right; color: var(--a-ink2, rgba(235,235,245,.7)); }
+.as-freqs { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; }
+.as-procs { margin-top: 10px; }
+.as-proc-h { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
+.as-proc-h small { opacity: .6; margin-left: 4px; }
+.as-proc-h.t-sid { color: #34C759; } .as-proc-h.t-star { color: #FF9F0A; } .as-proc-h.t-app { color: #64B5FF; }
+.as-proc-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.as-proc { padding: 5px 10px; border-radius: 99px; font: 650 12.5px/1 var(--data, ui-monospace, monospace); background: rgba(255,255,255,.07); box-shadow: inset 0 0 0 .5px rgba(255,255,255,.14); }
+.as-proc.on.t-sid { background: rgba(52,199,89,.22); box-shadow: inset 0 0 0 1px #34C759; } .as-proc.on.t-star { background: rgba(255,159,10,.22); box-shadow: inset 0 0 0 1px #FF9F0A; } .as-proc.on.t-app { background: rgba(10,132,255,.22); box-shadow: inset 0 0 0 1px #0A84FF; }
+:root .wx-radar .radar-bar { position: absolute !important; top: auto !important; bottom: 14px !important; left: 14px !important; right: 14px !important; width: auto !important; max-width: none !important; box-sizing: border-box; }

@@ -45,11 +45,24 @@ export function WeatherScreen() {
   const [idx, setIdx] = useState<number | null>(null);
   const [playing, setPlaying] = useState(true);
   const cur = idx ?? frames.length - 1;
+  // Play through the last two hours, holding a moment on the latest frame before going round again.
   useEffect(() => {
     if (!playing || frames.length < 2) return;
-    const t = window.setInterval(() => setIdx((i) => { const n = (i ?? frames.length - 1) + 1; return n >= frames.length ? 0 : n; }), 650);
-    return () => window.clearInterval(t);
-  }, [playing, frames.length]);
+    const atLatest = cur === frames.length - 1;
+    const t = window.setTimeout(() => setIdx(atLatest ? 0 : cur + 1), atLatest ? 2200 : 600);
+    return () => window.clearTimeout(t);
+  }, [playing, frames.length, cur]);
+  const [strength, setStrength] = useState(1);
+  const STRENGTH = [{ label: "Light", v: 0.45 }, { label: "Normal", v: 0.72 }, { label: "Strong", v: 0.92 }];
+  const step = (d: number) => { setPlaying(false); setIdx(((cur + d) % frames.length + frames.length) % frames.length); };
+  // Your airports on the radar, coloured by flight category (VFR, MVFR, IFR, LIFR).
+  const [coords, setCoords] = useState<Record<string, [number, number]>>({});
+  useEffect(() => {
+    let off = false;
+    for (const c of ids) if (!coords[c]) void airportDetail(c).then((a) => { if (!off && a) setCoords((x) => ({ ...x, [c]: [a.lon, a.lat] })); });
+    return () => { off = true; };
+  }, [ids.join(",")]);
+  const dots = (metars.data ?? []).filter((m) => coords[m.icao] && m.category).map((m) => ({ icao: m.icao, lon: coords[m.icao]![0], lat: coords[m.icao]![1], category: m.category!, raw: m.raw, wind: m.windDir !== null && m.windKt !== null ? `${m.windDir === "VRB" ? "VRB" : String(m.windDir).padStart(3, "0")}/${m.windKt} kt` : "", temp: m.tempC !== null ? `${m.tempC}°C` : "" }));
   const save = (list: string[]) => { setExtra(list); try { localStorage.setItem(KEY, JSON.stringify(list)); } catch { /* ignore */ } };
   const center: [number, number] | undefined = L.plan ? [L.plan.destination.lon, L.plan.destination.lat] : L.frame ? [L.frame.position.lon, L.frame.position.lat] : undefined;
 
@@ -67,12 +80,25 @@ export function WeatherScreen() {
       </div>
 
       <section className="glass wx-radar" aria-label="Rain radar">
-        <MapView trail={[]} plan={L.plan} center={center ?? [0, 30]} zoom={center ? 6 : 1.8} radarFrames={frames} radarIndex={cur} aircraft={L.frame && L.frame.attitude.headingTrueDeg !== null ? { lat: L.frame.position.lat, lon: L.frame.position.lon, hdg: L.frame.attitude.headingTrueDeg } : null} interactive />
+        <MapView trail={[]} plan={L.plan} center={center ?? [0, 30]} zoom={center ? 6 : 1.8} radarFrames={frames} radarIndex={cur} radarOpacity={STRENGTH[strength]!.v} metars={dots} aircraft={L.frame && L.frame.attitude.headingTrueDeg !== null ? { lat: L.frame.position.lat, lon: L.frame.position.lon, hdg: L.frame.attitude.headingTrueDeg, alt: L.frame.position.altMslFt } : null} interactive />
+        <div className="radar-key" aria-label="Rain intensity">
+          <span className="rk-bar" aria-hidden="true" />
+          <span className="rk-l"><b>Light</b><b>Moderate</b><b>Heavy</b><b>Storm</b></span>
+        </div>
         <div className="glass radar-bar">
           {frames.length > 1 ? (<>
-            <button className="radar-play" onClick={() => setPlaying((p) => !p)} aria-label={playing ? "Pause radar" : "Play radar"}>{playing ? "❚❚" : "▶"}</button>
-            <input type="range" min={0} max={frames.length - 1} value={cur} onChange={(e) => { setPlaying(false); setIdx(Number(e.target.value)); }} aria-label="Radar time" />
-            <span className="radar-time data">{new Date(frames[cur]!.time * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}{cur === frames.length - 1 ? " · latest" : ` · ${Math.round((frames[frames.length - 1]!.time - frames[cur]!.time) / 60)} min ago`}</span>
+            <button className="radar-btn" onClick={() => step(-1)} aria-label="Earlier frame"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
+            <button className="radar-play" onClick={() => setPlaying((p) => !p)} aria-label={playing ? "Pause radar" : "Play radar"}>
+              {playing ? <svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1.2" fill="currentColor" /><rect x="14" y="5" width="4" height="14" rx="1.2" fill="currentColor" /></svg>
+                : <svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z" fill="currentColor" /></svg>}
+            </button>
+            <button className="radar-btn" onClick={() => step(1)} aria-label="Later frame"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
+            <div className="radar-track">
+              <input type="range" min={0} max={frames.length - 1} value={cur} onChange={(e) => { setPlaying(false); setIdx(Number(e.target.value)); }} aria-label="Radar time" style={{ ["--p" as string]: `${(cur / (frames.length - 1)) * 100}%` }} />
+              <div className="radar-ticks" aria-hidden="true">{frames.map((f, i) => <i key={f.time} className={i === cur ? "on" : i === frames.length - 1 ? "now" : ""} />)}</div>
+            </div>
+            <span className="radar-time data">{new Date(frames[cur]!.time * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}<small>{cur === frames.length - 1 ? "latest" : `−${Math.round((frames[frames.length - 1]!.time - frames[cur]!.time) / 60)} min`}</small></span>
+            <button className="radar-str" onClick={() => setStrength((x) => (x + 1) % STRENGTH.length)} aria-label="Radar strength">{STRENGTH[strength]!.label}</button>
           </>) : <span className="radar-time">{radar.error ? "Radar unavailable right now" : "Loading radar…"}</span>}
         </div>
       </section>

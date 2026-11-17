@@ -131,6 +131,8 @@ export interface MapViewProps {
   /** Animated radar: every frame is loaded once and shown by index. */
   radarFrames?: Array<{ tiles: string; time: number }> | null;
   radarIndex?: number;
+  /** How strongly the radar shows (0..1). */
+  radarOpacity?: number;
   onSelectAtc?: (c: PlacedController | null) => void;
   onSelectMetar?: (m: MetarDot | null) => void;
   /** Visible area after each move: [west, south, east, north]. */
@@ -155,7 +157,7 @@ export interface MapViewProps {
   selTrack?: { key: string; flown: number[][]; before: number[][]; ahead: number[][]; at: [number, number] } | null;
 }
 
-export function MapView({ trail, plan, aircraft, airports = [], traffic = [], atc = [], metars = [], radarTiles = null, centres = [], radarFrames = null, radarIndex = 0, onSelectAtc, onSelectMetar, onView, follow, center, zoom: startZoom, threeD = false, stands = [], agl = null, onGround = false, onSelectTraffic, onUserMove, interactive = true, history, selTrack }: MapViewProps) {
+export function MapView({ trail, plan, aircraft, airports = [], traffic = [], atc = [], metars = [], radarTiles = null, centres = [], radarFrames = null, radarIndex = 0, radarOpacity = 0.7, onSelectAtc, onSelectMetar, onView, follow, center, zoom: startZoom, threeD = false, stands = [], agl = null, onGround = false, onSelectTraffic, onUserMove, interactive = true, history, selTrack }: MapViewProps) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<MLMap | null>(null);
   const [ready, setReady] = useState(false);
@@ -299,7 +301,7 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     // A pinch or scroll by the user wins over the automatic ground zoom.
     m.on("zoomstart", (e) => { if ((e as { originalEvent?: unknown }).originalEvent) zoomGoal.current = null; });
     m.on("dragstart", () => { cancelAnimationFrame(glideRaf.current); handlers.current.onUserMove?.(); });
-    return () => { m.remove(); map.current = null; };
+    return () => { cancelAnimationFrame(glideRaf.current); cancelAnimationFrame(acRaf.current); acRaf.current = 0; acMarker.current?.remove(); acMarker.current = null; window.clearTimeout(trailTimer.current); trailTimer.current = 0; m.remove(); map.current = null; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -405,6 +407,7 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     if (!m || !ready) return;
     const draw = () => {
       trailAt.current = performance.now(); trailTimer.current = 0;
+      if (map.current !== m) return; // this map was closed (screen change) before the update ran
       const t = trailDisplay(trail, aircraft ? { lon: aircraft.lon, lat: aircraft.lat, alt: aircraft.alt ?? null } : null);
       data.current.trail = t.coords;
       data.current.trailGradient = t.gradient;
@@ -528,8 +531,8 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
   useEffect(() => {
     const m = map.current;
     if (!m || !ready || !radarFrames?.length) return;
-    radarFrames.forEach((_, i) => { if (m.getLayer(`radarf-${i}`)) m.setPaintProperty(`radarf-${i}`, "raster-opacity", i === radarIndex ? 0.7 : 0); });
-  }, [ready, framesKey, radarIndex]);
+    radarFrames.forEach((_, i) => { if (m.getLayer(`radarf-${i}`)) m.setPaintProperty(`radarf-${i}`, "raster-opacity", i === radarIndex ? radarOpacity : 0); });
+  }, [ready, framesKey, radarIndex, radarOpacity]);
 
   // Airports (HTML markers)
   useEffect(() => {
@@ -578,7 +581,7 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
       if (!acRaf.current) {
         const step = () => {
           const an = acAnim.current, mk = acMarker.current;
-          if (!an || !mk) { acRaf.current = 0; return; }
+          if (!an || !mk || !map.current) { acRaf.current = 0; return; }
           const [lo, la, h] = an.at(performance.now());
           mk.setLngLat([lo, la]).setRotation(h);
           // Stop when the glide is done, so nothing runs between updates (saves battery on iPad).

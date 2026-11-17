@@ -40,7 +40,7 @@ export function useChoice(dep: string | null | undefined, arr: string | null | u
 }
 export const useChosenArrivalRunway = (dep: string | null | undefined, arr: string | null | undefined) => useChoice(dep, arr).arrRunway ?? null;
 
-function useProcs(icao: string | null | undefined, enabled: boolean) {
+export function useProcs(icao: string | null | undefined, enabled: boolean) {
   const [data, setData] = useState<AirportProcs | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);

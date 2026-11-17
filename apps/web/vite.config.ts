@@ -13,5 +13,5 @@ export default defineConfig({
   base: "./",
   define: { __BUILD_ID__: JSON.stringify(BUILD) },
   plugins: [react(), versionFile()],
-  build: { outDir: "dist", assetsDir: "assets", chunkSizeWarningLimit: 1500, sourcemap: false },
+  build: { sourcemap: true, outDir: "dist", assetsDir: "assets", chunkSizeWarningLimit: 1500, sourcemap: false },
 });
