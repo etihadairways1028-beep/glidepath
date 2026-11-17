@@ -1183,3 +1183,43 @@ button, .btn, .seg, .tabbar { -webkit-user-select: none; user-select: none; }
 .as-proc { padding: 5px 10px; border-radius: 99px; font: 650 12.5px/1 var(--data, ui-monospace, monospace); background: rgba(255,255,255,.07); box-shadow: inset 0 0 0 .5px rgba(255,255,255,.14); }
 .as-proc.on.t-sid { background: rgba(52,199,89,.22); box-shadow: inset 0 0 0 1px #34C759; } .as-proc.on.t-star { background: rgba(255,159,10,.22); box-shadow: inset 0 0 0 1px #FF9F0A; } .as-proc.on.t-app { background: rgba(10,132,255,.22); box-shadow: inset 0 0 0 1px #0A84FF; }
 :root .wx-radar .radar-bar { position: absolute !important; top: auto !important; bottom: 14px !important; left: 14px !important; right: 14px !important; width: auto !important; max-width: none !important; box-sizing: border-box; }
+
+/* ===================== Stronger, cooler button feel (final layer) ===================== */
+:root { --spring: cubic-bezier(.18, 1.9, .32, 1); --press-ring: rgba(100,181,255,.32); }
+/* Release: a lively spring back */
+:root :is(.btn, .chip-btn, .quick-a, .rc-tog, .seg button, .basemap, .wall-sw, .more-tile, .cr-tile, .radar-play, .radar-btn, .radar-str, .wn-go, .tm-pill) {
+  transition: transform .55s var(--spring), box-shadow .35s ease, filter .3s ease, background-color .25s ease !important;
+}
+/* Press: sink with a glowing ring */
+:root :is(.btn, .chip-btn, .rc-tog, .radar-play, .wn-go):not(:disabled):active {
+  transform: scale(.91) !important; filter: brightness(1.18) saturate(1.1);
+  box-shadow: 0 0 0 5px var(--press-ring), 0 6px 18px -8px rgba(10,132,255,.7) !important;
+  transition: transform .06s ease, box-shadow .06s ease, filter .06s ease !important;
+}
+:root :is(.quick-a, .more-tile, .cr-tile):active { transform: scale(.95) !important; box-shadow: 0 0 0 4px var(--press-ring) !important; transition: transform .07s ease, box-shadow .07s ease !important; }
+/* Hover on a laptop: lift and glow */
+@media (hover: hover) and (pointer: fine) {
+  :root :is(.btn, .chip-btn, .quick-a, .more-tile, .cr-tile, .basemap, .radar-btn, .radar-str):not(:disabled):hover { transform: translateY(-2px); filter: brightness(1.1); box-shadow: 0 10px 24px -12px rgba(10,132,255,.65), 0 0 0 1px rgba(143,200,255,.25) !important; }
+  :root .btn.primary:not(:disabled):hover { box-shadow: 0 12px 28px -10px rgba(10,132,255,.9), 0 0 0 1px rgba(255,255,255,.18) inset !important; }
+  :root .btn.primary { background-size: 220% 100% !important; }
+  :root .btn.primary:not(:disabled):hover { background-image: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.28) 46%, transparent 62%), linear-gradient(180deg, #4AA3FF, #0A6CFF) !important; animation: btnSweep .9s ease both; }
+  :root .nav-a:not(.on):hover .nav-ic { transform: scale(1.12) rotate(-6deg) !important; }
+}
+@keyframes btnSweep { from { background-position: 120% 0, 0 0; } to { background-position: -20% 0, 0 0; } }
+/* Selection changes: the new choice pops into place */
+:root .seg button.on { animation: segPop .45s var(--spring) both; }
+@keyframes segPop { 0% { transform: scale(.88); } 100% { transform: scale(1); } }
+:root .nav-a.on .nav-ic { animation: navBounce .6s var(--spring) both; }
+@keyframes navBounce { 0% { transform: scale(.7) rotate(-10deg); } 100% { transform: none; } }
+:root .tabbar .tab.on svg { animation: navBounce .6s var(--spring) both; }
+:root .chip-btn.on, :root .rc-tog.on, :root .wall-sw.on, :root .basemap.on { animation: segPop .45s var(--spring) both; }
+/* Switches: the thumb snaps across with a spring */
+:root input.switch::after { transition: transform .45s var(--spring), width .2s ease !important; }
+:root input.switch:checked { transition: background-color .3s ease, box-shadow .3s ease; }
+@media (prefers-reduced-motion: reduce) {
+  :root .seg button.on, :root .nav-a.on .nav-ic, :root .tabbar .tab.on svg, :root .chip-btn.on, :root .rc-tog.on, :root .wall-sw.on, :root .basemap.on { animation: none !important; }
+  :root .btn.primary:hover { animation: none !important; }
+}
+/* Pressing always wins over hovering (the ring and the sink show on a laptop too). */
+html:root :is(.btn, .chip-btn, .rc-tog, .radar-play, .wn-go):not(:disabled):hover:active { transform: scale(.91) !important; box-shadow: 0 0 0 5px var(--press-ring), 0 6px 18px -8px rgba(10,132,255,.7) !important; }
+html:root :is(.quick-a, .more-tile, .cr-tile):hover:active { transform: scale(.95) !important; box-shadow: 0 0 0 4px var(--press-ring) !important; }

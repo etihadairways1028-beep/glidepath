@@ -995,3 +995,27 @@ body::before { background:
   .hero .ipad .screen { border-radius: 16px !important; }
   .hero .phone, .hero .float-chip { display: none !important; }
 }
+
+/* ===================== Every button: lift, glow, press, spring (laptop, iPad, phone) ===================== */
+:root { --spring: cubic-bezier(.18, 1.9, .32, 1); }
+:is(.btn, .nav .links a, .menu-sheet a, .ai-chips a, .feat-toc a, .faq-list summary, .watch-play, .scroll-cue, .new-badge, .foot a, .ch-link, .trust span, .tile-link) {
+  transition: transform .55s var(--spring), box-shadow .35s ease, filter .3s ease, background-color .25s ease, color .2s ease !important;
+  -webkit-tap-highlight-color: transparent;
+}
+:is(.btn, .ai-chips a, .feat-toc a, .watch-play, .new-badge):active { transform: scale(.92) !important; filter: brightness(1.15); box-shadow: 0 0 0 5px rgba(100,181,255,.3), 0 8px 20px -10px rgba(10,132,255,.8) !important; transition: transform .06s ease, box-shadow .06s ease, filter .06s ease !important; }
+.faq-list summary:active { transform: scale(.985) !important; transition: transform .07s ease !important; }
+.nav .links a:active, .menu-sheet a:active, .foot a:active { transform: scale(.94) !important; transition: transform .06s ease !important; }
+@media (hover: hover) and (pointer: fine) {
+  :is(.btn, .ai-chips a, .feat-toc a, .new-badge):hover { transform: translateY(-2px); filter: brightness(1.1); box-shadow: 0 12px 26px -12px rgba(10,132,255,.7), 0 0 0 1px rgba(143,200,255,.25) !important; }
+  .btn.primary { background-size: 220% 100%; }
+  .btn.primary:hover { background-image: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.3) 46%, transparent 62%), linear-gradient(180deg, #3D9BFF, #0A6CFF 55%, #0957E0) !important; animation: btnSweep .9s ease both; }
+  .nav .links a:hover { transform: translateY(-1px); color: #fff; }
+  .faq-list summary:hover { transform: translateX(3px); }
+  .watch-play:hover { transform: scale(1.08); box-shadow: 0 0 0 10px rgba(10,132,255,.18), 0 18px 40px -12px rgba(10,132,255,.9); }
+}
+@keyframes btnSweep { from { background-position: 120% 0, 0 0; } to { background-position: -20% 0, 0 0; } }
+/* FAQ: the answer slides open */
+.faq-list details[open] > p { animation: faqOpen .4s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes faqOpen { from { opacity: 0; transform: translateY(-6px); } }
+@media (prefers-reduced-motion: reduce) { .btn.primary:hover, .faq-list details[open] > p { animation: none !important; } }
+html:root :is(.btn, .ai-chips a, .feat-toc a, .watch-play, .new-badge):hover:active { transform: scale(.92) !important; box-shadow: 0 0 0 5px rgba(100,181,255,.3), 0 8px 20px -10px rgba(10,132,255,.8) !important; }
