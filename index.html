@@ -69,7 +69,7 @@
     <section class="hero" aria-labelledby="hero-title">
       <div class="hero-scene" aria-hidden="true"></div>
       <div class="hero-copy reveal">
-        <a class="eyebrow glass new-badge" href="#new"><span class="new-tag">New</span><span>Connect anywhere<span class="nb-long"> and the flight review</span></span><span aria-hidden="true">›</span></a>
+        <a class="eyebrow glass new-badge" href="#new"><span class="new-tag">New</span><span>Glidepath AI<span class="nb-long"> and the flight review</span></span><span aria-hidden="true">›</span></a>
         <h1 id="hero-title"><span>Your flight.</span> <span>Every detail.</span> <span class="h1-grad">One screen.</span></h1>
         <p class="lede">Microsoft Flight Simulator, live on your iPad, phone or second screen. After every landing, an honest review of how you flew.</p>
         <div class="cta">
@@ -174,6 +174,45 @@
     </section>
 
     <p class="sources reveal">Built on open data: <span>OurAirports</span><span>SimBrief</span><span>VATSIM</span><span>IVAO</span><span>aviationweather.gov</span><span>OpenStreetMap</span><span>Esri World Imagery</span><span>RainViewer</span></p>
+
+    <section id="watch" class="watch" aria-labelledby="watch-title">
+      <div class="section-head reveal"><p class="kicker">See it fly</p><h2 id="watch-title">Gate to gate, in under a minute.</h2>
+        <p class="sub">The real app flying the demo flight: pushback, take-off, top of descent, the landing, "Flight complete?" and the review. Sped up to under a minute.</p></div>
+      <div class="watch-frame reveal">
+        <video id="watch-video" src="assets/video/glidepath-flight.mp4" poster="assets/shots/flight-poster.webp" muted loop playsinline preload="none" width="1770" height="1230" aria-label="Screen recording of the Glidepath app during a demo flight from London Heathrow to Manchester"></video>
+        <button class="watch-play" id="watch-play" type="button" aria-label="Play the video"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg></button>
+        <span class="watch-tag">Demo flight · real app · sped up</span>
+      </div>
+    </section>
+
+    <section id="ai" class="ai-sec" aria-labelledby="ai-title">
+      <div class="ai-grid">
+        <div class="ai-copy reveal">
+          <p class="kicker">Glidepath AI</p>
+          <h2 id="ai-title">A first officer who actually helps.</h2>
+          <p class="sub">Copilot reads your live flight and answers in plain words: when to start down, which runway, how to fly this approach. After you park, it coaches you through your review. Stuck on setup? Ask it that too.</p>
+          <ul class="ai-points">
+            <li>Free with your Glidepath account, 40 questions a day.</li>
+            <li>Grounded in your real flight data, and told never to guess numbers.</li>
+            <li>Built-in answers work with no AI at all. Prefer your own model? Plug it into the Bridge.</li>
+          </ul>
+        </div>
+        <div class="ai-card glass reveal" aria-label="Things you can ask Copilot">
+          <div class="ai-head"><span class="ai-dot"></span>Copilot<span class="ai-pill">Glidepath AI</span></div>
+          <p class="ai-lead">Tap one to try it in the app:</p>
+          <div class="ai-chips">
+            <a href="app/#/copilot">✦ Brief my arrival</a>
+            <a href="app/#/copilot">✦ What should I do next?</a>
+            <a href="app/#/copilot">✦ How do I fly a smooth landing here?</a>
+            <a href="app/#/copilot">✦ How do I connect my iPad?</a>
+            <a href="app/#/copilot">✦ How is my landing graded?</a>
+            <a href="app/#/logbook">✦ How do I improve on this flight?</a>
+          </div>
+          <p class="ai-foot">Runs on Cloudflare Workers AI. It sees your question and this flight's numbers, not your account. Glidepath doesn't store them.</p>
+        </div>
+      </div>
+    </section>
+
 
     <!-- LIVE NETWORK -->
     <div class="netlive glass reveal" id="netlive" aria-live="polite">
@@ -649,7 +688,8 @@
       <ol class="road reveal">
         <li class="done"><span class="rd-dot"></span><div><b>1.0 · Launch</b><p>Live flight on every screen, the logbook, the landing debrief, remote control and the live camera.</p></div></li>
         <li class="done"><span class="rd-dot"></span><div><b>1.0.1 · Connect anywhere</b><p>Sign in on the PC and the iPad, any network. Updates from inside the app.</p></div></li>
-        <li class="done now"><span class="rd-dot"></span><div><b>1.0.2 · Flight review · now</b><p>"Flight complete?" after landing and a full review; SID, STAR and approach picking from the sim's own data; a cleaner look.</p></div></li>
+        <li class="done"><span class="rd-dot"></span><div><b>1.0.2 · Flight review</b><p>"Flight complete?" after landing and a full review; SID, STAR and approach picking from the sim's own data; a cleaner look.</p></div></li>
+        <li class="done now"><span class="rd-dot"></span><div><b>App 1.0.3 · Glidepath AI · now</b><p>Copilot answers anything about your flight or the app, and coaches you after every review. Free with an account.</p></div></li>
         <li><span class="rd-dot"></span><div><b>Next · More aircraft</b><p>Proper take-off and landing references for the 737, A330 and A350, 777 and 787, regional jets, turboprops and light aircraft.</p></div></li>
         <li><span class="rd-dot"></span><div><b>Then · Your SimBrief plan, drawn</b><p>The SID and STAR from your plan picked for you, and the chosen procedure drawn on the live map.</p></div></li>
       </ol>
@@ -668,7 +708,8 @@
         <details class="glass"><summary>Will it slow down my sim?</summary><p>No noticeable effect. The Bridge reads a handful of values a few times a second, the same way flight-tracking apps do.</p></details>
         <details class="glass"><summary>Which aircraft work?</summary><p>Any aircraft for the live data, the logbook and the review. Remote control uses the sim's standard controls: default aircraft respond to all of it; study-level add-ons like PMDG, Fenix and FSLabs run their own systems and may ignore some buttons. Every button tells you whether the sim really changed.</p></details>
         <details class="glass"><summary>How do I update?</summary><p>Glidepath tells you when there's a new version, for the app and for the Bridge. Press Update; Windows asks once on the PC to allow it, and the Bridge restarts by itself.</p></details>
-        <details class="glass"><summary>Is my data private?</summary><p>Without an account, everything stays on your own PC and devices. With an account, your flight summaries are stored so your logbook follows you, and Connect anywhere passes your live data through your account's relay without keeping it. Delete your account in the app and it's all gone. The <a href="privacy.html">privacy policy</a> has the details.</p></details>
+        <details class="glass"><summary>Does Glidepath have AI?</summary><p>Yes: Copilot. Signed in to your free account, you can ask it anything during a flight (briefings, what to do next, technique) or about Glidepath itself, and it coaches you after each review. It's free for 40 questions a day and runs on Cloudflare Workers AI. Without an account, Copilot still gives built-in answers straight from the sim. You can also connect your own model to the Bridge instead.</p></details>
+        <details class="glass"><summary>Is my data private?</summary><p>Without an account, everything stays on your own PC and devices. With an account, your flight summaries are stored so your logbook follows you, and Connect anywhere passes your live data through your account's relay without keeping it, and Glidepath AI gets your question and the flight's numbers only to answer it. Delete your account in the app and it's all gone. The <a href="privacy.html">privacy policy</a> has the details.</p></details>
       </div>
     </section>
     <section id="download" class="download" aria-labelledby="download-title">
@@ -732,6 +773,7 @@
     </div>
   </dialog>
 
+  <div class="wordmark" aria-hidden="true">Glidepath</div>
   <footer class="foot">
     <div class="foot-brand"><img src="assets/mark.svg" alt="" width="24" height="24"><b>Glidepath</b></div>
     <p>An independent project, not affiliated with Microsoft, Laminar Research, VATSIM, IVAO, Navigraph, SimBrief, or any airline or aircraft maker. Not for real-world navigation.</p>

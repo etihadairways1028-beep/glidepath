@@ -334,6 +334,27 @@
   bar.className = "scroll-bar"; document.body.appendChild(bar);
   const onScroll = () => { const h = document.documentElement; bar.style.transform = `scaleX(${h.scrollTop / Math.max(1, h.scrollHeight - h.clientHeight)})`; };
   addEventListener("scroll", onScroll, { passive: true }); onScroll();
+  // The hero iPad lies back a little and flattens as you scroll, like setting it down in front of you.
+  const heroPad = document.querySelector(".hero .ipad");
+  if (heroPad && !reduced) {
+    let ticking = false;
+    const tilt = () => { ticking = false; const k = Math.min(1, scrollY / 520); heroPad.style.setProperty("--tilt", `${(10 * (1 - k)).toFixed(2)}deg`); };
+    addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(tilt); } }, { passive: true }); tilt();
+  }
+  // "See it fly": plays (muted) when it comes into view, pauses when it leaves; the button plays and pauses.
+  const vid = document.getElementById("watch-video"), play = document.getElementById("watch-play");
+  if (vid && play) {
+    const frame = vid.parentElement;
+    let userPaused = false;
+    const sync = () => { frame.classList.toggle("playing", !vid.paused); frame.classList.toggle("paused", vid.paused && vid.currentTime > 0); play.setAttribute("aria-label", vid.paused ? "Play the video" : "Pause the video"); };
+    vid.addEventListener("play", sync); vid.addEventListener("pause", sync);
+    const start = () => { vid.preload = "auto"; const p = vid.play(); if (p && p.catch) p.catch(() => sync()); };
+    play.addEventListener("click", () => { if (vid.paused) { userPaused = false; start(); } else { userPaused = true; vid.pause(); } });
+    vid.addEventListener("click", () => play.click());
+    if (!reduced && "IntersectionObserver" in window) {
+      new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting && !userPaused) start(); else if (!e.isIntersecting && !vid.paused) vid.pause(); }), { threshold: 0.45 }).observe(vid);
+    }
+  }
   const dev = document.querySelector(".hero .devices");
   if (dev && !reduced && matchMedia("(hover: hover) and (pointer: fine)").matches) {
     addEventListener("pointermove", (e) => {

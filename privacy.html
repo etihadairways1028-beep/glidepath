@@ -44,23 +44,27 @@
       <li><b>Your logbook:</b> a summary of each flight (route, times, aircraft, distance, fuel, landing and review results), so it shows on all your devices.</li>
       <li><b>Connect anywhere:</b> if you sign in on the Bridge, a key for that PC (kept as a hash) and the PC's name. While your devices are connected, your live flight passes through your account's relay to reach them; it isn't stored.</li>
       <li><b>Email settings:</b> which emails you want, and a note of which ones were sent, so you don't get the same one twice.</li>
+      <li><b>Glidepath AI:</b> a count of how many questions you asked each day, for the free daily limit, kept for three days. Your questions and answers aren't stored.</li>
       <li><b>Live links and the landing challenge:</b> only if you turn them on. A live link shows your position to people with the link until the flight ends; the challenge shows your best landing of the month under the name you choose.</li>
     </ul>
 
     <h2>Emails</h2>
     <p>We send the emails you've chosen: your debrief, top of descent and arrival, new sign-ins, and password resets. They're sent through an email delivery service (Google, Mailjet or Brevo, depending on how Glidepath is set up), which receives your address and the message to deliver it. Turn each kind off in the app under Account.</p>
 
+    <h2>Glidepath AI</h2>
+    <p>When you ask Copilot a question while signed in, your question, the conversation so far and your current flight's numbers (position, altitude, speeds, phase, plan, weather) are sent to <b>Cloudflare Workers AI</b> to write the answer. Your email and account details aren't sent. Glidepath doesn't store the conversation; Cloudflare handles the request under <a href="https://www.cloudflare.com/privacypolicy/">its own privacy policy</a>. If you've connected your own AI model to the Bridge, questions go to that model instead.</p>
+
     <h2>Where it's kept</h2>
     <p>Accounts and the relay run on <b>Cloudflare</b>. The website and the app are served by Cloudflare and GitHub; the Bridge download comes from GitHub. These services see the usual connection details (like your IP address) to deliver pages, as any website does.</p>
 
     <h2>Things your device fetches directly</h2>
-    <p>To show maps, weather and traffic, the app asks these services itself: map tiles (OpenStreetMap, Esri World Imagery), weather (aviationweather.gov, RainViewer), online traffic and ATC (VATSIM, IVAO, SayIntentions), airport data (OurAirports), and SimBrief, if you add your SimBrief name. The live camera uses free public STUN servers (Cloudflare and Google) to help your devices find each other; the picture itself goes straight between your devices, encrypted. If you connect an AI model to Copilot, your questions go to the provider you chose.</p>
+    <p>To show maps, weather and traffic, the app asks these services itself: map tiles (OpenStreetMap, Esri World Imagery), weather (aviationweather.gov, RainViewer), online traffic and ATC (VATSIM, IVAO, SayIntentions), airport data (OurAirports), and SimBrief, if you add your SimBrief name. The live camera uses free public STUN servers (Cloudflare and Google) to help your devices find each other; the picture itself goes straight between your devices, encrypted. </p>
 
     <h2>Cookies</h2>
     <p>No tracking or advertising cookies. The app keeps your settings and sign-in in your browser's storage, only so it works.</p>
 
     <h2>Deleting your data</h2>
-    <p>In the app, go to Account and choose <b>Delete account</b>. Your account, logbook, sign-ins, PC keys, live links and challenge entries are deleted straight away. Data kept only on your PC and devices stays there until you remove it.</p>
+    <p>In the app, go to Account and choose <b>Delete account</b>. Your account, logbook, sign-ins, PC keys, live links, challenge entries and AI counts are deleted straight away. Data kept only on your PC and devices stays there until you remove it.</p>
 
     <h2>Questions</h2>
     <p>Ask on the project's <a data-repo-link href="#">GitHub page</a>.</p>
