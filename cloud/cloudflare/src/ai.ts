@@ -217,3 +217,20 @@ export async function aiChatStream(env: AiEnv, userId: string, body: unknown): P
   }
   return { status: 502, body: { error: "Glidepath AI didn't answer just now. Try again in a moment." } };
 }
+
+/**
+ * Diagnostic for the deploy check only: the raw start of one model's stream for a fixed prompt.
+ * Works only while the workflow has set a one-off PROBE_KEY (it deletes it straight after).
+ */
+export async function aiProbe(env: AiEnv & { PROBE_KEY?: string }, key: string | null, model: string): Promise<{ status: number; body: Record<string, unknown> }> {
+  if (!env.AI || !env.PROBE_KEY || env.PROBE_KEY.length < 32 || key !== env.PROBE_KEY) return { status: 404, body: { error: "Not found." } };
+  if (!MODELS.includes(model)) return { status: 400, body: { error: "Unknown model." } };
+  const t0 = Date.now();
+  try {
+    const s = (await env.AI.run(model as Parameters<Ai["run"]>[0], { messages: [{ role: "system", content: "Be brief." }, { role: "user", content: "Say hello in five words." }], max_tokens: 120, stream: true } as never)) as unknown as ReadableStream<Uint8Array>;
+    const r = s.getReader(); const dec = new TextDecoder(); let raw = ""; let firstAt: number | null = null;
+    while (raw.length < 2500 && Date.now() - t0 < 40_000) { const { done, value } = await r.read(); if (done) break; firstAt ??= Date.now() - t0; raw += dec.decode(value, { stream: true }); }
+    void r.cancel().catch(() => undefined);
+    return { status: 200, body: { model, firstChunkMs: firstAt, totalMs: Date.now() - t0, raw: raw.slice(0, 2500) } };
+  } catch (e) { return { status: 200, body: { model, error: (e as Error).message, totalMs: Date.now() - t0 } }; }
+}
