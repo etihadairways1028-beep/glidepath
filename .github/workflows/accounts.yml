@@ -124,7 +124,12 @@ jobs:
           R=$(curl -s -X POST "$U/auth/signup" -H "Content-Type: application/json" -d "{\"email\":\"$E\",\"password\":\"test-password-123\",\"name\":\"CI\"}")
           TOKEN=$(echo "$R" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
           if [ -z "$TOKEN" ]; then echo "::warning::No session for the AI check."; exit 0; fi
-          A=$(curl -s -w "\nHTTP %{http_code} in %{time_total}s" -X POST "$U/ai/chat" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"messages":[{"role":"user","content":"In one sentence: what vertical speed makes a smooth airliner landing?"}],"facts":{}}')
+          # A new version can take a little while to reach every Cloudflare location: retry while the route isn't there yet.
+          for i in 1 2 3 4 5 6 7 8; do
+            A=$(curl -s -w "\nHTTP %{http_code} in %{time_total}s" -X POST "$U/ai/chat" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"messages":[{"role":"user","content":"In one sentence: what vertical speed makes a smooth airliner landing?"}],"facts":{}}')
+            echo "$A" | grep -q "HTTP 404" || break
+            echo "Not live yet (try $i), waiting..."; sleep 10
+          done
           echo "$A" | head -c 900; echo
           curl -s -X DELETE "$U/me" -H "Authorization: Bearer $TOKEN" -o /dev/null -w "Cleanup: %{http_code}\n"
           echo "$A" | grep -q '"answer"' && echo "Glidepath AI works." || echo "::warning::Glidepath AI did not answer (see above)."
