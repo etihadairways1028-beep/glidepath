@@ -146,9 +146,11 @@ jobs:
           K=$(openssl rand -hex 24)
           printf '%s' "$K" | npx wrangler secret put PROBE_KEY >/dev/null
           sleep 20
-          for M in @cf/google/gemma-4-26b-a4b-it @cf/qwen/qwen3-30b-a3b-fp8 @cf/meta/llama-3.2-3b-instruct; do
-            echo "===== $M"
-            curl -s -m 60 -X POST "$U/ai/probe" -H "x-probe-key: $K" -H "Content-Type: application/json" -d "{\"model\":\"$M\"}" | head -c 2800; echo
+          for M in @cf/google/gemma-4-26b-a4b-it @cf/qwen/qwen3-30b-a3b-fp8; do
+            for X in '{}' '{"chat_template_kwargs":{"enable_thinking":false}}' '{"reasoning_effort":"none"}' '{"reasoning_effort":"low"}' '{"reasoning":{"effort":"low"}}'; do
+              echo "===== $M $X"
+              curl -s -m 60 -X POST "$U/ai/probe" -H "x-probe-key: $K" -H "Content-Type: application/json" -d "{\"model\":\"$M\",\"extra\":$X}" | python3 -c 'import json,sys; d=json.load(sys.stdin); d.pop("raw",None) if d.get("firstContentMs") else None; print(json.dumps(d)[:900])'
+            done
           done
           echo y | npx wrangler secret delete PROBE_KEY >/dev/null && echo "Probe key deleted."
 

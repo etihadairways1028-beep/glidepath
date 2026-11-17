@@ -148,8 +148,8 @@ async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Re
   if (p === "/" || p === "/health") return json(200, { ok: true, service: "glidepath-accounts" });
 
   if (p === "/ai/probe" && req.method === "POST") {
-    const b = await req.json().catch(() => ({})) as { model?: string };
-    const r = await aiProbe(env, req.headers.get("x-probe-key"), String(b.model ?? ""));
+    const b = await req.json().catch(() => ({})) as { model?: string; extra?: Record<string, unknown> };
+    const r = await aiProbe(env, req.headers.get("x-probe-key"), String(b.model ?? ""), b.extra ?? {});
     return json(r.status, r.body);
   }
   if (p === "/auth/signup" && req.method === "POST") {
