@@ -1,0 +1,29 @@
+# Checks what the live website and app are serving right now (run by hand after publishing).
+name: Check the live website
+on:
+  workflow_dispatch:
+    inputs:
+      expect:
+        description: "Text the home page should contain"
+        required: false
+        default: "A first officer who actually helps"
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch pages and look for what was published
+        env:
+          EXPECT: ${{ inputs.expect }}
+        run: |
+          S=https://glidepath-ad9.pages.dev
+          H=$(curl -fsS "$S/?nocache=$RANDOM" -D /tmp/h.txt)
+          grep -i -E "^(HTTP|cache-control|age|cf-cache-status)" /tmp/h.txt || true
+          echo "$H" | grep -q "$EXPECT" && echo "Home page: has \"$EXPECT\"." || { echo "::error::Home page doesn't have \"$EXPECT\"."; FAIL=1; }
+          echo "Hero badge: $(echo "$H" | grep -o 'new-tag">New</span><span>[^<]*' | sed 's/.*<span>//')"
+          curl -fsS "$S/privacy.html" | grep -q "Workers AI" && echo "Privacy: mentions Glidepath AI." || { echo "::error::Privacy page is old."; FAIL=1; }
+          curl -fsS -o /dev/null -w "Video: HTTP %{http_code}, %{size_download} bytes, %{content_type}\n" "$S/assets/video/glidepath-flight.mp4"
+          curl -fsS -o /dev/null -w "404 page: HTTP %{http_code}\n" "$S/this-page-does-not-exist" || true
+          curl -fsS "$S/app/version.json" && echo
+          curl -fsS "$S/app/sw.js" | grep -o "glidepath-v[0-9]*" | head -1
+          curl -fsS -o /dev/null -w "Accounts via site: HTTP %{http_code}\n" "$S/acct/health"
+          [ -z "$FAIL" ]
