@@ -35,13 +35,11 @@
     <nav class="nav glass" aria-label="Main">
       <a class="brand" href="#" aria-label="Glidepath home"><img src="assets/mark.svg" alt="" width="28" height="28"><span>Glidepath</span></a>
       <div class="links">
+        <a href="#what">What is Glidepath?</a>
         <a href="#features">Features</a>
-        <a href="#remote">Remote</a>
-        <a href="#gate">Gate to gate</a>
-        <a href="#debrief">Debrief</a>
-        <a href="#aircraft">Aircraft</a>
         <a href="#faq">FAQ</a>
-        <a href="app/">App</a>
+        <a href="#roadmap">Roadmap</a>
+        <a href="app/">Open the app</a>
       </div>
       <button class="btn glass small" id="acct-btn" type="button" hidden>Sign in</button>
       <a class="btn primary small" data-download href="#download">Download</a>
@@ -49,6 +47,7 @@
     </nav>
     <div class="menu-sheet glass strong" id="menu-sheet" hidden>
       <button type="button" class="menu-signin" id="menu-signin" hidden>Sign in or create an account</button>
+      <a href="#what">What is Glidepath?</a>
       <a href="#features">Features</a>
       <a href="#remote">Remote control and camera</a>
       <a href="#gate">Gate to gate</a>
@@ -58,6 +57,7 @@
       <a href="#aircraft">Aircraft compatibility</a>
       <a href="#today">What works today</a>
       <a href="#faq">Questions</a>
+      <a href="#roadmap">Roadmap</a>
       <a href="app/">Open the app</a>
       <a href="#download">Download for Windows</a>
     </div>
@@ -140,6 +140,37 @@
     </div>
 
     <a class="scroll-cue" href="#new" aria-label="See what's inside"><span>See what's inside</span><i></i></a>
+
+    <section id="what" class="what" aria-labelledby="what-title">
+      <div class="section-head reveal"><p class="kicker">What is Glidepath?</p><h2 id="what-title">One app for the whole flight.</h2>
+        <p class="sub">Glidepath reads your flight straight from Microsoft Flight Simulator and puts it on every screen you own: no add-ons in the Community folder, no juggling tabs.</p></div>
+      <div class="pillars">
+        <article class="pillar glass reveal">
+          <div class="pl-shot"><img src="assets/shots/pillar-live.webp" alt="The live flight card in cruise: EGLL to EGCC, top of descent in a few minutes, runway 23R" width="1180" height="820" loading="lazy"></div>
+          <span class="pl-k">Gate to gate, live</span>
+          <h3>Every phase, the way airlines keep it.</h3>
+          <p>Off block, take-off, top of climb, top of descent, touchdown, on block. Times against your SimBrief plan, the runway in use, and a message before every big moment.</p>
+        </article>
+        <article class="pillar glass reveal">
+          <div class="pl-shot"><img src="assets/shots/pillar-review.webp" alt="The flight review: an overall score, take-off, handling, approach and landing, what went well and what to work on" width="1180" height="820" loading="lazy"></div>
+          <span class="pl-k">An honest review</span>
+          <h3>Land, tap "Flight complete", learn.</h3>
+          <p>A score for the take-off, the handling, the approach and the landing, measured from your flight, not guessed. What went well, and the one thing to work on next time.</p>
+        </article>
+        <article class="pillar glass reveal">
+          <div class="pl-shot pl-diagram" aria-hidden="true">
+            <span class="pd-node"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg><small>Your PC</small></span>
+            <span class="pd-line"><i></i></span>
+            <span class="pd-node pd-acct"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.8 3.9 6 3.9 9.5s-1.3 6.7-3.9 9.5c-2.6-2.8-3.9-6-3.9-9.5s1.3-6.7 3.9-9.5z"/></svg><small>Your account</small></span>
+            <span class="pd-line"><i></i></span>
+            <span class="pd-node"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="3"/><path d="M11 18h2"/></svg><small>iPad or phone</small></span>
+          </div>
+          <span class="pl-k">Every screen, any network</span>
+          <h3>Sign in once. It just connects.</h3>
+          <p>Sign in on the PC and on your iPad or phone. They find each other on any Wi-Fi, even mobile data. On the same Wi-Fi it goes direct, and your EFB and GSX screens open too.</p>
+        </article>
+      </div>
+    </section>
 
     <p class="sources reveal">Built on open data: <span>OurAirports</span><span>SimBrief</span><span>VATSIM</span><span>IVAO</span><span>aviationweather.gov</span><span>OpenStreetMap</span><span>Esri World Imagery</span><span>RainViewer</span></p>
 
@@ -612,17 +643,31 @@
     </section>
 
     <!-- FAQ -->
+    <section id="roadmap" class="roadmap" aria-labelledby="roadmap-title">
+      <div class="section-head reveal"><p class="kicker">Roadmap</p><h2 id="roadmap-title">Where Glidepath is going.</h2><p class="sub">What's out, and what's being built next.</p></div>
+      <ol class="road reveal">
+        <li class="done"><span class="rd-dot"></span><div><b>1.0 · Launch</b><p>Live flight on every screen, the logbook, the landing debrief, remote control and the live camera.</p></div></li>
+        <li class="done"><span class="rd-dot"></span><div><b>1.0.1 · Connect anywhere</b><p>Sign in on the PC and the iPad, any network. Updates from inside the app.</p></div></li>
+        <li class="done now"><span class="rd-dot"></span><div><b>1.0.2 · Flight review · now</b><p>"Flight complete?" after landing and a full review; SID, STAR and approach picking from the sim's own data; a cleaner look.</p></div></li>
+        <li><span class="rd-dot"></span><div><b>Next · More aircraft</b><p>Proper take-off and landing references for the 737, A330 and A350, 777 and 787, regional jets, turboprops and light aircraft.</p></div></li>
+        <li><span class="rd-dot"></span><div><b>Then · Your SimBrief plan, drawn</b><p>The SID and STAR from your plan picked for you, and the chosen procedure drawn on the live map.</p></div></li>
+      </ol>
+    </section>
+
     <section id="faq" class="faq" aria-labelledby="faq-title">
       <div class="section-head reveal"><p class="kicker">Questions</p><h2 id="faq-title">Good to know.</h2></div>
       <div class="faq-list reveal">
-        <details class="glass"><summary>Is it really free?</summary><p>Yes. There is no paid version and nothing is locked. Glidepath runs on free services, and your flight data stays on your own PC and devices.</p></details>
-        <details class="glass"><summary>Do I need an App Store app?</summary><p>No. Open the app link in Safari on your iPad or iPhone and add it to your Home Screen. It also works in any browser on Android, Mac and PC.</p></details>
-        <details class="glass"><summary>Which simulators work?</summary><p>Microsoft Flight Simulator 2020 and 2024. X-Plane isn't supported yet.</p></details>
-        <details class="glass"><summary>Will remote control work with PMDG, Fenix or FSLabs?</summary><p>Partly. Glidepath uses the simulator's standard controls. Default aircraft respond to all of them; study-level add-ons run their own systems and may ignore some. Every button tells you whether the sim actually changed.</p></details>
-        <details class="glass"><summary>Can I watch my flight away from home?</summary><p>Partly. Start a live link in the app and anyone, including you, can follow your plane on a map from anywhere. The full app, with remote control and the camera, still runs over your home Wi-Fi.</p></details>
-        <details class="glass"><summary>Do I need to put anything in my Community folder?</summary><p>No. The Bridge talks to the sim through SimConnect, which is built into Microsoft Flight Simulator.</p></details>
-        <details class="glass"><summary>Is my data private?</summary><p>Live telemetry stays on your network. If you make an account, only flight summaries are stored, so your logbook follows you between devices. A live link shares your position only while you have it on, and only with people who have the link. Delete your account in the app and it's all gone.</p></details>
-        <details class="glass"><summary>Windows says it protected my PC. Is that safe?</summary><p>Windows shows that for new apps that aren't code-signed yet. Check the file's SHA-256 against the one on this page, then choose <i>More info</i> and <i>Run</i>. The code is open on GitHub.</p></details>
+        <details class="glass"><summary>Is it really free?</summary><p>Yes. No subscription, no adverts, nothing locked. Glidepath runs on free services.</p></details>
+        <details class="glass"><summary>Which simulators work?</summary><p>Microsoft Flight Simulator 2020 and 2024, on Windows 10 and 11. X-Plane isn't supported yet.</p></details>
+        <details class="glass"><summary>Do I need a tablet?</summary><p>No. Glidepath works on an iPad, an iPhone or Android phone, a second monitor, or a laptop. A tablet next to your screen is the nicest way to use it.</p></details>
+        <details class="glass"><summary>Do I need an App Store app?</summary><p>No. Open the app in Safari and add it to your Home Screen; it then opens like any other app. It also works in any browser on Android, Mac and PC.</p></details>
+        <details class="glass"><summary>Does my iPad need to be on the same Wi-Fi?</summary><p>No. Sign in to your free Glidepath account on the PC (on the Bridge page) and on the iPad, and they connect on any network, even mobile data. On the same Wi-Fi it connects directly, which is a little faster and also opens add-on screens like the Fenix EFB and the GSX remote.</p></details>
+        <details class="glass"><summary>Windows says "Windows protected your PC". Is that safe?</summary><p>Windows shows that for new apps that aren't code-signed yet (signing costs money every year). Choose <i>More info</i>, then <i>Run anyway</i>. If you want to be sure, check the file's SHA-256 against the one on this page; the code is open on GitHub.</p></details>
+        <details class="glass"><summary>Do I need to put anything in my Community folder?</summary><p>No. The Bridge talks to the sim through SimConnect, which is built into Microsoft Flight Simulator. Nothing is added to the sim.</p></details>
+        <details class="glass"><summary>Will it slow down my sim?</summary><p>No noticeable effect. The Bridge reads a handful of values a few times a second, the same way flight-tracking apps do.</p></details>
+        <details class="glass"><summary>Which aircraft work?</summary><p>Any aircraft for the live data, the logbook and the review. Remote control uses the sim's standard controls: default aircraft respond to all of it; study-level add-ons like PMDG, Fenix and FSLabs run their own systems and may ignore some buttons. Every button tells you whether the sim really changed.</p></details>
+        <details class="glass"><summary>How do I update?</summary><p>Glidepath tells you when there's a new version, for the app and for the Bridge. Press Update; Windows asks once on the PC to allow it, and the Bridge restarts by itself.</p></details>
+        <details class="glass"><summary>Is my data private?</summary><p>Without an account, everything stays on your own PC and devices. With an account, your flight summaries are stored so your logbook follows you, and Connect anywhere passes your live data through your account's relay without keeping it. Delete your account in the app and it's all gone. The <a href="privacy.html">privacy policy</a> has the details.</p></details>
       </div>
     </section>
     <section id="download" class="download" aria-labelledby="download-title">
@@ -689,7 +734,7 @@
   <footer class="foot">
     <div class="foot-brand"><img src="assets/mark.svg" alt="" width="24" height="24"><b>Glidepath</b></div>
     <p>An independent project, not affiliated with Microsoft, Laminar Research, VATSIM, IVAO, Navigraph, SimBrief, or any airline or aircraft maker. Not for real-world navigation.</p>
-    <p><a data-repo-link href="#">Source code on GitHub</a> · <a href="app/">Open the app</a></p>
+    <p><a href="privacy.html">Privacy policy</a> · <a data-repo-link href="#">Source code on GitHub</a> · <a href="app/">Open the app</a></p>
   </footer>
 
   <script src="app.js" defer></script>
