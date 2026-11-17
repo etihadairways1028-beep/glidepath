@@ -2,6 +2,7 @@
  * Glance mode: a full-screen, high-contrast view for an iPad on a stand or a
  * second monitor. Keeps the screen awake where the browser allows it.
  */
+import { ClockPill } from "../components/Clock";
 import { useEffect, useState } from "react";
 import { LiveCard } from "../components/LiveCard";
 import { StatusPill, TimingsStrip } from "../components/Timings";
@@ -43,7 +44,7 @@ export function Glance() {
       <div className="glance glance-cockpit">
         <div className="gc-top between">
           <a className="btn small glass" href="#/home"><span style={{ width: 16, height: 16 }}>{Icon.back()}</span>Exit</a>
-          <div className="seg glass" role="group" aria-label="Layout"><button onClick={() => pick("card")}>Card</button><button className="on">Cockpit</button></div>
+          <div className="row" style={{ gap: 8 }}><ClockPill /><div className="seg glass" role="group" aria-label="Layout"><button onClick={() => pick("card")}>Card</button><button className="on">Cockpit</button></div></div>
         </div>
         <div className="gc-left">
           {L.flight ? <LiveCard big /> : <div className="glass pad empty"><div className="h2">No live flight</div><p className="muted">Start your sim, or the demo from Home.</p></div>}
@@ -74,6 +75,7 @@ export function Glance() {
       <div style={{ width: "min(980px, 100%)" }}>
         <div className="between" style={{ marginBottom: 14 }}>
           <a className="btn small glass" href="#/home"><span style={{ width: 16, height: 16 }}>{Icon.back()}</span>Exit</a>
+          <ClockPill />
           {wide || layout !== "auto" ? <div className="seg glass" role="group" aria-label="Layout"><button className="on">Card</button><button onClick={() => pick("cockpit")}>Cockpit</button></div> : null}
           <span className="faint" style={{ fontSize: 12.5 }}>{awake === "on" ? "Screen kept awake" : awake === "unsupported" ? "Tip: set Auto-Lock to Never while flying" : ""}{mode === "demo" ? (awake === "on" || awake === "unsupported" ? ". Demo flight" : "Demo flight") : ""}</span>
         </div>

@@ -3,26 +3,33 @@
  * route, where you are along it (an altitude profile that lights up as you
  * fly), times against plan, and the one number that matters right now.
  */
-import { useMemo } from "react";
-import type { TrailPoint } from "../data/store";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useApp } from "../data/store";
 import { altText, countdown, dur, fmt, PHASE_LABEL, useLive, zulu } from "../data/derive";
 import { useChoice, useChosenArrivalRunway } from "./Procedures";
 
-const BARS = 34;
 
 export function LiveCard({ big }: { big?: boolean }) {
   const L = useLive();
-  const trail = useApp((s) => s.trail);
   const { frame, flight, plan, phase } = L;
   const est = phaseProgress(L.phase, L.progress, !!L.plan || L.toGoNm !== null, L.completed);
-  const bars = useBars(L.plan, trail, est, L.completed);
   const choice = useChoice(flight?.departureIcao ?? plan?.origin.icao, flight?.arrivalIcao ?? plan?.destination.icao);
   const chosenArr = choice.arrRunway ?? null;
   // Where top of descent falls along the bars (from the time to TOD against the time to the gate).
   const T0 = L.timings;
   const todFrac = L.airborne && T0?.toTopOfDescentMs != null && T0.toGateMs != null && T0.toGateMs > 0
     ? Math.min(0.98, est + (T0.toTopOfDescentMs / T0.toGateMs) * (1 - est)) : null;
+
+  // Top of climb: from the time to TOC while climbing; afterwards from the profile's shape.
+  const tocFrac = L.airborne && T0?.toTopOfClimbMs != null && T0.toGateMs != null && T0.toGateMs > 0
+    ? Math.min(0.9, est + (T0.toTopOfClimbMs / T0.toGateMs) * (1 - est)) : null;
+  const events = useApp((s) => s.events);
+  const tocEv = events.find((e) => e.type === "TOP_OF_CLIMB");
+  const todEv = events.find((e) => e.type === "TOP_OF_DESCENT");
+  const nowT = L.frame?.t ?? Date.now();
+  const tocLabel = tocEv ? zulu(tocEv.t) : T0?.toTopOfClimbMs != null ? zulu(nowT + T0.toTopOfClimbMs) : null;
+  const todLabel = todEv ? zulu(todEv.t) : T0?.toTopOfDescentMs != null ? zulu(nowT + T0.toTopOfDescentMs) : null;
+  const profile = useProfile(L.plan, tocFrac, todFrac);
 
   if (!flight) return null;
   const callsign = plan?.callsign ?? flight.callsign ?? flight.aircraft?.registration ?? null;
@@ -94,14 +101,8 @@ export function LiveCard({ big }: { big?: boolean }) {
           <div className="s">{depNote}</div>
         </div>
         <div>
-          <div className="lc-bars">
-            {todFrac !== null && T0?.toTopOfDescentMs != null && (
-              <span className="lc-tod" style={{ left: `${todFrac * 100}%` }} title={`Top of descent in ${countdown(T0.toTopOfDescentMs)}`}>TOD</span>
-            )}
-            <div className="profile-bars" aria-hidden="true">
-              {bars.map((b, i) => <i key={i} className={`${b.cls}${todFrac !== null && i === Math.round(todFrac * (BARS - 1)) ? " tod" : ""}`} style={{ height: `${b.h}px` }} />)}
-            </div>
-          </div>
+          <FlightProfile alts={profile} progress={est} completed={L.completed} airborne={L.airborne} tocFrac={tocFrac} todFrac={todFrac}
+            tocLabel={tocLabel} todLabel={todLabel} />
           <div className="lc-mid">
             <div className="over">{over}</div>
             <div className="main-v">{main}</div>
@@ -144,11 +145,12 @@ function phaseProgress(phase: string, progress: number, known: boolean, complete
   return by[phase] ?? 0;
 }
 
-/** Bars: the planned altitude profile with a plan; otherwise the usual climb, cruise and descent shape. */
-function useBars(plan: ReturnType<typeof useLive>["plan"], _trail: TrailPoint[], progress: number, completed: boolean) {
+const N = 72;
+/** The altitude profile, 0..1 at N points: the plan's altitudes when there are enough, else climb, cruise and descent placed at T/C and T/D. */
+function useProfile(plan: ReturnType<typeof useLive>["plan"], tocFrac: number | null, todFrac: number | null): number[] {
+  const tocK = tocFrac === null ? null : Math.round(tocFrac * 50);
+  const todK = todFrac === null ? null : Math.round(todFrac * 50);
   return useMemo(() => {
-    let alts: number[];
-    // Plan altitudes, with gaps (fixes without one) filled in between their neighbours.
     const raw = plan && plan.fixes.length > 1 ? [plan.origin.elevationFt ?? 0, ...plan.fixes.map((f) => f.altitudeFt ?? null), plan.destination.elevationFt ?? 0] : [];
     const known = raw.filter((v) => v != null).length;
     if (raw.length > 3 && known >= Math.max(3, raw.length * 0.5)) {
@@ -159,15 +161,132 @@ function useBars(plan: ReturnType<typeof useLive>["plan"], _trail: TrailPoint[],
         const va = raw[a] ?? 0, vb = raw[b] ?? 0;
         return va + ((vb - va) * (i - a)) / Math.max(1, b - a);
       });
-      alts = Array.from({ length: BARS }, (_, i) => pts[Math.min(pts.length - 1, Math.round((i / (BARS - 1)) * (pts.length - 1)))]!);
-    } else {
-      // Climb over the first fifth, cruise, descend over the last quarter.
-      alts = Array.from({ length: BARS }, (_, i) => { const x = i / (BARS - 1); return x < 0.2 ? 0.12 + 0.88 * Math.sin((x / 0.2) * Math.PI / 2) : x > 0.75 ? 0.12 + 0.88 * Math.cos(((x - 0.75) / 0.25) * Math.PI / 2) : 1; });
+      // Place each altitude by real distance along the route (not by waypoint count), so the shape matches progress.
+      const geo = [plan!.origin, ...plan!.fixes, plan!.destination];
+      const cum = [0];
+      for (let i = 1; i < geo.length; i++) cum.push(cum[i - 1]! + gcNm(geo[i - 1]!.lat, geo[i - 1]!.lon, geo[i]!.lat, geo[i]!.lon));
+      const total = cum.at(-1)! || 1;
+      const out = Array.from({ length: N }, (_, i) => {
+        const d = (i / (N - 1)) * total;
+        let k = 0; while (k < cum.length - 2 && cum[k + 1]! < d) k++;
+        const seg = cum[k + 1]! - cum[k]! || 1, f = Math.min(1, Math.max(0, (d - cum[k]!) / seg));
+        return pts[k]! + (pts[k + 1]! - pts[k]!) * f;
+      });
+      const max = Math.max(1, ...out);
+      return out.map((v) => Math.max(0, v / max));
     }
-    const max = Math.max(1, ...alts);
-    const lit = Math.round(progress * BARS);
-    return alts.map((a, i) => ({ h: 6 + 44 * Math.max(0, a / max), cls: i === lit - 1 && !completed && lit > 0 ? "here" : i < lit ? "on" : "" }));
-  }, [plan, Math.round(progress * BARS), completed]);
+    const c = tocK !== null ? tocK / 50 : 0.2, d = todK !== null ? todK / 50 : 0.76;
+    const ease = (t: number) => (1 - Math.cos(Math.PI * Math.min(1, Math.max(0, t)))) / 2;
+    return Array.from({ length: N }, (_, i) => { const x = i / (N - 1); return x <= c ? ease(x / Math.max(0.01, c)) : x >= d ? 1 - ease((x - d) / Math.max(0.01, 1 - d)) : 1; });
+  }, [plan, tocK, todK]);
+}
+
+function gcNm(la1: number, lo1: number, la2: number, lo2: number): number {
+  const r = Math.PI / 180, dLa = (la2 - la1) * r, dLo = (lo2 - lo1) * r;
+  const h = Math.sin(dLa / 2) ** 2 + Math.cos(la1 * r) * Math.cos(la2 * r) * Math.sin(dLo / 2) ** 2;
+  return 2 * 3440.065 * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+function useSize(): [(el: HTMLDivElement | null) => void, number, number] {
+  const [size, setSize] = useState<[number, number]>([0, 0]);
+  const ro = useRef<ResizeObserver | null>(null);
+  const ref = useCallback((el: HTMLDivElement | null) => {
+    ro.current?.disconnect();
+    if (!el) return;
+    setSize([el.clientWidth, el.clientHeight]);
+    ro.current = new ResizeObserver(([e]) => setSize([Math.round(e!.contentRect.width), Math.round(e!.contentRect.height)]));
+    ro.current.observe(el);
+  }, []);
+  return [ref, size[0], size[1]];
+}
+
+/**
+ * Where you are along the flight, as pilots draw it: the vertical profile from gate to gate,
+ * lit up behind you, a plane riding it, and T/C and T/D marked with their times.
+ */
+function FlightProfile({ alts, progress, completed, airborne, tocFrac, todFrac, tocLabel, todLabel }: {
+  alts: number[]; progress: number; completed: boolean; airborne: boolean; tocFrac: number | null; todFrac: number | null; tocLabel: string | null; todLabel: string | null;
+}) {
+  const [ref, W, boxH] = useSize();
+  const H = boxH || 74, top = 20, base = H - 10, pad = 7;
+  const id = useMemo(() => Math.random().toString(36).slice(2, 8), []);
+  const p = Math.min(1, Math.max(0, progress));
+  const X = (f: number) => pad + f * (W - pad * 2);
+  const Y = (a: number) => base - a * (base - top);
+  const altAt = (f: number) => { const x = Math.min(1, Math.max(0, f)) * (alts.length - 1); const k = Math.floor(x), r = x - k; return alts[k]! + ((alts[Math.min(alts.length - 1, k + 1)] ?? alts[k]!) - alts[k]!) * r; };
+  // Where the profile reaches cruise and leaves it, when timings don't say.
+  const shapeToc = alts.findIndex((a) => a >= 0.97) / (alts.length - 1);
+  let lastHi = alts.length - 1; while (lastHi > 0 && alts[lastHi]! < 0.97) lastHi--;
+  const fToc = tocFrac ?? (shapeToc > 0 ? shapeToc : null);
+  const fTod = todFrac ?? (lastHi > 0 && lastHi < alts.length - 1 ? lastHi / (alts.length - 1) : null);
+
+  const path = useMemo(() => {
+    if (W < 40) return "";
+    const pts = alts.map((a, i) => [X(i / (alts.length - 1)), Y(a)] as const);
+    // Smooth curve through the points (Catmull-Rom to Bézier).
+    let d = `M${pts[0]![0].toFixed(1)},${pts[0]![1].toFixed(1)}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[Math.max(0, i - 1)]!, p1 = pts[i]!, p2 = pts[i + 1]!, p3 = pts[Math.min(pts.length - 1, i + 2)]!;
+      const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6, c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
+      d += ` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+    }
+    return d;
+  }, [alts, W, H]);
+
+  const px = X(p), py = Y(altAt(p));
+  const slope = (altAt(Math.min(1, p + 0.015)) - altAt(Math.max(0, p - 0.015))) * (base - top) / (0.03 * (W - pad * 2) || 1);
+  const angle = Math.max(-28, Math.min(28, (-Math.atan(slope) * 180) / Math.PI));
+  // When T/C and T/D are close, their labels lean away from each other instead of overlapping.
+  const close = fToc !== null && fTod !== null && Math.abs(X(fTod) - X(fToc)) < 120;
+  const marker = (f: number | null, label: string, time: string | null, key: string, side: "l" | "r") => {
+    if (f === null || W < 40) return null;
+    const x = X(f), y = Y(altAt(f)), passed = f <= p;
+    const anchor = close ? (side === "l" ? "end" : "start") : "middle";
+    const lx = close ? (side === "l" ? Math.max(70, x + 6) : Math.min(W - 70, x - 6)) : Math.min(W - 36, Math.max(36, x));
+    return (
+      <g key={key} className={`fp-mark${passed ? " passed" : ""}`}>
+        <circle cx={x} cy={y} r={3.2} />
+        <text x={lx} y={Math.max(9, y - 9)} textAnchor={anchor}>{label}{time ? <tspan className="fp-time"> {time}</tspan> : null}</text>
+      </g>
+    );
+  };
+  return (
+    <div className={`flight-profile${completed ? " done" : ""}`} ref={ref} aria-hidden="true">
+      {W >= 40 && (
+        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
+          <defs>
+            <linearGradient id={`fl-${id}`} x1="0" x2="1" y1="0" y2="0"><stop offset="0" stopColor="#3D8BFF" /><stop offset="1" stopColor="#8FD0FF" /></linearGradient>
+            <linearGradient id={`fa-${id}`} x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#4A9BFF" stopOpacity=".38" /><stop offset="1" stopColor="#4A9BFF" stopOpacity="0" /></linearGradient>
+            <clipPath id={`cf-${id}`}><rect x="0" y="0" width={px} height={H} /></clipPath>
+            <clipPath id={`cr-${id}`}><rect x={px} y="0" width={W - px} height={H} /></clipPath>
+            <filter id={`gl-${id}`} x="-10%" y="-60%" width="120%" height="220%"><feGaussianBlur stdDeviation="3" /></filter>
+          </defs>
+          {/* runway baseline with the two airports */}
+          <line className="fp-ground" x1={pad} x2={W - pad} y1={base} y2={base} />
+          {/* what's left: faint and dashed */}
+          <path className="fp-left" d={path} clipPath={`url(#cr-${id})`} />
+          {/* what's flown: filled, glowing, solid */}
+          <path d={`${path} L${X(1)},${base} L${X(0)},${base} Z`} fill={`url(#fa-${id})`} clipPath={`url(#cf-${id})`} />
+          <path d={path} stroke={`url(#fl-${id})`} className="fp-glow" filter={`url(#gl-${id})`} clipPath={`url(#cf-${id})`} />
+          <path d={path} stroke={`url(#fl-${id})`} className="fp-flown" clipPath={`url(#cf-${id})`} />
+          {marker(fToc, "T/C", tocLabel, "toc", "l")}
+          {marker(fTod, "T/D", todLabel, "tod", "r")}
+          <circle className="fp-apt" cx={X(0)} cy={base} r={3.5} />
+          <circle className={`fp-apt${completed ? " lit" : ""}`} cx={X(1)} cy={base} r={3.5} />
+          {/* you are here */}
+          {!completed && (
+            <g transform={`translate(${px.toFixed(1)},${py.toFixed(1)})`}>
+              {airborne && <circle className="fp-pulse" r="7" />}
+              <circle className="fp-halo" r="11" />
+              <g transform={`rotate(${angle.toFixed(1)})`}>
+                <path className="fp-plane" d="M9 0 L3 -1.6 L-1 -8 L-3.2 -8 L-1.2 -1.6 L-6 -1.4 L-7.6 -4 L-9 -4 L-8 0 L-9 4 L-7.6 4 L-6 1.4 L-1.2 1.6 L-3.2 8 L-1 8 L3 1.6 Z" />
+              </g>
+            </g>
+          )}
+        </svg>
+      )}
+    </div>
+  );
 }
 
 type Ev = { type: string; altMslFt: number | null };

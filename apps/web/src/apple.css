@@ -949,3 +949,154 @@ button, .btn, .seg, .tabbar { -webkit-user-select: none; user-select: none; }
 .ai-caret { display: inline-block; width: 8px; height: 1.05em; margin-left: 3px; vertical-align: -0.15em; border-radius: 2px; background: currentColor; opacity: .55; animation: aiCaret 1s steps(2, start) infinite; }
 @keyframes aiCaret { to { visibility: hidden; } }
 @media (prefers-reduced-motion: reduce) { .ai-caret { animation: none; } }
+
+/* ===================== Live card: the flight profile (gate to gate) ===================== */
+.flight-profile { position: relative; width: 100%; height: 74px; margin-bottom: 4px; }
+.flight-profile svg { display: block; overflow: visible; }
+.fp-ground { stroke: rgba(160,185,230,.22); stroke-width: 1.5; stroke-linecap: round; }
+.fp-left { fill: none; stroke: rgba(170,195,240,.32); stroke-width: 2; stroke-dasharray: 2 5; stroke-linecap: round; }
+.fp-flown { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.fp-glow { fill: none; stroke-width: 7; opacity: .55; }
+.fp-apt { fill: #0d1626; stroke: rgba(170,195,240,.55); stroke-width: 2; }
+.fp-apt.lit { fill: #8FD0FF; stroke: #fff; }
+.fp-mark line { stroke: rgba(143,208,255,.55); stroke-width: 1; }
+.fp-mark circle { fill: #0d1626; stroke: #8FD0FF; stroke-width: 1.6; }
+.fp-mark text { font: 700 12px/1 var(--data, ui-monospace, monospace); fill: #8FD0FF; letter-spacing: .04em; }
+.fp-mark .fp-time { font-weight: 600; fill: rgba(225,235,255,.72); }
+.fp-mark.passed circle { fill: #8FD0FF; stroke: #fff; }
+.fp-mark.passed text { fill: rgba(143,208,255,.6); }
+.fp-plane { fill: #fff; filter: drop-shadow(0 0 4px rgba(143,208,255,.95)) drop-shadow(0 1px 1px rgba(0,0,0,.45)); }
+.fp-halo { fill: rgba(143,208,255,.16); stroke: rgba(143,208,255,.35); stroke-width: 1; }
+.fp-pulse { fill: none; stroke: rgba(143,208,255,.7); stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: fpPulse 2.4s cubic-bezier(.2,.7,.3,1) infinite; }
+@keyframes fpPulse { 0% { transform: scale(1); opacity: .9; } 100% { transform: scale(3.2); opacity: 0; } }
+.flight-profile.done .fp-flown { stroke: #30D158; }
+@media (prefers-reduced-motion: reduce) { .fp-pulse { animation: none; opacity: 0; } }
+/* Light mode */
+:root[data-theme="light"] .fp-ground { stroke: rgba(40,60,110,.2); }
+:root[data-theme="light"] .fp-left { stroke: rgba(40,70,140,.35); }
+:root[data-theme="light"] .fp-apt { fill: #fff; stroke: rgba(40,70,140,.5); }
+:root[data-theme="light"] .fp-mark text { fill: #1f6fe0; }
+:root[data-theme="light"] .fp-mark .fp-time { fill: rgba(20,30,60,.65); }
+:root[data-theme="light"] .fp-mark circle { fill: #fff; stroke: #1f6fe0; }
+:root[data-theme="light"] .fp-plane { fill: #1f6fe0; filter: drop-shadow(0 0 3px rgba(31,111,224,.5)); }
+/* The live card is always dark in this design; keep its profile in dark colours even in light mode. */
+:root[data-theme="light"] .live-card .fp-ground { stroke: rgba(160,185,230,.22); }
+:root[data-theme="light"] .live-card .fp-left { stroke: rgba(170,195,240,.32); }
+:root[data-theme="light"] .live-card .fp-apt { fill: #0d1626; stroke: rgba(170,195,240,.55); }
+:root[data-theme="light"] .live-card .fp-mark text { fill: #8FD0FF; }
+:root[data-theme="light"] .live-card .fp-mark .fp-time { fill: rgba(225,235,255,.72); }
+:root[data-theme="light"] .live-card .fp-mark circle { fill: #0d1626; stroke: #8FD0FF; }
+:root[data-theme="light"] .live-card .fp-plane { fill: #fff; filter: drop-shadow(0 0 4px rgba(143,208,255,.95)); }
+.live-card.big .flight-profile, .glance-cockpit .flight-profile { height: 74px; }
+
+/* ===================== Glance on iPad: always fits the screen, nothing cut off ===================== */
+.glance:not(.glance-cockpit) { min-height: 100dvh; align-content: center; box-sizing: border-box; }
+.glance-cockpit { height: 100dvh !important; }
+.glance-cockpit .gc-left { overflow: hidden; display: flex; flex-direction: column; gap: 1.4vh; }
+.glance-cockpit .gc-left > .live-card { padding: 2.2vh 22px 1.8vh !important; flex: none; }
+.glance-cockpit .live-card .lc-route { margin-top: 1.2vh !important; }
+.glance-cockpit .lc-apt .code { font-size: clamp(30px, 6.2vh, 60px) !important; }
+.glance-cockpit .lc-mid .main-v { font-size: clamp(22px, 4.6vh, 42px) !important; }
+.glance-cockpit .lc-foot { margin-top: 1.2vh !important; padding-top: 1.2vh !important; }
+.glance-cockpit .gc-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.glance-cockpit .gc-tiles .tile { padding: 1.4vh 12px !important; min-height: 0 !important; }
+.glance-cockpit .gc-tiles .tile .v { font-size: clamp(18px, 3.4vh, 30px) !important; }
+.glance-cockpit .gc-tiles .tile .k { font-size: 11.5px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Narrow landscape (iPad mini): two by two again, but smaller */
+@media (max-width: 1100px) and (orientation: landscape) { .glance-cockpit .gc-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .glance-cockpit .gc-tiles .tile .v { font-size: clamp(16px, 2.8vh, 24px) !important; } }
+/* Portrait: the card layout, bigger, centred in the screen */
+@media (orientation: portrait) and (min-width: 700px) {
+  .glance:not(.glance-cockpit) .live-card { width: min(980px, 100%); }
+  .glance:not(.glance-cockpit) .lc-apt .code { font-size: clamp(56px, 9vw, 96px) !important; }
+  .glance:not(.glance-cockpit) .lc-mid .main-v { font-size: clamp(40px, 6.4vw, 68px) !important; }
+  .glance:not(.glance-cockpit) .flight-profile { height: 96px; }
+  .glance-strip { gap: 14px; }
+  .glance-strip .tile .v { font-size: clamp(28px, 4.4vw, 44px) !important; }
+}
+/* No PC connected: the camera is a slim message, not a full-screen empty box (the autopilot stays in view). */
+.cam-view.idle { aspect-ratio: auto; min-height: 96px; display: grid; place-items: center; }
+.cam-view.idle video { display: none; }
+.cam-view.idle .cam-empty { position: static; padding: 22px; }
+
+/* Glideslope messages on iPad: top-right, compact, like iPadOS notifications. Titles (left) and shortcut buttons (bottom) stay clear. */
+@media (min-width: 700px) {
+  .gs-stack { top: calc(14px + env(safe-area-inset-top)) !important; bottom: auto !important; right: max(16px, env(safe-area-inset-right)) !important; left: auto !important; transform: none !important; width: min(360px, 42vw) !important; flex-direction: column !important; }
+  .gs-msg { padding: 10px 14px 11px !important; border-radius: 20px !important; }
+  .gs-title { font-size: 15.5px !important; }
+  .gs-body { font-size: 13px !important; }
+  @keyframes gs-in { from { opacity: 0; transform: translateX(24px) scale(.96); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+  body:has(.fc-sheet) .gs-stack { bottom: auto !important; }
+}
+
+/* ===================== UTC and local time ===================== */
+.side-clock { margin: 4px 6px 14px; padding: 10px 12px; border-radius: 16px; background: rgba(255,255,255,.05); box-shadow: inset 0 0 0 .5px rgba(255,255,255,.12); display: grid; gap: 4px; }
+.sc-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.sc-k { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--a-ink2, rgba(235,235,245,.6)); }
+.sc-v { font: 700 19px/1.1 var(--data, ui-monospace, monospace); color: var(--a-ink, #fff); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.sc-v small { font-size: 13px; font-weight: 600; opacity: .55; }
+.sc-v b { font-size: 13px; color: #64B5FF; margin-left: 1px; }
+.sc-v.loc { font-size: 15px; font-weight: 650; }
+.sc-v.loc small { font-size: 11px; opacity: .6; }
+.clock-pill { display: inline-flex; align-items: center; gap: 10px; padding: 7px 14px !important; border-radius: 99px !important; font: 700 15px/1 var(--data, ui-monospace, monospace); font-variant-numeric: tabular-nums; color: var(--a-ink, #fff); white-space: nowrap; }
+.clock-pill b { color: #64B5FF; font-size: 12px; margin-left: 1px; }
+.clock-pill .cp-loc { font-weight: 600; opacity: .85; }
+.clock-pill .cp-loc small { font: 600 11px/1 var(--font, system-ui); opacity: .7; }
+.cp-sep { width: 1px; height: 14px; background: rgba(255,255,255,.22); }
+:root[data-theme="light"] .cp-sep { background: rgba(0,0,0,.18); }
+/* With the sidebar showing, Home doesn't need a second clock. */
+@media (min-width: 901px) { .home-clock { display: none !important; } }
+.home-head-r { flex-wrap: wrap; justify-content: flex-end; }
+
+/* ===================== Press feedback, everywhere (final layer) =====================
+   Press: sink a little, fast. Release: spring back with a small overshoot. Works on iPad (see main.tsx). */
+:root :is(.btn, .chip-btn, .chip, .quick-a, .rc-tog, .rc-steps button, .rc-v, .seg button, .basemap, .wall-sw, .more-tile, .cr-tile, .stat-chip, .sofar-to, .lh-bar, .cl-link, .cl-items button, .ch-list button, .radar-play, .pr-row, .tm-pill, .upd-bar .btn, .fc-btns .btn, .wn-go, .feat-toc a, summary) {
+  transition: transform .42s cubic-bezier(.2, 1.7, .4, 1), filter .25s ease, background-color .2s ease, box-shadow .2s ease;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+:root :is(.btn, .chip-btn, .chip, .quick-a, .rc-tog, .rc-v, .seg button, .basemap, .wall-sw, .tm-pill, .stat-chip, .sofar-to, .cl-link, .radar-play, .wn-go, summary):not(:disabled):active {
+  transform: scale(.94) !important; filter: brightness(1.14); transition: transform .07s ease, filter .07s ease !important;
+}
+:root .rc-steps button:not(:disabled):active { transform: scale(.86) !important; filter: brightness(1.2); transition: transform .06s ease !important; }
+/* Big tappable cards sink less, so they don't feel wobbly. */
+:root :is(.more-tile, .cr-tile, .lh-bar, .pr-row, .cl-items button, .ch-list button, a.glass, a.tile, .lb-list a, .logrows a):active {
+  transform: scale(.975) !important; filter: brightness(1.08); transition: transform .08s ease, filter .08s ease !important;
+}
+:root :is(a.glass, a.tile, .lb-list a, .logrows a) { transition: transform .42s cubic-bezier(.2, 1.7, .4, 1), filter .25s ease; -webkit-tap-highlight-color: transparent; }
+/* Sidebar and tab bar: the row lights up and the icon dips; the row itself doesn't move (moving it froze the sidebar while the map loaded). */
+:root .nav-a .nav-ic, :root .tabbar .tab svg, :root .tabbar .tab .tab-ic { transition: transform .4s cubic-bezier(.2, 1.7, .4, 1); }
+:root .nav-a:active { background: rgba(255,255,255,.12) !important; }
+:root .nav-a:active .nav-ic, :root .tabbar .tab:active svg, :root .tabbar .tab:active .tab-ic { transform: scale(.82) !important; transition: transform .07s ease !important; }
+:root[data-theme="light"] .nav-a:active { background: rgba(0,0,0,.07) !important; }
+/* Disabled things don't pretend to be pressable. */
+:root :is(.btn, .chip-btn, .seg button, .rc-tog):disabled { transform: none !important; filter: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  :root :is(.btn, .chip-btn, .chip, .quick-a, .rc-tog, .seg button, .more-tile, a.glass, a.tile):active { transform: none !important; filter: brightness(1.15); }
+}
+
+/* Autopilot: four boxes in a row only when the card is wide enough for the step buttons, else two by two (iPad mini, portrait). */
+.rc-grid > * { container-type: inline-size; }
+@container (max-width: 779px) { .rc-targets { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
+@container (min-width: 780px) { .rc-targets { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; } }
+.rc-steps { flex-wrap: nowrap; justify-content: center; }
+
+/* Sidebar on shorter screens (iPad landscape): tighter rows so everything down to Account fits under the clock. */
+@media (min-width: 901px) and (max-height: 1000px) {
+  .side .nav-a { min-height: 32px !important; padding-top: 5px !important; padding-bottom: 5px !important; }
+  .side .nav-sec { margin: 10px 12px 2px !important; font-size: 12px !important; }
+  .side .side-clock { margin: 2px 6px 8px; padding: 8px 12px; }
+  .side .sc-v { font-size: 17px; }
+}
+
+/* Portrait iPad: messages drop in just below the page header, so titles and the clock stay readable. */
+@media (min-width: 700px) and (orientation: portrait) { .gs-stack { top: calc(74px + env(safe-area-inset-top)) !important; } }
+
+/* Glance numbers never break across lines. */
+.gc-tiles .tile .v, .glance-strip .tile .v { white-space: nowrap; }
+.gc-tiles .tile .v .u, .gc-tiles .tile .v small, .glance-strip .tile .v small { font-size: .55em; }
+@media (min-width: 901px) and (max-height: 780px) {
+  .side .nav-a { min-height: 28px !important; padding-top: 3px !important; padding-bottom: 3px !important; font-size: 14.5px !important; }
+  .side .nav-sec { margin: 6px 12px 0 !important; }
+  .side .side-clock { margin: 0 6px 6px; padding: 6px 10px; gap: 2px; }
+  .side .sc-v { font-size: 15px; } .side .sc-v.loc { font-size: 13.5px; }
+  .side .brand { margin-bottom: 6px !important; }
+}

@@ -125,7 +125,7 @@ export function CameraViewer({ b, onState }: { b: BridgeClient | null; onState?:
   }, [b, tries]);
 
   return (
-    <div className="cam-view">
+    <div className={`cam-view${!b ? " idle" : ""}`}>
       <video ref={video} playsInline muted autoPlay className={state === "live" ? "on" : ""} />
       {state !== "live" && (
         <div className="cam-empty">

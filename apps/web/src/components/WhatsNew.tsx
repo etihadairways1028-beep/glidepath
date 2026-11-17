@@ -5,14 +5,14 @@
  */
 import { useEffect, useState } from "react";
 
-export const APP_VERSION = "1.0.3";
+export const APP_VERSION = "1.0.4";
 const KEY = "glidepath.seenVersion";
 
 export const WHATS_NEW: { t: string; d: string }[] = [
-  { t: "Glidepath AI in Copilot", d: "Sign in and ask anything, free: briefings, what to do next, technique, or how to use Glidepath. It answers from your live flight." },
-  { t: "Coaching after every flight", d: "On your review, tap How do I improve? for tips built from your own scores." },
-  { t: "Flight complete? Your full review", d: "After you land, tap Yes for a score on your take-off, handling, approach and landing." },
-  { t: "SID, STAR and approach", d: "Pick runways and procedures from your sim's own navigation data, like an EFB." },
+  { t: "A real flight profile", d: "The live card now draws your climb, cruise and descent, lights up what you've flown, and marks T/C and T/D with their times. Your plane rides the line." },
+  { t: "UTC and local time", d: "Always in the sidebar, and on Home and Glance: Zulu time with seconds, and your local time." },
+  { t: "Made for iPad", d: "Glance fits the screen, the autopilot stays in view, and messages no longer cover titles or buttons." },
+  { t: "Copilot answers instantly", d: "Glidepath AI starts answering in about half a second, word by word, and keeps your conversation when you switch screens." },
 ];
 
 function read(): string | null { try { return localStorage.getItem(KEY); } catch { return null; } }

@@ -10,6 +10,8 @@ import { installHover, installRipple } from "./hover";
 installHover();
 installRipple();
 
+// iPad and iPhone Safari only show the pressed (:active) look when the page listens for touches.
+document.addEventListener("touchstart", () => {}, { passive: true });
 createRoot(document.getElementById("root")!).render(<StrictMode><App /></StrictMode>);
 
 // Offline app shell, only where browsers allow service workers (the hosted https site).

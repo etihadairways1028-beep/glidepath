@@ -14,6 +14,7 @@ import { initAutoConnect, tryRelay } from "./data/connect";
 import { UpdateCenter } from "./components/UpdateCenter";
 import { FlightCompletePrompt } from "./components/FlightReview";
 import { APP_VERSION, WhatsNew } from "./components/WhatsNew";
+import { SideClock } from "./components/Clock";
 import { settingsStore, store, useApp, useSettings } from "./data/store";
 import { CockpitScreen } from "./screens/Cockpit";
 import { WeatherScreen } from "./screens/Weather";
@@ -228,6 +229,7 @@ export function App() {
         {screen !== "glance" && (
           <nav className="glass side" aria-label="Main">
             <a className="brand" href="#/home"><Mark />Glidepath</a>
+            <SideClock />
             {NAV.map((n) => (
               <Fragment key={n.id}>
                 {SECTION_BEFORE[n.id] && <div className="nav-sec">{SECTION_BEFORE[n.id]}</div>}

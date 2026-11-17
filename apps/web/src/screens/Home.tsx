@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ClockPill } from "../components/Clock";
 import type { FlightSummary } from "@glidepath/protocol";
 import { FlightFeed, LiveCard } from "../components/LiveCard";
 import { MapView } from "../components/MapView";
@@ -68,7 +69,7 @@ function FlightHeading() {
       <div>
         <h1 className="title">{title}</h1>
       </div>
-      <ConnPill />
+      <div className="row home-head-r" style={{ gap: 8 }}><ClockPill className="home-clock" /><ConnPill /></div>
     </header>
   );
 }
