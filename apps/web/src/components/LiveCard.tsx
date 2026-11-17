@@ -96,7 +96,7 @@ export function LiveCard({ big }: { big?: boolean }) {
         <div>
           <div className="lc-bars">
             {todFrac !== null && T0?.toTopOfDescentMs != null && (
-              <span className="lc-tod" style={{ left: `${todFrac * 100}%` }}>TOD in {countdown(T0.toTopOfDescentMs)}</span>
+              <span className="lc-tod" style={{ left: `${todFrac * 100}%` }} title={`Top of descent in ${countdown(T0.toTopOfDescentMs)}`}>TOD</span>
             )}
             <div className="profile-bars" aria-hidden="true">
               {bars.map((b, i) => <i key={i} className={`${b.cls}${todFrac !== null && i === Math.round(todFrac * (BARS - 1)) ? " tod" : ""}`} style={{ height: `${b.h}px` }} />)}
