@@ -3,7 +3,10 @@
 (function () {
   "use strict";
   const cfg = window.GLIDEPATH || {};
-  const $ = (id) => document.getElementById(id);
+  // The homepage and the Features page share this script; an element that isn't on this page
+  // becomes a detached stand-in, so the parts for the other page run harmlessly.
+  const spare = {};
+  const $ = (id) => document.getElementById(id) || (spare[id] = spare[id] || (["profile"].includes(id) ? document.createElementNS("http://www.w3.org/2000/svg", "svg") : document.createElement("div")));
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   /* ---------- download + repo links ---------- */
@@ -38,7 +41,7 @@
   }
 
   /* ---------- the real app, live, inside the iPad ---------- */
-  const frame = $("ipad-frame");
+  const frame = document.getElementById("ipad-frame");
   const fit = () => { const sc = frame.parentElement.clientWidth / 1180; frame.style.transform = "scale(" + sc + ")"; };
   if (frame && window.matchMedia("(min-width: 721px)").matches) {
     frame.addEventListener("load", () => setTimeout(() => $("ipad-cover").classList.add("gone"), 900));
@@ -85,8 +88,9 @@
   };
   const MARKS = { TOP_OF_CLIMB: "TOC", TOP_OF_DESCENT: "TOD", TOUCHDOWN: "TD" };
 
-  fetch("demo-flight.json").then((r) => r.json()).then(start).catch(() => {
-    $("demo").querySelector(".demo-head .section-lede").textContent = "The demo flight could not be loaded. Reload the page to try again.";
+  if (document.getElementById("demo") || document.getElementById("phase")) fetch("demo-flight.json").then((r) => r.json()).then(start).catch(() => {
+    const lede = document.querySelector("#demo .demo-head .section-lede");
+    if (lede) lede.textContent = "The demo flight could not be loaded. Reload the page to try again.";
   });
 
   function start(D) {
@@ -223,7 +227,7 @@
       last = now;
       t = Math.min(dur, t + dt * speed);
       render();
-      if (t >= dur) { setPlaying(false); return; }
+      if (t >= dur) { if (!onFeatures) { t = 0; last = 0; requestAnimationFrame(frame); return; } setPlaying(false); return; }
       requestAnimationFrame(frame);
     }
     function setPlaying(p) {
@@ -241,6 +245,9 @@
     document.querySelectorAll('a[href="#demo"]').forEach((a) => a.addEventListener("click", () => { if (!playing) setPlaying(true); }));
 
     render();
+    // Homepage: no interactive demo here, so the phone's Live Activity simply plays and loops.
+    const onFeatures = !!document.getElementById("demo");
+    if (!onFeatures && !reduced) { speed = 60; setPlaying(true); }
     // One orchestrated moment: the replay starts once, when the demo first scrolls into view.
     if (!reduced && "IntersectionObserver" in window) {
       const io = new IntersectionObserver((entries) => {
