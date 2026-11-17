@@ -26,12 +26,20 @@ jobs:
         run: |
           V=$(cat VERSION | tr -d '[:space:]')
           TAG="v$V"
+          # A file named FRESH starts the version history over: this version's release is made new
+          # (fresh notes and commit), and every other release and tag is removed.
+          if [ -f FRESH ]; then
+            for T in $(gh release list --limit 200 --json tagName --jq '.[].tagName'); do
+              gh release delete "$T" --yes --cleanup-tag || true
+            done
+            git push origin --delete "$TAG" 2>/dev/null || true
+          fi
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" GlidepathBridge-Setup.exe GlidepathBridge-Setup.exe.sha256 GlidepathBridge-windows-x64.zip GlidepathBridge-windows-x64.zip.sha256 --clobber
           else
             gh release create "$TAG" GlidepathBridge-Setup.exe GlidepathBridge-Setup.exe.sha256 GlidepathBridge-windows-x64.zip GlidepathBridge-windows-x64.zip.sha256 \
               --target "$GITHUB_SHA" --title "Glidepath Bridge $V" --latest \
-              --notes "Windows Bridge for Glidepath $V (early test build). Run GlidepathBridge-Setup.exe, or unzip the zip. Check the SHA-256 against the .sha256 file."
+              --notes "Glidepath Bridge $V for Windows. Run GlidepathBridge-Setup.exe (or unzip the zip), keep it open while you fly, and open Glidepath on your iPad, phone or browser. Check the download against the .sha256 file. Free, no ads."
           fi
           # The website downloads "latest": always point it at this version, even when an older tag has a higher number.
           gh release edit "$TAG" --latest
