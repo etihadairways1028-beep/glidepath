@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { settingsStore, useSettings } from "../data/store";
 
 export const WALLPAPERS = [
+  { id: "flight", label: "Night sky", swatch: "radial-gradient(70% 50% at 50% -8%, rgba(56,110,230,.45), transparent 70%), linear-gradient(180deg, #03050c, #08112a 78%, #2a1a2a)" },
   { id: "aurora", label: "Aurora", swatch: "radial-gradient(60% 60% at 25% 30%, #2F5BFF, transparent 70%), radial-gradient(60% 60% at 80% 30%, #8A3FFC, transparent 70%), radial-gradient(60% 60% at 60% 85%, #00BFA6, transparent 70%), #060818" },
   { id: "sunset", label: "Sunset", swatch: "radial-gradient(60% 60% at 25% 30%, #FF7A45, transparent 70%), radial-gradient(60% 60% at 80% 30%, #FF3D7F, transparent 70%), radial-gradient(60% 60% at 60% 85%, #FFC24B, transparent 70%), #1A0B1E" },
   { id: "ocean", label: "Ocean", swatch: "radial-gradient(60% 60% at 25% 30%, #0A84FF, transparent 70%), radial-gradient(60% 60% at 80% 30%, #00C7BE, transparent 70%), radial-gradient(60% 60% at 60% 85%, #3355FF, transparent 70%), #04121F" },
@@ -21,10 +22,15 @@ export function useWallpaper() {
   const s = useSettings();
   useEffect(() => {
     const root = document.documentElement;
-    const id = s.wallpaper ?? "aurora";
+    // The flight sky is the default; the old default (Aurora) moves over to it once.
+    let id = s.wallpaper ?? "flight";
+    try {
+      if (id === "aurora" && !localStorage.getItem("glidepath.wallMigrated")) { id = "flight"; settingsStore.set({ wallpaper: "flight" }); }
+      localStorage.setItem("glidepath.wallMigrated", "1");
+    } catch { /* storage blocked */ }
     let photo: string | null = null;
     if (id === "photo") { try { photo = localStorage.getItem(PHOTO_KEY); } catch { /* blocked */ } }
-    root.dataset.wall = id === "photo" && !photo ? "aurora" : id;
+    root.dataset.wall = id === "photo" && !photo ? "flight" : id;
     if (photo) root.style.setProperty("--wall-photo", `url("${photo}")`); else root.style.removeProperty("--wall-photo");
   }, [s.wallpaper]);
 }

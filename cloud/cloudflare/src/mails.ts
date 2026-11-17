@@ -5,35 +5,85 @@ export const esc = (s: unknown) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ 
 const SITE = "https://glidepath-ad9.pages.dev";
 const FONT = "-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,Helvetica,Arial,sans-serif";
 
+const MONO = "'SF Mono',ui-monospace,Menlo,Consolas,'Courier New',monospace";
+const BG = "#0C0F15", PANEL = "#151A24", EDGE = "#262D3B", INK = "#FFFFFF", SOFT = "#A9B3C9", FAINT = "#6E7891";
+
+/** Logo bar at the top of every email, with a small airline-style label on the right. */
+function header(label: string) {
+  return `<tr><td style="padding:0 4px 16px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+<td valign="middle"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td valign="middle"><img src="${SITE}/assets/email/icon.png" width="32" height="32" alt="" style="display:block;border-radius:8px;border:0;"></td><td valign="middle" style="padding-left:10px;font:800 15px ${FONT};letter-spacing:.14em;color:${INK};">GLIDEPATH</td></tr></table></td>
+<td align="right" valign="middle" style="font:700 11px ${FONT};letter-spacing:.16em;color:${FAINT};">${esc(label)}</td></tr></table></td></tr>`;
+}
+function footer(foot?: string) {
+  return `<tr><td align="center" style="padding:26px 18px 0;font:400 12px/1.65 ${FONT};color:${FAINT};">${esc(foot ?? "You can turn these emails off in Glidepath under Account.")}<br><a href="${SITE}" style="color:${FAINT};">glidepath-ad9.pages.dev</a> · Free for Microsoft Flight Simulator</td></tr>`;
+}
+function shell(inner: string) {
+  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"></head>
+<body style="margin:0;padding:0;background-color:${BG};">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${BG}" style="background-color:${BG};"><tr><td align="center" style="padding:30px 12px 40px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">${inner}</table></td></tr></table></body></html>`;
+}
+function button(b?: { label: string; url: string }) {
+  return b ? `<tr><td align="center" style="padding:24px 6px 2px;"><a href="${esc(b.url)}" style="display:inline-block;padding:15px 32px;border-radius:999px;background-color:#0A84FF;color:#FFFFFF;text-decoration:none;font:700 15px/1 ${FONT};">${esc(b.label)}</a></td></tr>` : "";
+}
+
 /**
- * The Glidepath email look: a dark aurora background with clear "glass" panels and bright
- * edges, like the app. Built from tables and inline styles so Gmail, Apple Mail and Outlook
- * all show it; where a mail app drops the background image, the dark colour stays.
+ * Everyday messages look like an ACARS printout: the short text message airline crews
+ * receive in the cockpit. Monospace, a header line, then the message.
  */
 export function card(o: { kicker: string; title: string; lead?: string; rows?: Array<[string, string]>; button?: { label: string; url: string }; foot?: string; color?: string; big?: { value: string; unit?: string; label: string; badge?: string } }) {
-  const accent = o.color ?? "#0A84FF";
-  const glass = "background-color:rgba(255,255,255,0.09);border:1px solid rgba(255,255,255,0.28);border-top-color:rgba(255,255,255,0.6);border-left-color:rgba(255,255,255,0.45);";
-  const tiles = (o.rows ?? []).map(([k, v]) => `<td width="50%" valign="top" style="padding:6px;"><div style="${glass}border-radius:18px;padding:14px 16px;"><div style="font:600 11px/1.2 ${FONT};letter-spacing:.08em;text-transform:uppercase;color:#AEB8D6;">${esc(k)}</div><div style="font:700 17px/1.35 ${FONT};color:#FFFFFF;padding-top:4px;">${esc(v)}</div></div></td>`);
-  const tileRows: string[] = [];
-  for (let i = 0; i < tiles.length; i += 2) tileRows.push(`<tr>${tiles[i]}${tiles[i + 1] ?? '<td width="50%"></td>'}</tr>`);
-  const big = o.big ? `<tr><td colspan="2" style="padding:6px 6px 6px;"><div style="${glass}border-radius:22px;padding:18px 20px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td valign="middle"><div style="font:600 11px/1.2 ${FONT};letter-spacing:.08em;text-transform:uppercase;color:#AEB8D6;">${esc(o.big.label)}</div><div style="font:800 46px/1.05 ${FONT};color:#FFFFFF;padding-top:6px;">${esc(o.big.value)}<span style="font:600 18px ${FONT};color:#C9D2EC;"> ${esc(o.big.unit ?? "")}</span></div></td>${o.big.badge ? `<td align="right" valign="middle" width="84"><div style="width:72px;height:72px;line-height:72px;border-radius:36px;background-color:${accent};color:#06122E;text-align:center;font:900 30px/72px ${FONT};border:2px solid rgba(255,255,255,0.8);">${esc(o.big.badge)}</div></td>` : ""}</tr></table></div></td></tr>` : "";
-  const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><meta name="supported-color-schemes" content="dark light"></head>
-<body style="margin:0;padding:0;background-color:#070B1F;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#070B1F" background="${SITE}/assets/email/aurora.jpg" style="background-color:#070B1F;background-image:url('${SITE}/assets/email/aurora.jpg');background-size:cover;background-position:center top;">
-<tr><td align="center" style="padding:28px 12px 36px;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
-<tr><td style="padding:0 6px 18px;"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td valign="middle"><img src="${SITE}/assets/email/icon.png" width="36" height="36" alt="" style="display:block;border-radius:9px;border:0;"></td><td valign="middle" style="padding-left:10px;font:700 18px ${FONT};color:#FFFFFF;">Glidepath</td></tr></table></td></tr>
-<tr><td style="padding:0 6px;"><div style="${glass}border-radius:28px;padding:24px 22px 22px;">
-<div><span style="display:inline-block;padding:5px 11px;border-radius:999px;background-color:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.35);font:800 11px/1 ${FONT};letter-spacing:.1em;text-transform:uppercase;color:${accent === "#0A84FF" ? "#64D2FF" : accent};">${esc(o.kicker)}</span></div>
-<div style="font:800 30px/1.12 ${FONT};color:#FFFFFF;padding-top:14px;letter-spacing:-.5px;">${esc(o.title)}</div>
-${o.lead ? `<div style="font:400 16px/1.55 ${FONT};color:#D3DAEE;padding-top:10px;">${esc(o.lead)}</div>` : ""}
-</div></td></tr>
-${big || tileRows.length ? `<tr><td style="padding:8px 0 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${big}${tileRows.join("")}</table></td></tr>` : ""}
-${o.button ? `<tr><td align="center" style="padding:22px 6px 4px;"><a href="${esc(o.button.url)}" style="display:inline-block;padding:15px 30px;border-radius:999px;background-color:#0A84FF;background-image:linear-gradient(135deg,#0A84FF,#5E5CE6);border:1px solid rgba(255,255,255,0.55);color:#FFFFFF;text-decoration:none;font:700 16px/1 ${FONT};">${esc(o.button.label)}</a></td></tr>` : ""}
-<tr><td align="center" style="padding:24px 18px 0;font:400 12.5px/1.6 ${FONT};color:#9AA5C4;">${esc(o.foot ?? "You can turn these emails off in Glidepath under Account.")}<br><a href="${SITE}" style="color:#9AA5C4;">glidepath-ad9.pages.dev</a> · Free for Microsoft Flight Simulator</td></tr>
-</table></td></tr></table></body></html>`;
+  const accent = o.color ?? "#64D2FF";
+  const now = new Date();
+  const stamp = `${String(now.getUTCHours()).padStart(2, "0")}${String(now.getUTCMinutes()).padStart(2, "0")}Z`;
+  const rows = (o.rows ?? []).map(([k, v]) => `<tr><td style="padding:5px 0;font:600 12px ${MONO};letter-spacing:.06em;color:${FAINT};width:38%;" valign="top">${esc(k.toUpperCase())}</td><td style="padding:5px 0;font:600 14px ${MONO};color:${INK};">${esc(v)}</td></tr>`).join("");
+  const big = o.big ? `<div style="padding-top:16px;font:700 12px ${MONO};letter-spacing:.06em;color:${FAINT};">${esc(o.big.label.toUpperCase())}</div><div style="font:800 40px/1.1 ${FONT};color:${INK};padding-top:2px;">${esc(o.big.value)}<span style="font:600 16px ${FONT};color:${SOFT};"> ${esc(o.big.unit ?? "")}</span>${o.big.badge ? ` <span style="font:800 16px ${FONT};color:${accent};">${esc(o.big.badge)}</span>` : ""}</div>` : "";
+  const inner = `${header(o.kicker)}
+<tr><td style="padding:0 4px;"><div style="background-color:${PANEL};border:1px solid ${EDGE};border-radius:18px;overflow:hidden;">
+<div style="padding:12px 20px;border-bottom:1px dashed ${EDGE};font:700 11.5px ${MONO};letter-spacing:.12em;color:${accent};">ACARS · GLIDEPATH · ${stamp}</div>
+<div style="padding:20px 20px 22px;">
+<div style="font:800 26px/1.2 ${FONT};color:${INK};letter-spacing:-.3px;">${esc(o.title)}</div>
+${o.lead ? `<div style="font:400 15.5px/1.6 ${FONT};color:${SOFT};padding-top:10px;">${esc(o.lead)}</div>` : ""}
+${big}
+${rows ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:16px;border-top:1px dashed ${EDGE};padding-top:8px;">${rows}</table>` : ""}
+</div></div></td></tr>
+${button(o.button)}${footer(o.foot)}`;
   const text = [o.title, o.lead ?? "", o.big ? `${o.big.label}: ${o.big.value} ${o.big.unit ?? ""}${o.big.badge ? ` (${o.big.badge})` : ""}` : "", ...(o.rows ?? []).map(([k, v]) => `${k}: ${v}`), o.button ? `${o.button.label}: ${o.button.url}` : "", "", o.foot ?? "You can turn these emails off in Glidepath under Account."].filter((x) => x !== "").join("\n");
-  return { html, text };
+  return { html: shell(inner), text };
+}
+
+/** The debrief as a boarding pass: route, a tear line, and a stub with the landing grade. */
+function boardingPass(o: { dep: string; arr: string; depName: string; arrName: string; callsign: string; date: string; grade?: string; fpm?: string; verdict: string; fields: Array<[string, string]>; button: { label: string; url: string } }) {
+  const cells = o.fields.map(([k, v]) => `<td width="25%" valign="top" style="padding:10px 4px 0 0;"><div style="font:700 10.5px ${FONT};letter-spacing:.12em;color:${FAINT};">${esc(k.toUpperCase())}</div><div style="font:700 15px ${MONO};color:${INK};padding-top:3px;">${esc(v)}</div></td>`);
+  const fieldRows: string[] = [];
+  for (let i = 0; i < cells.length; i += 4) fieldRows.push(`<tr>${cells.slice(i, i + 4).join("")}${'<td width="25%"></td>'.repeat(Math.max(0, 4 - cells.slice(i, i + 4).length))}</tr>`);
+  const gradeColor = !o.grade ? SOFT : /^A/.test(o.grade) ? "#30D158" : /^B/.test(o.grade) ? "#64D2FF" : /^C/.test(o.grade) ? "#FFB340" : "#FF6B5E";
+  const inner = `${header("FLIGHT DEBRIEF")}
+<tr><td style="padding:0 4px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${PANEL};border:1px solid ${EDGE};border-radius:20px;">
+<tr><td style="padding:22px 22px 6px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+    <td valign="top" style="font:700 11px ${FONT};letter-spacing:.14em;color:#64D2FF;">${esc(o.callsign)}</td>
+    <td align="right" valign="top" style="font:700 11px ${FONT};letter-spacing:.14em;color:${FAINT};">${esc(o.date)}</td>
+  </tr></table>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:14px;"><tr>
+    <td valign="top" width="40%"><div style="font:800 44px/1 ${FONT};letter-spacing:-1px;color:${INK};">${esc(o.dep)}</div><div style="font:500 13px/1.4 ${FONT};color:${SOFT};padding-top:6px;">${esc(o.depName)}</div></td>
+    <td align="center" valign="top" width="20%" style="padding-top:12px;font:400 22px ${FONT};color:#64D2FF;">&#9992;&#xFE0E;</td>
+    <td align="right" valign="top" width="40%"><div style="font:800 44px/1 ${FONT};letter-spacing:-1px;color:${INK};">${esc(o.arr)}</div><div style="font:500 13px/1.4 ${FONT};color:${SOFT};padding-top:6px;">${esc(o.arrName)}</div></td>
+  </tr></table>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;">${fieldRows.join("")}</table>
+</td></tr>
+<tr><td style="padding:18px 0 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+  <td width="14" style="font-size:0;line-height:0;"><div style="width:14px;height:28px;border-radius:0 14px 14px 0;background-color:${BG};border:1px solid ${EDGE};border-left:0;"></div></td>
+  <td style="border-top:2px dashed ${EDGE};font-size:0;line-height:0;">&nbsp;</td>
+  <td width="14" style="font-size:0;line-height:0;"><div style="width:14px;height:28px;border-radius:14px 0 0 14px;background-color:${BG};border:1px solid ${EDGE};border-right:0;"></div></td>
+</tr></table></td></tr>
+<tr><td style="padding:12px 22px 22px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+  <td valign="middle"><div style="font:700 10.5px ${FONT};letter-spacing:.12em;color:${FAINT};">TOUCHDOWN</div><div style="font:800 34px/1.1 ${FONT};color:${INK};padding-top:3px;">${esc(o.fpm ?? "—")}<span style="font:600 14px ${FONT};color:${SOFT};"> fpm</span></div><div style="font:400 14px/1.5 ${FONT};color:${SOFT};padding-top:6px;">${esc(o.verdict)}</div></td>
+  ${o.grade ? `<td align="right" valign="middle" width="92"><div style="width:76px;height:76px;border-radius:38px;border:4px solid ${gradeColor};text-align:center;font:900 28px/76px ${FONT};color:${gradeColor};">${esc(o.grade)}</div></td>` : ""}
+</tr></table></td></tr>
+</table></td></tr>
+${button(o.button)}${footer()}`;
+  return shell(inner);
 }
 
 const dur = (ms: number | null | undefined) => { if (!ms || ms < 0) return "—"; const m = Math.round(ms / 60000); return m >= 60 ? `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m` : `${m} min`; };
@@ -55,11 +105,14 @@ export function debriefMail(f: any) {
   ];
   if (l?.runway?.ident) rows.push(["Runway", String(l.runway.ident)]);
   if (l && Number.isFinite(l.peakG)) rows.push(["Peak G", `${Number(l.peakG).toFixed(2)} G`]);
-  return {
-    subject: `Your debrief: ${dep} → ${arr}${l?.grade ? ` (${l.grade})` : ""}`,
-    ...card({ kicker: "FLIGHT DEBRIEF", title: `${dep} → ${arr}`, lead: l?.verdict ? String(l.verdict) : "Your flight is saved to your logbook. Here's how it went.", rows,
-      big: fpm !== null ? { label: "Touchdown", value: String(fpm), unit: "fpm", badge: l.grade ? String(l.grade) : undefined } : undefined, button: { label: "Open the full debrief", url: `${APP}#/logbook/${encodeURIComponent(f.id)}` }, color: "#30D158" }),
-  };
+  const when = f.offBlockAt ?? f.startedAt;
+  const date = when ? new Date(when).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }).toUpperCase() : "";
+  const fields: Array<[string, string]> = rows.filter(([k]) => k !== "Route");
+  const verdict = l?.verdict ? String(l.verdict) : "Your flight is saved to your logbook.";
+  const url = `${APP}#/review/${encodeURIComponent(f.id)}`;
+  const html = boardingPass({ dep, arr, depName: f.departureName ?? "", arrName: f.arrivalName ?? "", callsign: (f.callsign ?? f.plan?.callsign ?? "GLIDEPATH").toString().toUpperCase(), date, grade: l?.grade ? String(l.grade) : undefined, fpm: fpm !== null ? String(fpm) : undefined, verdict, fields, button: { label: "See your full flight review", url } });
+  const text = [`${dep} → ${arr}`, verdict, fpm !== null ? `Touchdown: ${fpm} fpm${l?.grade ? ` (${l.grade})` : ""}` : "", ...fields.map(([k, v]) => `${k}: ${v}`), `Your full review: ${url}`, "", "You can turn these emails off in Glidepath under Account."].filter(Boolean).join("\n");
+  return { subject: `Your debrief: ${dep} → ${arr}${l?.grade ? ` (${l.grade})` : ""}`, html, text };
 }
 
 export function inflightMail(kind: string, title: string, body: string) {

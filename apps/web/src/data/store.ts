@@ -51,7 +51,7 @@ export interface Settings {
   accent: "glideslope" | "aurora" | "ice";
   theme: "system" | "dark" | "light";
   /** Background behind the glass: a built-in wallpaper, plain, or the person's own photo. */
-  wallpaper: "aurora" | "sunset" | "ocean" | "dusk" | "forest" | "plain" | "photo";
+  wallpaper: "flight" | "aurora" | "sunset" | "ocean" | "dusk" | "forest" | "plain" | "photo";
   /** Speak phase changes, top of descent and approach altitude callouts. */
   voiceCallouts: boolean;
   reduceTransparency: boolean;
@@ -75,7 +75,7 @@ export interface Settings {
 }
 
 const DEFAULT_SETTINGS: Settings = {
-  bridgeUrl: "", token: "", simbriefUser: "", showVatsim: true, showIvao: false, showSayIntentions: false, fuelUnit: "kg", accent: "glideslope", theme: "system", wallpaper: "aurora", voiceCallouts: false, reduceTransparency: false, glassLevel: 95, mapStyle: "map", map3d: false, flightMessages: true, approachCoach: true, systemNotifications: false, atcAlerts: true, lightMessages: true, showAtc: true, showRadar: false, showMetars: false,
+  bridgeUrl: "", token: "", simbriefUser: "", showVatsim: true, showIvao: false, showSayIntentions: false, fuelUnit: "kg", accent: "glideslope", theme: "system", wallpaper: "flight", voiceCallouts: false, reduceTransparency: false, glassLevel: 95, mapStyle: "map", map3d: false, flightMessages: true, approachCoach: true, systemNotifications: false, atcAlerts: true, lightMessages: true, showAtc: true, showRadar: false, showMetars: false,
 };
 
 const initial: AppState = {
@@ -166,5 +166,24 @@ export function framesToTrail(frames: TelemetryFrame[]): TrailPoint[] {
   for (const f of frames) t = pushTrail(t, f);
   return t;
 }
+
+/* ---- The flight's path, kept on this device so reopening the app shows it at once ---- */
+const TRAIL_KEY = "glidepath.trail";
+export function loadSavedTrail(flightId: string): TrailPoint[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(TRAIL_KEY) ?? "null") as { id: string; p: number[][] } | null;
+    return v?.id === flightId ? v.p.map(([t, lat, lon, alt, gs]) => ({ t: t!, lat: lat!, lon: lon!, alt: alt!, gs: gs! })) : [];
+  } catch { return []; }
+}
+let savedAt = 0;
+function saveTrail(s: AppState): void {
+  if (s.mode !== "bridge" || !s.flight || s.trail.length < 2 || Date.now() - savedAt < 15_000) return;
+  savedAt = Date.now();
+  try {
+    const p = s.trail.length > 6000 ? s.trail.filter((_, i, a) => i % Math.ceil(a.length / 6000) === 0 || i === a.length - 1) : s.trail;
+    localStorage.setItem(TRAIL_KEY, JSON.stringify({ id: s.flight.id, p: p.map((x) => [x.t, Math.round(x.lat * 1e5) / 1e5, Math.round(x.lon * 1e5) / 1e5, Math.round(x.alt), Math.round(x.gs)]) }));
+  } catch { /* storage full or private mode: the Bridge still has it */ }
+}
+store.subscribe(() => saveTrail(store.get()));
 
 export type { FlightPlan };

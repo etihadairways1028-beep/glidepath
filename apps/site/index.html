@@ -66,21 +66,25 @@
   <main id="main">
     <!-- HERO -->
     <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-scene" aria-hidden="true"></div>
       <div class="hero-copy reveal">
-        <a class="eyebrow glass new-badge" href="#new"><span class="new-tag">New</span><span><span class="nb-long">Glidepath 1.0: </span>career, live links, share cards</span><span aria-hidden="true">›</span></a>
-        <h1 id="hero-title"><span>Your flight.</span> <span>Every detail.</span> <span>One screen.</span></h1>
-        <p class="lede">Glidepath reads your flight straight from Microsoft Flight Simulator and puts it live on your iPad, phone or second screen. When you park, you get a real debrief of the takeoff, the approach and the landing.</p>
+        <a class="eyebrow glass new-badge" href="#new"><span class="new-tag">New</span><span>Connect anywhere<span class="nb-long"> and the flight review</span></span><span aria-hidden="true">›</span></a>
+        <h1 id="hero-title"><span>Your flight.</span> <span>Every detail.</span> <span class="h1-grad">One screen.</span></h1>
+        <p class="lede">Microsoft Flight Simulator, live on your iPad, phone or second screen. After every landing, an honest review of how you flew.</p>
         <div class="cta">
           <a class="btn primary" data-download href="#download"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Download for Windows</a>
           <a class="btn glass" href="app/?demo=1">Try the app now</a>
         </div>
         <div class="device-tip glass" id="device-tip" hidden></div>
         <ul class="trust" aria-label="At a glance">
-          <li>Free</li><li>Windows 10 and 11</li><li>MSFS 2020 and 2024</li><li>iPad, phone, PC</li>
+          <li>Free, no ads</li><li>MSFS 2020 and 2024</li><li>iPad, phone and PC</li><li>Any Wi-Fi</li>
         </ul>
       </div>
 
       <div class="devices reveal" aria-label="The Glidepath app on an iPad and a phone">
+        <!-- Two moments from the demo flight, floating beside the devices -->
+        <div class="float-chip fc-tod" aria-hidden="true"><span class="fcc-ic">↘</span><div><b>Top of descent in 4 min</b><span>Expect runway 23R at EGCC</span></div></div>
+        <div class="float-chip fc-land" aria-hidden="true"><span class="fcc-grade">A+</span><div><b>Landed 140 fpm</b><span>Runway 23R · 1.12 g · stable approach</span></div></div>
         <div class="ipad">
           <div class="screen">
             <iframe id="ipad-frame" title="The Glidepath app, running the demo flight" data-src="app/?demo=1&theme=dark#/home" loading="lazy" tabindex="-1"></iframe>
@@ -129,6 +133,13 @@
         </div>
       </div>
     </section>
+
+    <div class="works-with reveal" aria-label="Works with">
+      <span class="ww-k">Works with</span>
+      <span>Microsoft Flight Simulator 2020</span><span>MSFS 2024</span><span>SimBrief</span><span>VATSIM</span><span>IVAO</span><span>Navigraph</span><span>GSX Pro</span><span>Fenix</span><span>FSLabs</span><span>FlyByWire</span>
+    </div>
+
+    <a class="scroll-cue" href="#new" aria-label="See what's inside"><span>See what's inside</span><i></i></a>
 
     <p class="sources reveal">Built on open data: <span>OurAirports</span><span>SimBrief</span><span>VATSIM</span><span>IVAO</span><span>aviationweather.gov</span><span>OpenStreetMap</span><span>Esri World Imagery</span><span>RainViewer</span></p>
 
@@ -205,6 +216,10 @@
         </article>
       </div>
       <ul class="new-more reveal" aria-label="Also new">
+        <li><b>Connect anywhere</b>Sign in on the PC and the iPad with the same account. Any Wi-Fi, even mobile data. No codes.</li>
+        <li><b>Flight review</b>Land, tap "Flight complete", get a score for take-off, handling, approach and landing, and what to work on.</li>
+        <li><b>SID, STAR and approach</b>Pick runways and procedures from your sim's own navigation data, like an EFB.</li>
+        <li><b>Updates in the app</b>New versions of the Bridge and the app arrive with one tap. No hunting for downloads.</li>
         <li><b>Discord status</b>"EGLL → EGCC · A320, cruising at FL360" on your profile.</li>
         <li><b>Cockpit layout</b>Instruments and live map side by side on an iPad in landscape.</li>
         <li><b>Emails</b>Your debrief, top of descent and arrival, if you want them.</li>
@@ -544,7 +559,8 @@
             <li><b>Live airport boards</b> from VATSIM and IVAO, an <b>animated rain radar</b>, and <b>pilot tools</b> (clocks, crosswind, descent, approach path, fuel, converter).</li>
             <li><b>Sharper satellite map</b> from Esri World Imagery near airports and cities, with roads and airport markings on top.</li>
             <li><b>Accounts and emails:</b> sign up, sign in, password reset, several accounts per device, flights synced between devices, and emails for your debrief, top of descent, arrival and new sign-ins. Live on Cloudflare.</li>
-            <li><b>Newest features:</b> share cards, live "follow my flight" links, career mode, the approach coach, the monthly landing challenge, Discord status and the cockpit layout. Each checked against the demo flight (Discord against a stand-in for the Discord app); not yet with a real flight.</li>
+            <li><b>Newest (1.0.1):</b> Connect anywhere through your account (checked live: a stand-in PC and iPad through the real relay after every deploy), the flight review after landing, updates from inside the app (checked with a stand-in installer), and SID/STAR/approach lists from MSFS (reading checked with sample data; not yet with a running sim).</li>
+            <li><b>Also new:</b> share cards, live "follow my flight" links, career mode, the approach coach, the monthly landing challenge, Discord status and the cockpit layout. Each checked against the demo flight (Discord against a stand-in for the Discord app); not yet with a real flight.</li>
           </ul>
           <h3><span class="dot next" aria-hidden="true"></span>Not built yet</h3>
           <ul>

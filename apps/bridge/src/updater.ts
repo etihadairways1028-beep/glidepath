@@ -149,7 +149,13 @@ export class Updater {
       this.o.log.info(`Installing Bridge ${m.version}`);
       // /S: no wizard. /UPDATE tells the installer to start the Bridge again when it's done.
       if (this.o.run) this.o.run(file, ["/S", "/UPDATE"]);
-      else spawn(file, ["/S", "/UPDATE"], { detached: true, stdio: "ignore", windowsHide: false }).unref();
+      else {
+        // The installer needs admin. Starting it directly fails with "elevation required";
+        // "start" goes through the Windows shell, which shows the normal Yes/No prompt.
+        const child = spawn("cmd.exe", ["/d", "/s", "/c", `start "" "${file}" /S /UPDATE`], { detached: true, stdio: "ignore", windowsHide: true, windowsVerbatimArguments: true });
+        child.on("error", (e) => { this.st.state = "error"; this.st.message = `Couldn't start the installer: ${e.message}. You can download it from the Glidepath website instead.`; });
+        child.unref();
+      }
     } catch (e) {
       this.st.state = "error";
       this.st.message = `The update didn't work: ${(e as Error).message}. You can download it from the Glidepath website instead.`;

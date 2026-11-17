@@ -1,8 +1,11 @@
 /**
  * Live camera: the simulator PC shares its screen (or just the sim window)
- * and any device on the same network watches it. Video goes device to device
- * with WebRTC; the Bridge only relays the setup messages. Nothing leaves your
- * network.
+ * and your other devices watch it. Video goes device to device with WebRTC
+ * (encrypted); the Bridge, or Connect anywhere, only passes the setup messages.
+ * On the same Wi-Fi the picture stays on your network. On different networks
+ * free public STUN servers help the two devices find each other; most home
+ * and work networks allow that, some mobile networks don't (that would need a
+ * paid TURN relay, which Glidepath doesn't use).
  */
 import { useEffect, useRef, useState } from "react";
 import type { BridgeClient } from "../data/bridge";
@@ -10,7 +13,7 @@ import type { BridgeClient } from "../data/bridge";
 type Msg = { kind: string; from?: string; live?: boolean; data?: unknown };
 type Sig = { sdp?: RTCSessionDescriptionInit; candidate?: RTCIceCandidateInit };
 
-const RTC_CONFIG: RTCConfiguration = { iceServers: [] };
+const RTC_CONFIG: RTCConfiguration = { iceServers: [{ urls: ["stun:stun.cloudflare.com:3478", "stun:stun.l.google.com:19302"] }] };
 
 /** True when this browser can share its screen (desktop browsers). */
 export const canShare = () => typeof navigator !== "undefined" && !!navigator.mediaDevices && "getDisplayMedia" in navigator.mediaDevices && !/iPad|iPhone|Android/i.test(navigator.userAgent);
@@ -74,17 +77,25 @@ export function useCameraHost(b: BridgeClient | null) {
   return { stream, viewers, start, stop };
 }
 
-export function CameraViewer({ b, onState }: { b: BridgeClient | null; onState?: (s: "off" | "connecting" | "live") => void }) {
+type CamState = "off" | "connecting" | "live" | "failed";
+export function CameraViewer({ b, onState }: { b: BridgeClient | null; onState?: (s: CamState) => void }) {
   const video = useRef<HTMLVideoElement>(null);
   const [live, setLive] = useState(b?.cameraLive ?? false);
-  const [state, setState] = useState<"off" | "connecting" | "live">("off");
+  const [state, setState] = useState<CamState>("off");
+  const [tries, setTries] = useState(0);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   useEffect(() => { onState?.(state); }, [state]);
 
   useEffect(() => {
     if (!b) return;
     const close = () => { pcRef.current?.close(); pcRef.current = null; };
-    const watch = () => { close(); setState("connecting"); b.rtc("watch"); };
+    let timer = 0;
+    const watch = () => {
+      close(); setState("connecting"); b.rtc("watch");
+      // No picture after 15 s: say so instead of spinning forever.
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => setState((st) => (st === "connecting" ? "failed" : st)), 15_000);
+    };
     const onMsg = async (m: Msg) => {
       if (m.kind === "host-state") {
         setLive(!!m.live);
@@ -99,7 +110,7 @@ export function CameraViewer({ b, onState }: { b: BridgeClient | null; onState?:
         pcRef.current = pc;
         pc.ontrack = (e) => { if (video.current) { video.current.srcObject = e.streams[0] ?? new MediaStream([e.track]); void video.current.play().catch(() => undefined); } setState("live"); };
         pc.onicecandidate = (e) => { if (e.candidate) b.rtc("signal", undefined, { candidate: e.candidate.toJSON() }); };
-        pc.onconnectionstatechange = () => { if (pc.connectionState === "failed") setState("off"); };
+        pc.onconnectionstatechange = () => { if (pc.connectionState === "failed") setState("failed"); if (pc.connectionState === "connected") window.clearTimeout(timer); };
         await pc.setRemoteDescription(d.sdp);
         const ans = await pc.createAnswer();
         await pc.setLocalDescription(ans);
@@ -110,15 +121,24 @@ export function CameraViewer({ b, onState }: { b: BridgeClient | null; onState?:
     };
     b.rtcListeners.add(onMsg);
     if (b.cameraLive) watch();
-    return () => { b.rtcListeners.delete(onMsg); b.rtc("leave"); close(); };
-  }, [b]);
+    return () => { window.clearTimeout(timer); b.rtcListeners.delete(onMsg); b.rtc("leave"); close(); };
+  }, [b, tries]);
 
   return (
     <div className="cam-view">
       <video ref={video} playsInline muted autoPlay className={state === "live" ? "on" : ""} />
       {state !== "live" && (
         <div className="cam-empty">
-          {!b ? "Connect to your PC to watch the sim." : !live ? <>Nothing shared yet.<br /><span className="faint">On your sim PC, open Glidepath and press <b>Share my sim screen</b> on this page.</span></> : "Connecting to your PC…"}
+          {!b ? "Connect to your PC to watch the sim."
+            : state === "failed" ? (
+              <>
+                <b>Couldn't get the picture from your PC.</b><br />
+                <span className="faint">{b.isRelay ? "Some networks (often mobile data) block direct video between devices. Everything else still works; the camera works best on the same Wi-Fi as the PC." : "Check the PC is still sharing, then try again."}</span>
+                <br /><button className="btn small" style={{ marginTop: 12 }} onClick={() => setTries((n) => n + 1)}>Try again</button>
+              </>
+            )
+            : !live ? <>Nothing shared yet.<br /><span className="faint">On your sim PC, open Glidepath (go to <b>localhost:4810</b> and press Open Glidepath), go to Remote and press <b>Share my sim screen</b>. Keep that tab open.</span></>
+            : "Connecting to your PC…"}
         </div>
       )}
       {state === "live" && <span className="cam-live"><i />LIVE</span>}

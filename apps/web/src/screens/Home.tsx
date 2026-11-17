@@ -62,7 +62,7 @@ function FlightHeading() {
   const from = f?.departureName ?? L.plan?.origin.name ?? f?.departureIcao ?? null;
   const to = f?.arrivalName ?? L.plan?.destination.name ?? f?.arrivalIcao ?? null;
   const short = (n: string | null) => (n ? n.replace(/ (International )?Airport$/i, "") : null);
-  const title = !f ? (mode === "none" ? "Glidepath" : "No flight yet") : from && to ? `${short(from)} to ${short(to)}` : from ? `From ${short(from)}` : "Flight in progress";
+  const title = !f ? (mode === "none" ? "Welcome aboard" : "No flight yet") : from && to ? `${short(from)} to ${short(to)}` : from ? `From ${short(from)}` : "Flight in progress";
   return (
     <header className="home-head">
       <div>
@@ -94,6 +94,13 @@ function Onboarding() {
   return (
     <section className="glass strong onboard">
       <div className="ob-main">
+        <div className="ob-diagram" aria-hidden="true">
+          <span className="obd-node"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="13" rx="2" /><path d="M8 21h8M12 17v4" /></svg><small>Your PC</small></span>
+          <span className="obd-line"><i /></span>
+          <span className="obd-node obd-acct"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9.5" /><path d="M2.5 12h19M12 2.5c2.6 2.8 3.9 6 3.9 9.5s-1.3 6.7-3.9 9.5c-2.6-2.8-3.9-6-3.9-9.5s1.3-6.7 3.9-9.5z" /></svg><small>Your account</small></span>
+          <span className="obd-line"><i /></span>
+          <span className="obd-node"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="3" /><path d="M11 18h2" /></svg><small>This device</small></span>
+        </div>
         <span className="ob-tag">Easiest · any Wi-Fi or mobile data</span>
         <h2 className="onboard-h">Connect with your account</h2>
         <ol className="ob-steps">

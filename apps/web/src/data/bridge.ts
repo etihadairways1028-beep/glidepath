@@ -12,7 +12,7 @@
  * visible again (iPad screen woke up).
  */
 import { ServerMessage, type FlightSummary, type TelemetryFrame } from "@glidepath/protocol";
-import { framesToTrail, pushTrail, settingsStore, store } from "./store";
+import { framesToTrail, loadSavedTrail, pushTrail, settingsStore, store, type TrailPoint } from "./store";
 
 export function detectBridgeUrl(): string | null {
   const s = settingsStore.get();
@@ -311,6 +311,8 @@ export class BridgeClient {
     switch (msg.type) {
       case "welcome":
         store.set({ conn: "live", connMessage: null, status: msg.status });
+        // Every (re)connection reloads the whole path, so a gap while the app was closed fills in.
+        this.trailFor = null;
         if (msg.flight) this.setFlight(msg.flight);
         break;
       case "status":
@@ -369,12 +371,20 @@ export class BridgeClient {
       return;
     }
     const isNew = s.flight?.id !== f.id;
-    store.set({ flight: f, ...(isNew ? { events: [], landing: f.landings.at(-1) ?? null, trail: [], lastFlight: null } : {}) });
+    // Reopening the app: show the path saved on this device straight away, then the Bridge's full one.
+    store.set({ flight: f, ...(isNew ? { events: [], landing: f.landings.at(-1) ?? null, trail: loadSavedTrail(f.id), lastFlight: null } : {}) });
     if (this.trailFor !== f.id) {
       this.trailFor = f.id;
-      this.get<TelemetryFrame[]>(`/api/flights/${f.id}/frames`).then((frames) => {
-        store.set((st) => ({ trail: framesToTrail([...frames, ...[]]).concat(st.trail.filter((p) => p.t > (frames.at(-1)?.t ?? 0))) }));
-      }).catch(() => undefined);
+      const merge = (path: TrailPoint[]) => {
+        if (!path.length) return;
+        const end = path[path.length - 1]!.t;
+        store.set((st) => st.flight?.id === f.id ? { trail: path.concat(st.trail.filter((p) => p.t > end)) } : {});
+      };
+      this.get<Array<[number, number, number, number, number]>>(`/api/flights/${f.id}/trail`)
+        .then((rows) => merge(rows.map(([t, lat, lon, alt, gs]) => ({ t, lat, lon, alt, gs }))))
+        // Older Bridges: the raw frames instead.
+        .catch(() => this.get<TelemetryFrame[]>(`/api/flights/${f.id}/frames`).then((frames) => merge(framesToTrail(frames))))
+        .catch(() => undefined);
       this.get<import("@glidepath/protocol").FlightEvent[]>(`/api/flights/${f.id}/events`).then((events) => store.set({ events })).catch(() => undefined);
     }
   }

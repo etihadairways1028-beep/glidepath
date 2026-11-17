@@ -829,3 +829,90 @@ body:has(.fc-sheet) .gs-stack { bottom: calc(150px + env(safe-area-inset-bottom)
 .composer input, .composer textarea { min-width: 0; }
 /* Live card on phones: an unknown arrival is a quiet dash, not a row of dashes */
 @media (max-width: 760px) { .live-card .lc-apt .code.unknown { font-size: 22px !important; } }
+
+/* Floating panels must stay readable over busy pages */
+:root .gs-msg.glass.strong, :root .fc-sheet.glass.strong { background: rgba(250,250,252,.93) !important; -webkit-backdrop-filter: blur(26px) saturate(180%) !important; backdrop-filter: blur(26px) saturate(180%) !important; }
+:root[data-theme="dark"] .gs-msg.glass.strong, :root[data-theme="dark"] .fc-sheet.glass.strong { background: rgba(26,28,38,.93) !important; }
+:root .tabbar.glass { -webkit-backdrop-filter: blur(30px) saturate(180%) !important; backdrop-filter: blur(30px) saturate(180%) !important; background: rgba(250,250,252,.82) !important; }
+:root[data-theme="dark"] .tabbar.glass { background: rgba(22,24,34,.84) !important; }
+
+/* Remote: the answer to a button floats where you can see it, wherever you scrolled */
+.rc-toast { position: fixed !important; left: 50%; bottom: calc(28px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 900; max-width: min(560px, calc(100% - 32px)); padding: 11px 18px !important; border-radius: 999px !important; font-size: 14px; font-weight: 600; box-shadow: 0 14px 34px -14px rgba(0,0,30,.45) !important; animation: rcToast .25s ease; }
+@keyframes rcToast { from { opacity: 0; transform: translate(-50%, 10px); } }
+@media (max-width: 760px) { .rc-toast { bottom: calc(100px + env(safe-area-inset-bottom)); } }
+.rc-target.aiming .rc-v { color: var(--a-blue, #0A84FF) !important; }
+.rc-toast { top: auto !important; }
+
+/* Small things you feel */
+/* Fast taps (autopilot +/−) count as taps, never as a double-tap zoom. */
+button, a, [role="button"], .btn, .seg button, .tabbar a, input, select, textarea, label { touch-action: manipulation; }
+/* iPhones zoom the page into any text box under 16 px and stay zoomed: keep them at 16 on touch screens. */
+@media (pointer: coarse) { input, select, textarea { font-size: 16px !important; } }
+/* No blue flash on tap; buttons don't select text when pressed quickly. */
+button, a, .btn, .tabbar a { -webkit-tap-highlight-color: transparent; }
+button, .btn, .seg, .tabbar { -webkit-user-select: none; user-select: none; }
+/* Keyboard users can see where they are. */
+:focus-visible { outline: 2.5px solid var(--a-blue, #0A84FF) !important; outline-offset: 2px; }
+/* Smooth momentum scrolling inside panels; no page bounce behind the tab bar. */
+.main { -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
+
+/* Connect card: PC → account → this device, at a glance */
+.ob-diagram { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; max-width: 420px; }
+.obd-node { display: grid; justify-items: center; gap: 6px; flex: none; }
+.obd-node svg { width: 46px; height: 46px; padding: 11px; border-radius: 15px; color: #fff; background: linear-gradient(140deg, #64B5FF, #0A6CFF); box-shadow: inset 1px 1px .5px rgba(255,255,255,.7), 0 10px 22px -10px rgba(10,108,255,.8); }
+.obd-node.obd-acct svg { background: linear-gradient(140deg, #64D2FF, #5E5CE6); }
+.obd-node small { font-size: 11.5px; font-weight: 650; color: var(--a-ink2); white-space: nowrap; }
+.obd-line { flex: 1; height: 2px; margin-bottom: 22px; position: relative; background: repeating-linear-gradient(90deg, var(--a-ink3, rgba(120,120,128,.5)) 0 4px, transparent 4px 9px); border-radius: 2px; }
+.obd-line i { position: absolute; top: 50%; left: 0; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; background: #64D2FF; box-shadow: 0 0 10px 2px rgba(100,210,255,.8); animation: obdMove 2.4s ease-in-out infinite; }
+.obd-line + .obd-node + .obd-line i { animation-delay: 1.2s; }
+@keyframes obdMove { 0% { left: 0; opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { left: calc(100% - 8px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .obd-line i { animation: none; display: none; } }
+
+/* ===================== Flight sky: the default background =====================
+ * Clean and quiet: deep navy, one soft light from above, a thin sunset line at the horizon.
+ * Nothing drawn on it; the app is the star. */
+:root[data-wall="flight"] .sky { background:
+    radial-gradient(70% 50% at 50% -8%, rgba(56,110,230,.30), rgba(56,110,230,0) 70%),
+    linear-gradient(180deg, transparent 90%, rgba(255,150,95,.13) 95.5%, rgba(255,150,95,0) 99%),
+    linear-gradient(180deg, #03050c 0%, #050918 45%, #08112a 78%, #111a36 92%, #150f1f 100%) !important; }
+:root[data-wall="flight"] .sky::before, :root[data-wall="flight"] .sky::after { display: none !important; }
+:root[data-theme="light"][data-wall="flight"] .sky { background:
+    radial-gradient(70% 50% at 50% -8%, rgba(120,165,245,.35), rgba(120,165,245,0) 70%),
+    linear-gradient(180deg, transparent 88%, rgba(255,170,120,.16) 95%, rgba(255,170,120,0) 100%),
+    linear-gradient(180deg, #e8eefa 0%, #eff3fa 55%, #f4f5f9 85%, #f6f1ec 100%) !important; }
+
+
+/* ===================== Liquid feel ===================== */
+/* Press: things squish a little and spring back, like iOS 26. */
+.btn, .quick-a, .rc-tog, .rc-steps button, .seg button, .tab, .chip-btn, .pr-row, .lc-note, .upd-bar .btn, .fc-btns .btn, .ob-steps .btn {
+  transition: transform .5s cubic-bezier(.34, 1.56, .64, 1), background-color .2s, box-shadow .25s, opacity .2s !important; will-change: transform; }
+.btn:active, .quick-a:active, .rc-tog:active, .rc-steps button:active, .seg button:active, .tab:active, .chip-btn:active, .upd-bar .btn:active, .fc-btns .btn:active {
+  transform: scale(.94) !important; transition-duration: .09s !important; }
+.quick-a:hover { transform: translateY(-2px); }
+
+/* Light that follows your pointer (or your finger, where you press) across the glass. */
+:root .glass::after { display: block !important; content: "" !important; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 0;
+  background: radial-gradient(380px circle at var(--mx, -400px) var(--my, -400px), rgba(255,255,255,.12), rgba(255,255,255,.03) 40%, transparent 65%) !important; opacity: 1 !important; }
+:root[data-theme="light"] .glass::after { background: radial-gradient(380px circle at var(--mx, -400px) var(--my, -400px), rgba(255,255,255,.55), rgba(255,255,255,.12) 40%, transparent 65%) !important; }
+/* Cards get a positioned box for the light; floating glass (tab bar, messages, sheets) stays pinned. */
+:root .glass:not(.tabbar):not(.gs-msg):not(.fc-sheet):not(.side):not(.upd-bar):not(.map-hud) { position: relative; }
+:root .tabbar.glass { position: fixed !important; }
+:root .live-card.glass::after { opacity: .6 !important; }
+
+/* Tab bar: one liquid highlight that slides and stretches between tabs. */
+.tabbar::before { content: ""; position: absolute; z-index: 0; top: 6px; bottom: 6px; border-radius: 999px; pointer-events: none;
+  left: calc(6px + var(--ti, 0) * ((100% - 12px) / var(--tn, 6))); width: calc((100% - 12px) / var(--tn, 6));
+  background: linear-gradient(180deg, rgba(255,255,255,.24), rgba(255,255,255,.08)); box-shadow: inset 1px 1px .5px rgba(255,255,255,.55), inset 0 0 0 .5px rgba(255,255,255,.2), 0 6px 16px -8px rgba(0,0,0,.5);
+  transition: left .6s cubic-bezier(.34, 1.3, .64, 1); animation: tabGoo .6s cubic-bezier(.3, .8, .3, 1); }
+:root[data-theme="light"] .tabbar::before { background: linear-gradient(180deg, #fff, rgba(255,255,255,.78)); box-shadow: inset 0 0 0 .5px rgba(0,0,0,.06), 0 6px 16px -8px rgba(30,40,70,.35); }
+.tabbar .tab { position: relative; z-index: 1; }
+.tabbar .tab.on { background: transparent !important; box-shadow: none !important; }
+@keyframes tabGoo { 0% { transform: scaleX(1); } 35% { transform: scaleX(1.18) scaleY(.92); } 100% { transform: scaleX(1); } }
+@media (prefers-reduced-motion: reduce) { .tabbar::before { transition: none; animation: none; } }
+:root .tabbar.glass::before { display: block !important; content: "" !important; position: absolute !important; z-index: 0 !important; top: 6px !important; bottom: 6px !important; border-radius: 999px !important; pointer-events: none;
+  left: calc(6px + var(--ti, 0) * ((100% - 12px) / var(--tn, 6))) !important; width: calc((100% - 12px) / var(--tn, 6)) !important; inset: auto; height: auto; padding: 0 !important; -webkit-mask: none !important; mask: none !important;
+  background: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,.07)) !important; box-shadow: inset 1px 1px .5px rgba(255,255,255,.55), inset 0 0 0 .5px rgba(255,255,255,.2), 0 6px 16px -8px rgba(0,0,0,.5) !important;
+  transition: left .6s cubic-bezier(.34, 1.3, .64, 1) !important; }
+:root[data-theme="light"] .tabbar.glass::before { background: linear-gradient(180deg, #fff, rgba(255,255,255,.8)) !important; box-shadow: inset 0 0 0 .5px rgba(0,0,0,.06), 0 6px 16px -8px rgba(30,40,70,.35) !important; }
+:root .tabbar.glass::after { display: none !important; }

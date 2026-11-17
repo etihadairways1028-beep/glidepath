@@ -7,7 +7,7 @@
  * sim reports the change. Study-level add-ons (PMDG, Fenix, FSLabs) run their
  * own systems and may ignore some of these, which the app says plainly.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { TelemetryFrame } from "@glidepath/protocol";
 import { activeBridge } from "../data/bridge";
 import { useApp } from "../data/store";
@@ -45,11 +45,19 @@ function Toggle({ label, on, k, cap, s, confirm }: { label: string; on: boolean 
 
 function Target({ label, value, unit, k, cap, step, big, min, max, s, fmt }: { label: string; value: number | null; unit: string; k: string; cap: string; step: number; big: number; min: number; max: number; s: ReturnType<typeof useSend>; fmt?: (v: number) => string }) {
   const [edit, setEdit] = useState<string | null>(null);
-  const v = value ?? null;
-  const set = (n: number) => s.send(k, cap, Math.max(min, Math.min(max, n)));
+  // Quick taps add up: aim from the value you asked for, not the sim's last answer.
+  const [want, setWant] = useState<{ n: number; at: number } | null>(null);
+  useEffect(() => {
+    if (!want) return;
+    if (value !== null && Math.round(value) === Math.round(want.n)) { setWant(null); return; }
+    const t = window.setTimeout(() => setWant(null), 2500);
+    return () => window.clearTimeout(t);
+  }, [want, value]);
+  const v = want ? want.n : value ?? null;
+  const set = (n: number) => { const c = Math.max(min, Math.min(max, n)); setWant({ n: c, at: Date.now() }); s.send(k, cap, c); };
   const show = v === null ? "—" : fmt ? fmt(v) : Math.round(v).toLocaleString("en-US");
   return (
-    <div className={`rc-target${s.busy === k ? " busy" : ""}`}>
+    <div className={`rc-target${s.busy === k ? " busy" : ""}${want ? " aiming" : ""}`}>
       <span className="rc-k">{label}</span>
       {edit !== null ? (
         <form onSubmit={(e) => { e.preventDefault(); const n = Number(edit); if (Number.isFinite(n)) set(n); setEdit(null); }}>
@@ -115,6 +123,8 @@ export function RemoteScreen() {
   const b = mode === "bridge" ? activeBridge() : null;
   const s = useSend();
   const host = useCameraHost(b);
+  // Watching from this device: no "share" button (that's for the PC).
+  const [camState, setCamState] = useState<string>("off");
   const [view, setView] = useState<number | null>(null);
   const ap = f?.autopilot;
   const li = f?.lights;
@@ -138,15 +148,15 @@ export function RemoteScreen() {
               ))}
             </div>
           </div>
-          {host.stream ? <LocalPreview stream={host.stream} /> : <CameraViewer b={b} />}
-          {canShare() && (
+          {host.stream ? <LocalPreview stream={host.stream} /> : <CameraViewer b={b} onState={setCamState} />}
+          {canShare() && (host.stream || camState !== "live") && (
             <div className="rc-row">
               {host.stream
                 ? <><span className="rc-sharing"><i />Sharing to {host.viewers} {host.viewers === 1 ? "device" : "devices"}</span><button className="btn" onClick={host.stop}>Stop sharing</button></>
                 : <button className="btn primary" disabled={!b} onClick={() => void host.start().catch(() => undefined)}>Share my sim screen</button>}
             </div>
           )}
-          <p className="rc-note">The picture goes straight from your PC to your devices on your Wi-Fi. The view buttons switch the simulator's own camera.</p>
+          <p className="rc-note">The picture goes straight from your PC to your device, encrypted. It works best on the same Wi-Fi; on other networks it usually works too. Cockpit, Outside and Drone switch the simulator's own camera.</p>
         </section>
 
         <section className="glass rc-card rc-ap">

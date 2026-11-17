@@ -282,17 +282,24 @@
   const el = document.getElementById("netlive");
   if (!el) return;
   const set = (id, v) => { const n = document.getElementById(id); if (n) n.textContent = typeof v === "number" ? v.toLocaleString("en-US") : v; };
+  // Hidden until there are real numbers; a network that doesn't answer is left out, not shown as "–".
+  el.hidden = true;
+  const items = el.querySelectorAll(".nl-item");
   const load = async () => {
+    let any = false;
     try {
       const v = await fetch("https://data.vatsim.net/v3/vatsim-data.json", { cache: "no-store" }).then((r) => r.json());
       set("nl-vp", (v.pilots || []).length);
       set("nl-vc", (v.controllers || []).filter((c) => c.facility > 0).length);
-    } catch { set("nl-vp", "–"); set("nl-vc", "–"); }
+      if (items[0]) items[0].hidden = false; any = true;
+    } catch { if (items[0] && document.getElementById("nl-vp").textContent === "…") items[0].hidden = true; }
     try {
       const i = await fetch("https://api.ivao.aero/v2/tracker/whazzup", { cache: "no-store" }).then((r) => r.json());
       set("nl-ip", ((i.clients && i.clients.pilots) || []).length);
       set("nl-ic", ((i.clients && i.clients.atcs) || []).length);
-    } catch { set("nl-ip", "–"); set("nl-ic", "–"); }
+      if (items[1]) items[1].hidden = false; any = true;
+    } catch { if (items[1] && document.getElementById("nl-ip").textContent === "…") items[1].hidden = true; }
+    if (any) el.hidden = false;
   };
   load();
   setInterval(load, 60000);

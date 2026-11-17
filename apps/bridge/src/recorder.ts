@@ -57,6 +57,7 @@ export class Recorder {
       getFlight: this.db.prepare(`SELECT summary FROM flights WHERE id = ?`),
       lastActive: this.db.prepare(`SELECT summary FROM flights WHERE status = 'active' ORDER BY updated_at DESC LIMIT 1`),
       framesSince: this.db.prepare(`SELECT data FROM frames WHERE flight_id = ? AND seq > ? ORDER BY seq LIMIT ?`),
+      allFrames: this.db.prepare(`SELECT data FROM frames WHERE flight_id = ? ORDER BY seq`),
       eventsFor: this.db.prepare(`SELECT data FROM events WHERE flight_id = ? ORDER BY t`),
       deleteFlight: this.db.prepare(`DELETE FROM flights WHERE id = ?`),
       deleteFrames: this.db.prepare(`DELETE FROM frames WHERE flight_id = ?`),
@@ -111,6 +112,25 @@ export class Recorder {
   lastActiveFlight(): FlightSummary | null {
     const r = this.st.lastActive!.get() as { summary: string } | undefined;
     return r ? JSON.parse(r.summary) : null;
+  }
+
+  /**
+   * The whole flight's path, thinned the same way the app thins its live trail
+   * (a point every ~90 m, 150 ft or 30 s): small enough to send in one go, even
+   * for a long-haul, as [t, lat, lon, altFt, gsKt] rows.
+   */
+  trail(flightId: string): Array<[number, number, number, number, number]> {
+    this.flush();
+    const out: Array<[number, number, number, number, number]> = [];
+    let last: [number, number, number, number, number] | null = null;
+    for (const r of this.st.allFrames!.iterate(flightId) as Iterable<{ data: string }>) {
+      const f = JSON.parse(r.data) as TelemetryFrame;
+      const p: [number, number, number, number, number] = [f.t, f.position.lat, f.position.lon, Math.round(f.position.altMslFt ?? 0), Math.round(f.speed.gsKt ?? 0)];
+      if (last && Math.abs(last[1] - p[1]) + Math.abs(last[2] - p[2]) < 0.0008 && Math.abs(last[3] - p[3]) < 150 && p[0] - last[0] < 30_000) continue;
+      p[1] = Math.round(p[1] * 1e5) / 1e5; p[2] = Math.round(p[2] * 1e5) / 1e5;
+      out.push(p); last = p;
+    }
+    return out;
   }
 
   framesSince(flightId: string, seq: number, limit = 2000): TelemetryFrame[] {

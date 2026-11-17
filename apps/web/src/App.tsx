@@ -37,6 +37,24 @@ if (location.search.includes("gpdebug")) Object.assign(window, { __gpStore: stor
 import { BridgeIconTip } from "./components/InstallCard";
 import { Glance } from "./screens/Glance";
 
+/* ---------- Scroll and titles when moving between screens ----------
+ * A new screen starts at the top. Going back (to the screen you just came from)
+ * returns you to where you were, e.g. down the logbook list. */
+const scrollMemory = new Map<string, number>();
+let prevHash = "", prevPrevHash = "";
+if (typeof window !== "undefined") {
+  window.addEventListener("hashchange", (e) => {
+    const main = document.getElementById("main");
+    const from = new URL(e.oldURL).hash, to = location.hash;
+    if (main) scrollMemory.set(from, main.scrollTop);
+    const back = to === prevHash;
+    prevPrevHash = prevHash; prevHash = from;
+    void prevPrevHash;
+    requestAnimationFrame(() => { const m = document.getElementById("main"); if (m) m.scrollTop = back ? scrollMemory.get(to) ?? 0 : 0; if (!back) window.scrollTo(0, 0); });
+  });
+}
+const TITLES: Record<string, string> = { home: "", map: "Live map", flight: "Flight", remote: "Remote", logbook: "Logbook", review: "Flight review", copilot: "Copilot", charts: "Charts", checklists: "Checklists", tools: "Pilot tools", cockpit: "Cockpit tools", weather: "Weather", airports: "Airports", glance: "Glance", career: "Career", challenge: "Landing challenge", account: "Account", settings: "Settings" };
+
 /* ---------- hash router (works on GitHub Pages and on the Bridge) ---------- */
 export function useRoute(): string[] {
   const [hash, setHash] = useState(location.hash);
@@ -82,6 +100,7 @@ const NAV: Array<{ id: string; label: string; icon: () => ReactNode; mobile: boo
 
 export function App() {
   const route = useRoute();
+  useEffect(() => { const t = TITLES[route[0] ?? "home"]; document.title = t ? `${t} · Glidepath` : "Glidepath"; }, [route[0]]);
   const s = useSettings();
   const mode = useApp((st) => st.mode);
   const status = useApp((st) => st.status);
@@ -152,7 +171,7 @@ export function App() {
   useEffect(() => {
     let raf = 0;
     const on = (e: PointerEvent) => {
-      if (e.pointerType === "touch") return;
+      if (e.pointerType === "touch" && e.type === "pointermove") return;
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
         const el = (e.target as Element | null)?.closest?.(".glass") as HTMLElement | null;
@@ -163,11 +182,16 @@ export function App() {
       });
     };
     window.addEventListener("pointermove", on, { passive: true });
-    return () => window.removeEventListener("pointermove", on);
+    window.addEventListener("pointerdown", on, { passive: true });
+    return () => { window.removeEventListener("pointermove", on); window.removeEventListener("pointerdown", on); };
   }, []);
 
   const [welcomed, setWelcomed] = useState(hasBeenWelcomed);
   const [screen, ...rest] = route;
+  // Which tab the liquid highlight sits under (the last one is "More").
+  const mobileTabs = NAV.filter((n) => n.mobile);
+  const onTab = mobileTabs.findIndex((n) => n.id === (screen || "home"));
+  const tabIndex = onTab >= 0 ? onTab : mobileTabs.length;
   const full = screen === "map" || screen === "glance";
   let body: ReactNode;
   switch (screen) {
@@ -209,7 +233,7 @@ export function App() {
                 <a className={`nav-a${screen === n.id || (!screen && n.id === "home") ? " on" : ""}`} href={`#/${n.id}`}><span className={`nav-ic ic-${n.id}`}>{n.icon()}</span>{n.label}</a>
               </Fragment>
             ))}
-            <div className="side-foot faint">{mode === "demo" ? "Demo flight: synthetic data" : `Glidepath 1.0.1${status?.bridgeVersion && status.bridgeVersion !== "demo" ? ` · Bridge ${status.bridgeVersion}` : ""}`}</div>
+            <div className="side-foot faint">{mode === "demo" ? "Demo flight: synthetic data" : `Glidepath 1.0.2${status?.bridgeVersion && status.bridgeVersion !== "demo" ? ` · Bridge ${status.bridgeVersion}` : ""}`}</div>
           </nav>
         )}
         <main className="main" id="main">
@@ -220,7 +244,7 @@ export function App() {
         </main>
       </div>
       {screen !== "glance" && (
-        <nav className="glass tabbar" aria-label="Main">
+        <nav className="glass tabbar" aria-label="Main" style={{ ["--ti" as string]: tabIndex, ["--tn" as string]: mobileTabs.length + 1 } as React.CSSProperties}>
           {NAV.filter((n) => n.mobile).map((n) => (
             <a key={n.id} className={`tab${screen === n.id ? " on" : ""}`} href={`#/${n.id}`}>{n.icon()}{n.label === "Live map" ? "Map" : n.label}</a>
           ))}

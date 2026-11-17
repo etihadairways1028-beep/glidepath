@@ -336,7 +336,8 @@ export class FlightSession extends EventEmitter {
   completeNow(): FlightSummary | null {
     const f = this.flight;
     if (!f || !f.wheelsDownAt || this.detector.isAirborne) return null;
-    if (!f.onBlockAt && this.lastFrame && (this.lastFrame.speed.gsKt ?? 99) < 2) f.onBlockAt = this.lastFrame.t;
+    // The pilot says it's over: that's on block for the logbook (block time, taxi in).
+    if (!f.onBlockAt) f.onBlockAt = this.lastFrame?.t ?? Date.now();
     this.finish("completed");
     this.holdUntilParked = true;
     return f;

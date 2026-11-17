@@ -428,10 +428,11 @@ export class LanServer {
       return f ? json(res, 200, f) : json(res, 409, { error: "The flight can be completed once you've landed." });
     }
     if (p === "/api/flights") return json(res, 200, this.recorder.listFlights(Number(url.searchParams.get("limit") ?? 50)));
-    const m = /^\/api\/flights\/([0-9a-f-]{36})(\/frames|\/events)?$/.exec(p);
+    const m = /^\/api\/flights\/([0-9a-f-]{36})(\/frames|\/events|\/trail)?$/.exec(p);
     if (m) {
       const flight = this.recorder.getFlight(m[1]!);
       if (!flight) return json(res, 404, { error: "Flight not found" });
+      if (m[2] === "/trail") return json(res, 200, this.recorder.trail(flight.id));
       if (m[2] === "/frames") return json(res, 200, this.recorder.framesSince(flight.id, Number(url.searchParams.get("after") ?? 0), 20000));
       if (m[2] === "/events") return json(res, 200, this.recorder.events(flight.id));
       return json(res, 200, flight);

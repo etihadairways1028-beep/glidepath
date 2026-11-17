@@ -57,8 +57,9 @@ export function LiveCard({ big }: { big?: boolean }) {
       main = `${fmt(L.toGoNm)} nm`;
       under = "to go";
     } else {
-      main = PHASE_LABEL[phase];
-      under = "link a SimBrief plan for arrival times";
+      // No plan: the phase is already in the label above, so show time in the air instead.
+      main = flight.wheelsUpAt ? dur((frame?.t ?? Date.now()) - flight.wheelsUpAt) : PHASE_LABEL[phase];
+      under = flight.wheelsUpAt ? "in the air · add a plan for arrival times" : "add a plan for arrival times";
     }
   } else if (flight.wheelsDownAt) {
     over = "Taxiing to the gate";
@@ -109,7 +110,7 @@ export function LiveCard({ big }: { big?: boolean }) {
         </div>
         <div className="lc-apt r">
           <div className={`code${arr === "····" ? " unknown" : ""}`}>{arr === "····" ? "—" : arr}</div>
-          <div className={`t ${cls(arrDelta)}`}>{zulu(arrMs)}{!flight.onBlockAt && L.etaOnBlock ? <span className="est"> est</span> : null}</div>
+          {arr !== "····" || arrMs ? <div className={`t ${cls(arrDelta)}`}>{zulu(arrMs)}{!flight.onBlockAt && L.etaOnBlock ? <span className="est"> est</span> : null}</div> : null}
           <div className="s">{arr === "····" && !plan ? <a href="#/flight">Add your plan</a> : arrNote}</div>
         </div>
       </div>

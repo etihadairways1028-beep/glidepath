@@ -19,9 +19,9 @@ const BASE_CSS = `
 :root{color-scheme:dark;--bg:#060818;--panel:rgba(30,34,52,.34);--line:rgba(255,255,255,.12);--ink:#fff;--quiet:rgba(235,235,245,.62);--faint:rgba(235,235,245,.38);--accent:#0A84FF;--live:#30D158;--caution:#FF9F0A;--warn:#FF453A;--route:#BF5AF2}
 *{box-sizing:border-box}html{background:var(--bg)}html,body{margin:0;color:var(--ink);font:15px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable Text","Segoe UI",Inter,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
 body{min-height:100vh;background:transparent;overflow-x:hidden}
-body::before{content:"";position:fixed;inset:-25%;z-index:-2;pointer-events:none;background:radial-gradient(38% 34% at 18% 22%,#2F5BFF 0%,transparent 70%),radial-gradient(34% 32% at 82% 18%,#8A3FFC 0%,transparent 70%),radial-gradient(40% 36% at 70% 82%,#00BFA6 0%,transparent 70%),radial-gradient(30% 28% at 22% 85%,#FF5E8A 0%,transparent 72%);opacity:.85;filter:blur(30px) saturate(1.2);animation:drift 40s ease-in-out infinite alternate}
-body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(60% 50% at 50% 50%,transparent 40%,rgba(0,0,10,.45) 100%)}
-@keyframes drift{to{transform:translate3d(4vmax,3vmax,0) scale(1.08)}}
+body::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;background:radial-gradient(70% 55% at 50% -10%,rgba(56,110,230,.30),rgba(56,110,230,0) 70%),linear-gradient(180deg,transparent 90%,rgba(255,150,95,.11) 96%,rgba(255,150,95,0) 100%),linear-gradient(180deg,#03050c 0%,#050918 45%,#08112a 80%,#0f1630 100%)}
+body::after{content:none}
+
 @media (prefers-reduced-motion:reduce){body::before{animation:none}}
 .mono{font-family:"SF Mono",ui-monospace,"Cascadia Mono",Consolas,Menlo,monospace;font-variant-numeric:tabular-nums}
 .panel{position:relative;background:linear-gradient(140deg,rgba(255,255,255,.2) 0%,rgba(255,255,255,0) 28%,rgba(255,255,255,0) 72%,rgba(255,255,255,.13) 100%),var(--panel);border:0;border-radius:24px;-webkit-backdrop-filter:blur(15px) saturate(185%) brightness(1.06);backdrop-filter:blur(15px) saturate(185%) brightness(1.06);box-shadow:inset 1.5px 1.5px 1px -.5px rgba(255,255,255,.9),inset -1.5px -1.5px 1px -.5px rgba(255,255,255,.5),inset 0 0 0 .5px rgba(255,255,255,.3),inset 6px 8px 14px -10px rgba(255,255,255,.42),0 18px 40px -18px rgba(0,0,0,.55)}
@@ -138,6 +138,20 @@ function updateOverlay(): string {
 </div></div>`;
 }
 
+/** The first thing on the page: what's ready, what's left, in plain words. */
+function readyCard(s: BridgeStatus, c: CloudCard | null): string {
+  const sim = s.simState === "connected";
+  const devices = s.clients > 0 || !!c?.devices;
+  const anywhere = !!c?.signedIn && c.online;
+  const steps: Array<[boolean, string, string]> = [
+    [true, "Bridge is running", "Keep this window open while you fly."],
+    [sim, sim ? `Connected to ${esc(s.simulator?.name ?? "the simulator")}` : "Start Microsoft Flight Simulator", sim ? (s.aircraft?.title ? esc(s.aircraft.title) : "Load into a flight.") : "The Bridge connects by itself once it's running."],
+    [devices || anywhere, devices ? `${s.clients} device${s.clients === 1 ? "" : "s"} connected` : anywhere ? "Ready for your iPad or phone" : "Connect your iPad or phone", devices ? "Your flight is live on them." : anywhere ? "Open Glidepath there and sign in with the same account." : "Sign in below (any Wi-Fi), or use the code."],
+  ];
+  const all = steps.every((x) => x[0]);
+  return `<div class="panel ready${all ? " all" : ""}"><div class="rd-title">${all ? "Ready to fly" : sim ? "Almost ready" : "Getting ready"}</div><ol class="rd-steps">${steps.map(([ok, t, sub]) => `<li class="${ok ? "ok" : ""}"><span class="rd-ic">${ok ? "✓" : ""}</span><div><b>${t}</b><span>${sub}</span></div></li>`).join("")}</ol></div>`;
+}
+
 export function statusPage(p: { update?: UpdateCard | null; cloud?: CloudCard | null; local: boolean; pairCode: string; status: BridgeStatus; token: string | null; addresses: string[]; port: number; logs: string[] }): string {
   const s = p.status;
   const stateDot = s.simState === "connected" ? "live" : s.simState === "error" ? "err" : "warn";
@@ -149,6 +163,17 @@ export function statusPage(p: { update?: UpdateCard | null; cloud?: CloudCard | 
       }).join("")
     : "";
   const here = p.token ? `http://localhost:${p.port}/app/#token=${encodeURIComponent(p.token)}` : null;
+  const ip = p.addresses[0];
+  const sameWifi = `<div class="two">
+<div class="panel codecard"><div class="cap">Your pairing code</div><div class="bigcode mono">${code}</div><div class="label">Also saved on your Desktop as <b>Glidepath code.txt</b>.</div></div>
+<div class="panel easy"><div class="cap">Connect your iPad in 2 steps</div>
+  <ol class="steps"><li><div>On the iPad, open <b>Safari</b> and go to<br><span class="big mono">${ip ? `${esc(ip)}:${p.port}` : `glidepath.local:${p.port}`}</span></div></li>
+  <li><div>Type this code:<br><span class="big mono code">${code}</span></div></li></ol>
+  <div class="label">Or open the Glidepath website on the iPad, tap Connect and type the same code. Tap Share, then Add to Home Screen, to keep it as an app.</div>
+</div></div>
+<details class="panel sec"><summary><span class="cap">Or scan a QR code with the iPad camera</span></summary><div style="margin-top:10px">
+${links || "<p class='label'>No network address found. Is this PC connected to Wi-Fi or Ethernet?</p>"}
+<div class="label" style="margin-top:10px">This link contains your pairing key. Only open it on your own devices. If Windows asks, allow Glidepath Bridge on <b>private</b> networks.</div></div></details>`;
   const tile = (c1: string, c2: string, icon: string, k: string, v: string, sub: string) =>
     `<div class="panel tile"><div class="tile-h"><span class="ic" style="--c1:${c1};--c2:${c2}">${icon}</span><span class="cap">${k}</span></div><div class="v">${v}</div><div class="label">${sub}</div></div>`;
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -156,7 +181,7 @@ export function statusPage(p: { update?: UpdateCard | null; cloud?: CloudCard | 
 main{max-width:900px;margin:0 auto;padding:36px 22px 60px}
 .head{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.head .logo svg{width:52px;height:52px;border-radius:13px;box-shadow:0 12px 26px -12px rgba(47,107,255,.85)}
 h1{font-size:30px;font-weight:700;letter-spacing:-.02em;margin:0;line-height:1.1}.head .label{margin-top:3px}.head .btnp{margin-left:auto}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin:26px 0 14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin:0 0 14px}
 .tile{padding:16px 16px 15px}.tile-h{display:flex;align-items:center;gap:10px;margin-bottom:12px}.tile .v{font-size:19px;font-weight:600;letter-spacing:-.01em;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:14px}@media(max-width:720px){.two{grid-template-columns:minmax(0,1fr)}.head .btnp{margin-left:0;width:100%}}
 .codecard{padding:26px 22px;text-align:center;display:flex;flex-direction:column;justify-content:center}.bigcode{font-size:clamp(40px,11vw,58px);font-weight:700;letter-spacing:6px;margin:8px 0 6px;background:linear-gradient(180deg,#fff,#B9D6FF);-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -168,6 +193,15 @@ h1{font-size:30px;font-weight:700;letter-spacing:-.02em;margin:0;line-height:1.1
 details.sec summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}details.sec summary::-webkit-details-marker{display:none}details.sec summary::after{content:"›";font-size:22px;color:var(--faint);transition:transform .2s}details[open].sec summary::after{transform:rotate(90deg)}
 pre{white-space:pre-wrap;font-size:12px;color:var(--quiet);max-height:320px;overflow:auto;margin:12px 0 0;padding:14px;border-radius:14px;background:rgba(0,0,0,.28)}
 .foot{margin-top:18px;text-align:center}
+.ready{padding:22px 24px;margin:22px 0 14px}.rd-title{font-size:26px;font-weight:750;letter-spacing:-.02em;margin-bottom:14px}.ready.all .rd-title{background:linear-gradient(92deg,#7CF2A8,#64D2FF);-webkit-background-clip:text;background-clip:text;color:transparent}
+.rd-steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}@media(max-width:760px){.rd-steps{grid-template-columns:1fr}}
+.rd-steps li{display:flex;gap:12px;align-items:flex-start;padding:14px;border-radius:18px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 .5px rgba(255,255,255,.12)}
+.rd-steps li b{display:block;font-size:15px;margin-bottom:2px}.rd-steps li span{font-size:13px;color:var(--quiet);line-height:1.4}
+.rd-ic{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:14px;color:#fff;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.25)}
+.rd-steps li.ok .rd-ic{background:linear-gradient(180deg,#4ADE80,#1FA84A);box-shadow:inset 0 1px .5px rgba(255,255,255,.6),0 6px 14px -6px rgba(31,168,74,.8)}
+.rd-steps li:not(.ok){box-shadow:inset 0 0 0 1px rgba(255,159,10,.35)}
+.or-line{display:flex;align-items:center;gap:14px;margin:22px 4px 14px;color:var(--faint);font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase}.or-line::before,.or-line::after{content:"";flex:1;height:1px;background:rgba(255,255,255,.12)}
+details.other .two{margin-top:0}
 .anywhere{margin:0 0 14px;padding:20px}.any-h{display:flex;gap:14px;align-items:flex-start}.ic.big{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;flex:none}.ic.big svg{width:24px;height:24px}
 .any-t{font-size:19px;font-weight:700;letter-spacing:-.01em;margin:1px 0 3px}.anywhere .label{line-height:1.45}
 .cl-form{display:flex;gap:10px;margin:16px 0 8px;flex-wrap:wrap}.cl-form input{flex:1 1 200px;min-width:0;padding:13px 16px;border-radius:14px;border:0;background:rgba(255,255,255,.1);box-shadow:inset 0 0 0 .5px rgba(255,255,255,.25);color:#fff;font:inherit;font-size:16px;outline:none}
@@ -183,22 +217,13 @@ pre{white-space:pre-wrap;font-size:12px;color:var(--quiet);max-height:320px;over
 .upd-steps span.on{color:#fff;background:linear-gradient(180deg,#3A9BFF,#0A6CFF)}.upd-steps span.done{color:#30D158;background:rgba(48,209,88,.12)}
 #upd-msg{min-height:20px;margin:16px 0 0;line-height:1.5}.upd.ok #upd-dest{fill:#30D158;stroke:#30D158}</style></head><body><main id="root">
 <div class="head"><span class="logo">${LOGO}</span><div><h1>Glidepath Bridge</h1><div class="label">${esc(s.hostname)} · <span class="badge mono">v${esc(s.bridgeVersion)}</span></div></div>${p.local && here ? `<a class="btnp" href="${esc(here)}" target="_blank" rel="noreferrer">Open Glidepath</a>` : ""}</div>
-<div class="grid">
+${p.local ? readyCard(s, p.cloud ?? null) : ""}<div class="grid">
 ${tile("#64D2FF", "#0A84FF", SVG.sim, "Simulator", `<span class="dot ${stateDot}"></span>${esc(s.simulator?.name ?? "Not connected")}`, esc(s.message ?? s.simState))}
 ${tile("#FFB340", "#FF7A00", SVG.plane, "Aircraft", esc(s.aircraft?.title ?? "—"), `Profile: ${esc(s.aircraft?.profileId ?? "—")}`)}
 ${tile("#5EE07F", "#1FA84A", SVG.wave, "Telemetry", `<span class="mono">${s.framesPerSecond.toFixed(1)} fps</span>`, s.lastFrameAt ? "Last frame " + new Date(s.lastFrameAt).toLocaleTimeString() : "No frames yet")}
 ${tile("#D18CFF", "#8A3FFC", SVG.dev, "Devices", `<span class="mono">${s.clients}</span> connected`, s.activeFlightId ? "Recording flight " + esc(s.activeFlightId.slice(0, 8)) : "No active flight")}
 </div>
-${p.local ? `${updateCard(p.update ?? null)}${cloudCard(p.cloud ?? null)}<div class="two">
-<div class="panel codecard"><div class="cap">Your pairing code</div><div class="bigcode mono">${code}</div><div class="label">Also saved on your Desktop as <b>Glidepath code.txt</b>.</div></div>
-<div class="panel easy"><div class="cap">Connect your iPad in 2 steps</div>
-  <ol class="steps"><li><div>On the iPad, open <b>Safari</b> and go to<br><span class="big mono">glidepath.local:${p.port}</span></div></li>
-  <li><div>Type this code:<br><span class="big mono code">${code}</span></div></li></ol>
-  <div class="label">Or open the Glidepath website on the iPad, tap Connect and type the same code. Tap Share, then Add to Home Screen, to keep it as an app.</div>
-</div></div>
-<details class="panel sec" open><summary><span class="cap">Or scan this with your iPad camera (same Wi-Fi)</span></summary><div style="margin-top:10px">
-${links || "<p class='label'>No network address found. Is this PC connected to Wi-Fi or Ethernet?</p>"}
-<div class="label" style="margin-top:10px">This link contains your pairing key. Only open it on your own devices. If Windows asks, allow Glidepath Bridge on <b>private</b> networks.</div></div></details>
+${p.local ? `${updateCard(p.update ?? null)}${cloudCard(p.cloud ?? null)}${p.cloud?.signedIn ? `<details class="panel sec other"><summary><span class="cap">Other ways to connect (same Wi-Fi)</span></summary><div style="margin-top:14px">${sameWifi}</div></details>` : `<div class="or-line"><span>or on the same Wi-Fi, with a code</span></div>${sameWifi}`}
 <details class="panel sec"><summary><span class="cap">Recent log</span></summary><pre class="mono">${esc(p.logs.join("\n")) || "—"}</pre></details>
 <div class="label foot">Keep the Bridge window open while you fly. This page updates by itself.</div>` : `<div class="panel sec"><p class="label" style="margin:0">Pairing details are only shown on the simulator PC itself.</p></div>`}
 </main>${p.local ? updateOverlay() : ""}
