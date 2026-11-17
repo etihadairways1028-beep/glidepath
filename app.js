@@ -9,6 +9,7 @@
   /* ---------- download + repo links ---------- */
   const repoUrl = cfg.repo ? "https://github.com/" + cfg.repo : "#";
   document.querySelectorAll("[data-repo-link]").forEach((a) => (a.href = repoUrl));
+  document.querySelectorAll("[data-issues-link]").forEach((a) => { a.href = cfg.repo ? repoUrl + "/issues/new" : "#"; a.target = "_blank"; a.rel = "noopener"; });
   const dlUrl = cfg.downloadUrl || "#download";
   document.querySelectorAll("[data-download]").forEach((a) => {
     a.href = dlUrl;
