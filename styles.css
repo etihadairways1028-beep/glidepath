@@ -767,3 +767,134 @@ body::before { filter: none !important; will-change: auto; }
 
 /* The grading table scrolls sideways on phones instead of being cut off */
 @media (max-width: 700px) { table.weights { display: block; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; } }
+
+/* Menu bar: solid enough that headings scrolling underneath never show through */
+.nav, .nav.glass { background: linear-gradient(160deg, rgba(22,32,70,.86), rgba(10,14,34,.84)) !important; -webkit-backdrop-filter: blur(28px) saturate(180%) !important; backdrop-filter: blur(28px) saturate(180%) !important; box-shadow: inset 1px 1px .5px rgba(255,255,255,.35), inset 0 0 0 .5px rgba(255,255,255,.14), 0 14px 40px -18px rgba(0,0,0,.8) !important; }
+.netlive[hidden], .nl-item[hidden] { display: none !important; }
+/* What's new: four to a row on wide screens, two on tablets, one on phones */
+@media (max-width: 1000px) { .new-more { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
+@media (max-width: 600px) { .new-more { grid-template-columns: 1fr !important; } }
+
+/* ===================== Hero, take two: a scene, depth, and the product on every screen size ===================== */
+.hero { position: relative; isolation: isolate; }
+.hero-scene { position: absolute; z-index: -1; top: -140px; bottom: -80px; left: calc(50% - 50vw); width: 100vw; overflow: hidden; pointer-events: none;
+  background: radial-gradient(70% 55% at 72% 46%, rgba(46,96,230,.38), transparent 62%), radial-gradient(50% 45% at 12% 85%, rgba(0,190,170,.13), transparent 65%), radial-gradient(45% 40% at 95% 10%, rgba(140,70,240,.22), transparent 65%), linear-gradient(180deg, #02040d 0%, #050d24 50%, #071431 100%); }
+.hs-stars { position: absolute; inset: 0; opacity: .55; background-image: radial-gradient(1px 1px at 12% 18%, #fff, transparent 60%), radial-gradient(1px 1px at 33% 8%, #cfe1ff, transparent 60%), radial-gradient(1.2px 1.2px at 58% 14%, #fff, transparent 60%), radial-gradient(1px 1px at 76% 6%, #dfe9ff, transparent 60%), radial-gradient(1px 1px at 88% 22%, #fff, transparent 60%), radial-gradient(1px 1px at 22% 30%, #bcd3ff, transparent 60%), radial-gradient(1px 1px at 46% 26%, #fff, transparent 60%), radial-gradient(1.3px 1.3px at 67% 31%, #e6eeff, transparent 60%), radial-gradient(1px 1px at 5% 40%, #fff, transparent 60%), radial-gradient(1px 1px at 94% 38%, #fff, transparent 60%); mask-image: linear-gradient(180deg, #000 0%, transparent 45%); -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 45%); }
+.hs-map { position: absolute; left: 50%; top: 58%; width: max(1800px, 140vw); height: auto; opacity: .5; transform: translate(-50%, -50%) perspective(1000px) rotateX(56deg); transform-origin: 50% 50%;
+  mask-image: radial-gradient(55% 50% at 50% 50%, #000 30%, transparent 72%); -webkit-mask-image: radial-gradient(55% 50% at 50% 50%, #000 30%, transparent 72%); filter: saturate(1.4) brightness(1.15); animation: hsDrift 70s ease-in-out infinite alternate; }
+@keyframes hsDrift { to { transform: translate(-46%, -52%) perspective(1000px) rotateX(56deg) scale(1.06); } }
+.hs-route { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hs-flown { stroke-dasharray: 0 1; animation: hsFly 26s linear infinite; filter: drop-shadow(0 0 6px rgba(100,210,255,.7)); }
+@keyframes hsFly { to { stroke-dasharray: 1 0; } }
+.hs-fade { position: absolute; left: 0; right: 0; bottom: 0; height: 30%; background: linear-gradient(180deg, transparent, var(--bg, #05070f)); }
+.hero h1 .h1-grad { background: linear-gradient(92deg, #8FD0FF 0%, #6E8BFF 45%, #B07CFF 100%) !important; -webkit-background-clip: text !important; background-clip: text !important; color: transparent !important; -webkit-text-fill-color: transparent; padding-bottom: .06em; }
+.hero h1 { text-shadow: 0 10px 40px rgba(0,0,0,.35); }
+.hero .lede { font-size: clamp(18px, 1.5vw, 21px) !important; line-height: 1.5 !important; color: rgba(225,233,255,.82) !important; max-width: 30ch !important; }
+.hero .new-badge { white-space: nowrap; max-width: 100%; }
+.hero .trust { display: flex !important; flex-wrap: wrap; gap: 8px !important; margin-top: 22px !important; padding: 0; }
+.hero .trust li { list-style: none; padding: 7px 13px 7px 11px !important; border-radius: 999px; font-size: 13.5px !important; font-weight: 600; color: rgba(225,233,255,.85) !important; background: rgba(255,255,255,.07); box-shadow: inset 0 0 0 .5px rgba(255,255,255,.16); }
+.hero .trust li::before { margin-right: 7px !important; }
+.hero .btn.primary { box-shadow: 0 0 0 1px rgba(255,255,255,.18) inset, 0 14px 34px -10px rgba(10,132,255,.85), 0 0 60px -10px rgba(10,132,255,.6) !important; }
+
+/* Devices with depth: the iPad tilted toward you, the phone in front of it, a glow beneath */
+.devices::before { content: ""; position: absolute; left: 8%; right: 0; bottom: 4%; height: 90px; background: radial-gradient(50% 50% at 50% 50%, rgba(70,130,255,.55), transparent 70%); filter: blur(30px); z-index: 0; }
+@media (min-width: 1101px) {
+  .hero .devices { height: 600px !important; perspective: 1800px; }
+  .hero .ipad { transform: translateY(-50%) rotateY(-9deg) rotateX(3deg) !important; box-shadow: 0 50px 90px -30px rgba(0,0,0,.85), 0 0 0 1px rgba(255,255,255,.08) !important; }
+  .hero .phone { display: block !important; position: absolute !important; left: -70px !important; right: auto !important; top: auto !important; bottom: -40px !important; transform: scale(.74) rotate(-5deg) !important; transform-origin: bottom left; z-index: 4 !important; filter: drop-shadow(0 40px 50px rgba(0,0,0,.7)); }
+}
+@media (max-width: 1100px) {
+  .hero { padding-top: 100px !important; gap: 28px !important; }
+  .hero .devices { height: 560px !important; }
+  .hero .phone { position: relative !important; margin: 0 auto !important; left: auto !important; right: auto !important; top: 0 !important; transform: scale(.86) !important; transform-origin: top center; }
+  .hs-map { top: 62%; opacity: .42; }
+}
+@media (prefers-reduced-motion: reduce) { .hs-map, .hs-flown { animation: none !important; } .hs-route animateMotion { display: none; } }
+/* Keep the phone in front of the iPad (3D sorting would put the tilted iPad over it). */
+.hero .devices { transform-style: flat !important; }
+@media (min-width: 1101px) { .hero .phone { left: -30px !important; } }
+@media (min-width: 1101px) {
+  .hero .phone { width: 280px !important; height: 590px !important; left: -10px !important; bottom: -30px !important; }
+  .hero .phone .card-route .icao { white-space: nowrap; }
+}
+@media (min-width: 1101px) and (max-width: 1360px) { .hero .phone { left: 40px !important; transform: scale(.7) rotate(-5deg) !important; } }
+
+/* Floating moments beside the devices */
+.float-chip { position: absolute; z-index: 6; display: flex; align-items: center; gap: 12px; padding: 12px 16px 12px 12px; border-radius: 20px; color: #fff;
+  background: linear-gradient(140deg, rgba(255,255,255,.16), rgba(255,255,255,.04) 40%), rgba(16,22,44,.72); -webkit-backdrop-filter: blur(18px) saturate(170%); backdrop-filter: blur(18px) saturate(170%);
+  box-shadow: inset 1px 1px .5px rgba(255,255,255,.55), inset 0 0 0 .5px rgba(255,255,255,.18), 0 24px 50px -20px rgba(0,0,0,.8); animation: chipFloat 6s ease-in-out infinite; }
+.float-chip b { display: block; font-size: 14px; letter-spacing: -.01em; }
+.float-chip span { display: block; font-size: 12px; color: rgba(225,233,255,.72); margin-top: 1px; }
+.fcc-ic { width: 34px; height: 34px; border-radius: 11px; display: grid !important; place-items: center; font-size: 17px !important; font-weight: 800; color: #fff !important; margin: 0 !important; background: linear-gradient(140deg, #64D2FF, #5E5CE6); box-shadow: inset 1px 1px .5px rgba(255,255,255,.7); }
+.fcc-grade { width: 40px; height: 40px; border-radius: 50%; display: grid !important; place-items: center; font: 800 15px var(--data, ui-monospace) !important; color: #30D158 !important; margin: 0 !important; box-shadow: inset 0 0 0 3px #30D158, 0 0 18px -2px rgba(48,209,88,.6); }
+.fc-tod { top: 4%; right: 2%; animation-delay: -2s; }
+.fc-land { bottom: 6%; right: -2%; }
+@keyframes chipFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@media (max-width: 1100px) { .fc-tod { top: auto; bottom: 64%; right: 0; } .fc-land { bottom: 6%; right: 0; } }
+@media (max-width: 600px) { .float-chip { display: none; } }
+
+/* Headline lines rise in, one after another */
+@keyframes h1Rise { from { opacity: 0; transform: translateY(26px); filter: blur(6px); } }
+.hero h1 > span { animation: h1Rise .9s cubic-bezier(.2,.8,.2,1) both; }
+.hero h1 > span:nth-child(2) { animation-delay: .12s; }
+.hero h1 > span:nth-child(3) { animation-delay: .24s; }
+.hero .lede, .hero .cta, .hero .trust { animation: h1Rise .9s cubic-bezier(.2,.8,.2,1) .36s both; }
+
+/* Scroll cue */
+.scroll-cue { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: -10px auto 26px; width: max-content; color: rgba(225,233,255,.55); font-size: 12.5px; font-weight: 600; letter-spacing: .04em; text-decoration: none; }
+.scroll-cue i { width: 22px; height: 34px; border-radius: 12px; box-shadow: inset 0 0 0 1.5px rgba(225,233,255,.4); position: relative; }
+.scroll-cue i::after { content: ""; position: absolute; left: 50%; top: 7px; width: 3px; height: 7px; margin-left: -1.5px; border-radius: 2px; background: rgba(225,233,255,.8); animation: cueDot 1.8s ease-in-out infinite; }
+@keyframes cueDot { 0% { opacity: 0; transform: translateY(0); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateY(12px); } }
+.scroll-cue:hover { color: #fff; }
+@media (prefers-reduced-motion: reduce) { .float-chip, .hero h1 > span, .hero .lede, .hero .cta, .hero .trust, .scroll-cue i::after { animation: none !important; } }
+.float-chip, .float-chip div { text-align: left; }
+
+/* ===================== Background: clean and quiet (replaces the colour blobs and the drawn scene) =====================
+ * Deep navy, one soft light from above, a thin sunset line at the bottom of the screen. Nothing drawn. */
+html, body { background: #03050c !important; }
+body::before { inset: 0 !important; filter: none !important; opacity: 1 !important; animation: none !important; transform: none !important;
+  background:
+    radial-gradient(70% 55% at 50% -10%, rgba(56,110,230,.30), rgba(56,110,230,0) 70%),
+    linear-gradient(180deg, transparent 90%, rgba(255,150,95,.10) 96%, rgba(255,150,95,0) 100%),
+    linear-gradient(180deg, #03050c 0%, #050918 45%, #08112a 80%, #0f1630 100%) !important; }
+body::after { background: none !important; }
+.hero-scene { background: radial-gradient(55% 60% at 74% 48%, rgba(56,110,230,.22), rgba(56,110,230,0) 70%) !important; }
+.hero-scene > * { display: none !important; }
+.devices::before { background: radial-gradient(50% 50% at 50% 50%, rgba(70,120,240,.35), transparent 70%) !important; }
+
+/* ===================== Opening, EFBx-style: centred words, the product big underneath ===================== */
+html, body { background: #0c0f15 !important; }
+body::before { background:
+    radial-gradient(60% 45% at 50% -6%, rgba(70,120,235,.26), rgba(70,120,235,0) 70%),
+    linear-gradient(180deg, transparent 90%, rgba(255,150,95,.08) 96%, rgba(255,150,95,0) 100%),
+    linear-gradient(180deg, #0a0d13 0%, #0c0f16 50%, #0f131c 100%) !important; }
+@media (min-width: 821px) {
+  .hero { grid-template-columns: 1fr !important; justify-items: center; text-align: center; min-height: 0 !important; padding-top: 150px !important; gap: 54px !important; }
+  .hero-copy { display: flex; flex-direction: column; align-items: center; max-width: 920px !important; }
+  .hero h1 { font-size: clamp(54px, 6.2vw, 92px) !important; letter-spacing: -.05em !important; line-height: .98 !important; }
+  .hero h1 > span { display: inline !important; }
+  .hero h1 > span:nth-child(2)::after { content: "\A"; white-space: pre; }
+  .hero .lede { max-width: 36ch !important; margin-left: auto; margin-right: auto; font-size: clamp(19px, 1.6vw, 22px) !important; }
+  .hero .cta, .hero .trust { justify-content: center; }
+  .hero .devices { width: min(1060px, 92vw) !important; height: auto !important; aspect-ratio: 1060 / 700; perspective: 2200px; }
+  .hero .ipad { position: absolute !important; left: 0 !important; right: auto !important; top: 0 !important; width: 100% !important; height: auto !important; aspect-ratio: 1180 / 820; padding: 16px !important; border-radius: 48px !important;
+    transform: rotateX(10deg) !important; transform-origin: 50% 100%; box-shadow: 0 80px 120px -50px rgba(0,0,0,.9), 0 0 0 1px rgba(255,255,255,.08), 0 -1px 0 rgba(255,255,255,.12) inset !important; }
+  .hero .ipad .screen { border-radius: 34px !important; }
+  .hero .phone { left: auto !important; right: -40px !important; bottom: -70px !important; transform: scale(.78) rotate(4deg) !important; transform-origin: bottom right; }
+  .fc-tod { top: 12% !important; left: -56px !important; right: auto !important; }
+  .fc-land { bottom: 18% !important; left: -40px !important; right: auto !important; }
+  .devices::before { left: 10% !important; right: 10% !important; bottom: -6% !important; height: 120px !important; }
+}
+@media (min-width: 821px) and (max-width: 1180px) { .hero .phone { right: -10px !important; transform: scale(.66) rotate(4deg) !important; } .fc-tod { left: -10px !important; } .fc-land { left: 0 !important; } }
+
+.works-with { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px 26px; max-width: 1060px; margin: 90px auto 40px; padding: 0 20px; color: rgba(225,232,248,.5); font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+.works-with .ww-k { width: 100%; text-align: center; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: rgba(225,232,248,.38); margin-bottom: 4px; }
+.works-with span:not(.ww-k) { transition: color .2s; }
+.works-with span:not(.ww-k):hover { color: #fff; }
+@media (max-width: 820px) { .works-with { margin-top: 40px; gap: 8px 18px; font-size: 14px; } }
+@media (min-width: 821px) {
+  .hero { padding-top: 128px !important; gap: 44px !important; }
+  .hero h1 { font-size: clamp(46px, 5.1vw, 78px) !important; white-space: nowrap; }
+  .hero .lede { margin-top: 18px !important; }
+  .hero .new-badge { margin-bottom: 22px !important; }
+}
