@@ -163,7 +163,7 @@ export function CopilotScreen() {
             ))}
           </div>
           <form className="composer" onSubmit={(e) => { e.preventDefault(); void ask(input); }}>
-            <input className="input" value={input} onChange={(e) => setInput(e.target.value)} placeholder={aiReady ? (live.flight ? "When do we start down?" : "How do I connect my iPad?") : "Descent, fuel, weather, runway…"} aria-label="Your question" disabled={!live.flight && !aiReady} />
+            <input className="input" value={input} onChange={(e) => setInput(e.target.value)} placeholder={aiReady ? (live.flight ? "When do we start down?" : "How do I connect my iPad?") : "Descent, fuel, runway…"} aria-label="Your question" disabled={!live.flight && !aiReady} />
             <button className="btn primary send" type="submit" disabled={busy || !input.trim()} aria-label="Send">{Icon.send()}</button>
           </form>
           {!aiReady && !signed ? <p className="faint" style={{ fontSize: 12, margin: "8px 4px 0" }}>Answers come straight from the sim. <a href="#/account">Sign in</a> (free) and Glidepath AI answers anything, in plain words.</p> : null}

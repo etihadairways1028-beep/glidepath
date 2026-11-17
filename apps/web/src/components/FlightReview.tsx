@@ -11,7 +11,7 @@ import { gradeFor, reviewApproach } from "@glidepath/flight-engine";
 import { activeBridge } from "../data/bridge";
 import { activeDemo } from "../data/demo";
 import { useLive } from "../data/derive";
-import { useApp } from "../data/store";
+import { store, useApp } from "../data/store";
 
 interface Part { id: string; label: string; score: number; weight: number; line: string }
 
@@ -161,7 +161,11 @@ export function FlightCompletePrompt() {
       catch (e) { setBusy(false); setErr((e as Error).message); return; }
     }
     // The demo has no Bridge to end the flight: run the rest of the recording (taxi in, on block) so it completes for real.
-    if (mode === "demo") activeDemo()?.seek(1);
+    if (mode === "demo") {
+      activeDemo()?.seek(1);
+      // Open the review once the demo has really finished the flight (a tick or two), so it shows as completed.
+      for (let i = 0; i < 30 && store.get().lastFlight?.status !== "completed"; i++) await new Promise((r) => setTimeout(r, 100));
+    }
     remember();
     location.hash = `#/review/${f.id}`;
   };
