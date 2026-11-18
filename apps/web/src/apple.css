@@ -1225,3 +1225,15 @@ html:root :is(.btn, .chip-btn, .rc-tog, .radar-play, .wn-go):not(:disabled):hove
 html:root :is(.quick-a, .more-tile, .cr-tile):hover:active { transform: scale(.95) !important; box-shadow: 0 0 0 4px var(--press-ring) !important; }
 .push-note { font-size: 13px; margin: 4px 0 2px; line-height: 1.45; }
 .push-note.ok { color: #30D158; } .push-note.warn { color: #FF9F0A; }
+
+/* ===================== Release burst: overshoot + shockwave ring (hover.ts installPop) =====================
+   `scale` (not `transform`) so it stacks with the press/spring transitions; `outline` so no glass is repainted. */
+@media (prefers-reduced-motion: no-preference) {
+  :root [data-pop] { animation: gpPop .62s cubic-bezier(.2, 1.6, .35, 1), gpRing .6s cubic-bezier(.15, .7, .3, 1) !important; }
+  :root .nav-a[data-pop], :root .tab[data-pop] { animation: gpRing .6s cubic-bezier(.15, .7, .3, 1) !important; }
+}
+@keyframes gpPop { 0% { scale: .88; } 38% { scale: 1.09; } 70% { scale: .98; } 100% { scale: 1; } }
+@keyframes gpRing {
+  0% { outline: 3px solid rgba(120, 190, 255, .95); outline-offset: 0; }
+  100% { outline: 3px solid rgba(120, 190, 255, 0); outline-offset: 22px; }
+}

@@ -6,9 +6,10 @@ import "./extra.css";
 import "./liquid.css";
 import "./glass.css";
 import "./apple.css";
-import { installHover, installRipple } from "./hover";
+import { installHover, installPop, installRipple } from "./hover";
 installHover();
 installRipple();
+installPop();
 
 // iPad and iPhone Safari only show the pressed (:active) look when the page listens for touches.
 document.addEventListener("touchstart", () => {}, { passive: true });

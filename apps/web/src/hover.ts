@@ -52,3 +52,26 @@ export function installRipple(): void {
     s.addEventListener("animationend", () => s.remove());
   }, { passive: true });
 }
+
+const SEL_POP = ".btn, .rc-tog, .seg button, .chip-btn, .quick-a, .more-tile, .cr-tile, .rc-steps button, .radar-btn, .radar-play, .wn-go, .basemap, .wall-sw, .tab, .nav-a";
+/**
+ * On release, the button springs past its size and settles, and a ring bursts outward from it.
+ * Every device (touch included: it animates `scale` and `outline`, not the glass), never with reduced motion.
+ */
+export function installPop(): void {
+  if (typeof window === "undefined" || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  document.addEventListener("pointerup", (e) => {
+    const b = (e.target as Element | null)?.closest?.(SEL_POP) as HTMLElement | null;
+    if (!b || (b as HTMLButtonElement).disabled) return;
+    // A data attribute, not a class: React rewrites className when a toggle changes state.
+    b.removeAttribute("data-pop");
+    void b.offsetWidth; // restart the animation on quick repeat presses
+    b.setAttribute("data-pop", "");
+    const done = (ev: AnimationEvent) => {
+      if (ev.target !== b || ev.animationName !== "gpRing") return;
+      b.removeAttribute("data-pop"); b.removeEventListener("animationend", done);
+    };
+    b.addEventListener("animationend", done);
+    window.setTimeout(() => b.removeAttribute("data-pop"), 3000); // in case the animation never runs
+  }, { passive: true });
+}
