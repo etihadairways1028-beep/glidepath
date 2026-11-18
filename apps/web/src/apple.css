@@ -1237,3 +1237,22 @@ html:root :is(.quick-a, .more-tile, .cr-tile):hover:active { transform: scale(.9
   0% { outline: 3px solid rgba(120, 190, 255, .95); outline-offset: 0; }
   100% { outline: 3px solid rgba(120, 190, 255, 0); outline-offset: 22px; }
 }
+
+/* ===================== Effects matched to what the button does ===================== */
+@media (prefers-reduced-motion: no-preference) {
+  /* Copilot: the send arrow launches */
+  :root .btn.send[data-pop] svg { animation: sendFly .55s cubic-bezier(.3, 1.4, .4, 1); }
+  /* Busy: a spinner while it works */
+  :root .btn.busy { position: relative; color: transparent !important; }
+  :root .btn.busy::after { content: ""; position: absolute; left: 50%; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; animation: gpSpin .7s linear infinite; }
+  /* Done: green with a pop */
+  :root .btn.ok { background: linear-gradient(180deg, #4ADE80, #1FA84A) !important; animation: okPop .5s cubic-bezier(.2, 1.6, .35, 1); }
+  /* Sim switches and checklist ticks: a green flash as they turn on */
+  :root .rc-tog.on .rc-led { animation: ledOn .7s ease-out; }
+  :root .cl-items li.on .cl-box { animation: tickOn .55s cubic-bezier(.2, 1.6, .35, 1); }
+}
+@keyframes sendFly { 0% { translate: 0 0; opacity: 1; } 45% { translate: 14px -14px; opacity: 0; } 46% { translate: -10px 10px; opacity: 0; } 100% { translate: 0 0; opacity: 1; } }
+@keyframes gpSpin { to { transform: rotate(360deg); } }
+@keyframes okPop { 0% { scale: .9; } 45% { scale: 1.08; } 100% { scale: 1; } }
+@keyframes ledOn { 0% { box-shadow: 0 0 0 0 rgba(48,209,88,.9), 0 0 8px #30D158; } 100% { box-shadow: 0 0 0 10px rgba(48,209,88,0), 0 0 8px #30D158; } }
+@keyframes tickOn { 0% { scale: .5; box-shadow: 0 0 0 0 rgba(48,209,88,.8); } 55% { scale: 1.18; } 100% { scale: 1; box-shadow: 0 0 0 9px rgba(48,209,88,0); } }

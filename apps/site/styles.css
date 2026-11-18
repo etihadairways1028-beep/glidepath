@@ -1071,3 +1071,36 @@ html:root :is(.btn, .ai-chips a, .feat-toc a, .watch-play, .new-badge):hover:act
 .n10-radar .rd-2 { animation-duration: 8s; }
 @keyframes rdDrift { from { transform: translateX(-8px) scale(.96); } to { transform: translateX(10px) scale(1.04); } }
 @media (prefers-reduced-motion: reduce) { .n10-radar .rd-cell { animation: none; } }
+
+
+/* ===================== Button effects, matched to what each button does ===================== */
+@media (prefers-reduced-motion: no-preference) {
+  /* Release: overshoot and a ring that bursts outward (every button) */
+  :root [data-pop] { animation: sitePop .6s cubic-bezier(.2, 1.6, .35, 1) !important; }
+  .site-ring { position: fixed; z-index: 9999; pointer-events: none; outline: 3px solid rgba(120, 190, 255, 0); animation: sitePopRing .62s cubic-bezier(.15, .7, .3, 1) forwards; }
+  /* Download: the arrow drops into the tray on press, and bobs while hovered */
+  .btn[data-download] svg, #si-dl svg { transition: translate .3s cubic-bezier(.3, 1.6, .4, 1); }
+  .btn[data-download][data-pop] svg { animation: dlDrop .55s cubic-bezier(.3, 1.5, .4, 1); }
+  @media (hover: hover) and (pointer: fine) { .btn[data-download]:hover svg { animation: dlBob 1.1s ease-in-out infinite; } }
+  /* AI question chips: the star turns and twinkles */
+  .ai-chips a { transition: transform .45s cubic-bezier(.3, 1.6, .4, 1), background-color .2s ease, box-shadow .25s ease; }
+  @media (hover: hover) and (pointer: fine) {
+    .ai-chips a:hover { transform: translateY(-3px); box-shadow: 0 10px 26px -12px rgba(191, 90, 242, .7), 0 0 0 1px rgba(199, 125, 255, .35); }
+    .ai-chips a:hover::first-letter { color: #E2B6FF; }
+  }
+  .ai-chips a:active { transform: scale(.94); transition-duration: .08s; }
+  /* FAQ: the answer slides in */
+  .faq-list details[open] > p { animation: faqIn .45s cubic-bezier(.2, .9, .3, 1); }
+  /* Busy buttons show a spinner; a wrong password shakes the form */
+  .btn.busy { cursor: progress; }
+  .btn.busy::before { content: ""; width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; animation: siteSpin .7s linear infinite; flex: none; }
+  #si-form.shake { animation: siteShake .42s cubic-bezier(.36, .07, .19, .97); }
+}
+@keyframes sitePop { 0% { scale: .9; } 38% { scale: 1.07; } 70% { scale: .985; } 100% { scale: 1; } }
+@keyframes sitePopRing { 0% { outline-color: rgba(120, 190, 255, .95); outline-offset: 0; } 100% { outline-color: rgba(120, 190, 255, 0); outline-offset: 20px; } }
+@media (prefers-reduced-motion: reduce) { .site-ring { display: none; } }
+@keyframes dlDrop { 0% { translate: 0 -2px; } 40% { translate: 0 6px; } 100% { translate: 0 0; } }
+@keyframes dlBob { 0%, 100% { translate: 0 0; } 50% { translate: 0 3px; } }
+@keyframes faqIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@keyframes siteSpin { to { transform: rotate(360deg); } }
+@keyframes siteShake { 10%, 90% { translate: -1px 0; } 20%, 80% { translate: 3px 0; } 30%, 50%, 70% { translate: -6px 0; } 40%, 60% { translate: 6px 0; } }

@@ -44,7 +44,28 @@ button:not(:disabled):active,button:not(:disabled):hover:active,.btnp:active,.bt
 summary:active{transform:scale(.98);transition:transform .07s ease}
 button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #64B5FF;outline-offset:3px}
 @media (prefers-reduced-motion:reduce){button,.btnp,.btng,a.btn{transition:filter .2s ease}button:active,.btnp:active,.btng:active{transform:none}}
+/* Release: overshoot, plus a ring drawn as its own element so nothing clips it (POP_JS) */
+@media (prefers-reduced-motion:no-preference){[data-pop]{animation:gpPop .6s cubic-bezier(.2,1.6,.35,1)!important}
+.gp-ring{position:fixed;z-index:999;pointer-events:none;outline:3px solid rgba(120,190,255,0);animation:gpRing .62s cubic-bezier(.15,.7,.3,1) forwards}
+.busy::before{content:"";width:15px;height:15px;border-radius:50%;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;animation:gpSpin .7s linear infinite;flex:none}
+.shake{animation:gpShake .42s cubic-bezier(.36,.07,.19,.97)}
+.rd-steps li.ok.now .rd-ic{animation:gpTick .55s cubic-bezier(.2,1.6,.35,1) both}}
+.gp-ring{display:none}@media (prefers-reduced-motion:no-preference){.gp-ring{display:block}}
+.busy{cursor:progress}
+@keyframes gpPop{0%{scale:.9}38%{scale:1.07}70%{scale:.985}100%{scale:1}}
+@keyframes gpRing{0%{outline-color:rgba(120,190,255,.95);outline-offset:0}100%{outline-color:rgba(120,190,255,0);outline-offset:20px}}
+@keyframes gpSpin{to{transform:rotate(360deg)}}
+@keyframes gpShake{10%,90%{translate:-1px 0}20%,80%{translate:3px 0}30%,50%,70%{translate:-6px 0}40%,60%{translate:6px 0}}
+@keyframes gpTick{0%{scale:.4;opacity:0}60%{scale:1.15;opacity:1}100%{scale:1}}
 `;
+
+/** Every button: on release it springs past its size and a ring bursts outward. */
+const POP_JS = `<script>(function(){if(matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+document.addEventListener("pointerup",function(e){var b=e.target&&e.target.closest&&e.target.closest("button,.btnp,.btng,a.btn,summary");if(!b||b.disabled)return;
+b.removeAttribute("data-pop");void b.offsetWidth;b.setAttribute("data-pop","");setTimeout(function(){b.removeAttribute("data-pop");},700);
+var r=b.getBoundingClientRect(),w=b.offsetWidth,h=b.offsetHeight,g=document.createElement("span");g.className="gp-ring";
+g.style.cssText="left:"+(r.left+r.width/2-w/2)+"px;top:"+(r.top+r.height/2-h/2)+"px;width:"+w+"px;height:"+h+"px;border-radius:"+getComputedStyle(b).borderRadius;
+document.body.appendChild(g);g.addEventListener("animationend",function(){g.remove();});setTimeout(function(){g.remove();},2000);},{passive:true});})();</script>`;
 
 const LOGO = `<svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true" style="border-radius:6px"> <defs>  <linearGradient id="gp-bg" x1="0.1" y1="0" x2="0.9" y2="1">   <stop offset="0" stop-color="#4FB4FF"/>   <stop offset="0.5" stop-color="#2F6BFF"/>   <stop offset="1" stop-color="#7A3CFF"/>  </linearGradient>  <linearGradient id="gp-sheen" x1="0" y1="0" x2="0" y2="1">   <stop offset="0" stop-color="#fff" stop-opacity="0.42"/>   <stop offset="0.55" stop-color="#fff" stop-opacity="0.04"/>   <stop offset="1" stop-color="#fff" stop-opacity="0"/>  </linearGradient>  <linearGradient id="gp-path" x1="0" y1="0" x2="1" y2="1">   <stop offset="0" stop-color="#fff" stop-opacity="0.55"/>   <stop offset="0.6" stop-color="#fff"/>  </linearGradient> </defs> <rect width="64" height="64" rx="15" fill="url(#gp-bg)"/> <rect x="0.75" y="0.75" width="62.5" height="62.5" rx="14.4" fill="url(#gp-sheen)" stroke="#fff" stroke-opacity="0.28" stroke-width="1.5"/> <path d="M11 16 C 24 16, 31 26, 37 36 C 41.5 43.5, 45 47, 53 47" fill="none" stroke="url(#gp-path)" stroke-width="5.2" stroke-linecap="round"/> <path d="M27 53 H 53" stroke="#fff" stroke-opacity="0.5" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="4.5 4"/> <circle cx="11" cy="16" r="4.2" fill="#fff"/></svg>`;
 
@@ -75,11 +96,11 @@ button.btnp{width:100%;max-width:300px;padding:15px;font-size:17px}
 <h1>Connect this iPad</h1>
 <p>Type the 6-digit code shown on your PC, in the Glidepath Bridge window.</p>
 <form id="f"><div class="code"><input id="c" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="000000" autofocus></div>
-<button class="btnp" type="submit">Connect</button></form><div id="m"></div></div>
-<script>
-var f=document.getElementById("f");f.onsubmit=async function(e){if(e)e.preventDefault();var m=document.getElementById("m");m.textContent="Connecting…";
+<button class="btnp" type="submit" id="go">Connect</button></form><div id="m"></div></div>
+${POP_JS}<script>
+var f=document.getElementById("f");f.onsubmit=async function(e){if(e)e.preventDefault();var m=document.getElementById("m"),g=document.getElementById("go");m.textContent="";g.classList.add("busy");g.textContent="Connecting…";
 try{var r=await fetch("/api/pair",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code:document.getElementById("c").value})});var j=await r.json();
-if(r.ok&&j.token){location.replace("/app/#token="+encodeURIComponent(j.token));}else{m.textContent=j.error||"That didn't work. Try again.";}}catch(_){m.textContent="Can't reach your PC. Is the Bridge still open?";}};
+if(r.ok&&j.token){location.replace("/app/#token="+encodeURIComponent(j.token));return;}else{m.textContent=j.error||"That code was not accepted. Check it and try again.";f.classList.remove("shake");void f.offsetWidth;f.classList.add("shake");}}catch(_){m.textContent="Your PC cannot be reached. Check that Glidepath Bridge is open.";}g.classList.remove("busy");g.textContent="Connect";};
 var q=new URLSearchParams(location.search).get("code");if(q&&/^\\d{6}$/.test(q)){document.getElementById("c").value=q;f.onsubmit();}
 </script></main></body></html>`;
 }
@@ -102,7 +123,7 @@ function cloudCard(c: CloudCard | null): string {
     return `<div class="panel sec anywhere">${head("Connect anywhere", "Sign in with your Glidepath account. Your iPad or phone then connects on any Wi-Fi, or even mobile data. No codes.")}
 <form id="cl" class="cl-form" autocomplete="on"><input id="ce" type="email" placeholder="Email" autocomplete="username" required><input id="cp" type="password" placeholder="Password" autocomplete="current-password" required><button class="btnp" type="submit">Sign in</button></form>
 <div id="cm" class="cl-msg">${c.error ? esc(c.error) : ""}</div>
-<div class="label">No account yet? It's free: open <a href="https://glidepath-ad9.pages.dev/app/#/account" target="_blank" rel="noreferrer">Glidepath</a> and tap Create account, then sign in here.</div></div>`;
+<div class="label">No account? Create a free one in <a href="https://glidepath-ad9.pages.dev/app/#/account" target="_blank" rel="noreferrer">the Glidepath app</a> (Account, then Create account), then sign in here.</div></div>`;
   }
   const state = c.online
     ? `<span class="dot live"></span>Connect anywhere is on`
@@ -234,8 +255,9 @@ ${p.local ? `${updateCard(p.update ?? null)}${cloudCard(p.cloud ?? null)}${p.clo
 <details class="panel sec"><summary><span class="cap">Recent log</span></summary><pre class="mono">${esc(p.logs.join("\n")) || "—"}</pre></details>
 <div class="label foot">Keep the Bridge window open while you fly. This page updates by itself.</div>` : `<div class="panel sec"><p class="label" style="margin:0">Pairing details are only shown on the simulator PC itself.</p></div>`}
 </main>${p.local ? updateOverlay() : ""}
-<script>
+${POP_JS}<script>
 var open=function(){return [].map.call(document.querySelectorAll("details"),function(d){return d.open;});};
+[].forEach.call(document.querySelectorAll(".rd-steps li.ok"),function(l){l.classList.add("now");});
 var busy=false;
 (function(){
 var L=0,route,flown,plane,shown=0,target=0,bob=0,from="",to="",gone=0,done=false;
@@ -248,22 +270,23 @@ function stage(i,title,pct,msg){var s=document.querySelectorAll(".upd-steps span
  el("upd-title").textContent=title;el("upd-pct").textContent=pct||"";if(msg!==undefined)el("upd-msg").textContent=msg;}
 function show(u){var o=el("upd");if(o.hidden){o.hidden=false;from=u.current;to=u.latest||"";el("upd-from").textContent=from;el("upd-to").textContent=to;requestAnimationFrame(frame);}}
 function poll(){fetch("/api/update",{cache:"no-store"}).then(function(r){return r.json();}).then(function(u){gone=0;
- if(u.current===to&&to){done=true;target=1;el("upd").className="upd ok";stage(4,"Updated to "+to,"","Welcome aboard. This page will refresh.");setTimeout(function(){location.reload();},2500);return;}
+ if(u.current===to&&to){done=true;target=1;el("upd").className="upd ok";stage(4,"Updated to "+to,"","The update is complete. This page will reload.");setTimeout(function(){location.reload();},2500);return;}
  if(u.state==="downloading"){target=0.04+0.56*u.progress;stage(0,"Downloading",Math.round(u.progress*100)+"%","");}
  else if(u.state==="verifying"){target=0.64;stage(1,"Checking the download","","Making sure it's exactly the file we published.");}
  else if(u.state==="installing"){target=0.8;stage(2,"Installing","",u.message||"");}
  else if(u.state==="error"){stage(0,"Update stopped","",u.message||"Something went wrong.");el("upd").onclick=function(){location.reload();};return;}
  setTimeout(poll,700);}).catch(function(){gone++;target=0.93;stage(3,"Restarting the Bridge","","Windows may ask on this PC to allow it. Click Yes.");setTimeout(poll,1200);});}
-document.addEventListener("click",function(e){if(!e.target||e.target.id!=="upgo")return;busy=true;e.target.textContent="Starting…";
+document.addEventListener("click",function(e){if(!e.target||e.target.id!=="upgo")return;busy=true;e.target.classList.add("busy");e.target.textContent="Starting…";
  fetch("/api/update/install",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"}).then(function(r){return r.json();}).then(function(u){show(u);poll();}).catch(function(){busy=false;});});
 })();
 function typing(){var a=document.activeElement;if(a&&a.tagName==="INPUT")return true;var ins=document.querySelectorAll(".cl-form input");for(var i=0;i<ins.length;i++)if(ins[i].value)return true;return false;}
-document.addEventListener("submit",function(e){if(e.target.id!=="cl")return;e.preventDefault();var m=document.getElementById("cm");m.className="cl-msg";m.textContent="Signing in…";busy=true;
-fetch("/api/cloud/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:document.getElementById("ce").value,password:document.getElementById("cp").value})}).then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});}).then(function(x){busy=false;if(x.ok){m.className="cl-msg ok";m.textContent="Signed in.";document.getElementById("cp").value="";document.getElementById("ce").value="";setTimeout(function(){location.reload();},900);}else{m.textContent=x.j.error||"That didn't work. Try again.";}}).catch(function(){busy=false;m.textContent="Couldn't reach the Bridge.";});});
-document.addEventListener("click",function(e){if(!e.target||e.target.id!=="co")return;e.target.textContent="Signing out…";fetch("/api/cloud/logout",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"}).then(function(){location.reload();});});
+document.addEventListener("submit",function(e){if(e.target.id!=="cl")return;e.preventDefault();var m=document.getElementById("cm"),sb=e.target.querySelector("button");m.className="cl-msg";m.textContent="";if(sb){sb.classList.add("busy");sb.textContent="Signing in…";}busy=true;
+fetch("/api/cloud/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:document.getElementById("ce").value,password:document.getElementById("cp").value})}).then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});}).then(function(x){busy=false;if(x.ok){m.className="cl-msg ok";m.textContent="Signed in.";document.getElementById("cp").value="";document.getElementById("ce").value="";setTimeout(function(){location.reload();},900);}else{m.textContent=x.j.error||"Sign-in failed. Check your email and password.";e.target.classList.remove("shake");void e.target.offsetWidth;e.target.classList.add("shake");}if(sb){sb.classList.remove("busy");sb.textContent="Sign in";}}).catch(function(){busy=false;if(sb){sb.classList.remove("busy");sb.textContent="Sign in";}m.textContent="The Bridge could not be reached. Restart Glidepath Bridge and try again.";});});
+document.addEventListener("click",function(e){if(!e.target||e.target.id!=="co")return;e.target.classList.add("busy");e.target.textContent="Signing out…";fetch("/api/cloud/logout",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"}).then(function(){location.reload();});});
 setInterval(function(){if(busy||typing()||document.hidden||(window.getSelection&&String(window.getSelection())))return;
 fetch(location.href,{cache:"no-store"}).then(function(r){return r.ok?r.text():null;}).then(function(t){if(!t)return;var m=t.match(/<main id="root">([\\s\\S]*)<\\/main>/);if(!m)return;
-var o=open(),pre=document.querySelector("pre"),sc=pre?pre.scrollTop:0;document.getElementById("root").innerHTML=m[1];
+var o=open(),pre=document.querySelector("pre"),sc=pre?pre.scrollTop:0,was=[].map.call(document.querySelectorAll(".rd-steps li"),function(l){return l.classList.contains("ok");});document.getElementById("root").innerHTML=m[1];
+[].forEach.call(document.querySelectorAll(".rd-steps li"),function(l,i){if(l.classList.contains("ok")&&!was[i])l.classList.add("now");});
 [].forEach.call(document.querySelectorAll("details"),function(d,i){d.open=!!o[i];});var p2=document.querySelector("pre");if(p2)p2.scrollTop=sc;}).catch(function(){});},5000);
 </script></body></html>`;
 }

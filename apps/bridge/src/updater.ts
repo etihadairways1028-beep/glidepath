@@ -158,7 +158,7 @@ export class Updater {
       }
     } catch (e) {
       this.st.state = "error";
-      this.st.message = `The update didn't work: ${(e as Error).message}. You can download it from the Glidepath website instead.`;
+      this.st.message = `The update could not be installed: ${(e as Error).message}. You can download it from the Glidepath website instead.`;
       this.o.log.warn(this.st.message);
       try { rmSync(file, { force: true }); } catch { /* ignore */ }
     }

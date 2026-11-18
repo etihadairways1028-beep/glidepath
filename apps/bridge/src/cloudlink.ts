@@ -93,7 +93,7 @@ export class CloudLink {
         return { base, status: r.status, data: (await r.json().catch(() => ({}))) as T & { error?: string } };
       } catch (e) { last = e as Error; }
     }
-    throw new Error(last ? "Couldn't reach Glidepath. Check this PC is online." : "Couldn't reach Glidepath.");
+    throw new Error(last ? "Glidepath could not be reached. Check that this PC is online." : "Glidepath could not be reached.");
   }
 
   async signIn(email: string, password: string): Promise<CloudLinkStatus> {

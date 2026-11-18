@@ -38,13 +38,13 @@ export function ShareLive({ compact }: { compact?: boolean }) {
         <>
           <div className="share-link data" title={link}>{link.replace("https://", "")}</div>
           <div className="row wrap">
-            <button className="btn primary" onClick={share}>{copied ? "Copied" : "Share link"}</button>
+            <button className={`btn primary${copied ? " ok" : ""}`} onClick={share}>{copied ? "✓ Copied" : "Share link"}</button>
             <a className="btn" href={link} target="_blank" rel="noreferrer">Open</a>
             <button className="btn" onClick={() => void stopSharing()}>Stop sharing</button>
           </div>
         </>
       ) : (
-        <button className="btn primary" disabled={live.busy} onClick={async () => { const u = await startSharing(c.profile?.display_name ?? null); if (u && navigator.clipboard) navigator.clipboard.writeText(u).catch(() => undefined); }}>
+        <button className={`btn primary${live.busy ? " busy" : ""}`} disabled={live.busy} aria-busy={live.busy} onClick={async () => { const u = await startSharing(c.profile?.display_name ?? null); if (u && navigator.clipboard) navigator.clipboard.writeText(u).catch(() => undefined); }}>
           {live.busy ? "Starting…" : "Start a live link"}
         </button>
       )}

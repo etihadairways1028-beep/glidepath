@@ -461,3 +461,24 @@
   document.body.appendChild(svg);
   document.documentElement.setAttribute("data-refract", "");
 })();
+
+// Every button: on release it springs past its size and a ring bursts outward (data attribute, restarted on each press).
+(() => {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  document.addEventListener("pointerup", (e) => {
+    const b = e.target.closest && e.target.closest(".btn, .menu-btn, .ai-chips a, .seg button, .play, .faq-list summary, .toc a, .more-link a");
+    if (!b || b.disabled) return;
+    b.removeAttribute("data-pop"); void b.offsetWidth; b.setAttribute("data-pop", "");
+    // The ring is its own element above the button, so nothing on the button can clip it.
+    const r = b.getBoundingClientRect(), ring = document.createElement("span");
+    ring.className = "site-ring";
+    const w = b.offsetWidth, h = b.offsetHeight; // unscaled size, centred on the (possibly still shrunk) button
+    ring.style.cssText = `left:${r.left + r.width / 2 - w / 2}px;top:${r.top + r.height / 2 - h / 2}px;width:${w}px;height:${h}px;border-radius:${getComputedStyle(b).borderRadius}`;
+    document.body.appendChild(ring);
+    ring.addEventListener("animationend", () => ring.remove());
+    setTimeout(() => ring.remove(), 2000);
+    const done = (ev) => { if (ev.target === b && ev.animationName === "sitePop") { b.removeAttribute("data-pop"); b.removeEventListener("animationend", done); } };
+    b.addEventListener("animationend", done);
+    setTimeout(() => b.removeAttribute("data-pop"), 3000);
+  }, { passive: true });
+})();
