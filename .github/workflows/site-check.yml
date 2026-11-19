@@ -6,7 +6,7 @@ on:
       expect:
         description: "Text the home page should contain"
         required: false
-        default: "A first officer who actually helps"
+        default: "A first officer that helps you fly"
 jobs:
   check:
     runs-on: ubuntu-latest
