@@ -9,7 +9,7 @@ import { Icon, Mark } from "./components/ui";
 import { activeBridge, BridgeClient, consumePairingLink, detectBridgeUrl, setActiveBridge } from "./data/bridge";
 import { findBridgeOnNetwork, initCloud, saveBridge, syncFlights, useCloud } from "./data/cloud";
 import type { FlightSummary } from "@glidepath/protocol";
-import { startDemo } from "./data/demo";
+import { activeDemo, startDemo } from "./data/demo";
 import { initAutoConnect, tryRelay } from "./data/connect";
 import { UpdateCenter } from "./components/UpdateCenter";
 import { FlightCompletePrompt } from "./components/FlightReview";
@@ -36,7 +36,7 @@ import { ChallengeScreen } from "./screens/Challenge";
 import { initLive } from "./data/live";
 import { reviewApproach } from "@glidepath/flight-engine";
 initLive();
-if (location.search.includes("gpdebug")) Object.assign(window, { __gpStore: store, __gpReview: reviewApproach, __gpBridge: activeBridge });
+if (location.search.includes("gpdebug")) Object.assign(window, { __gpStore: store, __gpReview: reviewApproach, __gpBridge: activeBridge, __gpDemo: activeDemo });
 import { BridgeIconTip } from "./components/InstallCard";
 import { Glance } from "./screens/Glance";
 
