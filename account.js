@@ -67,7 +67,7 @@
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const email = $("si-email").value.trim(), password = $("si-pw").value;
-    msg.className = "si-msg"; msg.textContent = ""; go.disabled = true; go.textContent = "One moment…";
+    msg.className = "si-msg"; msg.textContent = ""; go.disabled = true; go.classList.add("busy"); go.textContent = "One moment…";
     try {
       if (mode === "up" && password.length < 8) throw new Error("Use a password of at least 8 characters.");
       const r = mode === "in"
@@ -77,9 +77,9 @@
       store.set(session);
       render(); fp.hidden = true;
     } catch (err) {
-      msg.className = "si-msg err"; msg.textContent = String(err.message || err);
+      msg.className = "si-msg err"; msg.textContent = String(err.message || err); form.classList.remove("shake"); void form.offsetWidth; form.classList.add("shake");
     } finally {
-      go.disabled = false; if (!session) go.textContent = mode === "in" ? "Sign in" : "Create account";
+      go.disabled = false; go.classList.remove("busy"); if (!session) go.textContent = mode === "in" ? "Sign in" : "Create account";
     }
   });
 
@@ -102,13 +102,13 @@
   syncFp();
 
   $("si-dl").addEventListener("click", async () => {
-    const b = $("si-dl"); b.disabled = true; b.textContent = "Getting your download…";
+    const b = $("si-dl"); b.disabled = true; b.classList.add("busy"); b.textContent = "Getting your download…";
     try {
       const r = await call("/download", "GET", null, session && session.token);
       location.href = r.url;
     } catch (err) {
       $("si-who").textContent = "Couldn't get the download just now: " + err.message + " Try again in a minute.";
-    } finally { b.disabled = false; b.textContent = "Download for Windows"; }
+    } finally { b.disabled = false; b.classList.remove("busy"); b.textContent = "Download for Windows"; }
   });
   $("si-out").addEventListener("click", async () => {
     try { if (session) await call("/auth/logout", "POST", {}, session.token); } catch (_) { /* already gone */ }
