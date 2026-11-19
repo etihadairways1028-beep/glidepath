@@ -29,8 +29,8 @@ export function BaseMapPicker() {
   );
 }
 
-const KEYS: Record<Network, "showVatsim" | "showIvao" | "showSayIntentions"> = { vatsim: "showVatsim", ivao: "showIvao", sayintentions: "showSayIntentions" };
-const NOTE: Record<Network, string> = { vatsim: "Human ATC and pilots", ivao: "Human ATC and pilots", sayintentions: "Pilots flying with AI ATC" };
+const KEYS: Record<Network, "showVatsim" | "showIvao" | "showSayIntentions" | "showSimTraffic"> = { vatsim: "showVatsim", ivao: "showIvao", sayintentions: "showSayIntentions", sim: "showSimTraffic" };
+const NOTE: Record<Network, string> = { vatsim: "Human ATC and pilots", ivao: "Human ATC and pilots", sayintentions: "Pilots flying with AI ATC", sim: "AI aircraft around you in the simulator, through your Bridge" };
 
 export function TrafficSources({ counts, errors }: { counts?: Partial<Record<Network, number>>; errors?: Partial<Record<Network, string | null>> }) {
   const s = useSettings();

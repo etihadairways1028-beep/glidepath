@@ -1,4 +1,6 @@
 import { ShareCardButton } from "../components/ShareCard";
+import { ReplayVideo } from "../components/ReplayVideo";
+import { AllFlightsMap } from "../components/AllFlightsMap";
 import { ReviewPending, ReviewScore } from "../components/FlightReview";
 import { LandingHistory } from "../components/LandingHistory";
 import { ApproachCoach } from "../components/ApproachCoach";
@@ -6,7 +8,7 @@ import { Replay, replayPoints } from "../components/Replay";
 import { DebriefPanel, HandlingCard, TakeoffCard } from "../components/Debrief";
 import { Career } from "../components/Career";
 import { Badges } from "../components/Badges";
-import { cloudFlights, useCloud } from "../data/cloud";
+import { cloudFlights, deleteCloudFlight, useCloud } from "../data/cloud";
 import { useEffect, useMemo, useState } from "react";
 import type { FlightEvent, FlightSummary, TelemetryFrame } from "@glidepath/protocol";
 import { MapView } from "../components/MapView";
@@ -69,6 +71,7 @@ export function Logbook() {
       </div>
       {mode === "none" && !fromCloud && <Notice info>Your logbook lives on your Bridge, so it keeps every flight even when this device is off. <a href="#/settings">Connect your Bridge</a> or <a href="#/account">sign in</a> to see it.</Notice>}
       {fromCloud && <Notice info>Showing the flights saved to your account. Connect your Bridge for full replays and maps of each flight.</Notice>}
+      {done.length > 0 && <AllFlightsMap flights={done} />}
       {error && <Notice>{error}</Notice>}
       {(mode !== "none" || fromCloud) && flights && <><Career flights={flights} /><LandingHistory flights={flights} /><Badges flights={flights} /></>}
       <section className="glass pad">
@@ -192,6 +195,7 @@ export function FlightDetail({ id, review }: { id: string; review?: boolean }) {
         <Tile k="Aircraft" v={flight.aircraft?.icaoType ?? "—"} />
         <Tile k="Simulator" v={flight.simulator.name.replace("Microsoft Flight Simulator", "MSFS")} />
       </div>
+      {trail.length > 2 && <Section title="Replay" right={<span className="faint" style={{ fontSize: 12.5 }}>Your route as flown, in 14 seconds</span>}><ReplayVideo flight={flight} track={trail} /></Section>}
       <Section title="Profile"><ProfileChart trail={trail} showSpeed marks={marks} height={200} /></Section>
       <Section title="Timings" right={<span className="faint" style={{ fontSize: 12.5 }}>{flight.plan ? "planned against actual" : "actual, from telemetry"}</span>}>
         <TimingsTable t={timingsFor(flight, events, null, { toGoNm: null, minutesToTod: null, now: flight.onBlockAt ?? flight.endedAt ?? flight.startedAt })} plan={flight.plan} live={false} />
@@ -228,6 +232,46 @@ export function FlightDetail({ id, review }: { id: string; review?: boolean }) {
       <Section title="Events">
         <div className="timeline">{events.filter((e) => e.type !== "SIM_RESUMED").map((e, i) => <div className="tl" key={i}><span className="t">{zulu(e.t)}</span><span className="d" /><span>{EVENT_LABEL[e.type] ?? e.type}</span></div>)}</div>
       </Section>
+      {mode !== "demo" && <DeleteFlight flight={flight} />}
+    </div>
+  );
+}
+
+/** Delete a flight everywhere it's kept: the recording on the PC, the account copy and this device's cache. */
+function DeleteFlight({ flight }: { flight: FlightSummary }) {
+  const [ask, setAsk] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const live = flight.status === "active";
+  const go = async () => {
+    setBusy(true); setErr(null);
+    const b = activeBridge();
+    try {
+      if (b) await b.del(`/api/flights/${flight.id}`).catch((e: Error) => { if (!/not found/i.test(e.message)) throw e; });
+      await deleteCloudFlight(flight.id).catch((e: Error) => { if (!b) throw e; });
+      try { for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && k.includes(flight.id)) localStorage.removeItem(k); } } catch { /* storage off */ }
+      try { for (let i = sessionStorage.length - 1; i >= 0; i--) { const k = sessionStorage.key(i); if (k && k.includes(flight.id)) sessionStorage.removeItem(k); } } catch { /* storage off */ }
+      location.hash = "#/logbook";
+    } catch (e) { setErr((e as Error).message); setBusy(false); }
+  };
+  return (
+    <div className="del-flight">
+      {!ask ? (
+        <button className="btn danger" disabled={live} onClick={() => setAsk(true)} title={live ? "Finish the flight first" : undefined}>
+          <span style={{ width: 16, height: 16 }}>{Icon.trash()}</span>Delete flight
+        </button>
+      ) : (
+        <div className="glass del-ask" role="alertdialog" aria-label="Delete this flight?">
+          <b>Delete this flight?</b>
+          <p className="muted">{flight.departureIcao ?? "····"} → {flight.arrivalIcao ?? "····"} will be removed from your logbook on every device: the recording on your PC, your account and this device. This can't be undone.</p>
+          {err && <p className="err-text">{err}</p>}
+          <div className="row" style={{ gap: 8 }}>
+            <button className={`btn danger${busy ? " busy" : ""}`} disabled={busy} onClick={() => void go()}>Delete</button>
+            <button className="btn" disabled={busy} onClick={() => setAsk(false)}>Keep it</button>
+          </div>
+        </div>
+      )}
+      {live && <p className="faint" style={{ fontSize: 12, marginTop: 6 }}>A flight in progress can be deleted once it's finished.</p>}
     </div>
   );
 }

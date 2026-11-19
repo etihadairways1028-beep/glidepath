@@ -6,7 +6,7 @@
 import { settingsStore, type Settings } from "./store";
 import { authed, cloudStore, signedIn } from "./cloud";
 
-const SYNCED: Array<keyof Settings> = ["simbriefUser", "showVatsim", "showIvao", "showSayIntentions", "fuelUnit", "accent", "theme", "wallpaper", "mapStyle", "map3d", "flightMessages", "approachCoach", "lightMessages", "atcAlerts", "showAtc", "showRadar", "showMetars"];
+const SYNCED: Array<keyof Settings> = ["simbriefUser", "showVatsim", "showIvao", "showSayIntentions", "showSimTraffic", "fuelUnit", "accent", "theme", "wallpaper", "mapStyle", "map3d", "flightMessages", "approachCoach", "lightMessages", "atcAlerts", "showAtc", "showRadar", "showMetars"];
 const STAMP = "glidepath.syncAt";
 interface Blob { settings: Partial<Settings>; procs: Record<string, unknown> }
 

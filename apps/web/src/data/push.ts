@@ -66,3 +66,12 @@ export async function testPush(): Promise<string | null> {
   if (!sub) return "Turn notifications on first.";
   try { await authed("/push/test", "POST", { endpoint: sub.endpoint }); return null; } catch (e) { return (e as Error).message; }
 }
+
+/** Which kinds of notification the pilot wants (saved on the account, so every device follows). */
+export type PushPrefs = { tod: boolean; checklist: boolean; landed: boolean; review: boolean };
+export async function getPushPrefs(): Promise<PushPrefs | null> {
+  try { return await authed<PushPrefs>("/push/prefs"); } catch { return null; }
+}
+export async function setPushPrefs(p: Partial<PushPrefs>): Promise<PushPrefs | null> {
+  try { return await authed<PushPrefs>("/push/prefs", "PUT", p); } catch { return null; }
+}

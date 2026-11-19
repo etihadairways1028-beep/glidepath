@@ -6,138 +6,106 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { FlightSummary } from "@glidepath/protocol";
+import { drawLand, drawTrack, fit, greatCircle, loadLand, roundRect, trackNm, type ArtPt } from "./routeArt";
 
-interface Pt { lat: number; lon: number }
+type Pt = ArtPt;
 const W = 1080, H = 1920;
 const FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Inter, system-ui, sans-serif';
 const GRADE_COLOR: Record<string, string> = { "A+": "#64D2FF", A: "#30D158", B: "#34C7A0", C: "#FFD60A", D: "#FF9F0A", F: "#FF453A" };
+const INK = "#F5F7FA", QUIET = "rgba(235,240,250,.58)", BG = "#0B0D12", SEA = "#10141D", LAND = "#1E2433";
 
-const dur = (ms: number | null | undefined) => { if (!ms || ms <= 0) return "—"; const m = Math.round(ms / 60000); return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`; };
+/** Minutes as "1h 25m"; nothing (a dash) when the time isn't known, never a made-up zero. */
+const dur = (ms: number | null | undefined) => { if (!ms || ms < 60_000) return "—"; const m = Math.round(ms / 60000); return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`; };
 
-function greatCircle(a: Pt, b: Pt, n = 64): Pt[] {
-  const r = Math.PI / 180;
-  const [la1, lo1, la2, lo2] = [a.lat * r, a.lon * r, b.lat * r, b.lon * r];
-  const d = 2 * Math.asin(Math.sqrt(Math.sin((la2 - la1) / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin((lo2 - lo1) / 2) ** 2));
-  if (!d) return [a, b];
-  return Array.from({ length: n + 1 }, (_, i) => {
-    const f = i / n, A = Math.sin((1 - f) * d) / Math.sin(d), B = Math.sin(f * d) / Math.sin(d);
-    const x = A * Math.cos(la1) * Math.cos(lo1) + B * Math.cos(la2) * Math.cos(lo2);
-    const y = A * Math.cos(la1) * Math.sin(lo1) + B * Math.cos(la2) * Math.sin(lo2);
-    const z = A * Math.sin(la1) + B * Math.sin(la2);
-    return { lat: Math.atan2(z, Math.hypot(x, y)) / r, lon: Math.atan2(y, x) / r };
-  });
-}
-
-function roundRect(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, rad: number) {
-  c.beginPath(); c.moveTo(x + rad, y); c.arcTo(x + w, y, x + w, y + h, rad); c.arcTo(x + w, y + h, x, y + h, rad); c.arcTo(x, y + h, x, y, rad); c.arcTo(x, y, x + w, y, rad); c.closePath();
-}
-
-/** Draw the card. Returns a PNG blob. */
+/** Draw the card: flat, from the flight's own data. Returns a PNG blob. */
 export async function drawShareCard(f: FlightSummary, track: Pt[]): Promise<Blob> {
   const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
   const c = cv.getContext("2d")!;
-  // Background: deep night with soft colour.
-  const bg = c.createLinearGradient(0, 0, W, H); bg.addColorStop(0, "#071233"); bg.addColorStop(0.55, "#0B1C4A"); bg.addColorStop(1, "#1A0B3A"); c.fillStyle = bg; c.fillRect(0, 0, W, H);
-  for (const [x, y, rr, col] of [[180, 300, 700, "rgba(47,91,255,.55)"], [950, 1250, 760, "rgba(191,90,242,.42)"], [200, 1700, 600, "rgba(100,210,255,.30)"]] as const) {
-    const g = c.createRadialGradient(x, y, 0, x, y, rr); g.addColorStop(0, col); g.addColorStop(1, "rgba(0,0,0,0)"); c.fillStyle = g; c.fillRect(0, 0, W, H);
-  }
-  // Glass panel helper
-  const glass = (x: number, y: number, w: number, h: number, rad = 48) => {
-    c.save(); roundRect(c, x, y, w, h, rad);
-    const g = c.createLinearGradient(x, y, x + w, y + h); g.addColorStop(0, "rgba(255,255,255,.20)"); g.addColorStop(0.35, "rgba(255,255,255,.06)"); g.addColorStop(1, "rgba(255,255,255,.12)");
-    c.fillStyle = g; c.fill(); c.lineWidth = 2.5; c.strokeStyle = "rgba(255,255,255,.55)"; c.stroke(); c.restore();
-  };
-  c.textBaseline = "alphabetic"; c.fillStyle = "#fff";
+  c.fillStyle = BG; c.fillRect(0, 0, W, H);
+  c.textBaseline = "alphabetic";
 
   // Header
-  c.font = `700 34px ${FONT}`; c.fillStyle = "rgba(235,240,255,.75)"; c.fillText("GLIDEPATH", 90, 140);
+  c.font = `700 32px ${FONT}`; c.fillStyle = QUIET; c.fillText("GLIDEPATH", 80, 130);
   const date = new Date(f.wheelsDownAt ?? f.startedAt).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
-  c.textAlign = "right"; c.fillText(date, W - 90, 140); c.textAlign = "left";
-  c.fillStyle = "#fff"; c.font = `800 150px ${FONT}`;
+  c.textAlign = "right"; c.fillText(date, W - 80, 130); c.textAlign = "left";
   const route = `${f.departureIcao ?? "····"} → ${f.arrivalIcao ?? "····"}`;
-  let size = 150; while (c.measureText(route).width > W - 180 && size > 80) { size -= 6; c.font = `800 ${size}px ${FONT}`; }
-  c.fillText(route, 90, 310);
-  c.font = `500 40px ${FONT}`; c.fillStyle = "rgba(235,240,255,.75)";
+  let size = 140; c.font = `800 ${size}px ${FONT}`; while (c.measureText(route).width > W - 160 && size > 80) { size -= 6; c.font = `800 ${size}px ${FONT}`; }
+  c.fillStyle = INK; c.fillText(route, 76, 290);
+  c.font = `500 38px ${FONT}`; c.fillStyle = QUIET;
   const names = [f.departureName, f.arrivalName].filter(Boolean).join(" to ");
-  if (names) c.fillText(names.length > 46 ? names.slice(0, 45) + "…" : names, 90, 375);
+  if (names) c.fillText(names.length > 48 ? names.slice(0, 47) + "…" : names, 80, 352);
 
-  // Route panel
-  const box = { x: 70, y: 430, w: W - 140, h: 620 };
-  glass(box.x, box.y, box.w, box.h);
+  // Map: the real coastline and the route as flown, coloured by altitude
+  const box = { x: 60, y: 410, w: W - 120, h: 800 };
   let pts = track.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lon));
-  if (pts.length < 2 && f.plan?.origin && f.plan?.destination) pts = greatCircle(f.plan.origin, f.plan.destination);
+  const planned = pts.length < 2 && f.plan?.origin && f.plan?.destination;
+  if (planned) pts = greatCircle(f.plan!.origin, f.plan!.destination);
+  c.save(); roundRect(c, box.x, box.y, box.w, box.h, 36); c.clip();
+  c.fillStyle = SEA; c.fillRect(box.x, box.y, box.w, box.h);
   if (pts.length >= 2) {
-    const midLat = pts.reduce((s, p) => s + p.lat, 0) / pts.length, k = Math.cos((midLat * Math.PI) / 180);
-    let lons = pts.map((p) => p.lon);
-    if (Math.max(...lons) - Math.min(...lons) > 180) lons = lons.map((l) => (l < 0 ? l + 360 : l)); // across the date line
-    const xs = lons.map((l) => l * k), ys = pts.map((p) => -p.lat);
-    const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
-    const pad = 110, s = Math.min((box.w - pad * 2) / Math.max(x1 - x0, 1e-6), (box.h - pad * 2) / Math.max(y1 - y0, 1e-6));
-    const ox = box.x + box.w / 2 - ((x0 + x1) / 2) * s, oy = box.y + box.h / 2 - ((y0 + y1) / 2) * s;
-    const P = xs.map((x, i) => [ox + x * s, oy + ys[i]! * s] as const);
-    // faint grid
-    c.save(); roundRect(c, box.x, box.y, box.w, box.h, 48); c.clip();
-    c.strokeStyle = "rgba(255,255,255,.06)"; c.lineWidth = 2;
-    for (let gx = box.x + 60; gx < box.x + box.w; gx += 90) { c.beginPath(); c.moveTo(gx, box.y); c.lineTo(gx, box.y + box.h); c.stroke(); }
-    for (let gy = box.y + 50; gy < box.y + box.h; gy += 90) { c.beginPath(); c.moveTo(box.x, gy); c.lineTo(box.x + box.w, gy); c.stroke(); }
-    c.restore();
-    const line = (w: number, col: string, blur = 0) => { c.save(); c.shadowColor = col; c.shadowBlur = blur; c.strokeStyle = col; c.lineWidth = w; c.lineCap = "round"; c.lineJoin = "round"; c.beginPath(); P.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.stroke(); c.restore(); };
-    line(22, "rgba(10,132,255,.35)", 30); line(8, "#64D2FF", 12); line(3, "#ffffff");
-    const dot = (x: number, y: number, label: string | null | undefined, col: string) => {
-      c.fillStyle = col; c.beginPath(); c.arc(x, y, 16, 0, Math.PI * 2); c.fill(); c.lineWidth = 6; c.strokeStyle = "#fff"; c.stroke();
+    const pr = fit(pts, box, 0.16);
+    drawLand(c, pr, box, await loadLand(), LAND, "rgba(255,255,255,.08)");
+    if (planned) { c.setLineDash([18, 14]); c.lineWidth = 7; c.strokeStyle = "rgba(255,255,255,.75)"; c.beginPath(); pts.forEach((p, i) => { const [x, y] = pr.map(p.lon, p.lat); if (i) c.lineTo(x, y); else c.moveTo(x, y); }); c.stroke(); c.setLineDash([]); }
+    else drawTrack(c, pr, pts, 9);
+    const end = (p: Pt, label: string | null | undefined, up: boolean) => {
+      const [x, y] = pr.map(p.lon, p.lat);
+      c.fillStyle = INK; c.beginPath(); c.arc(x, y, 13, 0, Math.PI * 2); c.fill(); c.lineWidth = 5; c.strokeStyle = BG; c.stroke();
       if (!label) return;
-      c.font = `800 40px ${FONT}`; const tw = c.measureText(label).width;
-      const lx = Math.min(Math.max(x - tw / 2 - 18, box.x + 24), box.x + box.w - tw - 60), ly = y + (y > box.y + box.h - 120 ? -88 : 34);
-      c.fillStyle = "rgba(0,0,0,.45)"; roundRect(c, lx, ly, tw + 36, 58, 18); c.fill();
-      c.fillStyle = "#fff"; c.fillText(label, lx + 18, ly + 43);
+      c.font = `700 36px ${FONT}`; const tw = c.measureText(label).width;
+      const lx = Math.min(Math.max(x - tw / 2 - 16, box.x + 20), box.x + box.w - tw - 52), ly = up ? y - 82 : y + 30;
+      c.fillStyle = "rgba(11,13,18,.82)"; roundRect(c, lx, ly, tw + 32, 52, 14); c.fill();
+      c.fillStyle = INK; c.fillText(label, lx + 16, ly + 38);
     };
-    dot(P[0]![0], P[0]![1], f.departureIcao, "#30D158");
-    dot(P.at(-1)![0], P.at(-1)![1], f.arrivalIcao, "#0A84FF");
+    const [, ya] = pr.map(pts[0]!.lon, pts[0]!.lat), [, yb] = pr.map(pts.at(-1)!.lon, pts.at(-1)!.lat);
+    end(pts[0]!, f.departureIcao, ya <= yb); end(pts.at(-1)!, f.arrivalIcao, yb < ya);
   } else {
-    c.font = `600 44px ${FONT}`; c.fillStyle = "rgba(235,240,255,.6)"; c.textAlign = "center"; c.fillText("Route map needs the flight's track", W / 2, box.y + box.h / 2); c.textAlign = "left";
+    c.font = `600 40px ${FONT}`; c.fillStyle = QUIET; c.textAlign = "center"; c.fillText("No route was recorded for this flight", W / 2, box.y + box.h / 2); c.textAlign = "left";
   }
+  c.restore();
+  if (planned) { c.font = `500 28px ${FONT}`; c.fillStyle = QUIET; c.fillText("Planned route (no track was recorded)", box.x + 4, box.y + box.h + 44); }
 
-  // Landing panel
+  // Landing
   const l = f.landings.at(-1);
-  const ly = 1090;
-  glass(70, ly, W - 140, 330);
-  c.font = `700 32px ${FONT}`; c.fillStyle = "rgba(235,240,255,.7)"; c.fillText("LANDING", 120, ly + 72);
+  const ly = 1330;
+  c.font = `700 30px ${FONT}`; c.fillStyle = QUIET; c.fillText("LANDING", 80, ly);
   if (l) {
     const fpm = l.touchdownVsFpm === null ? null : Math.round(Math.abs(l.touchdownVsFpm));
-    c.font = `800 150px ${FONT}`; c.fillStyle = "#fff"; c.fillText(fpm === null ? "—" : String(fpm), 116, ly + 230);
-    const w = c.measureText(fpm === null ? "—" : String(fpm)).width;
-    c.font = `600 50px ${FONT}`; c.fillStyle = "rgba(235,240,255,.8)"; c.fillText("fpm", 130 + w, ly + 230);
-    c.font = `500 36px ${FONT}`; c.fillStyle = "rgba(235,240,255,.7)";
+    const big = fpm === null ? "—" : String(fpm);
+    c.font = `800 150px ${FONT}`; c.fillStyle = INK; c.fillText(big, 74, ly + 150);
+    const w = c.measureText(big).width;
+    c.font = `600 48px ${FONT}`; c.fillStyle = QUIET; c.fillText("fpm", 92 + w, ly + 150);
+    c.font = `500 34px ${FONT}`;
     const sub = [l.runway?.ident ? `Runway ${l.runway.ident}` : null, l.peakG ? `${l.peakG.toFixed(2)} G` : null, l.bounces ? `${l.bounces} bounce${l.bounces > 1 ? "s" : ""}` : "No bounce"].filter(Boolean).join("  ·  ");
-    c.fillText(sub, 122, ly + 292);
-    // grade badge
-    const g = l.grade ?? "—", gc = GRADE_COLOR[g] ?? "#64D2FF";
-    c.save(); c.shadowColor = gc; c.shadowBlur = 40; c.fillStyle = gc; c.beginPath(); c.arc(W - 220, ly + 165, 105, 0, Math.PI * 2); c.fill(); c.restore();
-    c.lineWidth = 6; c.strokeStyle = "rgba(255,255,255,.8)"; c.beginPath(); c.arc(W - 220, ly + 165, 105, 0, Math.PI * 2); c.stroke();
-    c.fillStyle = "#06122e"; c.font = `900 ${g.length > 1 ? 96 : 120}px ${FONT}`; c.textAlign = "center"; c.fillText(g, W - 220, ly + 165 + (g.length > 1 ? 34 : 42)); c.textAlign = "left";
+    c.fillText(sub, 80, ly + 210);
+    if (l.grade) {
+      const g = l.grade, gc = GRADE_COLOR[g] ?? "#64D2FF";
+      c.font = `800 64px ${FONT}`; const gw = c.measureText(g).width + 72;
+      c.fillStyle = gc; roundRect(c, W - 80 - gw, ly + 52, gw, 110, 55); c.fill();
+      c.fillStyle = BG; c.textAlign = "center"; c.fillText(g, W - 80 - gw / 2, ly + 130); c.textAlign = "left";
+    }
   } else {
-    c.font = `600 60px ${FONT}`; c.fillStyle = "#fff"; c.fillText("No landing recorded", 120, ly + 200);
+    c.font = `600 56px ${FONT}`; c.fillStyle = INK; c.fillText("No landing recorded", 80, ly + 110);
   }
 
-  // Stats grid
+  // Numbers: worked out from the flight; a dash where it genuinely isn't known
+  const trackLen = !planned && pts.length > 1 ? trackNm(pts) : 0;
+  const dist = f.distanceNm && f.distanceNm > 1 ? f.distanceNm : trackLen > 1 ? trackLen : null;
   const stats: Array<[string, string]> = [
     ["AIR TIME", dur(f.wheelsDownAt && f.wheelsUpAt ? f.wheelsDownAt - f.wheelsUpAt : null)],
-    ["BLOCK TIME", dur((f.onBlockAt ?? f.endedAt ?? 0) - (f.offBlockAt ?? f.startedAt))],
-    ["DISTANCE", f.distanceNm ? `${Math.round(f.distanceNm).toLocaleString("en-US")} nm` : "—"],
+    ["BLOCK TIME", dur(f.offBlockAt && (f.onBlockAt ?? f.endedAt) ? (f.onBlockAt ?? f.endedAt)! - f.offBlockAt : null)],
+    ["DISTANCE", dist ? `${Math.round(dist).toLocaleString("en-US")} nm` : "—"],
     ["AIRCRAFT", f.aircraft?.icaoType ?? f.plan?.aircraftIcao ?? "—"],
   ];
-  const gy = 1450, gw = (W - 140 - 30) / 2, gh = 160;
+  const gy = 1620, gw = (W - 160) / 2;
+  c.fillStyle = "rgba(255,255,255,.10)"; c.fillRect(80, gy - 50, W - 160, 2);
   stats.forEach(([k, v], i) => {
-    const x = 70 + (i % 2) * (gw + 30), y = gy + Math.floor(i / 2) * (gh + 30);
-    glass(x, y, gw, gh, 40);
-    c.font = `700 28px ${FONT}`; c.fillStyle = "rgba(235,240,255,.65)"; c.fillText(k, x + 40, y + 60);
-    c.font = `800 66px ${FONT}`; c.fillStyle = "#fff";
-    let fs = 66; while (c.measureText(v).width > gw - 80 && fs > 36) { fs -= 4; c.font = `800 ${fs}px ${FONT}`; }
-    c.fillText(v, x + 40, y + 128);
+    const x = 80 + (i % 2) * gw, y = gy + Math.floor(i / 2) * 120;
+    c.font = `700 26px ${FONT}`; c.fillStyle = QUIET; c.fillText(k, x, y);
+    let fs = 56; c.font = `700 ${fs}px ${FONT}`; while (c.measureText(v).width > gw - 40 && fs > 34) { fs -= 4; c.font = `700 ${fs}px ${FONT}`; }
+    c.fillStyle = INK; c.fillText(v, x, y + 62);
   });
 
-  // Footer
-  c.font = `600 30px ${FONT}`; c.fillStyle = "rgba(235,240,255,.6)"; c.textAlign = "center";
+  c.font = `500 28px ${FONT}`; c.fillStyle = QUIET; c.textAlign = "center";
   c.fillText(`${[f.plan?.callsign ?? f.callsign, "Flown in Microsoft Flight Simulator"].filter(Boolean).join("  ·  ")}`, W / 2, H - 46);
   c.textAlign = "left";
 

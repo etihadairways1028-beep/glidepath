@@ -140,6 +140,8 @@ export interface MapViewProps {
   follow?: boolean;
   /** Where to start when there's no aircraft (an airport page, say). */
   center?: [number, number];
+  /** Move the camera here (change `key` to move again). */
+  flyTo?: { lon: number; lat: number; zoom: number; key: number } | null;
   zoom?: number;
   /** Tilted chase view with 3D terrain. */
   threeD?: boolean;
@@ -157,7 +159,7 @@ export interface MapViewProps {
   selTrack?: { key: string; flown: number[][]; before: number[][]; ahead: number[][]; at: [number, number] } | null;
 }
 
-export function MapView({ trail, plan, aircraft, airports = [], traffic = [], atc = [], metars = [], radarTiles = null, centres = [], radarFrames = null, radarIndex = 0, radarOpacity = 0.7, onSelectAtc, onSelectMetar, onView, follow, center, zoom: startZoom, threeD = false, stands = [], agl = null, onGround = false, onSelectTraffic, onUserMove, interactive = true, history, selTrack }: MapViewProps) {
+export function MapView({ trail, plan, aircraft, airports = [], traffic = [], atc = [], metars = [], radarTiles = null, centres = [], radarFrames = null, radarIndex = 0, radarOpacity = 0.7, onSelectAtc, onSelectMetar, onView, follow, center, zoom: startZoom, threeD = false, stands = [], agl = null, onGround = false, onSelectTraffic, onUserMove, interactive = true, history, selTrack, flyTo }: MapViewProps) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<MLMap | null>(null);
   const [ready, setReady] = useState(false);
@@ -198,6 +200,12 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
   handlers.current = { onSelectTraffic, onUserMove, onSelectAtc, onSelectMetar, onView };
 
   // Follow the app's light/dark theme.
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !ready || !flyTo) return;
+    m.flyTo({ center: [flyTo.lon, flyTo.lat], zoom: flyTo.zoom, speed: 1.6, essential: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flyTo?.key, ready]);
   useEffect(() => {
     const mo = new MutationObserver(() => setTheme(themeNow()));
     mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
@@ -735,7 +743,7 @@ function line(coords: number[][]) {
   return { type: "FeatureCollection" as const, features: coords.length > 1 ? [{ type: "Feature" as const, properties: {}, geometry: { type: "LineString" as const, coordinates: coords } }] : [] };
 }
 /** One colour per network so you can tell them apart at a glance. */
-export const NET_COLOR: Record<string, string> = { vatsim: "#30D158", ivao: "#64D2FF", sayintentions: "#FF9F0A" };
+export const NET_COLOR: Record<string, string> = { vatsim: "#30D158", ivao: "#64D2FF", sayintentions: "#FF9F0A", sim: "#D9A4FF" };
 
 /** Top-down narrow-body airliner, nose up, in a 48x48 box. */
 export const AIRLINER_PATH = "M24 2C26 2 26.8 4.6 26.8 8L26.8 18.2L45.5 27.6L45.5 30.4L26.8 25.8L26.6 37.4L34 42.1L34 44.2L25.3 42.3L24 46L22.7 42.3L14 44.2L14 42.1L21.4 37.4L21.2 25.8L2.5 30.4L2.5 27.6L21.2 18.2L21.2 8C21.2 4.6 22 2 24 2Z";

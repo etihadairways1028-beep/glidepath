@@ -531,3 +531,5 @@ export function emptyFrame(seq: number, t: number, lat: number, lon: number): Te
     sim: { paused: false, simRate: null, slew: null },
   };
 }
+export * from "./pilot";
+export * from "./weather";

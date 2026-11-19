@@ -1,9 +1,9 @@
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomBytes, randomInt, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir, hostname, platform } from "node:os";
 import { join } from "node:path";
 
-export const BRIDGE_VERSION = process.env.GLIDEPATH_TEST_VERSION ?? "1.0.1";
+export const BRIDGE_VERSION = process.env.GLIDEPATH_TEST_VERSION ?? "1.0.2";
 
 export type AdapterChoice = "auto" | "msfs" | "replay";
 
@@ -30,6 +30,8 @@ export interface BridgeIdentity {
   bridgeId: string;
   /** Local pairing token. Stage 3 replaces this with account-based device pairing. */
   pairingToken: string;
+  /** The six-digit code typed on a new device. Kept across restarts so it's always the same; "New code" changes it. */
+  pairCode?: string;
   createdAt: string;
 }
 
@@ -99,15 +101,26 @@ export function loadIdentity(dataDir: string): BridgeIdentity {
   const file = join(dataDir, "bridge.json");
   if (existsSync(file)) {
     const parsed = JSON.parse(readFileSync(file, "utf8")) as BridgeIdentity;
-    if (parsed.bridgeId && parsed.pairingToken) return parsed;
+    if (parsed.bridgeId && parsed.pairingToken) {
+      if (!parsed.pairCode || !/^\d{6}$/.test(parsed.pairCode)) { parsed.pairCode = newCode(); saveIdentity(dataDir, parsed); }
+      return parsed;
+    }
   }
   const id: BridgeIdentity = {
     bridgeId: randomUUID(),
     pairingToken: randomBytes(24).toString("base64url"),
+    pairCode: newCode(),
     createdAt: new Date().toISOString(),
   };
-  writeFileSync(file, JSON.stringify(id, null, 2), { mode: 0o600 });
+  saveIdentity(dataDir, id);
   return id;
+}
+
+export function saveIdentity(dataDir: string, id: BridgeIdentity): void {
+  writeFileSync(join(dataDir, "bridge.json"), JSON.stringify(id, null, 2), { mode: 0o600 });
+}
+export function newCode(): string {
+  return String(randomInt(0, 1_000_000)).padStart(6, "0");
 }
 
 export const HOSTNAME = hostname();

@@ -13,7 +13,7 @@ const hdr = (s: string) => (/^[\x20-\x7e]*$/.test(s) ? s : `=?UTF-8?B?${b64(s)}?
 /** Base64 body, wrapped at 76 characters. */
 const body64 = (s: string) => b64(s).replace(/.{1,76}/g, "$&\r\n");
 
-export async function sendGmail(user: string, appPassword: string, to: string, toName: string | null, subject: string, html: string, text: string): Promise<string | null> {
+export async function sendGmail(user: string, appPassword: string, to: string, toName: string | null, subject: string, html: string, text: string, replyTo?: string): Promise<string | null> {
   const socket = connect({ hostname: "smtp.gmail.com", port: 465 }, { secureTransport: "on", allowHalfOpen: false });
   const w = socket.writable.getWriter();
   const r = socket.readable.getReader();
@@ -55,6 +55,7 @@ export async function sendGmail(user: string, appPassword: string, to: string, t
       `From: ${hdr("Glidepath")} <${user}>`,
       `To: ${toName ? `${hdr(toName)} ` : ""}<${to}>`,
       `Subject: ${hdr(subject)}`,
+      ...(replyTo && /^[^\s<>@,]+@[^\s<>@,]+$/.test(replyTo) ? [`Reply-To: <${replyTo}>`] : []),
       `Date: ${new Date().toUTCString().replace("GMT", "+0000")}`,
       `Message-ID: <${crypto.randomUUID()}@glidepath.app>`,
       "MIME-Version: 1.0",

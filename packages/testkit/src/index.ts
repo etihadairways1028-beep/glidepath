@@ -72,9 +72,14 @@ export function generateSyntheticFlight(opts: SyntheticOptions = {}): TelemetryF
   // A stand on the airfield south-west of the 27R threshold (inside the airport,
   // so the demo taxis over taxiways rather than the houses east of Heathrow).
   const stand: LatLon = { lat: 51.4741, lon: -0.4428 };
-  const iaf = destinationPoint(EGCC_23R.threshold, (EGCC_23R.headingTrueDeg + 180) % 360, 14);
-  const route: LatLon[] = [EGLL_27R.threshold, iaf, EGCC_23R.threshold];
-  const routeTotal = distanceNm(route[0]!, route[1]!) + distanceNm(route[1]!, route[2]!);
+  // A believable route: out of 27R, right turn to Brookmans Park, then the Daventry and Trent beacons,
+  // and a 12 nm final for Manchester 23R (navaid positions are the published ones).
+  const BPK: LatLon = { lat: 51.7497, lon: -0.1067 }, DTY: LatLon = { lat: 52.1806, lon: -1.1144 }, TNT: LatLon = { lat: 53.0538, lon: -1.67 };
+  const iaf = destinationPoint(EGCC_23R.threshold, (EGCC_23R.headingTrueDeg + 180) % 360, 12);
+  const route: LatLon[] = [EGLL_27R.threshold, BPK, DTY, TNT, iaf, EGCC_23R.threshold];
+  const legs = route.slice(1).map((p, i) => distanceNm(route[i]!, p));
+  const routeTotal = legs.reduce((a, b) => a + b, 0);
+  const lastWp = route.length - 1;
 
   const s: State = {
     t: opts.startT ?? Date.UTC(2026, 10, 1, 10, 0, 0),
@@ -136,10 +141,7 @@ export function generateSyntheticFlight(opts: SyntheticOptions = {}): TelemetryF
     s.bank = Math.max(-lim, Math.min(lim, diff / dt * 8));
   };
   const tasFor = (ias: number, alt: number) => ias * (1 + (alt / 1000) * 0.02);
-  const remaining = () => {
-    const toWp = distanceNm(s.pos, route[wp]!);
-    return wp === 1 ? toWp + distanceNm(route[1]!, route[2]!) : toWp;
-  };
+  const remaining = () => distanceNm(s.pos, route[wp]!) + legs.slice(wp).reduce((a, b) => a + b, 0);
   let gearUpAt = s.t + 6000;
   while (s.alt < cruiseFt - 5) {
     step(dt, () => {
@@ -180,25 +182,32 @@ export function generateSyntheticFlight(opts: SyntheticOptions = {}): TelemetryF
       navigate();
       s.vs += Math.max(-150 * dt, Math.min(150 * dt, -2000 - s.vs));
       s.alt += (s.vs / 60) * dt;
-      s.ias = s.alt > 11000 ? 290 : Math.max(220, s.ias - 2 * dt);
+      // 250 kt below FL100, slowing to 220 kt below 5,000 ft.
+      s.ias = s.alt > 11000 ? 290 : s.alt > 5000 ? Math.max(250, s.ias - 1 * dt) : Math.max(220, s.ias - 1 * dt);
       s.gs = tasFor(s.ias, s.alt) - 10; s.pitch = 0; s.ffKgH = 2 * 350; s.n1 = 35;
       move(dt, s.gs);
     });
   }
   // 8. Approach: fly to the IAF level, then intercept a 3° path to the threshold.
+  s.flaps = 1;
+  while (wp < lastWp) step(dt, () => { navigate(); s.vs = 0; s.ias = Math.max(180, s.ias - 0.7 * dt); s.flaps = s.ias < 200 ? 2 : 1; s.gs = s.ias; s.pitch = 3; s.ffKgH = 2 * 500; move(dt, s.gs); });
   s.gear = true; s.flaps = 3;
-  while (wp === 1) step(dt, () => { navigate(); s.vs = 0; s.ias = Math.max(180, s.ias - 1 * dt); s.gs = s.ias; s.pitch = 3; s.ffKgH = 2 * 500; move(dt, s.gs); });
-  s.flaps = 5;
+  let fullFlap = false;
+  // Distance to the threshold measured along the runway: negative once past it, so the path keeps going down.
+  const along = () => distanceNm(s.pos, EGCC_23R.threshold) * Math.cos(((bearingDeg(s.pos, EGCC_23R.threshold) - EGCC_23R.headingTrueDeg) * Math.PI) / 180);
+  let captured = false;
   for (;;) {
-    const d = distanceNm(s.pos, EGCC_23R.threshold);
+    const d = along();
     const pathAlt = EGCC_ELEV + 50 + d * 318; // 3° ≈ 318 ft/nm, crossing the threshold at 50 ft
     if (s.alt - EGCC_ELEV <= 30) break;
     step(dt, () => {
       navigate(EGCC_ELEV);
       s.ias = Math.max(140, s.ias - 1 * dt); s.gs = s.ias - 8;
-      // Hold altitude until the 3° path is intercepted from below, then track it.
-      s.vs = s.alt < pathAlt - 20 ? 0 : Math.max(-1500, Math.min(0, -s.gs * 5.3 + (pathAlt - s.alt) * 2));
-      s.alt = Math.max(EGCC_ELEV + 29, s.alt + (s.vs / 60) * dt);
+      if (!fullFlap && d < 6) { fullFlap = true; s.flaps = 5; }
+      // Level until the 3° glide slope is captured from below, then stay on it down to the flare.
+      if (!captured && s.alt >= pathAlt - 20) captured = true;
+      s.vs = !captured ? 0 : Math.max(-1200, Math.min(0, -s.gs * 5.3 + (pathAlt - s.alt) * 2));
+      s.alt = s.alt + (s.vs / 60) * dt;
       s.pitch = 2.5; s.ffKgH = 2 * 450; s.n1 = 55;
       move(dt, s.gs);
     });
@@ -233,7 +242,18 @@ export function generateSyntheticFlight(opts: SyntheticOptions = {}): TelemetryF
   // Lower the nose gently onto the runway, then brake.
   while (s.gs > 18) step(dt, () => { s.pitch = Math.max(0.5, s.pitch - 1.2 * dt); s.gs -= 3 * dt; s.ias = s.gs; move(dt, s.gs); });
   s.spoilers = 0; s.flaps = 0;
-  step(120, () => { s.gs = 15; s.ias = 12; s.n1 = 28; move(dt, 15); });
+  // Turn off the runway and taxi to a stand at the terminal, north of the runway.
+  const standCC: LatLon = { lat: 53.3612, lon: -2.2731 };
+  while (distanceNm(s.pos, standCC) > 0.02) {
+    step(dt, () => {
+      const want = bearingDeg(s.pos, standCC);
+      let diff = ((want - s.hdg + 540) % 360) - 180;
+      diff = Math.max(-8 * dt, Math.min(8 * dt, diff));
+      s.hdg = (s.hdg + diff + 360) % 360;
+      const sp = Math.abs(diff) > 4 * dt ? 10 : 16;
+      s.gs = sp; s.ias = sp - 3; s.n1 = 28; move(dt, sp);
+    });
+  }
   s.gs = 0; s.ias = 0;
   step(10, () => {});
   s.brake = true;

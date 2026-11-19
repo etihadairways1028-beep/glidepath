@@ -19,7 +19,8 @@ export function installHover(): void {
       light.style.setProperty("--hx", `${e.clientX - r.left}px`);
       light.style.setProperty("--hy", `${e.clientY - r.top}px`);
     }
-    const tilt = t?.closest?.(SEL_TILT) as HTMLElement | null;
+    // Cards no longer tilt towards the pointer: moving under the cursor made them wobble.
+    const tilt = null as HTMLElement | null; void SEL_TILT;
     if (tilted && tilted !== tilt) { tilted.style.removeProperty("--rx"); tilted.style.removeProperty("--ry"); }
     if (tilt) {
       const r = tilt.getBoundingClientRect();

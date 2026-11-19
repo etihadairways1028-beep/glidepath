@@ -39,8 +39,8 @@ a{color:#64B5FF}
 .ic svg{width:19px;height:19px}
 /* Every button: lift and glow on hover, sink with a glowing ring on press, spring back on release */
 button,.btnp,.btng,a.btn,a.lnk,summary,input[type=submit]{transition:transform .55s cubic-bezier(.18,1.9,.32,1),box-shadow .3s ease,filter .25s ease,background-color .2s ease;-webkit-tap-highlight-color:transparent;cursor:pointer}
-@media (hover:hover) and (pointer:fine){button:not(:disabled):hover,.btnp:hover,.btng:hover,a.btn:hover{transform:translateY(-2px);filter:brightness(1.1);box-shadow:0 12px 26px -12px rgba(10,132,255,.75),0 0 0 1px rgba(143,200,255,.25)}}
-button:not(:disabled):active,button:not(:disabled):hover:active,.btnp:active,.btng:active,a.btn:active,input[type=submit]:active{transform:scale(.92);filter:brightness(1.15);box-shadow:0 0 0 5px rgba(100,181,255,.3),0 6px 18px -8px rgba(10,132,255,.8);opacity:1!important;transition:transform .06s ease,box-shadow .06s ease,filter .06s ease}
+@media (hover:hover) and (pointer:fine){button:not(:disabled):hover,.btnp:hover,.btng:hover,a.btn:hover{filter:brightness(1.12);box-shadow:0 10px 24px -12px rgba(10,132,255,.8),0 0 0 1px rgba(143,200,255,.35)}}
+button:not(:disabled):active,button:not(:disabled):hover:active,.btnp:active,.btng:active,a.btn:active,input[type=submit]:active{transform:scale(.92);filter:brightness(1.15);box-shadow:0 0 0 5px rgba(100,181,255,.3),0 6px 18px -8px rgba(10,132,255,.8);opacity:1!important;transition:transform .09s cubic-bezier(.3,0,.2,1),box-shadow .09s ease,filter .09s ease}
 summary:active{transform:scale(.98);transition:transform .07s ease}
 button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #64B5FF;outline-offset:3px}
 @media (prefers-reduced-motion:reduce){button,.btnp,.btng,a.btn{transition:filter .2s ease}button:active,.btnp:active,.btng:active{transform:none}}
@@ -193,7 +193,7 @@ export function statusPage(p: { update?: UpdateCard | null; cloud?: CloudCard | 
   const here = p.token ? `http://localhost:${p.port}/app/#token=${encodeURIComponent(p.token)}` : null;
   const ip = p.addresses[0];
   const sameWifi = `<div class="two">
-<div class="panel codecard"><div class="cap">Your pairing code</div><div class="bigcode mono">${code}</div><div class="label">Also saved on your Desktop as <b>Glidepath code.txt</b>.</div></div>
+<div class="panel codecard"><div class="cap">Your pairing code</div><div class="bigcode mono">${code}</div><div class="label">It stays the same every time the Bridge starts, and is saved on your Desktop as <b>Glidepath code.txt</b>. Devices you've paired reconnect by themselves.</div><button class="btng" id="newcode" type="button" style="margin-top:12px;align-self:center">New code</button></div>
 <div class="panel easy"><div class="cap">Connect your iPad in 2 steps</div>
   <ol class="steps"><li><div>On the iPad, open <b>Safari</b> and go to<br><span class="big mono">${ip ? `${esc(ip)}:${p.port}` : `glidepath.local:${p.port}`}</span></div></li>
   <li><div>Type this code:<br><span class="big mono code">${code}</span></div></li></ol>
@@ -282,6 +282,7 @@ document.addEventListener("click",function(e){if(!e.target||e.target.id!=="upgo"
 function typing(){var a=document.activeElement;if(a&&a.tagName==="INPUT")return true;var ins=document.querySelectorAll(".cl-form input");for(var i=0;i<ins.length;i++)if(ins[i].value)return true;return false;}
 document.addEventListener("submit",function(e){if(e.target.id!=="cl")return;e.preventDefault();var m=document.getElementById("cm"),sb=e.target.querySelector("button");m.className="cl-msg";m.textContent="";if(sb){sb.classList.add("busy");sb.textContent="Signing in…";}busy=true;
 fetch("/api/cloud/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:document.getElementById("ce").value,password:document.getElementById("cp").value})}).then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});}).then(function(x){busy=false;if(x.ok){m.className="cl-msg ok";m.textContent="Signed in.";document.getElementById("cp").value="";document.getElementById("ce").value="";setTimeout(function(){location.reload();},900);}else{m.textContent=x.j.error||"Sign-in failed. Check your email and password.";e.target.classList.remove("shake");void e.target.offsetWidth;e.target.classList.add("shake");}if(sb){sb.classList.remove("busy");sb.textContent="Sign in";}}).catch(function(){busy=false;if(sb){sb.classList.remove("busy");sb.textContent="Sign in";}m.textContent="The Bridge could not be reached. Restart Glidepath Bridge and try again.";});});
+document.addEventListener("click",function(e){if(!e.target||e.target.id!=="newcode")return;if(!confirm("Make a new pairing code? Devices already paired stay connected."))return;e.target.classList.add("busy");fetch("/api/pair/new",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"}).then(function(){location.reload();});});
 document.addEventListener("click",function(e){if(!e.target||e.target.id!=="co")return;e.target.classList.add("busy");e.target.textContent="Signing out…";fetch("/api/cloud/logout",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"}).then(function(){location.reload();});});
 setInterval(function(){if(busy||typing()||document.hidden||(window.getSelection&&String(window.getSelection())))return;
 fetch(location.href,{cache:"no-store"}).then(function(r){return r.ok?r.text():null;}).then(function(t){if(!t)return;var m=t.match(/<main id="root">([\\s\\S]*)<\\/main>/);if(!m)return;

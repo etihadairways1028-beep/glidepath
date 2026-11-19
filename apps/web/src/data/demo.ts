@@ -136,7 +136,7 @@ function demoPlan(frames: TelemetryFrame[], db: Awaited<ReturnType<typeof loadAi
   const airborne = frames.filter((f) => !f.position.onGround);
   const fixes = airborne.filter((_, i) => i % 40 === 0).map((f, i) => ({ ident: `WP${i + 1}`, lat: f.position.lat, lon: f.position.lon, altitudeFt: Math.round((f.position.altMslFt ?? 0) / 100) * 100 }));
   return {
-    source: "simbrief" as const, ofpId: null, callsign: "GPD1", flightNumber: "1", airline: null, aircraftIcao: "A320", registration: "G-DEMO",
+    source: "simbrief" as const, ofpId: null, callsign: "GPD1", flightNumber: "1", airline: null, aircraftIcao: "A20N", registration: "G-DEMO",
     origin: { icao: o.code, name: o.name, runway: "27R", lat: o.lat, lon: o.lon, elevationFt: o.elevationFt },
     destination: { icao: d.code, name: d.name, runway: "23R", lat: d.lat, lon: d.lon, elevationFt: d.elevationFt },
     alternate: "EGNM", route: "Demo route (synthetic)", fixes, cruiseAltitudeFt: 24000, distanceNm: 154,

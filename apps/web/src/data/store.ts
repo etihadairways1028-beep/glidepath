@@ -47,6 +47,7 @@ export interface Settings {
   showVatsim: boolean;
   showIvao: boolean;
   showSayIntentions: boolean;
+  showSimTraffic: boolean;
   fuelUnit: "kg" | "lb";
   accent: "glideslope" | "aurora" | "ice";
   theme: "system" | "dark" | "light";
@@ -75,7 +76,7 @@ export interface Settings {
 }
 
 const DEFAULT_SETTINGS: Settings = {
-  bridgeUrl: "", token: "", simbriefUser: "", showVatsim: true, showIvao: false, showSayIntentions: false, fuelUnit: "kg", accent: "glideslope", theme: "system", wallpaper: "flight", voiceCallouts: false, reduceTransparency: false, glassLevel: 95, mapStyle: "map", map3d: false, flightMessages: true, approachCoach: true, systemNotifications: false, atcAlerts: true, lightMessages: true, showAtc: true, showRadar: false, showMetars: false,
+  bridgeUrl: "", token: "", simbriefUser: "", showVatsim: true, showIvao: false, showSayIntentions: false, showSimTraffic: true, fuelUnit: "kg", accent: "glideslope", theme: "system", wallpaper: "flight", voiceCallouts: false, reduceTransparency: false, glassLevel: 95, mapStyle: "map", map3d: false, flightMessages: true, approachCoach: true, systemNotifications: false, atcAlerts: true, lightMessages: true, showAtc: true, showRadar: false, showMetars: false,
 };
 
 const initial: AppState = {

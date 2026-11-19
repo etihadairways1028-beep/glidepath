@@ -110,3 +110,23 @@ CREATE TABLE IF NOT EXISTS push_subs (
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS push_subs_user ON push_subs(user_id);
+
+-- Which lock screen notifications a pilot has turned off (comma list: tod, checklist, landed, review).
+CREATE TABLE IF NOT EXISTS push_prefs (
+  user_id TEXT PRIMARY KEY,
+  off TEXT NOT NULL DEFAULT '',
+  updated_at INTEGER NOT NULL
+);
+
+-- Messages sent from the Support Centre (website and app).
+CREATE TABLE IF NOT EXISTS support_tickets (
+  ref TEXT PRIMARY KEY,
+  created_at INTEGER NOT NULL,
+  email TEXT NOT NULL,
+  topic TEXT NOT NULL,
+  message TEXT NOT NULL,
+  meta TEXT,
+  user_id TEXT,
+  ip_hash TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS support_ip ON support_tickets(ip_hash, created_at);

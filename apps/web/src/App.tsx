@@ -1,3 +1,4 @@
+import { Support } from "./screens/Support";
 import { Fragment } from "react";
 import { useWallpaper } from "./components/Wallpaper";
 import { ChartsScreen } from "./screens/Charts";
@@ -205,6 +206,7 @@ export function App() {
     case "airports": body = rest[0] ? <AirportPage code={rest[0]} /> : <Airports />; break;
     case "settings": body = <SettingsScreen />; break;
     case "account": body = <Account />; break;
+    case "support": body = <Support />; break;
     case "forgot": body = <ForgotPassword />; break;
     case "career": body = <CareerScreen />; break;
     case "challenge": body = <ChallengeScreen />; break;
@@ -253,7 +255,7 @@ export function App() {
           {NAV.filter((n) => n.mobile).map((n) => (
             <a key={n.id} className={`tab${screen === n.id ? " on" : ""}`} href={`#/${n.id}`}>{n.icon()}{n.label === "Live map" ? "Map" : n.label}</a>
           ))}
-          <a className={`tab${["airports", "settings", "glance", "account", "forgot", "reset", "career", "challenge", "cockpit", "weather", "checklists", "tools", "copilot", "charts"].includes(screen ?? "") ? " on" : ""}`} href="#/settings">{Icon.more()}More</a>
+          <a className={`tab${["airports", "settings", "glance", "account", "support", "forgot", "reset", "career", "challenge", "cockpit", "weather", "checklists", "tools", "copilot", "charts"].includes(screen ?? "") ? " on" : ""}`} href="#/settings">{Icon.more()}More</a>
         </nav>
       )}
     </>

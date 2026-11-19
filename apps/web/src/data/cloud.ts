@@ -382,3 +382,43 @@ export async function streamGlidepathAi(messages: Array<{ role: "user" | "assist
 }
 export const glidepathAiStatus = () => authed<{ available: boolean; left: number; perDay: number }>("/ai/status");
 export const signedIn = () => !!activeAccount();
+
+/** A public read from the Glidepath service (no account needed), e.g. live weather. Tries each address in turn. */
+export async function publicGet<T>(path: string): Promise<T> {
+  const list = bases.length ? bases : [api ?? BUILT_IN_API];
+  let last: Error = new Error("The Glidepath service couldn't be reached.");
+  for (const b of list) {
+    try {
+      const r = await fetch(b + path, { cache: "no-store" });
+      const j = await r.json().catch(() => null);
+      if (r.ok) return j as T;
+      last = new Error((j as { error?: string } | null)?.error ?? `HTTP ${r.status}`);
+      if (r.status < 500 && r.status !== 404) break;
+    } catch (e) { last = e as Error; }
+  }
+  throw last;
+}
+
+/** Remove a flight from the active account's logbook. */
+export async function deleteCloudFlight(id: string): Promise<void> {
+  const a = activeAccount();
+  if (!a) return;
+  await call(`/flights/${encodeURIComponent(id)}`, { method: "DELETE", slot: a.slot });
+}
+
+/** Send a message to Glidepath Support. Signed in: sent with the account (the email is filled in). */
+export async function sendSupport(msg: { topic: string; email: string; message: string; meta: Record<string, string> }): Promise<string> {
+  if (activeAccount()) { const r = await authed<{ ref: string }>("/support", "POST", msg); return r.ref; }
+  const list = bases.length ? bases : [api ?? BUILT_IN_API];
+  let last: Error = new Error("Support couldn't be reached just now. Try again in a minute.");
+  for (const b of list) {
+    try {
+      const r = await fetch(b + "/support", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(msg) });
+      const j = (await r.json().catch(() => ({}))) as { ref?: string; error?: string };
+      if (r.ok && j.ref) return j.ref;
+      last = new Error(j.error ?? `HTTP ${r.status}`);
+      if (r.status !== 404) break;
+    } catch (e) { last = e as Error; }
+  }
+  throw last;
+}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { disablePush, enablePush, pushState, testPush, type PushState } from "../data/push";
+import { disablePush, enablePush, getPushPrefs, pushState, setPushPrefs, testPush, type PushPrefs, type PushState } from "../data/push";
 import { APP_VERSION, showWhatsNew } from "../components/WhatsNew";
 import { BaseMapPicker, TrafficSources } from "../components/MapLayers";
 import { connectFromSettings } from "../App";
@@ -162,7 +162,7 @@ export function SettingsScreen() {
             <Kv k="Version" v={`Glidepath ${APP_VERSION}`} />
             <div className="row" style={{ gap: 8, flexWrap: "wrap", margin: "6px 0 10px" }}>
               <button className="btn" onClick={showWhatsNew}>What's new</button>
-              <a className="btn" href="https://github.com/etihadairways1028-beep/glidepath/issues/new" target="_blank" rel="noopener">Report a problem</a>
+              <a className="btn" href="#/support">Support</a>
               <a className="btn" href="https://glidepath-ad9.pages.dev/privacy.html" target="_blank" rel="noopener">Privacy</a>
             </div>
             <Kv k="Airports" v="OurAirports, public domain" />
@@ -211,7 +211,7 @@ function PushSetup() {
     <div className="push-setup">
       <label className="between" style={{ padding: "8px 0" }}>
         <span>On this {st === null ? "device" : /iPad|iPhone/.test(navigator.userAgent) ? (/iPad/.test(navigator.userAgent) ? "iPad" : "iPhone") : "device"}<br />
-          <span className="faint" style={{ fontSize: 12.5 }}>Top of descent, landed (with your touchdown), and your flight review, even with Glidepath closed. Sent by the Bridge on your PC through your account.</span></span>
+          <span className="faint" style={{ fontSize: 12.5 }}>Checklist reminders, top of descent, your landing and your flight review, even with Glidepath closed. Sent by the Bridge on your PC through your account.</span></span>
         <input className="switch" type="checkbox" checked={on} disabled={busy || !signed || st === "unsupported" || st === "needs-home-screen"} onChange={() => void toggle()} />
       </label>
       {!signed && <p className="faint push-note">Sign in (Account) on this device and on the Bridge page on your PC to get them.</p>}
@@ -220,6 +220,32 @@ function PushSetup() {
       {signed && st === "unsupported" && <p className="faint push-note">This browser can't show notifications from websites.</p>}
       {on && <div className="row" style={{ gap: 8, marginTop: 4 }}><button className="btn small" disabled={busy} onClick={async () => { setBusy(true); const t = await testPush(); setMsg(t ? { ok: false, text: t } : { ok: true, text: "Test sent. It should arrive in a few seconds." }); setBusy(false); }}>Send a test</button></div>}
       {msg && <p className={`push-note ${msg.ok ? "ok" : "warn"}`}>{msg.text}</p>}
+      {signed && <PushKinds />}
+    </div>
+  );
+}
+
+const KINDS: Array<[keyof PushPrefs, string, string]> = [
+  ["checklist", "Checklist reminders", "Before take-off when you taxi, approach and landing, and parking at the gate"],
+  ["tod", "Top of descent", "When it's time to start down"],
+  ["landed", "Landing", "Your touchdown rate, grade and runway"],
+  ["review", "Flight review ready", "Your scores and one thing to work on"],
+];
+/** One switch per kind of notification; saved on the account, so every device follows. */
+function PushKinds() {
+  const [p, setP] = useState<PushPrefs | null>(null);
+  useEffect(() => { void getPushPrefs().then(setP); }, []);
+  if (!p) return null;
+  return (
+    <div className="push-kinds">
+      <p className="lp-h" style={{ margin: "12px 0 4px" }}>Send me</p>
+      {KINDS.map(([k, label, sub]) => (
+        <label key={k} className="between" style={{ padding: "7px 0" }}>
+          <span>{label}<br /><span className="faint" style={{ fontSize: 12.5 }}>{sub}</span></span>
+          <input className="switch" type="checkbox" checked={p[k]} onChange={(e) => { const next = { ...p, [k]: e.target.checked }; setP(next); void setPushPrefs({ [k]: e.target.checked }).then((r) => r && setP(r)); }} />
+        </label>
+      ))}
+      <p className="faint push-note">Emails (your debrief and in-flight emails) stay as they are; change those under Account.</p>
     </div>
   );
 }

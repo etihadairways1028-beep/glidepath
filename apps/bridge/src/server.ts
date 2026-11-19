@@ -24,7 +24,7 @@ import {
   ClientMessage, PROTOCOL_VERSION,
   type BridgeStatus, type FlightPhase, type ServerMessage, type TelemetryFrame,
 } from "@glidepath/protocol";
-import type { BridgeConfig, BridgeIdentity } from "./config.js";
+import { saveIdentity, type BridgeConfig, type BridgeIdentity } from "./config.js";
 import type { DiscordConfig, DiscordPresence } from "./discord.js";
 import type { Logger } from "./log.js";
 import type { Recorder } from "./recorder.js";
@@ -57,9 +57,20 @@ export class LanServer {
   private http = createServer((req, res) => this.route(req, res));
   private wss = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });
   private bonjour: Bonjour | null = null;
-  /** Six-digit code shown on the PC; typing it on an iPad hands over the pairing key. */
-  readonly pairCode = newPairCode();
+  /** Six-digit code shown on the PC; typing it on an iPad hands over the pairing key. The same every time the Bridge starts. */
+  get pairCode(): string { return this.identity.pairCode ?? (this.identity.pairCode = newPairCode()); }
+  /** Called when the code changes (the Desktop file and window title follow it). */
+  onPairCode: ((code: string) => void) | null = null;
   private pairFails = 0;
+  private pairLockedUntil = 0;
+  /** A fresh code: from "New code" on this PC, or after too many wrong guesses. */
+  newPairCode(): string {
+    this.identity.pairCode = newPairCode();
+    try { saveIdentity(this.cfg.dataDir, this.identity); } catch (e) { this.log.warn(`Couldn't save the new code: ${(e as Error).message}`); }
+    this.pairFails = 0;
+    this.onPairCode?.(this.identity.pairCode);
+    return this.identity.pairCode;
+  }
   private flushTimer: NodeJS.Timeout | null = null;
   private rateTimer: NodeJS.Timeout | null = null;
   private readonly log: Logger;
@@ -343,7 +354,7 @@ export class LanServer {
       res.setHeader("Access-Control-Allow-Origin", origin);
       res.setHeader("Vary", "Origin");
       res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
-      res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
       // Chrome's Private Network Access: lets the hosted app reach this Bridge on localhost.
       res.setHeader("Access-Control-Allow-Private-Network", "true");
     }
@@ -359,14 +370,19 @@ export class LanServer {
 
   private async handle(req: IncomingMessage, res: ServerResponse, url: URL, local: boolean, authed: boolean, atThisPc = false): Promise<void> {
     const p = url.pathname;
+    if (p === "/api/pair/new" && req.method === "POST") {
+      if (!local) return json(res, 403, { error: "Only on the PC itself." });
+      return json(res, 200, { code: this.newPairCode() });
+    }
     const POSTS = ["/api/plan", "/api/ai/config", "/api/ai/chat", "/api/pair", "/api/discord", "/api/cloud/login", "/api/cloud/logout", "/api/update/check", "/api/update/install", "/api/flight/complete"];
-    if (req.method !== "GET" && !(req.method === "POST" && POSTS.includes(p))) return text(res, 405, "Method not allowed");
+    const DELETABLE = /^\/api\/flights\/[0-9a-f-]{36}$/.test(p);
+    if (req.method !== "GET" && !(req.method === "POST" && POSTS.includes(p)) && !(req.method === "DELETE" && DELETABLE)) return text(res, 405, "Method not allowed");
     if (p === "/") {
       if (!local) return html(res, pairPage());
       return html(res, statusPage({ update: this.updater?.status() ?? null, cloud: this.cloud?.status() ?? null, local, pairCode: this.pairCode, status: this.getStatus(), token: local ? this.identity.pairingToken : null, addresses: lanAddresses(), port: this.cfg.port, logs: local ? this.log.recent().slice(-60) : [] }));
     }
     if (p === "/api/pair" && req.method === "POST") {
-      if (this.pairFails >= 10) return json(res, 429, { error: "Too many wrong codes. Restart the Bridge on your PC for a new code." });
+      if (Date.now() < this.pairLockedUntil) return json(res, 429, { error: "Too many wrong codes. Pairing is paused for a few minutes; the code on your PC has changed." });
       const body = (await readBody(req, 500)) as { code?: unknown };
       const code = String(body?.code ?? "").replace(/\D/g, "");
       if (code.length === 6 && code === this.pairCode) {
@@ -375,6 +391,8 @@ export class LanServer {
       }
       this.pairFails++;
       this.log.warn(`Wrong pairing code from ${req.socket.remoteAddress ?? "?"}`);
+      // Guessing a permanent code: after 10 wrong tries, pause pairing for 15 minutes and change the code.
+      if (this.pairFails >= 10) { this.pairLockedUntil = Date.now() + 15 * 60_000; this.newPairCode(); this.log.warn("Too many wrong codes: pairing paused for 15 minutes and the code changed."); }
       return json(res, 403, { error: "That code doesn't match. Check the code on your PC." });
     }
     if (p === "/live") return html(res, liveRedirectPage());
@@ -415,6 +433,13 @@ export class LanServer {
       return json(res, 200, await addonStatus(lanAddresses(), extra, undefined, sh ? { host: sh, doors: this.addonDoors } : null));
     }
     if (p === "/api/lan") return json(res, 200, { bridgeId: this.identity.bridgeId, addresses: lanAddresses(), port: this.cfg.port });
+    // AI aircraft around you in the sim (its own AI and traffic from tools like SayIntentions), shaped like a network feed.
+    if (p === "/api/ext/simtraffic") {
+      const t = this.remoteAdapter?.aiTraffic;
+      const fresh = t && Date.now() - t.at < 60_000 ? t.list : [];
+      return json(res, 200, { network: "sim", updatedAt: new Date(t?.at || Date.now()).toISOString(), controllers: [],
+        pilots: fresh.map((a) => ({ callsign: a.callsign, lat: a.lat, lon: a.lon, altFt: a.altFt, gsKt: a.gsKt, hdg: a.hdg, type: a.type, dep: null, arr: null, network: "sim", title: a.title, onGround: a.onGround })) });
+    }
     const pm = /^\/api\/procedures\/([A-Za-z0-9]{3,4})$/.exec(p);
     if (pm && req.method === "GET") {
       const a = this.remoteAdapter;
@@ -432,6 +457,12 @@ export class LanServer {
     if (m) {
       const flight = this.recorder.getFlight(m[1]!);
       if (!flight) return json(res, 404, { error: "Flight not found" });
+      if (req.method === "DELETE" && !m[2]) {
+        if (this.session.activeFlight?.id === flight.id && flight.status === "active") return json(res, 409, { error: "This flight is still in progress. Finish it first, then delete it." });
+        this.recorder.deleteFlight(flight.id);
+        this.log.info(`Flight ${flight.id.slice(0, 8)} deleted from the logbook`);
+        return json(res, 200, { ok: true });
+      }
       if (m[2] === "/trail") return json(res, 200, this.recorder.trail(flight.id));
       if (m[2] === "/frames") return json(res, 200, this.recorder.framesSince(flight.id, Number(url.searchParams.get("after") ?? 0), 20000));
       if (m[2] === "/events") return json(res, 200, this.recorder.events(flight.id));
@@ -499,6 +530,15 @@ export class LanServer {
             return json(res, 200, await this.external.stands(lat, lon));
           }
           case "/api/ext/sayintentions": return json(res, 200, await this.external.sayintentions());
+          case "/api/ext/track": {
+            const n = url.searchParams.get("network") ?? "", cs = url.searchParams.get("callsign") ?? "";
+            if (!/^(vatsim|ivao|sayintentions)$/.test(n) || !/^[A-Za-z0-9_-]{2,12}$/.test(cs)) return json(res, 400, { error: "network and callsign required" });
+            return json(res, 200, { points: this.external.traffic.track(n, cs) });
+          }
+          case "/api/ext/pilot": {
+            const d = await this.external.pilot(url.searchParams.get("network") ?? "", url.searchParams.get("callsign") ?? "");
+            return d ? json(res, 200, d) : json(res, 404, { error: "That aircraft isn't on the network any more." });
+          }
           case "/api/ext/metar": return json(res, 200, await this.external.metar(ids));
           case "/api/ext/metarbox": return json(res, 200, await this.external.metarBox(url.searchParams.get("bbox") ?? ""));
           case "/api/ext/taf": return json(res, 200, await this.external.taf(ids));

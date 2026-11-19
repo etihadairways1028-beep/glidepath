@@ -73,7 +73,7 @@ export class BridgeClient {
   private lastSeq: number | null = null;
   private trailFor: string | null = null;
 
-  constructor(private readonly base: string, private readonly token: string, private readonly relay: RelayTarget | null = null) {}
+  constructor(readonly base: string, private readonly token: string, private readonly relay: RelayTarget | null = null) {}
 
   /** True when this connection goes through the account relay (any network). */
   get isRelay(): boolean { return !!this.relay; }
@@ -213,6 +213,13 @@ export class BridgeClient {
         try { onText((JSON.parse(payload) as { t: string }).t); } catch { /* ignore */ }
       }
     }
+  }
+
+  async del<T>(path: string): Promise<T> {
+    const res = await this.fetchBridge(path, { method: "DELETE" });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error((body as { error?: string }).error ?? `Bridge returned HTTP ${res.status}`);
+    return body as T;
   }
 
   async post<T>(path: string, data: unknown): Promise<T> {
@@ -380,11 +387,16 @@ export class BridgeClient {
         const end = path[path.length - 1]!.t;
         store.set((st) => st.flight?.id === f.id ? { trail: path.concat(st.trail.filter((p) => p.t > end)) } : {});
       };
-      this.get<Array<[number, number, number, number, number]>>(`/api/flights/${f.id}/trail`)
-        .then((rows) => merge(rows.map(([t, lat, lon, alt, gs]) => ({ t, lat, lon, alt, gs }))))
-        // Older Bridges: the raw frames instead.
-        .catch(() => this.get<TelemetryFrame[]>(`/api/flights/${f.id}/frames`).then((frames) => merge(framesToTrail(frames))))
-        .catch(() => undefined);
+      // The whole path from the gate, recorded by the Bridge even while the app was closed. Retried, so a slow
+      // first connection (or Connect anywhere still waking up) doesn't leave the trail starting mid-flight.
+      const load = (attempt: number): void => {
+        this.get<Array<[number, number, number, number, number]>>(`/api/flights/${f.id}/trail`)
+          .then((rows) => merge(rows.map(([t, lat, lon, alt, gs]) => ({ t, lat, lon, alt, gs }))))
+          // Older Bridges: the raw frames instead.
+          .catch(() => this.get<TelemetryFrame[]>(`/api/flights/${f.id}/frames`).then((frames) => merge(framesToTrail(frames))))
+          .catch(() => { if (attempt < 4 && this.trailFor === f.id) window.setTimeout(() => load(attempt + 1), [2000, 5000, 10000, 20000][attempt]); });
+      };
+      load(0);
       this.get<import("@glidepath/protocol").FlightEvent[]>(`/api/flights/${f.id}/events`).then((events) => store.set({ events })).catch(() => undefined);
     }
   }

@@ -9,6 +9,7 @@
  * (the PEPPER secret), so a copy of the database alone isn't enough to test
  * guesses. Ten wrong passwords lock that email for 15 minutes.
  */
+import { esc } from "./mails";
 import { composeMonthlyBrief } from "../../../packages/flight-engine/src/brief";
 import { sendGmail } from "./gmail";
 import { addTrail, cleanLive, cleanName, leaderboard, monthRange, shareId } from "./social";
@@ -31,6 +32,8 @@ interface Env {
   MAILJET_SECRET_KEY?: string;
   MAILJET_SENDER_EMAIL?: string;
   APP_URL?: string;
+  /** Where support messages go (a worker secret). Defaults to the sending Gmail address. */
+  SUPPORT_EMAIL?: string;
   DOWNLOAD_URL?: string;
 }
 
@@ -78,6 +81,14 @@ async function prefsOf(env: Env, userId: string): Promise<Prefs> {
   const r = await env.DB.prepare("SELECT debrief, inflight, signin FROM email_prefs WHERE user_id = ?").bind(userId).first<{ debrief: number; inflight: number; signin: number }>();
   return { debrief: r ? !!r.debrief : true, inflight: r ? !!r.inflight : true, signin: r ? !!r.signin : true };
 }
+/** Lock screen notification kinds the Bridge may send; cl-* are checklist reminders. */
+const PUSH_KINDS = ["tod", "landed", "review", "test", "cl-taxi", "cl-approach", "cl-parked"];
+const PUSH_PREFS = ["tod", "checklist", "landed", "review"];
+const pushPref = (kind: string) => (kind.startsWith("cl-") ? "checklist" : kind);
+async function pushOff(env: Env, userId: string): Promise<string[]> {
+  const r = await env.DB.prepare("SELECT off FROM push_prefs WHERE user_id = ?").bind(userId).first<{ off: string }>();
+  return (r?.off ?? "").split(",").filter(Boolean);
+}
 /** Send at most once per (kind, period); returns false if it was already sent. */
 async function once(env: Env, userId: string, kind: string, period: string): Promise<boolean> {
   const r = await env.DB.prepare("INSERT OR IGNORE INTO email_log (user_id, kind, period, sent_at) VALUES (?, ?, ?, ?)").bind(userId, kind, period, Date.now()).run();
@@ -103,9 +114,9 @@ async function body<T>(req: Request): Promise<T | null> {
 }
 const validEmail = (e: string) => e.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
-async function sendEmail(env: Env, to: string, name: string | null, subject: string, html: string, text: string): Promise<string | null> {
+async function sendEmail(env: Env, to: string, name: string | null, subject: string, html: string, text: string, replyTo?: string): Promise<string | null> {
   // Gmail with an app password (no email service needed) comes first, then Mailjet, then Brevo.
-  if (env.GMAIL_USER && env.GMAIL_APP_PASSWORD) return sendGmail(env.GMAIL_USER, env.GMAIL_APP_PASSWORD, to, name, subject, html, text);
+  if (env.GMAIL_USER && env.GMAIL_APP_PASSWORD) return sendGmail(env.GMAIL_USER, env.GMAIL_APP_PASSWORD, to, name, subject, html, text, replyTo);
   // Mailjet (free, 200 a day) if its keys are set, otherwise Brevo.
   if (env.MAILJET_API_KEY && env.MAILJET_SECRET_KEY && env.MAILJET_SENDER_EMAIL) {
     const r = await fetch("https://api.mailjet.com/v3.1/send", {
@@ -142,11 +153,82 @@ function withRole(req: Request, role: "bridge" | "app", name?: string | null): R
   return new Request(req.url, { method: req.method, headers: h });
 }
 
+const SUPPORT_TOPICS: Record<string, string> = {
+  connect: "Connecting my iPad or phone", sim: "The Bridge and the simulator", install: "Installing or updating", notifications: "Notifications",
+  account: "Account and sign-in", bug: "Something isn't working", idea: "An idea for Glidepath", other: "Something else",
+};
+async function support(req: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
+  const b = await req.json().catch(() => null) as { topic?: string; email?: string; message?: string; meta?: Record<string, unknown>; website?: string } | null;
+  if (b?.website) return json(200, { ok: true, ref: "GP-OK" }); // a field only bots fill in
+  const topic = SUPPORT_TOPICS[String(b?.topic)] ? String(b!.topic) : "other";
+  const email = String(b?.email ?? "").trim().toLowerCase(), message = String(b?.message ?? "").trim();
+  if (!validEmail(email)) return fail(400, "Add the email address you'd like the answer sent to.");
+  if (message.length < 10) return fail(400, "Tell us a little more (at least a sentence), so we can help.");
+  if (message.length > 5000) return fail(400, "That's a long message: keep it under 5,000 characters.");
+  const ipHash = await sha256(`${req.headers.get("cf-connecting-ip") ?? "?"}:${env.PEPPER}`);
+  const hour = await env.DB.prepare("SELECT COUNT(*) AS n FROM support_tickets WHERE ip_hash = ? AND created_at > ?").bind(ipHash, Date.now() - 3600_000).first<{ n: number }>();
+  if ((hour?.n ?? 0) >= 5) return fail(429, "You've sent a few messages already. We'll answer those first; try again in an hour if you need to.");
+  const day = await env.DB.prepare("SELECT COUNT(*) AS n FROM support_tickets WHERE created_at > ?").bind(Date.now() - 86_400_000).first<{ n: number }>();
+  if ((day?.n ?? 0) >= 300) return fail(503, "Support is very busy today. Please try again tomorrow.");
+  const who = await userFrom(req, env).catch(() => null);
+  const ref = "GP-" + rand(4).toUpperCase().replace(/[01]/g, "7").slice(0, 6);
+  const meta = Object.fromEntries(Object.entries(b?.meta ?? {}).slice(0, 12).map(([k, v]) => [String(k).slice(0, 30), String(v).slice(0, 200)]));
+  await env.DB.prepare("INSERT INTO support_tickets (ref, created_at, email, topic, message, meta, user_id, ip_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").bind(ref, Date.now(), email, topic, message, JSON.stringify(meta), who?.id ?? null, ipHash).run();
+  const inbox = env.SUPPORT_EMAIL ?? env.GMAIL_USER ?? env.MAILJET_SENDER_EMAIL ?? env.BREVO_SENDER_EMAIL;
+  const title = SUPPORT_TOPICS[topic]!;
+  const metaRows = Object.entries(meta).map(([k, v]) => `${k}: ${v}`).join("\n");
+  const jobs: Promise<unknown>[] = [];
+  if (inbox) jobs.push(sendEmail(env, inbox, "Glidepath Support", `[${ref}] ${title}`,
+    `<p><b>${esc(title)}</b> from ${esc(email)}${who ? " (signed in)" : ""}</p><pre style="white-space:pre-wrap;font:14px/1.5 sans-serif">${esc(message)}</pre>${metaRows ? `<pre style="color:#666;font-size:12px">${esc(metaRows)}</pre>` : ""}<p>Reply to this email to answer them.</p>`,
+    `${title} from ${email}\n\n${message}\n\n${metaRows}\n\nReply to this email to answer them.`, email));
+  jobs.push(sendEmail(env, email, null, `We got your message (${ref})`,
+    `<p>Thanks for writing to Glidepath. Your reference is <b>${ref}</b>; we'll answer at this address.</p><p style="color:#555">What you sent (${esc(title)}):</p><pre style="white-space:pre-wrap;font:14px/1.5 sans-serif;color:#333">${esc(message)}</pre><p style="color:#777;font-size:13px">Glidepath Support</p>`,
+    `Thanks for writing to Glidepath. Your reference is ${ref}; we'll answer at this address.\n\nWhat you sent (${title}):\n${message}\n\nGlidepath Support`));
+  const all = Promise.allSettled(jobs).then((r) => { for (const x of r) if (x.status === "fulfilled" && x.value) console.log("support email:", x.value); });
+  if (ctx) ctx.waitUntil(all); else await all;
+  return json(200, { ok: true, ref });
+}
+
+async function weather(url: URL, ctx?: ExecutionContext): Promise<Response> {
+  const kind = url.pathname.replace(/\/+$/, "").slice(4);
+  let upstream: string, ttl: number;
+  if (kind === "metar" || kind === "taf") {
+    const ids = (url.searchParams.get("ids") ?? "").toUpperCase().split(",").map((x) => x.trim()).filter((x) => /^[A-Z0-9]{3,4}$/.test(x)).slice(0, 30);
+    if (!ids.length) return fail(400, "Add one or more ICAO codes, e.g. ?ids=EGLL,OMDB");
+    upstream = `https://aviationweather.gov/api/data/${kind}?ids=${ids.sort().join(",")}&format=json`;
+    ttl = kind === "metar" ? 300 : 1200;
+  } else if (kind === "metarbox") {
+    const b = (url.searchParams.get("bbox") ?? "").split(",").map(Number);
+    if (b.length !== 4 || b.some((v) => !Number.isFinite(v)) || Math.abs(b[2]! - b[0]!) > 60 || Math.abs(b[3]! - b[1]!) > 90) return fail(400, "bbox must be south,west,north,east (a region, not the world)");
+    upstream = `https://aviationweather.gov/api/data/metar?bbox=${b.map((v) => v.toFixed(1)).join(",")}&format=json`;
+    ttl = 300;
+  } else return fail(404, "Unknown weather request.");
+  const key = new Request(upstream);
+  const cache = (globalThis as unknown as { caches?: { default: Cache } }).caches?.default;
+  const hit = cache ? await cache.match(key) : undefined;
+  if (hit) return new Response(hit.body, { headers: { ...CORS, "Content-Type": "application/json; charset=utf-8", "Cache-Control": `public, max-age=${Math.min(ttl, 120)}` } });
+  const r = await fetch(upstream, { headers: { "User-Agent": "Glidepath (https://glidepath-ad9.pages.dev)" } });
+  if (!r.ok) return fail(502, "The weather service didn't answer. Try again in a minute.");
+  let text = await r.text();
+  if (!text.trim()) text = "[]";
+  if (kind === "metarbox") { try { text = JSON.stringify((JSON.parse(text) as unknown[]).slice(0, 600)); } catch { text = "[]"; } }
+  const out = new Response(text, { headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": `public, max-age=${ttl}` } });
+  if (cache) { const put = cache.put(key, out.clone()); if (ctx) ctx.waitUntil(put); else await put; }
+  return new Response(text, { headers: { ...CORS, "Content-Type": "application/json; charset=utf-8", "Cache-Control": `public, max-age=${Math.min(ttl, 120)}` } });
+}
+
 async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
   const url = new URL(req.url);
   const p = url.pathname.replace(/\/+$/, "") || "/";
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (p === "/" || p === "/health") return json(200, { ok: true, service: "glidepath-accounts" });
+
+  // Support Centre: a message from the website or the app, kept with a reference and emailed to support and to the sender.
+  if (p === "/support" && req.method === "POST") return support(req, env, ctx);
+
+  // Live weather for any device: aviationweather.gov doesn't allow browsers to ask directly, so this passes
+  // its METAR/TAF answers through (read-only, inputs checked, cached at the edge for a few minutes).
+  if (p.startsWith("/wx/") && req.method === "GET") return weather(url, ctx);
 
   // Web Push: the public key devices subscribe with.
   if (p === "/push/key" && req.method === "GET") {
@@ -160,9 +242,11 @@ async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Re
     const k = await env.DB.prepare("SELECT user_id FROM relay_keys WHERE key_hash = ?").bind(await sha256(key)).first<{ user_id: string }>();
     if (!k) return fail(401, "This PC isn't signed in.");
     const b = await req.json().catch(() => null) as { kind?: string; flight_id?: string; title?: string; body?: string; url?: string } | null;
-    const kind = ["tod", "landed", "review", "test"].includes(String(b?.kind)) ? String(b!.kind) : null;
+    const kind = PUSH_KINDS.includes(String(b?.kind)) ? String(b!.kind) : null;
     const title = String(b?.title ?? "").slice(0, 80), text = String(b?.body ?? "").slice(0, 240);
     if (!kind || !title) return fail(400, "Missing message.");
+    // The pilot can turn each kind off in Settings (checklist reminders are one switch).
+    if (kind !== "test" && (await pushOff(env, k.user_id)).includes(pushPref(kind))) return json(200, { sent: 0, reason: "Turned off in Settings." });
     // One of each kind per flight, however often the Bridge asks.
     if (kind !== "test" && !(await once(env, k.user_id, `push:${kind}:${String(b?.flight_id ?? "").slice(0, 60)}`, "1"))) return json(200, { sent: 0, reason: "Already sent for this flight." });
     const url = typeof b?.url === "string" && b.url.startsWith("/") ? b.url.slice(0, 200) : "/app/";
@@ -345,6 +429,18 @@ async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Re
     await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(await sha256(t)).run();
     return json(200, { ok: true });
   }
+  if (p === "/push/prefs" && req.method === "GET") {
+    const off = await pushOff(env, user.id);
+    return json(200, Object.fromEntries(PUSH_PREFS.map((k) => [k, !off.includes(k)])));
+  }
+  if (p === "/push/prefs" && req.method === "PUT") {
+    const b = await body<Record<string, unknown>>(req);
+    const cur = await pushOff(env, user.id);
+    const on = Object.fromEntries(PUSH_PREFS.map((k) => [k, typeof b?.[k] === "boolean" ? (b[k] as boolean) : !cur.includes(k)]));
+    const off = PUSH_PREFS.filter((k) => !on[k]).join(",");
+    await env.DB.prepare("INSERT INTO push_prefs (user_id, off, updated_at) VALUES (?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET off = excluded.off, updated_at = excluded.updated_at").bind(user.id, off, Date.now()).run();
+    return json(200, on);
+  }
   if (p === "/me" && req.method === "GET") return json(200, { ...publicUser(user), email_prefs: await prefsOf(env, user.id) });
   if (p === "/me" && req.method === "PATCH") {
     const b = await body<{ monthly_email?: boolean; display_name?: string; email_prefs?: Partial<Prefs> }>(req);
@@ -359,10 +455,15 @@ async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Re
     return json(200, { ...publicUser(u!), email_prefs: await prefsOf(env, user.id) });
   }
   if (p === "/me" && req.method === "DELETE") {
-    await env.DB.batch(["sessions", "flights", "bridges", "relay_keys", "email_prefs", "password_resets", "email_log", "live_shares", "challenge", "ai_usage", "user_sync", "push_subs"].map((t) => env.DB.prepare(`DELETE FROM ${t} WHERE user_id = ?`).bind(user.id)).concat(env.DB.prepare("DELETE FROM users WHERE id = ?").bind(user.id)));
+    await env.DB.batch(["sessions", "flights", "bridges", "relay_keys", "email_prefs", "password_resets", "email_log", "live_shares", "challenge", "ai_usage", "user_sync", "push_subs", "push_prefs"].map((t) => env.DB.prepare(`DELETE FROM ${t} WHERE user_id = ?`).bind(user.id)).concat(env.DB.prepare("DELETE FROM users WHERE id = ?").bind(user.id)));
     return json(200, { ok: true });
   }
 
+  const del = /^\/flights\/([A-Za-z0-9-]{1,64})$/.exec(p);
+  if (del && req.method === "DELETE") {
+    await env.DB.prepare("DELETE FROM flights WHERE user_id = ? AND id = ?").bind(user.id, del[1]).run();
+    return json(200, { ok: true });
+  }
   if (p === "/flights" && req.method === "GET") {
     const { results } = await env.DB.prepare("SELECT summary FROM flights WHERE user_id = ? ORDER BY off_block_at DESC LIMIT 2000").bind(user.id).all<{ summary: string }>();
     return json(200, results.map((r) => JSON.parse(r.summary)));

@@ -15,19 +15,20 @@
  * Parsers are pure functions (exported for tests). Network failures return a
  * clear error; nothing is ever invented to fill a gap.
  */
-import type { FlightPlan } from "@glidepath/protocol";
+import { pilotDetails, type FlightPlan, type PilotDetails, type PilotNetwork } from "@glidepath/protocol";
 import { distanceNm } from "@glidepath/flight-engine";
 import type { Logger } from "./log.js";
+import { TrafficTracks } from "./traffic.js";
 
 const UA = "GlidepathBridge/0.1 (+https://github.com/etihadairways1028-beep/glidepath)";
 const LB_TO_KG = 0.45359237;
 
-export interface NetworkPilot { callsign: string; lat: number; lon: number; altFt: number; gsKt: number; hdg: number; type: string | null; dep: string | null; arr: string | null; network: Network }
+export interface NetworkPilot { callsign: string; lat: number; lon: number; altFt: number; gsKt: number; hdg: number; type: string | null; dep: string | null; arr: string | null; network: Network; squawk?: string | null }
 export type Network = "vatsim" | "ivao" | "sayintentions";
 export interface NetworkController { callsign: string; frequency: string | null; facility: string; atis: string[]; network: Network }
 export interface NetworkSnapshot { network: Network; updatedAt: string; pilots: NetworkPilot[]; controllers: NetworkController[] }
-export interface Metar { icao: string; raw: string; observed: string | null; windDir: number | "VRB" | null; windKt: number | null; gustKt: number | null; visibility: string | null; tempC: number | null; dewC: number | null; qnhHpa: number | null; category: string | null; clouds: Array<{ cover: string; baseFt: number | null }> }
-export interface Taf { icao: string; raw: string; issued: string | null }
+export type { Metar, Taf } from "@glidepath/protocol";
+import { parseMetars, parseTafs, type Metar, type Taf } from "@glidepath/protocol";
 export interface Stand { ref: string; kind: "gate" | "stand"; lat: number; lon: number; distanceM: number }
 
 /* ---------------- parsers ---------------- */
@@ -37,7 +38,7 @@ const FACILITY: Record<number, string> = { 0: "Observer", 1: "Flight service", 2
 export function parseVatsim(j: any): NetworkSnapshot {
   const pilots: NetworkPilot[] = (j?.pilots ?? []).filter((p: any) => Number.isFinite(p.latitude) && Number.isFinite(p.longitude)).map((p: any) => ({
     callsign: String(p.callsign), lat: p.latitude, lon: p.longitude, altFt: p.altitude ?? 0, gsKt: p.groundspeed ?? 0, hdg: p.heading ?? 0,
-    type: p.flight_plan?.aircraft_short || null, dep: p.flight_plan?.departure || null, arr: p.flight_plan?.arrival || null, network: "vatsim" as const,
+    type: p.flight_plan?.aircraft_short || null, dep: p.flight_plan?.departure || null, arr: p.flight_plan?.arrival || null, network: "vatsim" as const, squawk: p.transponder ? String(p.transponder) : null,
   }));
   const ctl = [...(j?.controllers ?? []), ...(j?.atis ?? [])];
   const controllers: NetworkController[] = ctl.filter((c: any) => c.facility !== 0).map((c: any) => ({
@@ -51,7 +52,7 @@ export function parseIvao(j: any): NetworkSnapshot {
   const pilots: NetworkPilot[] = (j?.clients?.pilots ?? []).filter((p: any) => p.lastTrack && Number.isFinite(p.lastTrack.latitude)).map((p: any) => ({
     callsign: String(p.callsign), lat: p.lastTrack.latitude, lon: p.lastTrack.longitude, altFt: p.lastTrack.altitude ?? 0, gsKt: p.lastTrack.groundSpeed ?? 0,
     hdg: p.lastTrack.heading ?? 0, type: p.flightPlan?.aircraftId || p.flightPlan?.aircraft?.icaoCode || null,
-    dep: p.flightPlan?.departureId || null, arr: p.flightPlan?.arrivalId || null, network: "ivao" as const,
+    dep: p.flightPlan?.departureId || null, arr: p.flightPlan?.arrivalId || null, network: "ivao" as const, squawk: Number.isFinite(p.lastTrack?.transponder) ? String(p.lastTrack.transponder).padStart(4, "0") : null,
   }));
   const controllers: NetworkController[] = (j?.clients?.atcs ?? []).map((c: any) => ({
     callsign: String(c.callsign), frequency: c.atcSession?.frequency ? Number(c.atcSession.frequency).toFixed(3) : null,
@@ -81,20 +82,7 @@ export function parseSayIntentions(j: any): NetworkSnapshot {
   return { network: "sayintentions", updatedAt: new Date().toISOString(), pilots, controllers: [] };
 }
 
-export function parseMetars(j: any): Metar[] {
-  return (Array.isArray(j) ? j : []).map((m: any) => ({
-    icao: String(m.icaoId), raw: String(m.rawOb ?? ""), observed: m.reportTime ?? null,
-    windDir: m.wdir === "VRB" ? "VRB" : Number.isFinite(m.wdir) ? m.wdir : null, windKt: Number.isFinite(m.wspd) ? m.wspd : null,
-    gustKt: Number.isFinite(m.wgst) ? m.wgst : null, visibility: m.visib === undefined || m.visib === null ? null : String(m.visib),
-    tempC: Number.isFinite(m.temp) ? m.temp : null, dewC: Number.isFinite(m.dewp) ? m.dewp : null,
-    qnhHpa: Number.isFinite(m.altim) ? Math.round(m.altim) : null, category: m.fltCat ?? null,
-    clouds: Array.isArray(m.clouds) ? m.clouds.map((c: any) => ({ cover: String(c.cover), baseFt: Number.isFinite(c.base) ? c.base : null })) : [],
-  }));
-}
-
-export function parseTafs(j: any): Taf[] {
-  return (Array.isArray(j) ? j : []).map((t: any) => ({ icao: String(t.icaoId), raw: String(t.rawTAF ?? ""), issued: t.issueTime ?? null }));
-}
+export { parseMetars, parseTafs } from "@glidepath/protocol";
 
 const num = (v: unknown): number | null => {
   const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : NaN;
@@ -177,14 +165,41 @@ export class ExternalData {
     this.log = log.child("external");
   }
 
-  vatsim(): Promise<NetworkSnapshot> {
-    return this.cached("vatsim", 15_000, async () => parseVatsim(await this.json("https://data.vatsim.net/v3/vatsim-data.json")));
+  /** The raw network feeds, kept briefly so the map list and a tapped aircraft's details share one download. */
+  private feed(n: PilotNetwork): Promise<any> {
+    const url = { vatsim: "https://data.vatsim.net/v3/vatsim-data.json", ivao: "https://api.ivao.aero/v2/tracker/whazzup", sayintentions: "https://tracker.sayintentions.ai/api/map" }[n];
+    return this.cached(`feed:${n}`, n === "vatsim" ? 15_000 : 30_000, () => this.json(url));
   }
-  sayintentions(): Promise<NetworkSnapshot> {
-    return this.cached("sayintentions", 30_000, async () => parseSayIntentions(await this.json("https://tracker.sayintentions.ai/api/map")));
+  /** Other aircraft's tracks, recorded from every network snapshot (see traffic.ts). */
+  readonly traffic = new TrafficTracks();
+  private snap(n: PilotNetwork, ms: number, parse: (j: any) => NetworkSnapshot, background: boolean): Promise<NetworkSnapshot> {
+    if (!background) this.traffic.wanted.set(n, Date.now());
+    return this.cached(n, ms, async () => { const s = parse(await this.feed(n)); this.traffic.record(n, s.pilots); return s; });
   }
-  ivao(): Promise<NetworkSnapshot> {
-    return this.cached("ivao", 30_000, async () => parseIvao(await this.json("https://api.ivao.aero/v2/tracker/whazzup")));
+  vatsim(background = false): Promise<NetworkSnapshot> { return this.snap("vatsim", 15_000, parseVatsim, background); }
+  sayintentions(background = false): Promise<NetworkSnapshot> { return this.snap("sayintentions", 30_000, parseSayIntentions, background); }
+  ivao(background = false): Promise<NetworkSnapshot> { return this.snap("ivao", 30_000, parseIvao, background); }
+  /**
+   * Keep recording tracks for the networks an app has used in the last 12 hours, once a minute,
+   * so a tapped aircraft shows its whole track even if the app was closed.
+   */
+  startTrafficRecording(): () => void {
+    const t = setInterval(() => {
+      const now = Date.now();
+      for (const [n, at] of this.traffic.wanted) {
+        if (now - at > 12 * 3600_000) { this.traffic.wanted.delete(n); continue; }
+        const run = n === "vatsim" ? this.vatsim(true) : n === "ivao" ? this.ivao(true) : this.sayintentions(true);
+        run.catch(() => undefined);
+      }
+    }, 60_000);
+    t.unref?.();
+    return () => clearInterval(t);
+  }
+  /** Everything the network shares about one pilot (flight plan, squawk, rating…), for the aircraft someone taps. */
+  async pilot(n: string, callsign: string): Promise<PilotDetails | null> {
+    if (n !== "vatsim" && n !== "ivao" && n !== "sayintentions") throw new Error("network must be vatsim, ivao or sayintentions");
+    if (!/^[A-Za-z0-9_-]{2,12}$/.test(callsign)) throw new Error("callsign is not valid");
+    return pilotDetails(n, await this.feed(n), callsign);
   }
   /** Raw aviationweather.gov METARs inside a box (south,west,north,east), for weather dots on the map. */
   metarBox(bbox: string): Promise<unknown[]> {

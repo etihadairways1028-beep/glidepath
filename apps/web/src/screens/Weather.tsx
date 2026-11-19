@@ -38,14 +38,17 @@ export function WeatherScreen() {
   }
   for (const c of extra) if (!roles.some((r) => r.code === c)) roles.push({ code: c, role: "Added by you" });
   const ids = roles.map((r) => r.code);
-  const metars = usePoll(bridge && ids.length ? () => getMetar(ids) : null, 5 * 60_000, [bridge, ids.join(",")]);
-  const tafs = usePoll(bridge && ids.length ? () => getTaf(ids) : null, 20 * 60_000, [bridge, ids.join(",")]);
+  // Live: METARs every two minutes, TAFs every fifteen, on any device (the Glidepath service passes them through).
+  const metars = usePoll(ids.length ? () => getMetar(ids) : null, 2 * 60_000, [bridge, ids.join(",")]);
+  const tafs = usePoll(ids.length ? () => getTaf(ids) : null, 15 * 60_000, [bridge, ids.join(",")]);
   const radar = useRadarFrames();
   const frames = radar.data ?? [];
   const [idx, setIdx] = useState<number | null>(null);
-  const [playing, setPlaying] = useState(true);
+  const [playing, setPlaying] = useState(false); // opens on the latest (live) frame; play shows the last two hours
   const cur = idx ?? frames.length - 1;
   // Play through the last two hours, holding a moment on the latest frame before going round again.
+  // Back to live when playback stops at the end.
+  useEffect(() => { if (!playing && idx === frames.length - 1) setIdx(null); }, [playing, idx, frames.length]);
   useEffect(() => {
     if (!playing || frames.length < 2) return;
     const atLatest = cur === frames.length - 1;
@@ -71,7 +74,7 @@ export function WeatherScreen() {
       <div className="between wrap">
         <div>
           <h1 className="title">Weather</h1>
-          <p className="muted" style={{ margin: "4px 0 0" }}>Live reports from aviationweather.gov{bridge ? ", through your Bridge" : ""}. Radar from RainViewer.</p>
+          <p className="muted" style={{ margin: "4px 0 0" }}>Live METAR and TAF from aviationweather.gov, refreshed every few minutes. Radar from RainViewer.</p>
         </div>
         <form className="wx-add" onSubmit={(e) => { e.preventDefault(); const c = add.trim().toUpperCase(); if (/^[A-Z0-9]{3,4}$/.test(c) && !extra.includes(c)) save([...extra, c]); setAdd(""); }}>
           <input value={add} onChange={(e) => setAdd(e.target.value)} placeholder="ICAO, e.g. EGKK" aria-label="Add an airport by ICAO code" maxLength={4} />
@@ -80,7 +83,7 @@ export function WeatherScreen() {
       </div>
 
       <section className="glass wx-radar" aria-label="Rain radar">
-        <MapView trail={[]} plan={L.plan} center={center ?? [0, 30]} zoom={center ? 6 : 1.8} radarFrames={frames} radarIndex={cur} radarOpacity={STRENGTH[strength]!.v} metars={dots} aircraft={L.frame && L.frame.attitude.headingTrueDeg !== null ? { lat: L.frame.position.lat, lon: L.frame.position.lon, hdg: L.frame.attitude.headingTrueDeg, alt: L.frame.position.altMslFt } : null} interactive />
+        <MapView trail={[]} plan={L.plan} center={center ?? [20, 28]} zoom={center ? 6 : 2.5} radarFrames={frames} radarIndex={cur} radarOpacity={STRENGTH[strength]!.v} metars={dots} aircraft={L.frame && L.frame.attitude.headingTrueDeg !== null ? { lat: L.frame.position.lat, lon: L.frame.position.lon, hdg: L.frame.attitude.headingTrueDeg, alt: L.frame.position.altMslFt } : null} interactive />
         <div className="radar-key" aria-label="Rain intensity">
           <span className="rk-bar" aria-hidden="true" />
           <span className="rk-l"><b>Light</b><b>Moderate</b><b>Heavy</b><b>Storm</b></span>
@@ -97,26 +100,35 @@ export function WeatherScreen() {
               <input type="range" min={0} max={frames.length - 1} value={cur} onChange={(e) => { setPlaying(false); setIdx(Number(e.target.value)); }} aria-label="Radar time" style={{ ["--p" as string]: `${(cur / (frames.length - 1)) * 100}%` }} />
               <div className="radar-ticks" aria-hidden="true">{frames.map((f, i) => <i key={f.time} className={i === cur ? "on" : i === frames.length - 1 ? "now" : ""} />)}</div>
             </div>
-            <span className="radar-time data">{new Date(frames[cur]!.time * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}<small>{cur === frames.length - 1 ? "latest" : `−${Math.round((frames[frames.length - 1]!.time - frames[cur]!.time) / 60)} min`}</small></span>
+            <span className="radar-time data">{new Date(frames[cur]!.time * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}<small>{cur === frames.length - 1 ? <b className="live-dot">Live</b> : `−${Math.round((frames[frames.length - 1]!.time - frames[cur]!.time) / 60)} min`}</small></span>
+            {cur !== frames.length - 1 && <button className="radar-str" onClick={() => { setPlaying(false); setIdx(null); }} aria-label="Back to live radar">Live</button>}
             <button className="radar-str" onClick={() => setStrength((x) => (x + 1) % STRENGTH.length)} aria-label="Radar strength">{STRENGTH[strength]!.label}</button>
           </>) : <span className="radar-time">{radar.error ? "Radar unavailable right now" : "Loading radar…"}</span>}
         </div>
       </section>
 
-      {!bridge && <Notice info>METAR and TAF come through your Bridge (the weather service doesn't allow direct requests from browsers). Connect your PC to see them; the radar works anywhere.</Notice>}
-      {roles.length === 0 && <p className="muted">Load a flight plan, start a flight, or add an airport above to see its weather.</p>}
+      {metars.error && ids.length > 0 && <Notice info>Live reports couldn't be loaded just now. Glidepath tries again in a moment.</Notice>}
+      {roles.length === 0 && (
+        <div className="glass wx-empty">
+          <b>See the weather at any airport</b>
+          <p className="muted">Your departure, destination and alternate appear here by themselves when you load a flight plan or start a flight. Or add airports:</p>
+          <div className="row wrap" style={{ gap: 8 }}>
+            {["EGLL", "KJFK", "OMDB", "EDDF", "LFPG", "WSSS", "YSSY", "KLAX"].map((c) => <button key={c} className="btn small" onClick={() => save([...extra, c])}>{c}</button>)}
+          </div>
+        </div>
+      )}
 
       <div className="grid cols-2">
         {roles.map((r) => (
           <AirportWx key={r.code} code={r.code} role={r.role} m={metars.data?.find((x) => x.icao === r.code) ?? null} taf={tafs.data?.find((x) => x.icao === r.code)?.raw ?? null}
-            loading={metars.loading} bridge={bridge} onRemove={extra.includes(r.code) ? () => save(extra.filter((c) => c !== r.code)) : undefined} />
+            loading={metars.loading} onRemove={extra.includes(r.code) ? () => save(extra.filter((c) => c !== r.code)) : undefined} />
         ))}
       </div>
     </div>
   );
 }
 
-function AirportWx({ code, role, m, taf, loading, bridge, onRemove }: { code: string; role: string; m: Metar | null; taf: string | null; loading: boolean; bridge: boolean; onRemove?: () => void }) {
+function AirportWx({ code, role, m, taf, loading, onRemove }: { code: string; role: string; m: Metar | null; taf: string | null; loading: boolean; onRemove?: () => void }) {
   const [apt, setApt] = useState<AirportDetail | null>(null);
   useEffect(() => { let off = false; void airportDetail(code).then((a) => { if (!off) setApt(a); }); return () => { off = true; }; }, [code]);
   const cat = m?.category;
@@ -126,7 +138,7 @@ function AirportWx({ code, role, m, taf, loading, bridge, onRemove }: { code: st
       {cat && <span className={`pill wx-${cat}`}>{cat}</span>}
       {onRemove && <button className="btn small round" aria-label={`Remove ${code}`} onClick={onRemove}>{Icon.close()}</button>}
     </span>}>
-      {!bridge ? <p className="muted">Connect your Bridge for live reports.</p> : loading && !m ? <div className="skeleton" style={{ height: 120 }} /> : !m ? <p className="muted">No METAR published for {code}.</p> : (
+      {loading && !m ? <div className="skeleton" style={{ height: 120 }} /> : !m ? <p className="muted">No METAR published for {code}.</p> : (
         <>
           <p className="faint" style={{ fontSize: 12, margin: "0 0 6px" }}>Observed {ago(m.observed)}{m.observed ? ` (${new Date(m.observed).toISOString().slice(11, 16)}Z)` : ""} · aviationweather.gov</p>
           <MetarView m={m} />

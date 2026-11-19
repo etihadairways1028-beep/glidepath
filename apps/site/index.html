@@ -40,6 +40,7 @@
         <a href="features.html">Features</a>
         <a href="#faq">FAQ</a>
         <a href="#roadmap">Roadmap</a>
+        <a href="support.html">Support</a>
         <a href="app/">Open the app</a>
       </div>
       <button class="btn glass small" id="acct-btn" type="button" hidden>Sign in</button>
@@ -56,6 +57,7 @@
       <a href="features.html#demo">Watch the demo</a>
       <a href="features.html#brief">Monthly brief</a>
       <a href="features.html#aircraft">Aircraft compatibility</a>
+      <a href="support.html">Support</a>
       <a href="features.html#today">What works today</a>
       <a href="#faq">Questions</a>
       <a href="#roadmap">Roadmap</a>
@@ -75,6 +77,7 @@
         <div class="cta">
           <a class="btn primary" data-download href="#download"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Download for Windows</a>
           <a class="btn glass" href="app/?demo=1">Try the app now</a>
+          <button class="btn glass" type="button" data-trailer><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg>Watch the trailer</button>
         </div>
         <div class="device-tip glass" id="device-tip" hidden></div>
         <ul class="trust" aria-label="At a glance">
@@ -140,6 +143,18 @@
     </div>
 
     <a class="scroll-cue" href="#what" aria-label="See what's inside"><span>See what's inside</span><i></i></a>
+
+    <!-- TRAILER -->
+    <section class="trailer reveal" aria-label="Glidepath trailer">
+      <div class="trailer-frame">
+        <video class="trailer-loop" src="assets/video/glidepath-trailer-720.mp4" poster="assets/shots/trailer-poster.webp" muted loop playsinline preload="none" aria-hidden="true"></video>
+        <button class="trailer-play" type="button" data-trailer aria-label="Watch the Glidepath trailer with sound"><span class="tp-ic"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg></span><span>Watch with sound<small>70 seconds</small></span></button>
+      </div>
+    </section>
+    <dialog class="trailer-modal" id="trailer-modal" aria-label="Glidepath trailer">
+      <button class="tm-close" type="button" aria-label="Close the trailer">×</button>
+      <video controls playsinline preload="none" poster="assets/shots/trailer-poster.webp"><source src="assets/video/glidepath-trailer.mp4" type="video/mp4"></video>
+    </dialog>
 
     <section id="what" class="what" aria-labelledby="what-title">
       <div class="section-head reveal"><p class="kicker">What is Glidepath?</p><h2 id="what-title">One app for the whole flight.</h2>
@@ -306,7 +321,7 @@
       <div class="section-head reveal"><p class="kicker">Roadmap</p><h2 id="roadmap-title">Where Glidepath is going.</h2><p class="sub">What is available today, and what comes next.</p></div>
       <ol class="road reveal">
         <li class="done now"><span class="rd-dot"></span><div><b>1.0 · Launch · now</b><p>Live flight on every screen and any network, the logbook and full flight reviews, Glidepath AI, lock screen notifications, your SimBrief SID and STAR drawn, references for many more aircraft, remote control and the live camera.</p></div></li>
-        <li><span class="rd-dot"></span><div><b>Next · What you ask for</b><p>Glidepath is built around the people flying it. <a href="https://github.com/etihadairways1028-beep/glidepath/issues/new" data-issues-link>Tell us what you'd like next</a>, or report anything that isn't right.</p></div></li>
+        <li><span class="rd-dot"></span><div><b>Next · What you ask for</b><p>Glidepath is built around the people flying it. <a href="support.html#idea" data-issues-link>Tell us what you'd like next</a>, or report anything that isn't right.</p></div></li>
       </ol>
     </section>
 
@@ -358,8 +373,8 @@
             <summary>Something not working?</summary>
             <ul>
               <li><b>The iPad can't connect:</b> check you're signed in to the same account on the Bridge page and in the app. Using a code instead? The iPad must be on the same Wi-Fi as the PC; if the code isn't found, tap <i>Type my PC's address instead</i> and enter the numbers from the Bridge window, or open <i>glidepath.local:4810</i> in Safari.</li>
-              <li><b>The sim isn't found:</b> start MSFS and load into a flight, then run <i>Test MSFS connection</i> from the Start menu and <a data-issues-link href="#">report a problem</a> with the result.</li>
-              <li><b>Anything else:</b> <a data-issues-link href="#">report a problem</a> and attach the newest file from Start menu › Glidepath › Bridge logs. Every report is read.</li>
+              <li><b>The sim isn't found:</b> start MSFS and load into a flight, then run <i>Test MSFS connection</i> from the Start menu and <a data-issues-link href="support.html">write to Support</a> with the result.</li>
+              <li><b>Anything else:</b> <a data-issues-link href="support.html">write to Support</a> and attach the newest file from Start menu › Glidepath › Bridge logs. Every report is read.</li>
             </ul>
           </details>
         </div>
@@ -393,7 +408,7 @@
   <footer class="foot">
     <div class="foot-brand"><img src="assets/mark.svg" alt="" width="24" height="24"><b>Glidepath</b></div>
     <p>An independent project, not affiliated with Microsoft, Laminar Research, VATSIM, IVAO, Navigraph, SimBrief, or any airline or aircraft maker. Not for real-world navigation.</p>
-    <p><a href="privacy.html">Privacy policy</a> · <a data-issues-link href="#">Report a problem</a> · <a data-repo-link href="#">Source code on GitHub</a> · <a href="app/">Open the app</a></p>
+    <p><a href="privacy.html">Privacy policy</a> · <a data-issues-link href="support.html">Support</a> · <a data-repo-link href="#">Source code on GitHub</a> · <a href="app/">Open the app</a></p>
   </footer>
 
   <script src="app.js" defer></script>

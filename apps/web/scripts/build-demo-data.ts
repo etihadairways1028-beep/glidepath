@@ -24,7 +24,7 @@ const kept = frames.filter((f) => {
   if (f.t - last >= step) { last = f.t; return true; }
   return false;
 });
-writeFileSync(join(out, "demo-flight.json"), JSON.stringify({ notice: SYNTHETIC_NOTICE, aircraft: { title: "Synthetic test aircraft (A320-class)", icaoType: "A320" }, frames: kept }));
+writeFileSync(join(out, "demo-flight.json"), JSON.stringify({ notice: SYNTHETIC_NOTICE, aircraft: { title: "Airbus A320neo (demo)", icaoType: "A20N" }, frames: kept }));
 console.log(`demo: ${kept.length} frames`);
 
 const data = join(here, "..", "..", "..", "packages", "aviation-data", "data");

@@ -896,7 +896,7 @@ button, .btn, .seg, .tabbar { -webkit-user-select: none; user-select: none; }
   background: radial-gradient(380px circle at var(--mx, -400px) var(--my, -400px), rgba(255,255,255,.12), rgba(255,255,255,.03) 40%, transparent 65%) !important; opacity: 1 !important; }
 :root[data-theme="light"] .glass::after { background: radial-gradient(380px circle at var(--mx, -400px) var(--my, -400px), rgba(255,255,255,.55), rgba(255,255,255,.12) 40%, transparent 65%) !important; }
 /* Cards get a positioned box for the light; floating glass (tab bar, messages, sheets) stays pinned. */
-:root .glass:not(.tabbar):not(.gs-msg):not(.fc-sheet):not(.side):not(.upd-bar):not(.map-hud) { position: relative; }
+:root .glass:not(.tabbar):not(.gs-msg):not(.fc-sheet):not(.side):not(.upd-bar):not(.map-hud):not(.map-sheet) { position: relative; }
 :root .tabbar.glass { position: fixed !important; }
 :root .live-card.glass::after { opacity: .6 !important; }
 
@@ -1256,3 +1256,113 @@ html:root :is(.quick-a, .more-tile, .cr-tile):hover:active { transform: scale(.9
 @keyframes okPop { 0% { scale: .9; } 45% { scale: 1.08; } 100% { scale: 1; } }
 @keyframes ledOn { 0% { box-shadow: 0 0 0 0 rgba(48,209,88,.9), 0 0 8px #30D158; } 100% { box-shadow: 0 0 0 10px rgba(48,209,88,0), 0 0 8px #30D158; } }
 @keyframes tickOn { 0% { scale: .5; box-shadow: 0 0 0 0 rgba(48,209,88,.8); } 55% { scale: 1.18; } 100% { scale: 1; box-shadow: 0 0 0 9px rgba(48,209,88,0); } }
+
+/* ===================== Traffic card: solid, scrollable, flight-tracker detail ===================== */
+:root .map-hud.behind { opacity: 0 !important; visibility: hidden; pointer-events: none; transition: opacity .2s ease, visibility 0s .2s; }
+:root .map-sheet.traffic-sheet { background: rgba(14, 18, 28, .97) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+  width: min(420px, calc(100% - 32px)); max-height: calc(100% - 40px); overflow: auto; overscroll-behavior: contain; z-index: 8; animation: tsIn .32s cubic-bezier(.2, .9, .3, 1); }
+@media (prefers-reduced-motion: reduce) { :root .map-sheet.traffic-sheet { animation: none; } }
+@keyframes tsIn { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
+.ts-head { display: flex; align-items: center; gap: 12px; }
+.ts-logo { width: 42px; height: 42px; flex: none; border-radius: 12px; display: grid; place-items: center; font: 800 13px/1 var(--mono, ui-monospace, monospace); letter-spacing: .04em; color: #fff;
+  background: linear-gradient(140deg, #3A9BFF, #5E5CE6); box-shadow: inset 0 1px .5px rgba(255,255,255,.5); }
+.ts-id { flex: 1; min-width: 0; display: grid; } .ts-id b { font-size: 21px; font-weight: 800; letter-spacing: .01em; } .ts-id span { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ts-type { margin-top: 10px; font-size: 14px; font-weight: 600; color: rgba(235,240,250,.88); }
+.ts-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.ts-chip { font-size: 11.5px; font-weight: 700; padding: 4px 9px; border-radius: 999px; background: rgba(255,255,255,.09); color: rgba(235,240,250,.85); }
+.ts-chip.net-vatsim { background: rgba(48,209,88,.16); color: #5EE07F; } .ts-chip.net-ivao { background: rgba(10,132,255,.18); color: #7CC4FF; } .ts-chip.net-sayintentions { background: rgba(191,90,242,.18); color: #D9A4FF; }
+.ts-chip.ph-climbing { color: #7CC4FF; } .ts-chip.ph-descending { color: #FFB340; } .ts-chip.ph-on { color: #A1A1AA; }
+.ts-times, .ts-dist { display: flex; justify-content: space-between; gap: 10px; margin-top: 6px; font-size: 12px; }
+.ts-dist { justify-content: flex-start; }
+.ts-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+.ts-cell { padding: 9px 10px; border-radius: 12px; background: rgba(255,255,255,.06); min-width: 0; }
+.ts-cell span { display: block; font-size: 10.5px; letter-spacing: .01em; font-weight: 600; color: rgba(235,240,250,.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ts-cell b { display: block; margin-top: 3px; font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 520px) { .ts-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.ts-more { margin-top: 12px; border-radius: 14px; background: rgba(255,255,255,.05); padding: 0 12px; }
+.ts-more summary { cursor: pointer; list-style: none; padding: 11px 0; font-weight: 700; font-size: 14px; display: flex; justify-content: space-between; }
+.ts-more summary::-webkit-details-marker { display: none; }
+.ts-more summary::after { content: "›"; font-size: 18px; line-height: 1; color: rgba(235,240,250,.5); transition: transform .25s ease; }
+.ts-more[open] summary::after { transform: rotate(90deg); }
+.ts-more[open] > :not(summary) { animation: faqIn .3s ease; }
+@keyframes faqIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.ts-kv { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; padding-bottom: 10px; }
+.ts-kv div { display: grid; } .ts-kv span { font-size: 11px; color: rgba(235,240,250,.55); } .ts-kv b { font-size: 14px; }
+.ts-sub { font-size: 11px; font-weight: 700; color: rgba(235,240,250,.55); margin-top: 4px; }
+.ts-routestr { font-size: 12.5px; line-height: 1.5; margin: 4px 0 12px; word-break: break-word; color: rgba(235,240,250,.85); }
+.ts-note { font-size: 11.5px; margin: 8px 0 0; }
+
+/* The aircraft card takes the flight panel's place (top left of the map, clear of the sidebar); a bottom sheet on phones. */
+:root .map-sheet.traffic-sheet { position: absolute; left: 16px; top: 16px; right: auto; bottom: auto; max-height: calc(100% - 32px); }
+@media (max-width: 900px) {
+  :root .map-sheet.traffic-sheet { left: 12px; right: 12px; top: auto; bottom: calc(96px + var(--safe-b, 0px)); width: auto; max-height: min(64vh, calc(100% - 150px)); }
+}
+
+/* ===================== No wobble: hover lights a button up, it never moves =====================
+   Lifting or scaling on hover moves the button out from under the pointer near its edge, which then
+   un-hovers it, and so on: the "shaking". Hover is light only; movement is kept for the press and release. */
+@media (hover: hover) and (pointer: fine) {
+  :root :is(.btn, .chip-btn, .quick-a, .more-tile, .cr-tile, .basemap, .radar-btn, .radar-str, .rc-tog, .seg button, .tile, .badge, .rc-target, .tl-card, .board-row, .welcome-feats li, .nav-a, .nav-a .nav-ic, .tab):hover:not(:active) {
+    transform: none !important; translate: none !important;
+  }
+  :root :is(.btn, .chip-btn, .quick-a, .more-tile, .cr-tile, .basemap, .radar-btn, .radar-str, .rc-tog):not(:disabled):hover {
+    filter: brightness(1.12); box-shadow: 0 0 0 1px rgba(143, 200, 255, .35), 0 8px 22px -12px rgba(10, 132, 255, .75) !important;
+    transition: filter .2s ease, box-shadow .25s ease, background-color .2s ease !important;
+  }
+}
+/* Press: a quick, smooth sink (no bounce while held); the spring and ring play on release. */
+:root :is(.btn, .chip-btn, .rc-tog, .quick-a, .more-tile, .cr-tile, .seg button, .radar-play, .wn-go):not(:disabled):active {
+  transition: transform .09s cubic-bezier(.3, 0, .2, 1), box-shadow .09s ease, filter .09s ease !important;
+}
+
+/* Delete a flight */
+.del-flight { margin-top: 8px; }
+.del-ask { padding: 16px 18px; border-radius: 18px; border: 1px solid rgba(255, 69, 58, .35); animation: faqIn .25s ease; }
+.del-ask b { font-size: 16px; } .del-ask p { margin: 6px 0 12px; font-size: 14px; }
+.err-text { color: #FF6961; font-size: 13.5px; }
+
+/* Replay video */
+.replay-cv { display: block; width: 100%; max-width: 560px; aspect-ratio: 1; border-radius: 18px; background: #10141D; }
+
+/* All flights on one map */
+.all-map { padding: 0 !important; overflow: hidden; border-radius: 22px; }
+.all-map-cv { display: block; width: 100%; height: clamp(200px, 34vw, 340px); }
+.all-map-stats { display: flex; gap: 22px; padding: 12px 16px; font-size: 13.5px; color: rgba(235,240,250,.7); }
+.all-map-stats b { font-size: 17px; color: #fff; margin-right: 4px; }
+
+/* Airport live board: everything inside the box */
+.ab { padding: 18px 18px 14px !important; display: grid; gap: 12px; }
+.ab .board-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.ab .board-list { margin: 0; }
+.ab .board-row { padding-left: 12px; padding-right: 12px; }
+.ab-foot { font-size: 12px; margin: 0; }
+.ab-ai { padding: 12px 14px; border-radius: 16px; background: rgba(255,255,255,.05); display: grid; gap: 8px; }
+.ab-ai-h { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; font-size: 13px; } .ab-ai-h b { font-size: 14px; }
+.ab-atis { margin: 0; font-size: 13.5px; line-height: 1.5; }
+
+/* Support Centre */
+.sup-topics { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.sup-topic { display: grid; gap: 4px; text-align: left; padding: 16px !important; border-radius: 18px !important; cursor: pointer; font: inherit; color: inherit; border: 1px solid rgba(255,255,255,.08); }
+.sup-topic.on { border-color: rgba(124,196,255,.7); background: rgba(10,132,255,.14) !important; }
+.sup-topic .ic { font-size: 22px; } .sup-topic b { font-size: 15px; } .sup-topic span:last-child { font-size: 12.5px; color: rgba(235,240,250,.6); }
+.sup-answer { padding: 18px 20px !important; animation: faqIn .3s ease; } .sup-answer ol { margin: 0 0 12px; padding-left: 20px; line-height: 1.6; }
+.sup-form { padding: 18px 20px !important; display: grid; gap: 8px; }
+.sup-f { display: grid; gap: 5px; font-size: 13px; font-weight: 600; color: rgba(235,240,250,.7); }
+.sup-f input, .sup-f select, .sup-f textarea { font: inherit; font-size: 16px; color: inherit; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); border-radius: 12px; padding: 11px 13px; }
+.sup-done b { font-size: 17px; }
+
+/* Online now panel */
+.traffic-panel { max-height: min(78vh, 640px); overflow: auto; }
+.tp-search { width: 100%; font: inherit; font-size: 16px; color: inherit; padding: 11px 13px; border-radius: 12px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.08); margin: 4px 0 10px; }
+.tp-search:focus { outline: none; border-color: #0A84FF; box-shadow: 0 0 0 3px rgba(10,132,255,.25); }
+.tp-list { display: grid; gap: 4px; }
+.tp-row { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; text-align: left; padding: 9px 11px; border-radius: 12px; border: 0; background: rgba(255,255,255,.05); color: inherit; font: inherit; cursor: pointer; }
+.tp-row:hover { background: rgba(255,255,255,.09); }
+.tp-row b { font-size: 14px; } .tp-row span { font-size: 12.5px; color: rgba(235,240,250,.62); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tp-emerg { grid-column: 1 / -1; font-style: normal; font-size: 12px; font-weight: 700; color: #FF6961; }
+.tp-stats { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: rgba(235,240,250,.7); margin-bottom: 6px; } .tp-stats b { color: #fff; }
+.tp-busy { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.tp-apt { display: grid; text-align: left; padding: 9px 11px; border-radius: 12px; border: 0; background: rgba(255,255,255,.05); color: inherit; font: inherit; cursor: pointer; }
+.tp-apt b { font-size: 15px; } .tp-apt span { font-size: 12px; color: rgba(235,240,250,.6); }
+.ts-star { font-size: 18px; line-height: 1; color: #FFD60A; } .ts-star.on { background: rgba(255,214,10,.18) !important; }
+.ts-chip.emerg { background: rgba(255,69,58,.2); color: #FF8A80; }

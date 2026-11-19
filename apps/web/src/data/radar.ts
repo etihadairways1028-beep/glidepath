@@ -15,5 +15,5 @@ export async function fetchRadarFrames(): Promise<RadarFrame[]> {
 }
 
 export function useRadarFrames(on = true) {
-  return usePoll(on ? fetchRadarFrames : null, 10 * 60_000, [on]);
+  return usePoll(on ? fetchRadarFrames : null, 5 * 60_000, [on]); // RainViewer adds a frame every 10 min; check twice as often to stay live
 }

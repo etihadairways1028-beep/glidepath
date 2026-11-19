@@ -10,7 +10,7 @@
  */
 import { activeBridge, BridgeClient, setActiveBridge } from "./bridge";
 import { cloudStore, relayStatus, relayTarget } from "./cloud";
-import { store } from "./store";
+import { settingsStore, store } from "./store";
 
 let started = false;
 let stuckSince = 0;
@@ -35,9 +35,52 @@ export async function tryRelay(): Promise<boolean> {
   } finally { checking = false; }
 }
 
+/* ---- Same Wi-Fi: find this PC again by itself when its address changes (like a router handing out a new one) ---- */
+const KNOWN = "glidepath.knownBridge";
+interface Known { id: string; host: string; urls: string[] }
+const readKnown = (): Known | null => { try { return JSON.parse(localStorage.getItem(KNOWN) ?? "null") as Known | null; } catch { return null; } };
+let lastSeek = 0, seeking = false;
+function remember(b: BridgeClient): void {
+  const st = store.get().status;
+  if (!st?.bridgeId || b.isRelay) return;
+  const k = readKnown();
+  const urls = [b.base, ...(k && k.id === st.bridgeId ? k.urls : [])].filter((u, i, a) => a.indexOf(u) === i).slice(0, 6);
+  if (k && k.id === st.bridgeId && k.urls[0] === b.base && k.host === st.hostname) return;
+  try { localStorage.setItem(KNOWN, JSON.stringify({ id: st.bridgeId, host: st.hostname, urls })); } catch { /* storage off */ }
+}
+async function seekBridge(): Promise<void> {
+  const k = readKnown(), token = settingsStore.get().token;
+  if (!k || !token || seeking) return;
+  // A page on https can't reach a PC on http; the account link covers that case.
+  if (location.protocol === "https:") return;
+  seeking = true; lastSeek = Date.now();
+  try {
+    const port = (() => { try { return new URL(k.urls[0]!).port || "4810"; } catch { return "4810"; } })();
+    const names = [k.host, "glidepath"].filter(Boolean).map((h) => `http://${h.toLowerCase().replace(/[^a-z0-9-]/g, "-")}.local:${port}`);
+    const current = activeBridge()?.base;
+    for (const u of [...k.urls, ...names].filter((x, i, a) => a.indexOf(x) === i && x !== current)) {
+      try {
+        const r = await fetch(`${u}/healthz`, { signal: AbortSignal.timeout(2500), cache: "no-store" });
+        const j = (await r.json()) as { bridgeId?: string };
+        if (j.bridgeId !== k.id) continue;
+        settingsStore.set({ bridgeUrl: u });
+        setActiveBridge(new BridgeClient(u, token));
+        return;
+      } catch { /* not there */ }
+    }
+  } finally { seeking = false; }
+}
+
 export function initAutoConnect(): void {
   if (started) return;
   started = true;
+  // Remember the PC each time it's live; look for it if the link stays down.
+  window.setInterval(() => {
+    const b = activeBridge();
+    if (!b || store.get().mode === "demo") return;
+    if (store.get().conn === "live") { remember(b); return; }
+    if (!b.isRelay && Date.now() - lastSeek > 15_000) void seekBridge();
+  }, 5000);
   window.setInterval(() => {
     if (store.get().mode === "demo" || !relayTarget()) { stuckSince = 0; return; }
     const b = activeBridge();

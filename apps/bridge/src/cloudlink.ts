@@ -70,7 +70,7 @@ export class CloudLink {
    * Tell the pilot's devices (lock screen notifications) about the flight. Best effort: never throws.
    * The account sends each kind once per flight, so repeats are harmless.
    */
-  async notify(kind: "tod" | "landed" | "review", flightId: string, title: string, body: string, url = "/app/"): Promise<void> {
+  async notify(kind: "tod" | "landed" | "review" | "cl-taxi" | "cl-approach" | "cl-parked", flightId: string, title: string, body: string, url = "/app/"): Promise<void> {
     if (!this.saved?.key) return;
     try {
       const r = await this.call<{ sent?: number }>("/relay/notify", { method: "POST", headers: { "x-relay-key": this.saved.key }, body: { kind, flight_id: flightId, title, body, url } });
@@ -230,7 +230,7 @@ export class CloudLink {
   /** An HTTP request from a device, made to this Bridge on its behalf. */
   private async request(cid: string, id: string, method: string, path: string, body: unknown): Promise<void> {
     const reply = (m: Record<string, unknown>) => this.sendUp(cid, JSON.stringify({ $: m.$, id, ...m }));
-    if (!path.startsWith("/api/") || path.includes("..") || !["GET", "POST"].includes(method)) { reply({ $: "res", status: 403, ct: "application/json", text: '{"error":"Not available through Connect anywhere."}' }); return; }
+    if (!path.startsWith("/api/") || path.includes("..") || !(["GET", "POST"].includes(method) || (method === "DELETE" && /^\/api\/flights\/[0-9a-f-]{36}$/.test(path)))) { reply({ $: "res", status: 403, ct: "application/json", text: '{"error":"Not available through Connect anywhere."}' }); return; }
     try {
       const r = await fetch(`http://${this.localHost}:${this.o.port}${path}`, {
         method,

@@ -24,6 +24,7 @@ import {
   SimConnectConstants,
   SimConnectDataType,
   SimConnectPeriod,
+  SimObjectType,
   type RecvEventFilename,
   type RecvException,
   type RecvSimObjectData,
@@ -35,6 +36,13 @@ import type { Logger } from "../log.js";
 import { profileForTitle } from "../profiles.js";
 import type { RawFrame, SimAdapter } from "./types.js";
 import { ALL_EVENTS, type Step } from "../remote.js";
+
+// AI traffic around the user (the sim's own AI, and traffic injected by tools like SayIntentions)
+const DEF_AI = 20001, REQ_AI = 20002, AI_RADIUS_M = 120_000, AI_EVERY_MS = 10_000;
+/** Strings first, then numbers: the order is the data layout. */
+const AI_STRINGS: Array<[string, "s32" | "s256"]> = [["ATC ID", "s32"], ["ATC AIRLINE", "s32"], ["ATC FLIGHT NUMBER", "s32"], ["ATC MODEL", "s32"], ["TITLE", "s256"]];
+const AI_NUMBERS: Array<[string, string]> = [["PLANE LATITUDE", "degrees"], ["PLANE LONGITUDE", "degrees"], ["PLANE ALTITUDE", "feet"], ["GROUND VELOCITY", "knots"], ["PLANE HEADING DEGREES TRUE", "degrees"], ["SIM ON GROUND", "bool"]];
+export interface SimTraffic { id: number; callsign: string; type: string | null; title: string | null; lat: number; lon: number; altFt: number; gsKt: number; hdg: number; onGround: boolean }
 
 // Remote control ids
 const EVT_REMOTE_BASE = 1000; // + index into ALL_EVENTS
@@ -161,6 +169,10 @@ export class MsfsAdapter extends EventEmitter implements SimAdapter {
   private paused = false;
   private lastEmit = 0;
   private aircraftTitle = "";
+  private aiTimer: NodeJS.Timeout | null = null;
+  private aiBatch: SimTraffic[] = [];
+  /** The latest AI aircraft around the user, refreshed every 10 s while the sim is connected. */
+  aiTraffic: { at: number; list: SimTraffic[] } = { at: 0, list: [] };
   private readonly log: Logger;
 
   constructor(private readonly opts: MsfsAdapterOptions) {
@@ -205,6 +217,7 @@ export class MsfsAdapter extends EventEmitter implements SimAdapter {
       this.subscribe(handle);
       this.buildTelemetryDefinition(handle);
       this.requestIdent(handle);
+      this.startAiTraffic(handle);
     } catch (err) {
       this.log.debug("SimConnect not available yet", err instanceof Error ? err.message : String(err));
       this.handle = null;
@@ -232,6 +245,7 @@ export class MsfsAdapter extends EventEmitter implements SimAdapter {
       }
     });
     h.on("simObjectData", (d: RecvSimObjectData) => this.onData(d));
+    h.on("simObjectDataByType", (d: RecvSimObjectData) => { if ((d.requestID as number) === REQ_AI) this.onAiData(d); });
     h.on("facilityData", (d) => {
       const w = this.procWaiting.get(d.userRequestId as number);
       if (w) w.records.push({ type: d.type as number, id: d.uniqueRequestId as number, parent: d.parentUniqueRequestId as number, data: d.data });
@@ -299,6 +313,41 @@ export class MsfsAdapter extends EventEmitter implements SimAdapter {
     }
   }
 
+  /** Ask for every aircraft within ~65 nm every 10 s. Strings and numbers only: widely supported simvars. */
+  private startAiTraffic(h: SimConnectConnection): void {
+    if (this.aiTimer) clearInterval(this.aiTimer);
+    try {
+      h.clearDataDefinition(DEF_AI);
+      for (const [name, kind] of AI_STRINGS) h.addToDataDefinition(DEF_AI, name, null, kind === "s32" ? SimConnectDataType.STRING32 : SimConnectDataType.STRING256);
+      for (const [name, unit] of AI_NUMBERS) h.addToDataDefinition(DEF_AI, name, unit, SimConnectDataType.FLOAT64);
+    } catch (e) { this.log.warn("AI traffic isn't available from this simulator", (e as Error).message); return; }
+    const ask = () => {
+      if (this.handle !== h) return;
+      // Whatever arrived for the last request is the current picture (a request with no aircraft sends nothing).
+      this.aiTraffic = { at: Date.now(), list: this.aiBatch };
+      this.aiBatch = [];
+      try { h.requestDataOnSimObjectType(REQ_AI, DEF_AI, AI_RADIUS_M, SimObjectType.AIRCRAFT); } catch (e) { this.log.debug("AI traffic request failed", (e as Error).message); }
+    };
+    ask();
+    this.aiTimer = setInterval(ask, AI_EVERY_MS);
+    this.aiTimer.unref?.();
+  }
+
+  private onAiData(d: RecvSimObjectData): void {
+    // Object 1 is the user's own aircraft.
+    if ((d.objectID as number) === 1) return;
+    try {
+      const b = d.data;
+      const [atcId, airline, flightNo, model, title] = AI_STRINGS.map(([, k]) => (k === "s32" ? b.readString32() : b.readString256()).trim());
+      const [lat, lon, alt, gs, hdg, ground] = AI_NUMBERS.map(() => b.readFloat64());
+      if (!Number.isFinite(lat) || !Number.isFinite(lon) || (Math.abs(lat!) < 0.01 && Math.abs(lon!) < 0.01)) return;
+      const type = model?.match(/AC_MODEL[_ ]?([A-Z0-9]{2,4})/i)?.[1]?.toUpperCase() ?? (/^[A-Z0-9]{3,4}$/i.test(model ?? "") ? model!.toUpperCase() : null);
+      const callsign = airline && flightNo ? `${airline} ${flightNo}` : atcId || `AI${d.objectID as number}`;
+      this.aiBatch.push({ id: d.objectID as number, callsign: callsign.slice(0, 24), type, title: title || null, lat: lat!, lon: lon!, altFt: Math.round(alt!), gsKt: Math.round(gs!), hdg: Math.round(hdg!), onGround: ground! > 0.5 });
+      if (d.entryNumber === d.outOf) { this.aiTraffic = { at: Date.now(), list: this.aiBatch }; this.aiBatch = []; }
+    } catch (e) { this.log.debug("Couldn't read an AI aircraft", (e as Error).message); }
+  }
+
   private requestIdent(h: SimConnectConnection): void {
     h.clearDataDefinition(DEF_IDENT);
     for (const [name] of IDENT_VARS) h.addToDataDefinition(DEF_IDENT, name, null, SimConnectDataType.STRING256);
@@ -343,6 +392,8 @@ export class MsfsAdapter extends EventEmitter implements SimAdapter {
     if (!this.handle) return;
     this.log.info(`Disconnected: ${reason}`);
     this.handle = null;
+    if (this.aiTimer) { clearInterval(this.aiTimer); this.aiTimer = null; }
+    this.aiTraffic = { at: 0, list: [] }; this.aiBatch = [];
     this.emit("state", "disconnected", reason);
     this.emit("sessionEnd");
     this.scheduleRetry(3000);

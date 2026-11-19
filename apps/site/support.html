@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Support · Glidepath</title>
+  <meta name="description" content="Help with connecting, the Bridge, notifications and your account, and a direct line to Glidepath Support.">
+  <meta name="theme-color" content="#0c0f15">
+  <link rel="icon" href="assets/mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .sup { max-width: 980px; margin: 0 auto; padding: 156px 24px 80px; color: rgba(225,232,248,.85); }
+    .sup h1 { font-size: clamp(38px, 5.4vw, 58px); letter-spacing: -.035em; line-height: 1.04; color: #fff; margin: 0 0 12px; }
+    .sup .lede { font-size: 18px; color: rgba(225,232,248,.7); margin: 0 0 34px; max-width: 620px; }
+    .topics { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+    .topic { display: grid; gap: 6px; text-align: left; padding: 18px; border-radius: 20px; border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.05); color: #fff; font: inherit; cursor: pointer; transition: background-color .2s ease, box-shadow .25s ease, border-color .2s ease; }
+    .topic:hover { background: rgba(255,255,255,.08); border-color: rgba(124,196,255,.4); box-shadow: 0 10px 26px -14px rgba(10,132,255,.8); }
+    .topic:active { transform: scale(.97); transition: transform .09s ease; }
+    .topic[aria-expanded="true"] { border-color: rgba(124,196,255,.7); background: rgba(10,132,255,.12); }
+    .topic .ic { font-size: 22px; line-height: 1; }
+    .topic b { font-size: 16px; } .topic span { font-size: 13.5px; color: rgba(225,232,248,.62); }
+    .answer { margin: 16px 0 0; padding: 22px 24px; border-radius: 22px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); animation: supIn .35s cubic-bezier(.2,.9,.3,1); }
+    .answer h2 { color: #fff; font-size: 22px; margin: 0 0 10px; letter-spacing: -.01em; }
+    .answer ol { margin: 0 0 14px; padding-left: 20px; line-height: 1.65; } .answer li { margin: 6px 0; }
+    .answer b { color: #fff; } .answer a { color: #7DB8FF; }
+    @keyframes supIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+    .contact { margin-top: 44px; padding: 26px; border-radius: 26px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); }
+    .contact h2 { color: #fff; font-size: 26px; margin: 0 0 6px; letter-spacing: -.02em; }
+    .contact p.sub { margin: 0 0 18px; color: rgba(225,232,248,.65); }
+    .fgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 640px) { .fgrid { grid-template-columns: 1fr; } }
+    .contact label { display: grid; gap: 6px; font-size: 13.5px; font-weight: 600; color: rgba(225,232,248,.75); }
+    .contact input, .contact select, .contact textarea { font: inherit; font-size: 16px; color: #fff; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); border-radius: 14px; padding: 12px 14px; outline: none; }
+    .contact input:focus, .contact select:focus, .contact textarea:focus { border-color: #0A84FF; box-shadow: 0 0 0 3px rgba(10,132,255,.25); }
+    .contact textarea { min-height: 150px; resize: vertical; }
+    .contact .full { grid-column: 1 / -1; }
+    .contact .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 16px; }
+    .contact .check { display: flex; gap: 10px; align-items: center; font-weight: 500; }
+    .contact .check input { width: 18px; height: 18px; }
+    .hp { position: absolute; left: -9999px; }
+    .msg { margin: 12px 0 0; font-size: 15px; } .msg.ok { color: #5EE07F; } .msg.err { color: #FF8A80; }
+    .done { padding: 22px; border-radius: 20px; background: rgba(48,209,88,.1); border: 1px solid rgba(48,209,88,.35); }
+    .done b { color: #fff; font-size: 18px; }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <nav class="nav glass" aria-label="Main">
+      <a class="brand" href="./" aria-label="Glidepath home"><img src="assets/mark.svg" alt="" width="28" height="28"><span>Glidepath</span></a>
+      <div class="links"><a href="./#what">What is Glidepath?</a><a href="./#faq">FAQ</a><a href="support.html">Support</a><a href="app/">Open the app</a></div>
+      <a class="btn primary small" href="./#download">Download</a>
+    </nav>
+  </header>
+  <main class="sup">
+    <h1>How can we help?</h1>
+    <p class="lede">Pick what's going on for the quick fix. Still stuck, or have an idea? Write to us below and a person answers by email.</p>
+
+    <div class="topics" role="list">
+      <button class="topic" data-t="connect" role="listitem" aria-expanded="false"><span class="ic" aria-hidden="true">📱</span><b>My iPad or phone won't connect</b><span>Pairing, codes and Connect anywhere</span></button>
+      <button class="topic" data-t="sim" role="listitem" aria-expanded="false"><span class="ic" aria-hidden="true">🖥️</span><b>The Bridge doesn't see the sim</b><span>MSFS 2020 and 2024</span></button>
+      <button class="topic" data-t="install" role="listitem" aria-expanded="false"><span class="ic" aria-hidden="true">⬇️</span><b>Installing or updating</b><span>Windows warnings, updates</span></button>
+      <button class="topic" data-t="notifications" role="listitem" aria-expanded="false"><span class="ic" aria-hidden="true">🔔</span><b>Notifications</b><span>Lock screen alerts and reminders</span></button>
+      <button class="topic" data-t="account" role="listitem" aria-expanded="false"><span class="ic" aria-hidden="true">👤</span><b>Account and sign-in</b><span>Passwords, email, deleting</span></button>
+      <button class="topic" data-t="bug" role="listitem" aria-expanded="false"><span class="ic" aria-hidden="true">🛠️</span><b>Something isn't working</b><span>Tell us what happened</span></button>
+      <button class="topic" data-t="idea" role="listitem" aria-expanded="false"><span class="ic" aria-hidden="true">💡</span><b>An idea for Glidepath</b><span>What should we build next?</span></button>
+    </div>
+    <div id="answer" hidden></div>
+
+    <section class="contact" id="contact" aria-labelledby="contact-title">
+      <h2 id="contact-title">Write to Glidepath Support</h2>
+      <p class="sub">You'll get a reference number straight away and our answer by email. Usually within a day or two.</p>
+      <form id="sup-form" novalidate>
+        <div class="fgrid">
+          <label>Your email<input id="s-email" type="email" autocomplete="email" required placeholder="you@example.com"></label>
+          <label>About<select id="s-topic">
+            <option value="connect">Connecting my iPad or phone</option><option value="sim">The Bridge and the simulator</option><option value="install">Installing or updating</option>
+            <option value="notifications">Notifications</option><option value="account">Account and sign-in</option><option value="bug">Something isn't working</option>
+            <option value="idea">An idea for Glidepath</option><option value="other">Something else</option></select></label>
+          <label class="full">Message<textarea id="s-msg" required placeholder="What happened, and what were you doing at the time? For ideas: what would make Glidepath better for you?"></textarea></label>
+        </div>
+        <input class="hp" id="s-web" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <label class="check"><input id="s-diag" type="checkbox" checked> Include my browser and device type (helps us fix things faster)</label>
+        <div class="row"><button class="btn primary" id="s-send" type="submit">Send to Support</button><span class="faint" style="font-size:13px">We only use your email to answer you.</span></div>
+        <p class="msg" id="s-out" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+  </main>
+  <footer class="foot">
+    <div class="foot-brand"><img src="assets/mark.svg" alt="" width="24" height="24"><b>Glidepath</b></div>
+    <p><a href="privacy.html">Privacy policy</a> · <a href="./">Home</a> · <a href="app/">Open the app</a></p>
+  </footer>
+  <script src="config.js"></script>
+  <script src="app.js" defer></script>
+  <script>
+  (function () {
+    var A = {
+      connect: ["My iPad or phone won't connect", [
+        "<b>Easiest:</b> sign in to the same free Glidepath account on the Bridge page on your PC and in the app. They connect by themselves on any network, even mobile data, every time the Bridge opens.",
+        "<b>With a code instead:</b> your iPad and PC must be on the same Wi-Fi. Type the 6-digit code from the Bridge page on your PC (it stays the same every time the Bridge starts). Once paired, the app reconnects by itself.",
+        "If Windows asked about the firewall when you installed, choose <b>Allow</b> on <b>private networks</b>. You can fix this later by reinstalling the Bridge.",
+        "Some public or work Wi-Fi blocks devices from seeing each other. Use Connect anywhere (sign in) instead.",
+      ]],
+      sim: ["The Bridge doesn't see the sim", [
+        "Start Microsoft Flight Simulator and <b>load into a flight</b> (the main menu doesn't send data). The Bridge connects by itself within a few seconds.",
+        "Keep the Bridge running while you fly. Nothing needs installing in the Community folder.",
+        "Still nothing? Run <b>Test MSFS connection</b> from the Start menu (Glidepath folder) and send us the result below.",
+      ]],
+      install: ["Installing or updating", [
+        "If Windows shows <b>“Windows protected your PC”</b>: choose <b>More info</b>, then <b>Run anyway</b>. It appears for new apps that aren't code-signed yet.",
+        "You can check the download first: its SHA-256 is listed next to the download link on the home page.",
+        "Updates: the Bridge page shows <b>Update</b> when a new version is out. Windows asks once to allow it, then the Bridge restarts by itself.",
+      ]],
+      notifications: ["Notifications", [
+        "Sign in on the device, then open <b>Settings › Lock screen notifications</b> and turn them on. Choose which ones you want: checklist reminders, top of descent, landing and your review.",
+        "<b>iPhone and iPad:</b> Apple only allows these for apps on the Home Screen. In Safari tap Share › <b>Add to Home Screen</b>, open Glidepath from there, then turn them on.",
+        "The Bridge on your PC must be signed in to the same account: it's what tells your devices when each moment happens.",
+      ]],
+      account: ["Account and sign-in", [
+        "Forgot your password? Use <b>Forgot password</b> on the sign-in screen; a reset link arrives by email.",
+        "Not getting emails? Check your spam folder, and that the address on your account is right.",
+        "To delete your account and everything stored with it: in the app, go to <b>Account › Delete account</b>.",
+      ]],
+      bug: ["Something isn't working", [
+        "Tell us what you expected, what happened instead, and what you were doing (which screen, sim and aircraft).",
+        "If it's about the Bridge, attach the newest log: Start menu › Glidepath › <b>Bridge logs</b> (or describe what it says).",
+        "Write to us below: every message is read.",
+      ]],
+      idea: ["An idea for Glidepath", [
+        "Glidepath is built around the people flying it. Tell us what would make your flights better, and why.",
+        "Write it below and choose <b>An idea for Glidepath</b>.",
+      ]],
+    };
+    var box = document.getElementById("answer"), topics = document.querySelectorAll(".topic");
+    function show(t) {
+      topics.forEach(function (b) { b.setAttribute("aria-expanded", String(b.dataset.t === t)); });
+      var a = A[t]; if (!a) return;
+      box.hidden = false;
+      box.innerHTML = '<div class="answer"><h2>' + a[0] + '</h2><ol>' + a[1].map(function (x) { return "<li>" + x + "</li>"; }).join("") + '</ol><a class="btn glass small" href="#contact" data-pick="' + t + '">Still stuck? Write to us</a></div>';
+      document.getElementById("s-topic").value = t;
+      box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+    topics.forEach(function (b) { b.addEventListener("click", function () { show(b.dataset.t); }); });
+    box.addEventListener("click", function (e) { var p = e.target.closest && e.target.closest("[data-pick]"); if (p) document.getElementById("s-topic").value = p.dataset.pick; });
+    var h = location.hash.replace("#", ""); if (A[h]) show(h); if (h === "idea") document.getElementById("s-topic").value = "idea";
+
+    // Prefill the email when signed in on this site.
+    try { var ss = JSON.parse(localStorage.getItem("gp-site-session") || "null"); var em = ss && ((ss.user && ss.user.email) || ss.email); if (em) document.getElementById("s-email").value = em; } catch (e) {}
+
+    var api = null;
+    fetch("cloud.json", { cache: "no-cache" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) { if (j && j.api) api = j.api.replace(/\/$/, ""); }).catch(function () {});
+    var form = document.getElementById("sup-form"), out = document.getElementById("s-out"), send = document.getElementById("s-send");
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var email = document.getElementById("s-email").value.trim(), msg = document.getElementById("s-msg").value.trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { out.className = "msg err"; out.textContent = "Add the email address you'd like the answer sent to."; return; }
+      if (msg.length < 10) { out.className = "msg err"; out.textContent = "Tell us a little more, so we can help."; return; }
+      var meta = { page: "website", version: (window.GLIDEPATH && window.GLIDEPATH.version) || "" };
+      if (document.getElementById("s-diag").checked) { meta.browser = navigator.userAgent.slice(0, 180); meta.screen = screen.width + "x" + screen.height; }
+      send.disabled = true; send.classList.add("busy"); send.textContent = "Sending…"; out.textContent = "";
+      var bases = [/\.pages\.dev$/.test(location.hostname) ? location.origin + "/acct" : null, api].filter(Boolean);
+      var body = JSON.stringify({ topic: document.getElementById("s-topic").value, email: email, message: msg, meta: meta, website: document.getElementById("s-web").value });
+      (function tryNext(i) {
+        if (i >= bases.length) { done(null, "Support couldn't be reached just now. Try again in a minute."); return; }
+        fetch(bases[i] + "/support", { method: "POST", headers: { "Content-Type": "application/json" }, body: body })
+          .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (r.status === 404 && i < bases.length - 1) return tryNext(i + 1); r.ok ? done(j.ref) : done(null, j.error || "That didn't send. Try again."); }); })
+          .catch(function () { tryNext(i + 1); });
+      })(0);
+    });
+    function done(ref, err) {
+      send.disabled = false; send.classList.remove("busy"); send.textContent = "Send to Support";
+      if (err) { out.className = "msg err"; out.textContent = err; form.classList.remove("shake"); void form.offsetWidth; form.classList.add("shake"); return; }
+      form.outerHTML = '<div class="done"><b>Sent. Your reference is ' + ref + '.</b><p style="margin:8px 0 0">A copy is on its way to your inbox, and we’ll answer there.</p></div>';
+    }
+  })();
+  </script>
+</body>
+</html>

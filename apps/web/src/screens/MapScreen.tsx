@@ -1,10 +1,13 @@
 import { startDemo } from "../data/demo";
 import { useMemo, useState } from "react";
 import { MapView } from "../components/MapView";
+import { TrafficSheet } from "../components/TrafficSheet";
+import { TrafficPanel } from "../components/TrafficPanel";
 import { Icon } from "../components/ui";
 import { fmt, PHASE_LABEL, useLive } from "../data/derive";
 import { getStands, NETWORK_LABEL, usePoll, type NetworkPilot, type Stand } from "../data/external";
-import { arc, nm, recordTraffic, trackKey, trackOf } from "../data/trafficTracks";
+import { arc, nm, recordTraffic, seedTrack, trackKey, trackOf } from "../data/trafficTracks";
+import { activeBridge } from "../data/bridge";
 import { loadAirportDb } from "../data/airports";
 import { getLiveNetwork, getMetarsInView, type MetarDot, type PlacedController } from "../data/networks";
 import { useEffect, useRef } from "react";
@@ -19,6 +22,8 @@ export function MapScreen() {
   const [follow, setFollow] = useState(true);
   const [sel, setSel] = useState<NetworkPilot | null>(null);
   const [layers, setLayers] = useState(false);
+  const [panel, setPanel] = useState(false);
+  const [fly, setFly] = useState<{ lon: number; lat: number; zoom: number; key: number } | null>(null);
   useEffect(() => {
     if (!layers) return;
     const k = (e: KeyboardEvent) => { if (e.key === "Escape") setLayers(false); };
@@ -30,13 +35,27 @@ export function MapScreen() {
   const vatsim = usePoll(s.showVatsim ? () => getLiveNetwork("vatsim") : null, 20_000, [bridge, s.showVatsim]);
   const ivao = usePoll(s.showIvao ? () => getLiveNetwork("ivao") : null, 30_000, [bridge, s.showIvao]);
   const si = usePoll(s.showSayIntentions ? () => getLiveNetwork("sayintentions") : null, 30_000, [bridge, s.showSayIntentions]);
-  const traffic = [...(vatsim.data?.pilots ?? []), ...(ivao.data?.pilots ?? []), ...(si.data?.pilots ?? [])].filter((p) => p.callsign !== (L.plan?.callsign ?? L.flight?.callsign));
+  const simAi = usePoll(s.showSimTraffic && bridge ? () => getLiveNetwork("sim") : null, 10_000, [bridge, s.showSimTraffic]);
+  const traffic = [...(vatsim.data?.pilots ?? []), ...(ivao.data?.pilots ?? []), ...(si.data?.pilots ?? []), ...(simAi.data?.pilots ?? [])].filter((p) => p.callsign !== (L.plan?.callsign ?? L.flight?.callsign));
   // Remember where every aircraft has been, so tapping one shows its track.
-  useEffect(() => { recordTraffic(traffic); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [vatsim.data, ivao.data, si.data]);
+  useEffect(() => { recordTraffic(traffic); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [vatsim.data, ivao.data, si.data, simAi.data]);
   const [db, setDb] = useState<Awaited<ReturnType<typeof loadAirportDb>> | null>(null);
   useEffect(() => { void loadAirportDb().then(setDb).catch(() => undefined); }, []);
   // Keep the tapped aircraft up to date as new positions arrive.
   const selLive = sel ? traffic.find((p) => trackKey(p) === trackKey(sel)) ?? sel : null;
+  // The Bridge records every aircraft's track while it runs, even with the app closed: add that in front.
+  const [trackTick, setTrackTick] = useState(0);
+  const selKey = sel ? trackKey(sel) : null;
+  useEffect(() => {
+    const b = activeBridge();
+    if (!sel || !b) return;
+    let live = true;
+    b.get<{ points: Array<[number, number, number, number]> }>(`/api/ext/track?network=${sel.network}&callsign=${encodeURIComponent(sel.callsign)}`)
+      .then((r) => { if (live && seedTrack(sel, r.points)) setTrackTick((n) => n + 1); })
+      .catch(() => undefined); // older Bridges don't record traffic
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selKey]);
   const selInfo = useMemo(() => {
     if (!selLive) return null;
     const { pts, sinceMs } = trackOf(selLive);
@@ -50,7 +69,7 @@ export function MapScreen() {
     const etaMin = toGo !== null && selLive.gsKt > 60 ? Math.round((toGo / selLive.gsKt) * 60) : null;
     const climbing = pts.length > 1 ? Math.sign(selLive.altFt - pts[Math.max(0, pts.length - 4)]![2]) : 0;
     return { track: { key: trackKey(selLive), flown, before, ahead, at: [selLive.lon, selLive.lat] as [number, number] }, dep, arr, toGo, total, etaMin, sinceMs, climbing };
-  }, [selLive, db, vatsim.data, ivao.data, si.data]);
+  }, [selLive, db, vatsim.data, ivao.data, si.data, trackTick]);
   const atc = s.showAtc ? [...(vatsim.data?.atc ?? []), ...(ivao.data?.atc ?? [])] : [];
   const centres = s.showAtc ? [...(vatsim.data?.controllers ?? []), ...(ivao.data?.controllers ?? [])] : [];
   const [atcSel, setAtcSel] = useState<PlacedController | null>(null);
@@ -63,7 +82,7 @@ export function MapScreen() {
     if (!s.showMetars || !view) { setMetars([]); return; }
     if (view.zoom < 4.5) { setMetars([]); setWxErr("Zoom in to see weather stations."); return; }
     const t = window.setTimeout(() => {
-      getMetarsInView(view.bbox).then((m) => { setMetars(m); setWxErr(null); }).catch(() => setWxErr(bridge ? "Couldn't load weather right now." : "Weather stations come through your Bridge. Connect it to see them."));
+      getMetarsInView(view.bbox).then((m) => { setMetars(m); setWxErr(null); }).catch(() => setWxErr("Couldn't load weather stations right now."));
     }, 600);
     return () => clearTimeout(t);
   }, [s.showMetars, view?.bbox.map((v) => v.toFixed(1)).join(","), bridge]);
@@ -94,8 +113,9 @@ export function MapScreen() {
 
   return (
     <div className="map-wrap">
-      <MapView trail={trail} plan={L.plan} aircraft={aircraft} airports={airports} traffic={traffic} atc={atc} centres={centres} metars={metars} radarTiles={s.showRadar ? radar.data ?? null : null} onSelectAtc={(c) => { setAtcSel(c); setSel(null); setWxSel(null); }} onSelectMetar={(w) => { setWxSel(w); setSel(null); setAtcSel(null); }} onView={(bbox, zoom) => setView({ bbox, zoom })} follow={follow} threeD={s.map3d} stands={stands} agl={f?.position.altAglFt ?? null} onGround={!!f?.position.onGround} onSelectTraffic={(p) => { setSel(p); if (p) { setAtcSel(null); setWxSel(null); } }} onUserMove={() => setFollow(false)} selTrack={selInfo?.track ?? null} />
-      <div className="map-hud glass strong pad" style={{ padding: "14px 16px" }}>
+      <MapView trail={trail} plan={L.plan} aircraft={aircraft} airports={airports} traffic={traffic} atc={atc} centres={centres} metars={metars} radarTiles={s.showRadar ? radar.data ?? null : null} onSelectAtc={(c) => { setAtcSel(c); setSel(null); setWxSel(null); }} onSelectMetar={(w) => { setWxSel(w); setSel(null); setAtcSel(null); }} onView={(bbox, zoom) => setView({ bbox, zoom })} follow={follow} threeD={s.map3d} stands={stands} agl={f?.position.altAglFt ?? null} onGround={!!f?.position.onGround} onSelectTraffic={(p) => { setSel(p); if (p) { setAtcSel(null); setWxSel(null); } }} onUserMove={() => setFollow(false)} selTrack={selInfo?.track ?? null} flyTo={fly} />
+      {/* The flight panel steps aside while a traffic, ATC or weather card is open, so the two never overlap. */}
+      <div className={`map-hud glass strong pad${selLive || atcSel || wxSel ? " behind" : ""}`} style={{ padding: "14px 16px" }}>
         {L.flight ? (
           <>
             <div className="between">
@@ -127,7 +147,13 @@ export function MapScreen() {
       <div className="map-tools">
         <button className={`btn glass${follow ? " on" : ""}`} aria-pressed={follow} aria-label="Follow my aircraft" title="Follow my aircraft" onClick={() => setFollow(!follow)}><span style={{ width: 22, height: 22 }}>{Icon.target()}</span></button>
         <button className={`btn glass map3d${s.map3d ? " on" : ""}`} aria-pressed={s.map3d} aria-label="3D chase view" title="3D chase view" onClick={() => { settingsStore.set({ map3d: !s.map3d }); if (!s.map3d) setFollow(true); }}>3D</button>
-        <button className={`btn glass${layers ? " on" : ""}`} aria-expanded={layers} aria-label="Map layers" title="Map layers" onClick={() => setLayers(!layers)}><span style={{ width: 22, height: 22 }}>{Icon.layers()}</span></button>
+        <button className={`btn glass${panel ? " on" : ""}`} aria-expanded={panel} aria-label="Search and online now" title="Search callsigns and airports, busiest airports, favourites" onClick={() => { setPanel(!panel); setLayers(false); }}><span style={{ width: 22, height: 22 }}>{Icon.search()}</span></button>
+        {panel && <div className="layers-backdrop" onClick={() => setPanel(false)} aria-hidden="true" />}
+        {panel && <TrafficPanel traffic={traffic} atcCount={atc.length} onClose={() => setPanel(false)}
+          onPick={(p) => { setSel(p); setAtcSel(null); setWxSel(null); setFollow(false); setFly({ lon: p.lon, lat: p.lat, zoom: 7, key: Date.now() }); setPanel(false); }}
+          onAirport={(a) => { setFollow(false); setFly({ lon: a.lon, lat: a.lat, zoom: 11, key: Date.now() }); setPanel(false); }} />}
+        <button className={`btn glass${s.showRadar || s.showMetars ? " on" : ""}`} aria-pressed={s.showRadar || s.showMetars} aria-label="Weather on the map" title="Weather: rain radar and airport reports" onClick={() => { const on = !(s.showRadar || s.showMetars); settingsStore.set({ showRadar: on, showMetars: on }); }}><span style={{ width: 22, height: 22 }}>{Icon.cloud()}</span></button>
+        <button className={`btn glass${layers ? " on" : ""}`} aria-expanded={layers} aria-label="Map layers" title="Map layers" onClick={() => { setLayers(!layers); setPanel(false); }}><span style={{ width: 22, height: 22 }}>{Icon.layers()}</span></button>
         {layers && <div className="layers-backdrop" onClick={() => setLayers(false)} aria-hidden="true" />}
         {layers && (
           <div className="glass strong layers-pop" role="dialog" aria-label="Map layers">
@@ -135,7 +161,7 @@ export function MapScreen() {
             <p className="lp-h">Map</p>
             <BaseMapPicker />
             <p className="lp-h" style={{ marginTop: 16 }}>Traffic</p>
-            <TrafficSources counts={{ vatsim: vatsim.data?.pilots.length, ivao: ivao.data?.pilots.length, sayintentions: si.data?.pilots.length }} errors={{ vatsim: vatsim.error, ivao: ivao.error, sayintentions: si.error }} />
+            <TrafficSources counts={{ vatsim: vatsim.data?.pilots.length, ivao: ivao.data?.pilots.length, sayintentions: si.data?.pilots.length, sim: bridge ? simAi.data?.pilots.length : undefined }} errors={{ vatsim: vatsim.error, ivao: ivao.error, sayintentions: si.error, sim: simAi.error }} />
             <p className="lp-h" style={{ marginTop: 16 }}>Overlays</p>
             <Toggle label={`Air traffic control${atc.length ? ` (${atc.length})` : ""}`} on={s.showAtc} set={(v) => settingsStore.set({ showAtc: v })} />
             <Toggle label="Rain radar" on={s.showRadar} set={(v) => settingsStore.set({ showRadar: v })} />
@@ -161,25 +187,7 @@ export function MapScreen() {
           <a className="btn small" href={`#/airports/${wxSel.icao}`}>Airport page</a>
         </div>
       )}
-      {selLive && selInfo && (
-        <div className="map-sheet glass strong pad traffic-sheet">
-          <div className="between"><span className="data" style={{ fontWeight: 800, fontSize: 20 }}>{selLive.callsign}</span><button className="btn small" aria-label="Close" onClick={() => setSel(null)}><span style={{ width: 16, height: 16 }}>{Icon.close()}</span></button></div>
-          <div className="muted" style={{ marginTop: 2 }}>{selLive.type ?? "Unknown type"} on {NETWORK_LABEL[selLive.network]}</div>
-          <div className="ts-route">
-            <div><b className="data">{selLive.dep ?? "—"}</b><small className="faint">{selInfo.dep?.city ?? selInfo.dep?.name ?? ""}</small></div>
-            <div className="ts-bar"><span style={{ width: `${selInfo.total && selInfo.toGo !== null ? Math.max(3, Math.min(100, (1 - selInfo.toGo / selInfo.total) * 100)) : 0}%` }} /><i style={{ left: `${selInfo.total && selInfo.toGo !== null ? Math.max(3, Math.min(97, (1 - selInfo.toGo / selInfo.total) * 100)) : 50}%` }} /></div>
-            <div style={{ textAlign: "right" }}><b className="data">{selLive.arr ?? "—"}</b><small className="faint">{selInfo.arr?.city ?? selInfo.arr?.name ?? ""}</small></div>
-          </div>
-          <div className="grid cols-4" style={{ gap: 8, marginTop: 12 }}>
-            <Mini k="ALT" v={`${selLive.altFt >= 18000 ? `FL${String(Math.round(selLive.altFt / 100)).padStart(3, "0")}` : fmt(selLive.altFt)}${selInfo.climbing > 0 ? " ↑" : selInfo.climbing < 0 ? " ↓" : ""}`} />
-            <Mini k="SPEED" v={`${fmt(selLive.gsKt)} kt`} />
-            <Mini k="TO GO" v={selInfo.toGo !== null ? `${fmt(selInfo.toGo)} nm` : "—"} />
-            <Mini k="ARRIVES" v={selInfo.etaMin !== null ? (selInfo.etaMin >= 60 ? `${Math.floor(selInfo.etaMin / 60)}h ${String(selInfo.etaMin % 60).padStart(2, "0")}m` : `${selInfo.etaMin} min`) : "—"} />
-          </div>
-          <div className="ts-legend faint"><span><i className="l-flown" />Flown{selInfo.sinceMs && selInfo.sinceMs > 60_000 ? ` (seen for ${Math.round(selInfo.sinceMs / 60_000)} min)` : ""}</span>{selInfo.track.before.length ? <span><i className="l-before" />From {selLive.dep}, estimated</span> : null}{selInfo.track.ahead.length ? <span><i className="l-ahead" />To {selLive.arr}</span> : null}</div>
-          <p className="faint" style={{ fontSize: 11.5, margin: "6px 0 0" }}>The networks share only where each aircraft is now, so Glidepath draws the track it has seen since you opened the map.</p>
-        </div>
-      )}
+      {selLive && selInfo && <TrafficSheet p={selLive} info={{ dep: selInfo.dep, arr: selInfo.arr, toGo: selInfo.toGo, total: selInfo.total, etaMin: selInfo.etaMin, sinceMs: selInfo.sinceMs, climbing: selInfo.climbing, hasBefore: selInfo.track.before.length > 0, hasAhead: selInfo.track.ahead.length > 0 }} me={f ? { lat: f.position.lat, lon: f.position.lon } : null} onClose={() => setSel(null)} />}
     </div>
   );
 }

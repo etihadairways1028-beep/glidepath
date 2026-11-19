@@ -8,6 +8,8 @@
 import { activeBridge } from "./bridge";
 import { loadAirportDb } from "./airports";
 import type { Network, NetworkController, NetworkPilot, NetworkSnapshot } from "./external";
+import { pilotDetails, type PilotDetails } from "@glidepath/protocol";
+import { publicGet } from "./cloud";
 
 export interface PlacedController extends NetworkController { lat: number; lon: number }
 export interface LiveNetwork extends NetworkSnapshot { atc: PlacedController[] }
@@ -19,7 +21,7 @@ const num = (v: unknown) => (typeof v === "number" ? v : typeof v === "string" &
 function parseVatsim(j: any): NetworkSnapshot {
   const pilots: NetworkPilot[] = (j?.pilots ?? []).filter((p: any) => Number.isFinite(p.latitude) && Number.isFinite(p.longitude)).map((p: any) => ({
     callsign: String(p.callsign), lat: p.latitude, lon: p.longitude, altFt: p.altitude ?? 0, gsKt: p.groundspeed ?? 0, hdg: p.heading ?? 0,
-    type: p.flight_plan?.aircraft_short || null, dep: p.flight_plan?.departure || null, arr: p.flight_plan?.arrival || null, network: "vatsim" as const,
+    type: p.flight_plan?.aircraft_short || null, dep: p.flight_plan?.departure || null, arr: p.flight_plan?.arrival || null, network: "vatsim" as const, squawk: p.transponder ? String(p.transponder) : null,
   }));
   const controllers: NetworkController[] = [...(j?.controllers ?? []), ...(j?.atis ?? [])].filter((c: any) => c.facility !== 0).map((c: any) => ({
     callsign: String(c.callsign), frequency: c.frequency && c.frequency !== "199.998" ? String(c.frequency) : null,
@@ -32,7 +34,7 @@ function parseIvao(j: any): NetworkSnapshot & { pos: Map<string, [number, number
   const pilots: NetworkPilot[] = (j?.clients?.pilots ?? []).filter((p: any) => p.lastTrack && Number.isFinite(p.lastTrack.latitude)).map((p: any) => ({
     callsign: String(p.callsign), lat: p.lastTrack.latitude, lon: p.lastTrack.longitude, altFt: p.lastTrack.altitude ?? 0, gsKt: p.lastTrack.groundSpeed ?? 0,
     hdg: p.lastTrack.heading ?? 0, type: p.flightPlan?.aircraftId || p.flightPlan?.aircraft?.icaoCode || null,
-    dep: p.flightPlan?.departureId || null, arr: p.flightPlan?.arrivalId || null, network: "ivao" as const,
+    dep: p.flightPlan?.departureId || null, arr: p.flightPlan?.arrivalId || null, network: "ivao" as const, squawk: Number.isFinite(p.lastTrack?.transponder) ? String(p.lastTrack.transponder).padStart(4, "0") : null,
   }));
   const pos = new Map<string, [number, number]>();
   const controllers: NetworkController[] = (j?.clients?.atcs ?? []).map((c: any) => {
@@ -59,7 +61,7 @@ function parseSayIntentions(j: any): NetworkSnapshot {
   return { network: "sayintentions", updatedAt: new Date().toISOString(), pilots, controllers: [] };
 }
 
-const FEED: Record<Network, string> = {
+const FEED: Record<Exclude<Network, "sim">, string> = {
   vatsim: "https://data.vatsim.net/v3/vatsim-data.json",
   ivao: "https://api.ivao.aero/v2/tracker/whazzup",
   sayintentions: "https://tracker.sayintentions.ai/api/map",
@@ -103,6 +105,12 @@ async function place(controllers: NetworkController[], known: Map<string, [numbe
 export async function getLiveNetwork(n: Network): Promise<LiveNetwork> {
   let snap: NetworkSnapshot & { pos?: Map<string, [number, number]> };
   const b = activeBridge();
+  // AI aircraft in the sim come only from the Bridge (it reads them from SimConnect).
+  if (n === "sim") {
+    if (!b) throw new Error("Sim traffic comes from your Bridge while the simulator runs.");
+    const s = await b.get<NetworkSnapshot>("/api/ext/simtraffic").catch(() => { throw new Error("Update the Bridge on your PC to see sim traffic."); });
+    return { ...s, atc: [] };
+  }
   try {
     if (!b) throw new Error("no bridge");
     snap = await b.get<NetworkSnapshot>(`/api/ext/${n}`);
@@ -110,6 +118,7 @@ export async function getLiveNetwork(n: Network): Promise<LiveNetwork> {
   } catch {
     try {
       const j = await direct(FEED[n]);
+      rawFeed.set(n, { at: Date.now(), j });
       snap = n === "vatsim" ? parseVatsim(j) : n === "ivao" ? parseIvao(j) : parseSayIntentions(j);
     } catch {
       throw new Error(b ? `Couldn't load ${n === "sayintentions" ? "SayIntentions" : n.toUpperCase()} right now.` : "Couldn't load this network from here. Connect your Bridge and it fetches it for you.");
@@ -124,6 +133,25 @@ export async function getLiveNetwork(n: Network): Promise<LiveNetwork> {
   return { network: snap.network, updatedAt: snap.updatedAt, pilots: snap.pilots, controllers: snap.controllers, atc };
 }
 
+/* ---------------- one tapped aircraft ---------------- */
+const rawFeed = new Map<Exclude<Network, "sim">, { at: number; j: any }>();
+/**
+ * Everything the network shares about one aircraft: flight plan, squawk, rating, time online.
+ * From the Bridge when connected (older Bridges don't have this), otherwise from the feed this device already loaded.
+ */
+export async function getPilotDetails(p: Pick<NetworkPilot, "network" | "callsign">): Promise<PilotDetails | null> {
+  if (p.network === "sim") return null; // AI aircraft have no flight plan to share
+  const net = p.network;
+  const b = activeBridge();
+  if (b) {
+    try { return await b.get<PilotDetails>(`/api/ext/pilot?network=${p.network}&callsign=${encodeURIComponent(p.callsign)}`); }
+    catch (e) { if (/isn't on the network/.test(String((e as Error).message))) return null; /* older Bridge: read the feed here */ }
+  }
+  let r = rawFeed.get(net);
+  if (!r || Date.now() - r.at > 60_000) { r = { at: Date.now(), j: await direct(FEED[net]) }; rawFeed.set(net, r); }
+  return pilotDetails(net, r.j, p.callsign);
+}
+
 /* ---------------- METARs on the map ---------------- */
 export interface MetarDot { icao: string; lat: number; lon: number; category: string; raw: string; wind: string; temp: string }
 export async function getMetarsInView(bbox: [number, number, number, number]): Promise<MetarDot[]> {
@@ -135,7 +163,8 @@ export async function getMetarsInView(bbox: [number, number, number, number]): P
     if (!b) throw new Error("no bridge");
     list = await b.get<any[]>(`/api/ext/metarbox?bbox=${s},${w},${n},${e}`);
   } catch {
-    list = await direct(url);
+    // Browsers can't ask aviationweather.gov directly; the Glidepath service passes it through.
+    try { list = await publicGet<any[]>(`/wx/metarbox?bbox=${s},${w},${n},${e}`); } catch { list = await direct(url); }
   }
   return (Array.isArray(list) ? list : []).filter((m) => Number.isFinite(m.lat) && Number.isFinite(m.lon)).slice(0, 600).map((m) => ({
     icao: String(m.icaoId), lat: m.lat, lon: m.lon, category: String(m.fltCat ?? m.fltcat ?? ""), raw: String(m.rawOb ?? ""),

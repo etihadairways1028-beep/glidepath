@@ -59,6 +59,7 @@ async function main(): Promise<void> {
   const recorder = new Recorder(cfg.dataDir);
   const airports = new AirportDb(airportsJson as unknown as AirportRow[], runwaysJson as unknown as Record<string, RunwayRow[]>, frequenciesJson as unknown as Record<string, FrequencyRow[]>);
   const external = new ExternalData(log);
+  external.startTrafficRecording();
   log.info(`Airport database: ${airports.size.toLocaleString("en-US")} airports (OurAirports)`);
   const session = new FlightSession(recorder, log, airports, external);
 
@@ -142,6 +143,10 @@ async function main(): Promise<void> {
   session.on("event", (e: FlightEvent) => {
     const f = session.activeFlight;
     if (!f) return;
+    // Checklist reminders at the moments they're run.
+    if (e.type === "TAXI_START") void cloud.notify("cl-taxi", f.id, "Before take-off checklist", `Taxiing out${apt(f, "dep") ? ` of ${apt(f, "dep")}` : ""}. Run the before take-off checklist.`, "/app/#/checklists");
+    if (e.type === "APPROACH_START") void cloud.notify("cl-approach", f.id, "Approach checklist", `On approach${apt(f, "arr") ? ` to ${apt(f, "arr")}` : ""}. Run the approach and landing checklists.`, "/app/#/checklists");
+    if (e.type === "ON_BLOCK") void cloud.notify("cl-parked", f.id, "Parking checklist", "At the gate. Set the parking brake, shut down and secure the aircraft.", "/app/#/checklists");
     if (e.type === "TOP_OF_DESCENT") {
       const to = apt(f, "arr");
       void cloud.notify("tod", f.id, "Top of descent", `Time to start down${to ? ` for ${to}` : ""}. Brief the arrival and set up the approach.`);
@@ -227,6 +232,12 @@ async function main(): Promise<void> {
   log.info(`Pairing code: ${spaced}`);
   try { process.title = `Glidepath Bridge - code ${spaced}`; } catch { /* ignore */ }
   writeCodeFile(spaced, cfg.port, log);
+  server.onPairCode = (c) => {
+    const sp = `${c.slice(0, 3)} ${c.slice(3)}`;
+    log.info(`New pairing code: ${sp}`);
+    try { process.title = `Glidepath Bridge - code ${sp}`; } catch { /* ignore */ }
+    writeCodeFile(sp, cfg.port, log);
+  };
   if (cfg.openBrowser) openInBrowser(`http://localhost:${cfg.port}`);
 }
 

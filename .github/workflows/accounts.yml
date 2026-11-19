@@ -88,7 +88,9 @@ jobs:
           MAILJET_SENDER_EMAIL: ${{ secrets.MAILJET_SENDER_EMAIL }}
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          SUPPORT_EMAIL: ${{ secrets.SUPPORT_EMAIL }}
         run: |
+          if [ -n "$SUPPORT_EMAIL" ]; then printf '%s' "$SUPPORT_EMAIL" | npx wrangler secret put SUPPORT_EMAIL >/dev/null && echo "Support messages go to the SUPPORT_EMAIL inbox."; else echo "Support messages go to the sending email address."; fi
           if [ -n "$GMAIL_USER" ] && [ -n "$GMAIL_APP_PASSWORD" ]; then
             printf '%s' "$GMAIL_USER" | npx wrangler secret put GMAIL_USER
             printf '%s' "$GMAIL_APP_PASSWORD" | npx wrangler secret put GMAIL_APP_PASSWORD

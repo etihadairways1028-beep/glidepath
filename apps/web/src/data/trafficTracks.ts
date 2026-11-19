@@ -53,3 +53,16 @@ export function arc(a: { lat: number; lon: number }, b: { lat: number; lon: numb
   }
   return out;
 }
+
+/** Add older points (from the Bridge, which records while the app is closed) in front of what this device has seen. */
+export function seedTrack(p: Pick<NetworkPilot, "network" | "callsign">, older: Pt[]): boolean {
+  if (!older.length) return false;
+  const k = trackKey(p);
+  let e = tracks.get(k);
+  if (!e) { e = { pts: [], seen: Date.now() }; tracks.set(k, e); }
+  const firstLocal = e.pts[0]?.[3] ?? Infinity;
+  const before = older.filter((q) => q[3] < firstLocal - 1000);
+  if (!before.length) return false;
+  e.pts = [...before, ...e.pts];
+  return true;
+}

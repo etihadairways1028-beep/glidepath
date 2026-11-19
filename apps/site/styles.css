@@ -1104,3 +1104,31 @@ html:root :is(.btn, .ai-chips a, .feat-toc a, .watch-play, .new-badge):hover:act
 @keyframes faqIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 @keyframes siteSpin { to { transform: rotate(360deg); } }
 @keyframes siteShake { 10%, 90% { translate: -1px 0; } 20%, 80% { translate: 3px 0; } 30%, 50%, 70% { translate: -6px 0; } 40%, 60% { translate: 6px 0; } }
+
+/* ===================== No wobble: hover lights a button up, it never moves ===================== */
+@media (hover: hover) and (pointer: fine) {
+  html:root :is(.btn, .ai-chips a, .feat-toc a, .toc a, .watch-play, .new-badge, .menu-btn, .seg button, .play, .free-grid > div, .uses-grid article, .n10, .tile, .bx, .nav .links a, .faq-list summary):hover:not(:active) { transform: none !important; translate: none !important; }
+  html:root .faq-list summary:hover { padding-left: 0 !important; }
+  html:root .btn:not(:disabled):hover { filter: brightness(1.1); box-shadow: 0 0 0 1px rgba(143, 200, 255, .35), 0 10px 26px -12px rgba(10, 132, 255, .8) !important; }
+  html:root .ai-chips a:hover { box-shadow: 0 0 0 1px rgba(199, 125, 255, .45), 0 10px 26px -12px rgba(191, 90, 242, .7) !important; }
+}
+html:root :is(.btn, .ai-chips a, .seg button, .play):not(:disabled):active { transition: transform .09s cubic-bezier(.3, 0, .2, 1), box-shadow .09s ease !important; }
+
+@media (prefers-reduced-motion: no-preference) { form.shake { animation: siteShake .42s cubic-bezier(.36,.07,.19,.97); } }
+
+/* ---------- Trailer ---------- */
+.trailer { max-width: 1180px; margin: 10px auto 0; padding: 0 20px; }
+.trailer-frame { position: relative; aspect-ratio: 16 / 9; border-radius: 28px; overflow: hidden; background: #000; box-shadow: 0 0 0 1px rgba(255,255,255,.1), 0 40px 90px -40px rgba(0,0,0,.8); }
+.trailer-loop { width: 100%; height: 100%; object-fit: cover; display: block; }
+.trailer-play { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; padding: 10px 22px 10px 10px; border-radius: 999px; border: 0; cursor: pointer;
+  background: rgba(11, 13, 18, .82); color: #fff; font: 700 16px/1.15 inherit; box-shadow: 0 0 0 1px rgba(255,255,255,.18), 0 18px 40px -16px rgba(0,0,0,.8); transition: box-shadow .25s ease, background-color .2s ease; }
+.trailer-play:hover { background: rgba(11, 13, 18, .92); box-shadow: 0 0 0 1px rgba(124,196,255,.55), 0 18px 40px -14px rgba(10,132,255,.7); }
+.trailer-play:active { transform: translateX(-50%) scale(.95); transition: transform .09s ease; }
+.trailer-play small { display: block; font-weight: 500; font-size: 12.5px; color: rgba(235,240,250,.65); margin-top: 2px; }
+.tp-ic { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: #0A84FF; }
+.tp-ic svg { margin-left: 3px; }
+.trailer-modal { width: min(1280px, 96vw); padding: 0; border: 0; border-radius: 20px; background: #000; overflow: hidden; }
+.trailer-modal::backdrop { background: rgba(0, 0, 0, .82); }
+.trailer-modal video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #000; }
+.tm-close { position: absolute; right: 10px; top: 10px; z-index: 2; width: 40px; height: 40px; border-radius: 50%; border: 0; background: rgba(0,0,0,.6); color: #fff; font-size: 26px; line-height: 1; cursor: pointer; }
+@media (max-width: 640px) { .trailer-frame { border-radius: 20px; } .trailer-play { bottom: 14px; padding: 8px 16px 8px 8px; font-size: 14px; } .tp-ic { width: 38px; height: 38px; } }
