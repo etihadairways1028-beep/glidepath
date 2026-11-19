@@ -12,7 +12,8 @@
   /* ---------- download + repo links ---------- */
   const repoUrl = cfg.repo ? "https://github.com/" + cfg.repo : "#";
   document.querySelectorAll("[data-repo-link]").forEach((a) => (a.href = repoUrl));
-  document.querySelectorAll("[data-issues-link]").forEach((a) => { a.href = cfg.repo ? repoUrl + "/issues/new" : "#"; a.target = "_blank"; a.rel = "noopener"; });
+  // Problems and ideas go to Glidepath's own Support Centre (a person answers by email).
+  document.querySelectorAll("[data-issues-link]").forEach((a) => { if (!/support\.html/.test(a.getAttribute("href") || "")) a.href = "support.html"; a.removeAttribute("target"); });
   const dlUrl = cfg.downloadUrl || "#download";
   document.querySelectorAll("[data-download]").forEach((a) => {
     a.href = dlUrl;
@@ -340,7 +341,7 @@
     if (last && last !== c) { last.style.removeProperty("--rx"); last.style.removeProperty("--ry"); }
     if (c) {
       const r = c.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5;
-      c.style.setProperty("--rx", (x * 6).toFixed(2) + "deg"); c.style.setProperty("--ry", (-y * 6).toFixed(2) + "deg");
+      void x; void y; // cards keep the light that follows the pointer, but no longer tilt (it read as shaking)
       c.style.setProperty("--hx", e.clientX - r.left + "px"); c.style.setProperty("--hy", e.clientY - r.top + "px");
     }
     last = c;
@@ -379,7 +380,8 @@
   if (dev && !reduced && matchMedia("(hover: hover) and (pointer: fine)").matches) {
     addEventListener("pointermove", (e) => {
       const x = e.clientX / innerWidth - .5, y = e.clientY / innerHeight - .5;
-      dev.style.transform = `perspective(1400px) rotateY(${x * 8}deg) rotateX(${-y * 6}deg) translateZ(0)`;
+      dev.style.transition = "transform .9s cubic-bezier(.2, .8, .2, 1)";
+      dev.style.transform = `perspective(1400px) rotateY(${x * 3}deg) rotateX(${-y * 2}deg) translateZ(0)`;
     }, { passive: true });
   }
   // Count up the live network numbers when they arrive.
@@ -481,4 +483,19 @@
     b.addEventListener("animationend", done);
     setTimeout(() => b.removeAttribute("data-pop"), 3000);
   }, { passive: true });
+})();
+
+// Trailer: a silent loop while it's on screen; "Watch with sound" plays it full size.
+(() => {
+  const loop = document.querySelector(".trailer-loop"), modal = document.getElementById("trailer-modal");
+  if (loop && "IntersectionObserver" in window && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { loop.preload = "auto"; loop.play().catch(() => {}); } else loop.pause(); }), { threshold: 0.25 }).observe(loop);
+  }
+  if (!modal) return;
+  const v = modal.querySelector("video");
+  const close = () => { v.pause(); modal.close(); };
+  document.querySelectorAll("[data-trailer]").forEach((b) => b.addEventListener("click", () => { modal.showModal(); v.currentTime = 0; v.play().catch(() => {}); }));
+  modal.querySelector(".tm-close").addEventListener("click", close);
+  modal.addEventListener("click", (e) => { if (e.target === modal) close(); });
+  modal.addEventListener("close", () => v.pause());
 })();
