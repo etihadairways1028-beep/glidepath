@@ -5,14 +5,14 @@
  */
 import { useEffect, useState } from "react";
 
-export const APP_VERSION = "1.0.0";
+export const APP_VERSION = "1.0.3";
 const KEY = "glidepath.seenVersion";
 
 export const WHATS_NEW: { t: string; d: string }[] = [
-  { t: "A real flight profile", d: "The live card now draws your climb, cruise and descent, lights up what you've flown, and marks T/C and T/D with their times. Your plane rides the line." },
-  { t: "UTC and local time", d: "Always in the sidebar, and on Home and Glance: Zulu time with seconds, and your local time." },
-  { t: "Made for iPad", d: "Glance fits the screen, the autopilot stays in view, and messages no longer cover titles or buttons." },
-  { t: "Copilot answers instantly", d: "Glidepath AI starts answering in about half a second, word by word, and keeps your conversation when you switch screens." },
+  { t: "A full flight plan", d: "Your SimBrief plan on the Flight screen: route, every waypoint with airway, altitude and distance, where you are along it, fuel and weights." },
+  { t: "Connects by itself", d: "Open Glidepath on the sim PC and it's connected. Paired devices stay paired and reconnect when the Bridge opens." },
+  { t: "Online now", d: "Search any callsign or airport on the live map, see the busiest airports, follow pilots with a star, and spot emergencies." },
+  { t: "Your logbook, mapped", d: "Every flight on one map, a short replay video of each, and you can delete flights." },
 ];
 
 function read(): string | null { try { return localStorage.getItem(KEY); } catch { return null; } }

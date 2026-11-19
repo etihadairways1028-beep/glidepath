@@ -1,4 +1,5 @@
 import { Procedures } from "../components/Procedures";
+import { FlightPlanCard, LoadPlanCard } from "../components/FlightPlanCard";
 import { ShareLive } from "../components/ShareLive";
 import { TouchdownDiagram } from "../components/TouchdownDiagram";
 import { useMemo, useState } from "react";
@@ -29,6 +30,7 @@ export function FlightScreen() {
       <div className="stack">
         <h1 className="title">Flight</h1>
         <section className="glass pad empty"><div className="h2">No live flight</div><p className="muted">{mode === "none" ? "Connect your Bridge in Settings, or start the demo from Home." : "Waiting for the simulator."}</p></section>
+        {mode === "bridge" && <LoadPlanCard />}
       </div>
     );
   }
@@ -48,6 +50,7 @@ export function FlightScreen() {
       </AircraftHero>
       {L.completed && <DebriefPanel flight={L.flight} />}
       <LiveCard />
+      {L.plan ? <FlightPlanCard plan={L.plan} frame={f} completed={L.completed} /> : <LoadPlanCard />}
       <Procedures />
 
       <div className="grid cols-4">

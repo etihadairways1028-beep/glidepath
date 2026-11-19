@@ -21,6 +21,23 @@ export function detectBridgeUrl(): string | null {
   return null;
 }
 
+/**
+ * The app opened on the sim PC itself (localhost:4810/app, a bookmark, a desktop shortcut)
+ * without a pairing key: the Bridge hands its key to this PC, so it connects with no code.
+ */
+export async function adoptLocalToken(): Promise<boolean> {
+  if (!(location.protocol === "http:" && location.pathname.startsWith("/app"))) return false;
+  if (settingsStore.get().token) return false;
+  try {
+    const r = await fetch("/api/local-token", { cache: "no-store" });
+    if (!r.ok) return false;
+    const j = (await r.json()) as { token?: string };
+    if (!j.token) return false;
+    settingsStore.set({ token: j.token, bridgeUrl: location.origin });
+    return true;
+  } catch { return false; }
+}
+
 /** Read `#bridge=…&token=…` pairing parameters, save them, and clean the URL. */
 export function consumePairingLink(): boolean {
   keepPairingForHomeScreen();

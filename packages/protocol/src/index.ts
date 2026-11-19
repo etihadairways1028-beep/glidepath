@@ -337,7 +337,12 @@ export type FlightStats = z.infer<typeof FlightStats>;
 /* Flight plan (from SimBrief, via the Bridge)                         */
 /* ------------------------------------------------------------------ */
 
-export const PlanFix = z.object({ ident: z.string(), lat: z.number(), lon: z.number(), altitudeFt: z.number().nullable(), /** Part of the plan's SID or STAR (SimBrief marks these). */ proc: z.enum(["sid", "star"]).nullable().optional() });
+export const PlanFix = z.object({ ident: z.string(), lat: z.number(), lon: z.number(), altitudeFt: z.number().nullable(), /** Part of the plan's SID or STAR (SimBrief marks these). */ proc: z.enum(["sid", "star"]).nullable().optional(),
+  /** Navlog details from SimBrief (optional: older Bridges don't send them). */
+  name: z.string().nullable().optional(), via: z.string().nullable().optional(), kind: z.string().nullable().optional(),
+  /** Leg distance from the previous fix, nm; planned time from take-off, seconds; planned fuel on board, kg. */
+  legNm: z.number().nullable().optional(), timeS: z.number().nullable().optional(), fuelKg: z.number().nullable().optional(),
+  trackDeg: z.number().nullable().optional(), windDirDeg: z.number().nullable().optional(), windKt: z.number().nullable().optional(), oatC: z.number().nullable().optional() });
 
 export const FlightPlan = z.object({
   source: z.literal("simbrief"),
@@ -373,6 +378,14 @@ export const FlightPlan = z.object({
   fuelBurnKg: z.number().nullable(),
   fuelLandingKg: z.number().nullable(),
   fetchedAt: z.number().int(),
+  /** OFP extras (optional: older Bridges don't send them). Weights and fuel in kg. */
+  costIndex: z.string().nullable().optional(),
+  avgWindKt: z.number().nullable().optional(),
+  paxCount: z.number().nullable().optional(),
+  payloadKg: z.number().nullable().optional(), zfwKg: z.number().nullable().optional(), towKg: z.number().nullable().optional(), ldwKg: z.number().nullable().optional(),
+  fuelTaxiKg: z.number().nullable().optional(), fuelTakeoffKg: z.number().nullable().optional(), fuelContKg: z.number().nullable().optional(),
+  fuelAltnKg: z.number().nullable().optional(), fuelReserveKg: z.number().nullable().optional(), fuelExtraKg: z.number().nullable().optional(),
+  ofpUrl: z.string().nullable().optional(),
 });
 export type FlightPlan = z.infer<typeof FlightPlan>;
 

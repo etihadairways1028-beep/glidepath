@@ -1366,3 +1366,58 @@ html:root :is(.quick-a, .more-tile, .cr-tile):hover:active { transform: scale(.9
 .tp-apt b { font-size: 15px; } .tp-apt span { font-size: 12px; color: rgba(235,240,250,.6); }
 .ts-star { font-size: 18px; line-height: 1; color: #FFD60A; } .ts-star.on { background: rgba(255,214,10,.18) !important; }
 .ts-chip.emerg { background: rgba(255,69,58,.2); color: #FF8A80; }
+
+/* ---- Everything inside its box (1.0.3) ---- */
+/* Remote: label and value on top, four step buttons in a full-width row underneath. */
+:root .rc-targets { grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr)) !important; }
+:root .rc-target { display: grid !important; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "k v" "s s"; align-items: center; gap: 10px 10px !important; padding: 12px 14px !important; min-width: 0; overflow: hidden; }
+:root .rc-target > .rc-k { grid-area: k; text-align: left; }
+:root .rc-target > .rc-v, :root .rc-target > form { grid-area: v; justify-self: end; min-width: 0; }
+:root .rc-target .rc-edit { width: 7ch; }
+:root .rc-steps { grid-area: s; display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px !important; width: 100%; }
+:root .rc-steps button { width: auto !important; height: 38px !important; border-radius: 12px !important; }
+/* Timings strip: six equal columns that shrink their text instead of spilling. */
+:root .tm-strip { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; min-width: 0; max-width: 100%; }
+:root .tm-s { min-width: 0; padding-left: 4px !important; padding-right: 4px !important; }
+:root .tm-s .v { font-size: clamp(13px, 1.9vw, 22px) !important; white-space: nowrap; }
+:root .tm-strip.big .tm-s .v { font-size: clamp(14px, 2.3vw, 26px) !important; }
+/* Clock pill: never wider than the screen. */
+:root .clock-pill { max-width: 100%; overflow: hidden; }
+@media (max-width: 420px) { :root .clock-pill .cp-loc small { display: none; } }
+/* Filter buttons wrap on small screens rather than running off the edge. */
+@media (max-width: 600px) { :root .seg { flex-wrap: wrap; overflow: visible; } :root .seg button { flex: 1 1 auto; } }
+/* Tables scroll inside their card. */
+:root .scroll-x { overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
+:root section.glass { min-width: 0; }
+
+/* Flight plan (OFP) */
+.fp-head { display: grid; grid-template-columns: auto minmax(40px, 1fr) auto; align-items: center; gap: 14px; }
+.fp-od { display: flex; align-items: baseline; gap: 8px; min-width: 0; } .fp-od b { font-size: clamp(20px, 3vw, 28px); } .fp-od.end { justify-content: flex-end; }
+.fp-proc { font: 600 12px/1 var(--data, ui-monospace, monospace); padding: 4px 7px; border-radius: 7px; background: rgba(100,181,255,.14); color: #9FD0FF; }
+.fp-line { height: 4px; border-radius: 4px; background: rgba(255,255,255,.1); overflow: hidden; } .fp-line i { display: block; height: 100%; background: #0A84FF; border-radius: 4px; transition: width .8s ease; }
+.fp-names { font-size: 12.5px; margin: 6px 0 14px; }
+.fp-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.fp-stats > div { padding: 9px 11px; border-radius: 12px; background: rgba(127,127,127,.09); min-width: 0; }
+.fp-stats span { display: block; font-size: 11.5px; color: var(--a-ink2, rgba(235,240,250,.6)); margin-bottom: 3px; } .fp-stats b { font-size: 15px; white-space: nowrap; }
+.fp-route { font-size: 13px; line-height: 1.55; padding: 10px 12px; border-radius: 12px; background: rgba(0,0,0,.22); border: 1px solid rgba(255,255,255,.07); overflow-wrap: anywhere; word-break: break-word; max-height: 120px; overflow: auto; }
+.fp-next { font-size: 14px; margin: 12px 0 4px; }
+.fp-table-wrap { margin-top: 10px; border-radius: 12px; }
+.fp-table { width: 100%; min-width: 600px; border-collapse: collapse; font-size: 13px; }
+.fp-table th { font-size: 11.5px; font-weight: 600; color: var(--a-ink2, rgba(235,240,250,.6)); text-align: left; padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,.08); white-space: nowrap; }
+.fp-table td { padding: 7px 8px; border-bottom: 1px solid rgba(255,255,255,.05); white-space: nowrap; vertical-align: top; }
+.fp-table .r { text-align: right; }
+.fp-table td small { display: block; font-size: 11px; color: var(--a-ink2, rgba(235,240,250,.55)); max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
+.fp-table tr.passed td { opacity: .42; }
+.fp-table tr.next td { background: rgba(10,132,255,.14); } .fp-table tr.next td:first-child { box-shadow: inset 3px 0 0 #0A84FF; }
+.fp-table tr.fp-apt td { background: rgba(127,127,127,.06); }
+.fp-live { color: #64B5FF; font-weight: 700; }
+.fp-more td { text-align: center; } .fp-more .link { all: unset; cursor: pointer; color: #64B5FF; font-size: 12.5px; font-weight: 600; }
+.fp-bottom { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 14px; } .fp-bottom.one { grid-template-columns: minmax(0, 1fr); max-width: 420px; }
+@media (max-width: 640px) { .fp-bottom { grid-template-columns: minmax(0, 1fr); } }
+.fp-load { display: flex; gap: 8px; flex-wrap: wrap; } .fp-load .input { flex: 1 1 220px; min-width: 0; }
+@media (max-width: 640px) {
+  .fp-table { min-width: 0; }
+  .fp-table th:nth-child(2), .fp-table td:nth-child(2), .fp-table th:nth-child(7), .fp-table td:nth-child(7), .fp-table th:nth-child(8), .fp-table td:nth-child(8) { display: none; }
+  .fp-table td, .fp-table th { padding: 7px 5px; }
+  .fp-head { gap: 8px; } .fp-proc { display: none; }
+}

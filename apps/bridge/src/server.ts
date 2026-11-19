@@ -69,6 +69,8 @@ export class LanServer {
     try { saveIdentity(this.cfg.dataDir, this.identity); } catch (e) { this.log.warn(`Couldn't save the new code: ${(e as Error).message}`); }
     this.pairFails = 0;
     this.onPairCode?.(this.identity.pairCode);
+    // Post the new code's address straight away, so the website can find this PC with it.
+    if (this.secureUrl) { try { const u = new URL(this.secureUrl); void announce(this.identity.pairCode, u.hostname, Number(u.port), this.log); } catch { /* no secure link */ } }
     return this.identity.pairCode;
   }
   private flushTimer: NodeJS.Timeout | null = null;
@@ -381,11 +383,18 @@ export class LanServer {
       if (!local) return html(res, pairPage());
       return html(res, statusPage({ update: this.updater?.status() ?? null, cloud: this.cloud?.status() ?? null, local, pairCode: this.pairCode, status: this.getStatus(), token: local ? this.identity.pairingToken : null, addresses: lanAddresses(), port: this.cfg.port, logs: local ? this.log.recent().slice(-60) : [] }));
     }
+    // The app opened on this PC (typed address, bookmark, desktop shortcut) pairs itself: no code needed.
+    if (p === "/api/local-token") {
+      const host = String(req.headers.host ?? "");
+      if (!atThisPc || !/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(host)) return json(res, 403, { error: "Only on this PC" });
+      return json(res, 200, { token: this.identity.pairingToken });
+    }
     if (p === "/api/pair" && req.method === "POST") {
       if (Date.now() < this.pairLockedUntil) return json(res, 429, { error: "Too many wrong codes. Pairing is paused for a few minutes; the code on your PC has changed." });
       const body = (await readBody(req, 500)) as { code?: unknown };
       const code = String(body?.code ?? "").replace(/\D/g, "");
       if (code.length === 6 && code === this.pairCode) {
+        this.pairFails = 0;
         this.log.info(`Paired a device by code (${req.socket.remoteAddress ?? "?"})`);
         return json(res, 200, { token: this.identity.pairingToken });
       }

@@ -112,6 +112,9 @@ export function parseSimbrief(j: any, now = Date.now()): FlightPlan {
   const star = starIdx >= 0 ? str(fixesRaw[starIdx].via_airway) : null;
   const fixes = fixesRaw
     .map((f: any, i: number) => ({ ident: String(f.ident ?? ""), lat: num(f.pos_lat), lon: num(f.pos_long), altitudeFt: num(f.altitude_feet),
+      name: str(f.name), via: str(f.via_airway), kind: str(f.type),
+      legNm: num(f.distance), timeS: num(f.time_total), fuelKg: toKg(f.fuel_plan_onboard),
+      trackDeg: num(f.track_mag ?? f.track_true), windDirDeg: num(f.wind_dir), windKt: num(f.wind_spd), oatC: num(f.oat),
       proc: sid && i < firstPlain && flagged(f) ? "sid" as const : star && i > lastPlain && flagged(f) ? "star" as const : null }))
     .filter((f: any) => f.lat !== null && f.lon !== null) as FlightPlan["fixes"];
   const origin = apt(j?.origin);
@@ -139,6 +142,13 @@ export function parseSimbrief(j: any, now = Date.now()): FlightPlan {
     fuelUnits: units,
     fuelRampKg: toKg(j?.fuel?.plan_ramp), fuelBurnKg: toKg(j?.fuel?.enroute_burn), fuelLandingKg: toKg(j?.fuel?.plan_landing),
     fetchedAt: now,
+    costIndex: str(j?.general?.costindex ?? j?.general?.cruise_profile),
+    avgWindKt: num(j?.general?.avg_wind_comp),
+    paxCount: num(j?.weights?.pax_count),
+    payloadKg: toKg(j?.weights?.payload), zfwKg: toKg(j?.weights?.est_zfw), towKg: toKg(j?.weights?.est_tow), ldwKg: toKg(j?.weights?.est_ldw),
+    fuelTaxiKg: toKg(j?.fuel?.taxi), fuelTakeoffKg: toKg(j?.fuel?.plan_takeoff), fuelContKg: toKg(j?.fuel?.contingency),
+    fuelAltnKg: toKg(j?.fuel?.alternate_burn), fuelReserveKg: toKg(j?.fuel?.reserve), fuelExtraKg: toKg(j?.fuel?.extra),
+    ofpUrl: j?.files?.directory && j?.files?.pdf?.link ? `${String(j.files.directory)}${String(j.files.pdf.link)}` : null,
   };
 }
 

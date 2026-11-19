@@ -134,14 +134,37 @@ function demoPlan(frames: TelemetryFrame[], db: Awaited<ReturnType<typeof loadAi
   const d = db.get("EGCC")!;
   const start = frames[0]!.t / 1000;
   const airborne = frames.filter((f) => !f.position.onGround);
-  const fixes = airborne.filter((_, i) => i % 40 === 0).map((f, i) => ({ ident: `WP${i + 1}`, lat: f.position.lat, lon: f.position.lon, altitudeFt: Math.round((f.position.altMslFt ?? 0) / 100) * 100 }));
+  const off = airborne[0] ?? frames[0]!;
+  // The fixes the demo aircraft actually flies (with its climb and descent points), each read from the flight itself.
+  const near = (lat: number, lon: number) => airborne.reduce((b, f) => (distanceNm(f.position, { lat, lon }) < distanceNm(b.position, { lat, lon }) ? f : b), airborne[0]!);
+  const cruise = Math.max(...airborne.map((f) => f.position.altMslFt ?? 0));
+  const toc = airborne.find((f) => (f.position.altMslFt ?? 0) >= cruise - 150) ?? airborne[0]!;
+  const tod = [...airborne].reverse().find((f) => (f.position.altMslFt ?? 0) >= cruise - 150) ?? airborne[0]!;
+  const named = [
+    { ident: "BPK", name: "Brookmans Park", via: "BPK7G", proc: "sid" as const, f: near(51.7497, -0.1067) },
+    { ident: "TOC", name: "Top of climb", via: "DCT", proc: null, f: toc },
+    { ident: "DTY", name: "Daventry", via: "DCT", proc: null, f: near(52.1806, -1.1144) },
+    { ident: "TOD", name: "Top of descent", via: "DCT", proc: null, f: tod },
+    { ident: "TNT", name: "Trent", via: "DCT", proc: null, f: near(53.0538, -1.67) },
+  ].sort((a, b) => a.f.t - b.f.t);
+  let prev = { lat: o.lat, lon: o.lon };
+  const fixes = named.map((n) => {
+    const lat = n.ident.startsWith("TO") ? n.f.position.lat : ({ BPK: 51.7497, DTY: 52.1806, TNT: 53.0538 } as Record<string, number>)[n.ident]!;
+    const lon = n.ident.startsWith("TO") ? n.f.position.lon : ({ BPK: -0.1067, DTY: -1.1144, TNT: -1.67 } as Record<string, number>)[n.ident]!;
+    const legNm = Math.round(distanceNm(prev, { lat, lon }) * 10) / 10; prev = { lat, lon };
+    return { ident: n.ident, name: n.name, via: n.via, kind: n.ident.startsWith("TO") ? "ltlg" : "vor", proc: n.proc, lat, lon,
+      altitudeFt: Math.round((n.f.position.altMslFt ?? 0) / 100) * 100, legNm, timeS: Math.round((n.f.t - off.t) / 1000),
+      fuelKg: n.f.fuel.totalKg === null ? null : Math.round(n.f.fuel.totalKg / 10) * 10, trackDeg: null, windDirDeg: n.f.environment.windDirDeg === null ? null : Math.round(n.f.environment.windDirDeg), windKt: n.f.environment.windKt === null ? null : Math.round(n.f.environment.windKt), oatC: null };
+  });
   return {
     source: "simbrief" as const, ofpId: null, callsign: "GPD1", flightNumber: "1", airline: null, aircraftIcao: "A20N", registration: "G-DEMO",
     origin: { icao: o.code, name: o.name, runway: "27R", lat: o.lat, lon: o.lon, elevationFt: o.elevationFt },
     destination: { icao: d.code, name: d.name, runway: "23R", lat: d.lat, lon: d.lon, elevationFt: d.elevationFt },
-    alternate: "EGNM", route: "Demo route (synthetic)", fixes, cruiseAltitudeFt: 24000, distanceNm: 154,
+    alternate: "EGNM", route: "BPK7G BPK DCT DTY DCT TNT DCT (demo route)", sid: "BPK7G", star: null, fixes, cruiseAltitudeFt: 24000, distanceNm: 154,
     scheduledOut: Math.round(start + 60), scheduledOff: Math.round(start + 420), scheduledOn: Math.round(start + 2160), scheduledIn: Math.round(start + 2400),
     blockTimeS: 2340, airTimeS: 1740, originUtcOffsetH: 0, destinationUtcOffsetH: 0, fuelUnits: "kg" as const, fuelRampKg: 6200, fuelBurnKg: 950, fuelLandingKg: 5250, fetchedAt: Date.now(),
+    costIndex: "30", avgWindKt: -8, paxCount: 162, payloadKg: 15400, zfwKg: 60200, towKg: 66200, ldwKg: 65250,
+    fuelTaxiKg: 200, fuelTakeoffKg: 6000, fuelContKg: 100, fuelAltnKg: 900, fuelReserveKg: 1100, fuelExtraKg: 0, ofpUrl: null,
   };
 }
 

@@ -7,7 +7,7 @@ import { ToolsScreen } from "./screens/Tools";
 import { ChecklistsScreen } from "./screens/Checklists";
 import { useEffect, useState, type ReactNode } from "react";
 import { Icon, Mark } from "./components/ui";
-import { activeBridge, BridgeClient, consumePairingLink, detectBridgeUrl, setActiveBridge } from "./data/bridge";
+import { activeBridge, BridgeClient, adoptLocalToken, consumePairingLink, detectBridgeUrl, setActiveBridge } from "./data/bridge";
 import { findBridgeOnNetwork, initCloud, saveBridge, syncFlights, useCloud } from "./data/cloud";
 import type { FlightSummary } from "@glidepath/protocol";
 import { activeDemo, startDemo } from "./data/demo";
@@ -115,6 +115,7 @@ export function App() {
   useEffect(() => {
     consumePairingLink();
     connectFromSettings();
+    void adoptLocalToken().then((ok) => { if (ok) connectFromSettings(); });
     if (!settingsStore.get().token && new URLSearchParams(location.search).get("demo") === "1") startDemo();
     void initCloud().then(() => { initAutoConnect(); initSync(); });
   }, []);
