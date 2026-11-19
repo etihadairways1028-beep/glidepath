@@ -28,4 +28,9 @@ jobs:
           curl -fsS "$S/app/version.json" && echo
           curl -fsS "$S/app/sw.js" | grep -o "glidepath-v[0-9]*" | head -1
           curl -fsS -o /dev/null -w "Accounts via site: HTTP %{http_code}\n" "$S/acct/health"
+          echo "bridge.json: $(curl -fsS "$S/bridge.json?n=$RANDOM")"
+          echo "config.js: $(curl -fsS "$S/config.js?n=$RANDOM" | grep -E 'version|sha256' | tr -d ' ')"
+          curl -fsS https://local-ip.sh/server.pem -o /tmp/c.pem && openssl x509 -in /tmp/c.pem -noout -subject -enddate || echo "::warning::local-ip.sh certificate download failed"
+          curl -fsS -o /dev/null -w "ntfy: HTTP %{http_code}\n" "https://ntfy.sh/glidepath-test/json?poll=1" || echo "::warning::ntfy unreachable"
+          getent hosts 192-168-1-20.local-ip.sh || echo "::warning::local-ip.sh DNS failed"
           [ -z "$FAIL" ]
