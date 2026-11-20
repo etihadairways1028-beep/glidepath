@@ -8,6 +8,7 @@
  *   The website can't reach a plain-http PC, so this secure address is the way in.
  */
 import { settingsStore } from "./store";
+import { cloudBases } from "./cloud";
 
 const onBridge = () => location.protocol === "http:" && location.pathname.startsWith("/app");
 
@@ -58,14 +59,17 @@ export async function pairWithCode(rawCode: string, address?: string): Promise<v
     if (!base) throw new Error("That address doesn't look right. It's four numbers like 192.168.1.20, shown in the Bridge window.");
   } else {
     base = await findPc(code);
+    if (!base && await pairViaRelay(code)) return;
     if (!base) throw new Error("Couldn't find your PC from that code. Check the Bridge is open on your PC and the code matches, or type your PC's address below.");
   }
   let r: Response;
   try {
     r = await fetch(`${base}/api/pair`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }), signal: AbortSignal.timeout(6000) });
   } catch {
-    // Many routers block the secure local name (DNS rebinding protection) even on
-    // the same Wi-Fi. The PC's own plain address still works: go there and pair.
+    // Many routers (and iCloud Private Relay) block the secure local name even on the same Wi-Fi.
+    // Pair through the Glidepath relay instead, and stay on this page.
+    if (await pairViaRelay(code)) return;
+    // Older Bridges: the PC's own plain address still works. Go there and pair.
     const ip = plainAddress(base);
     if (ip) {
       location.href = `http://${ip}:4810/?code=${code}`;
@@ -75,5 +79,46 @@ export async function pairWithCode(rawCode: string, address?: string): Promise<v
   }
   const j = await r.json().catch(() => ({})) as { token?: string; error?: string };
   if (!r.ok || !j.token) throw new Error(j.error ?? "Your PC didn't accept the code. Check it and try again.");
-  settingsStore.set({ bridgeUrl: base, token: j.token });
+  settingsStore.set({ bridgeUrl: base, token: j.token, pcRelay: null });
+}
+
+/**
+ * Pair through the Glidepath relay: find the PC by its code, then send the code to it there.
+ * The PC checks the code itself (wrong codes count towards its lockout). Returns false if this
+ * PC's Bridge doesn't have the relay (older versions) or the service can't be reached.
+ */
+export async function pairViaRelay(code: string): Promise<boolean> {
+  const urls = cloudBases();
+  if (!urls.length) return false;
+  let bid: string | null = null, lastErr: string | null = null;
+  for (const u of urls) {
+    try {
+      const r = await fetch(`${u}/pc/find?code=${code}`, { signal: AbortSignal.timeout(8000) });
+      const j = await r.json().catch(() => ({})) as { bid?: string; error?: string };
+      if (r.ok && j.bid) { bid = j.bid; break; }
+      if (r.status === 429 || r.status === 404) { lastErr = j.error ?? null; break; }
+    } catch { /* try the next address */ }
+  }
+  if (!bid) { if (lastErr && /Too many/.test(lastErr)) throw new Error(lastErr); return false; }
+  const token = await new Promise<string>((resolve, reject) => {
+    const ws = new WebSocket(`${urls[0]!.replace(/^http/, "ws")}/relay/pcapp?bid=${encodeURIComponent(bid!)}`);
+    const done = (e: Error | null, t?: string) => { clearTimeout(timer); try { ws.close(); } catch { /* closed */ } if (e) reject(e); else resolve(t!); };
+    const timer = window.setTimeout(() => done(new Error("Your PC didn't answer. Check Glidepath is open on the PC and try again.")), 15000);
+    let sent = false;
+    ws.onmessage = (ev) => {
+      let m: { $?: string; online?: boolean; id?: string; status?: number; text?: string };
+      try { m = JSON.parse(String(ev.data)); } catch { return; }
+      if (m.$ === "bridge" && m.online && !sent) { sent = true; ws.send(JSON.stringify({ $: "req", id: "pair", method: "POST", path: "/api/pair", body: { code } })); }
+      else if (m.$ === "bridge" && !m.online) done(new Error("Your PC isn't online right now. Open Glidepath on the PC and try again."));
+      else if (m.$ === "res" && m.id === "pair") {
+        let j: { token?: string; error?: string } = {};
+        try { j = JSON.parse(m.text ?? "{}"); } catch { /* not json */ }
+        if (m.status === 200 && j.token) done(null, j.token);
+        else done(new Error(j.error ?? "Your PC didn't accept the code. Check it and try again."));
+      }
+    };
+    ws.onerror = () => done(new Error("Couldn't reach Glidepath. Check your internet connection."));
+  });
+  settingsStore.set({ token, pcRelay: bid, bridgeUrl: "" });
+  return true;
 }

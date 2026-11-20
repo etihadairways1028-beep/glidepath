@@ -130,3 +130,16 @@ CREATE TABLE IF NOT EXISTS support_tickets (
   ip_hash TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS support_ip ON support_tickets(ip_hash, created_at);
+
+-- Pairing by code without an account: each Bridge keeps a link open and posts a fingerprint (sha256) of its
+-- current 6-digit code, so a device that types the code can reach it through the relay. The code itself is
+-- checked by the Bridge (with its own lockout); the service never sees it.
+CREATE TABLE IF NOT EXISTS pc_links (
+  bridge_id TEXT PRIMARY KEY,
+  key_hash TEXT NOT NULL,
+  code_hash TEXT,
+  updated INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS pc_links_code ON pc_links (code_hash);
+CREATE TABLE IF NOT EXISTS pc_find_log (ip_hash TEXT NOT NULL, at INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS pc_find_log_ip ON pc_find_log (ip_hash, at);

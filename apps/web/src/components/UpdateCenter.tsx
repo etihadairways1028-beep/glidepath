@@ -154,12 +154,27 @@ export function UpdateCenter() {
 
   const updateBridge = async () => {
     const b = activeBridge();
-    if (!b || !bu?.latest) return;
-    goingTo.current = bu.latest;
-    setFlight({ title: "Updating Glidepath Bridge", from: bu.current, to: bu.latest, target: 0.03, step: 0, label: "Starting", pct: "", msg: "", done: false, failed: false });
+    const cur = bu ?? await b?.get<BridgeUpdate>("/api/update").catch(() => null) ?? null;
+    if (!b || !cur?.latest) return;
+    if (!bu) setBu(cur);
+    const bu2 = cur;
+    goingTo.current = bu2.latest;
+    setFlight({ title: "Updating Glidepath Bridge", from: bu2.current, to: bu2.latest!, target: 0.03, step: 0, label: "Starting", pct: "", msg: "", done: false, failed: false });
     try { await b.post("/api/update/install", {}); }
     catch (e) { setFlight((f) => f && { ...f, label: "Update stopped", msg: (e as Error).message, failed: true }); }
   };
+
+  // The Updates page (and the app's own new-version check) start these.
+  const fns = useRef({ updateApp, updateBridge, bu });
+  fns.current = { updateApp, updateBridge, bu };
+  useEffect(() => {
+    (window as unknown as { __gpUpdHandled?: boolean }).__gpUpdHandled = true;
+    const a = () => void fns.current.updateApp();
+    const b = () => void fns.current.updateBridge();
+    window.addEventListener("gp-update-app", a); window.addEventListener("gp-update-bridge", b);
+    return () => { window.removeEventListener("gp-update-app", a); window.removeEventListener("gp-update-bridge", b); (window as unknown as { __gpUpdHandled?: boolean }).__gpUpdHandled = false; };
+  }, []);
+  useEffect(() => { window.dispatchEvent(new CustomEvent("gp-bridge-update", { detail: bu })); }, [bu]);
 
   const bridgeReady = !!bu && bu.state === "available" && !!bu.latest && later !== `bridge-${bu.latest}` && mode === "bridge";
   return (

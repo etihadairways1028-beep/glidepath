@@ -187,6 +187,7 @@ export function SettingsScreen() {
             <Kv k="Version" v={`Glidepath ${APP_VERSION}`} />
             <div className="row" style={{ gap: 8, flexWrap: "wrap", margin: "6px 0 10px" }}>
               <button className="btn" onClick={showWhatsNew}>What's new</button>
+              <a className="btn" href="#/updates">Updates</a>
               <a className="btn" href="#/support">Support</a>
               <a className="btn" href="https://glidepath-ad9.pages.dev/privacy.html" target="_blank" rel="noopener">Privacy</a>
             </div>

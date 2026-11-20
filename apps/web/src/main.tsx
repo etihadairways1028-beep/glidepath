@@ -47,6 +47,8 @@ function keepCurrent(): void {
         location.reload();
       };
       if (document.visibilityState === "hidden") return void go();
+      // The app's update flight (it reloads at the end); a plain notice if the app isn't up.
+      if ((window as unknown as { __gpUpdHandled?: boolean }).__gpUpdHandled) { window.dispatchEvent(new Event("gp-update-app")); return; }
       if (shown) return;
       shown = true;
       const n = document.createElement("div");

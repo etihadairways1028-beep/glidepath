@@ -84,7 +84,7 @@ export function AirportBoard({ code, lat, lon }: { code: string; lat: number; lo
           <span className="faint" style={{ fontSize: 12.5 }}>{live.data ? `${NETWORK_LABEL[net]} · updated ${new Date(live.data.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : live.error ?? "Loading…"}</span>
         </div>
         <div className="seg" role="group" aria-label="Network">
-          {(["vatsim", "ivao", ...(bridge ? ["sim"] : [])] as Network[]).map((n) => <button key={n} className={net === n ? "on" : ""} onClick={() => setNet(n)}>{n === "sim" ? "Sim AI" : NETWORK_LABEL[n]}</button>)}
+          {(["vatsim", "ivao"] as Network[]).map((n) => <button key={n} className={net === n ? "on" : ""} onClick={() => setNet(n)}>{n === "sim" ? "Sim AI" : NETWORK_LABEL[n]}</button>)}
         </div>
       </div>
       {atc.length > 0 ? (

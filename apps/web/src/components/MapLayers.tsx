@@ -36,7 +36,8 @@ export function TrafficSources({ counts, errors }: { counts?: Partial<Record<Net
   const s = useSettings();
   return (
     <div className="sources-list">
-      {(Object.keys(KEYS) as Network[]).map((n) => {
+      {/* Sim AI traffic is off in the Bridge for now (asking MSFS for it may destabilise the sim), so no switch for it. */}
+      {(Object.keys(KEYS) as Network[]).filter((n) => n !== "sim").map((n) => {
         const on = !!s[KEYS[n]];
         const c = counts?.[n];
         const err = errors?.[n];

@@ -46,7 +46,8 @@ export function MapScreen() {
   const vatsim = usePoll(s.showVatsim ? () => getLiveNetwork("vatsim") : null, 20_000, [bridge, s.showVatsim]);
   const ivao = usePoll(s.showIvao ? () => getLiveNetwork("ivao") : null, 30_000, [bridge, s.showIvao]);
   const si = usePoll(s.showSayIntentions ? () => getLiveNetwork("sayintentions") : null, 30_000, [bridge, s.showSayIntentions]);
-  const simAi = usePoll(s.showSimTraffic && bridge ? () => getLiveNetwork("sim") : null, 10_000, [bridge, s.showSimTraffic]);
+  // Off with the Bridge's sim-safety setting: nothing to ask for.
+  const simAi = usePoll(null as null | (() => ReturnType<typeof getLiveNetwork>), 10_000, [bridge, s.showSimTraffic]);
   const traffic = [...(vatsim.data?.pilots ?? []), ...(ivao.data?.pilots ?? []), ...(si.data?.pilots ?? []), ...(simAi.data?.pilots ?? [])].filter((p) => p.callsign !== (L.plan?.callsign ?? L.flight?.callsign));
   // Remember where every aircraft has been, so tapping one shows its track.
   useEffect(() => { recordTraffic(traffic); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [vatsim.data, ivao.data, si.data, simAi.data]);

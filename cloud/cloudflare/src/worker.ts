@@ -354,6 +354,42 @@ async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Re
     return json(200, { token: await newSession(env, r.user_id), user: publicUser(u!) });
   }
 
+  // Pairing by code, no account: the Bridge's always-on link, keyed by its own id and secret.
+  if (p === "/relay/pc") {
+    const bid = url.searchParams.get("bid") ?? "", key = url.searchParams.get("key") ?? "", code = (url.searchParams.get("code") ?? "").toLowerCase();
+    if (!/^[A-Za-z0-9_-]{6,64}$/.test(bid) || key.length < 24 || key.length > 200 || !/^[a-f0-9]{64}$/.test(code)) return fail(400, "Bad link.");
+    const kh = await sha256(key);
+    const row = await env.DB.prepare("SELECT key_hash FROM pc_links WHERE bridge_id = ?").bind(bid).first<{ key_hash: string }>();
+    if (row && row.key_hash !== kh) return fail(401, "This PC's link key doesn't match.");
+    // Another PC online with the same code right now: ask this one to pick a new code.
+    const clash = await env.DB.prepare("SELECT bridge_id FROM pc_links WHERE code_hash = ? AND bridge_id != ? AND updated > ? LIMIT 1").bind(code, bid, Date.now() - 6 * 3600_000).first();
+    if (clash) return fail(409, "That code is in use by another PC.");
+    await env.DB.prepare("INSERT INTO pc_links (bridge_id, key_hash, code_hash, updated) VALUES (?, ?, ?, ?) ON CONFLICT(bridge_id) DO UPDATE SET code_hash = excluded.code_hash, updated = excluded.updated").bind(bid, kh, code, Date.now()).run();
+    return env.RELAY.get(env.RELAY.idFromName(`pc:${bid}`)).fetch(withRole(req, "bridge", null));
+  }
+  // Typing the code: find which PC has it (rate-limited), then join that PC's relay.
+  if (p === "/pc/find" && req.method === "GET") {
+    const code = url.searchParams.get("code") ?? "";
+    if (!/^\d{6}$/.test(code)) return fail(400, "Type the 6-digit code shown on your PC.");
+    const ip = await sha256(`${req.headers.get("cf-connecting-ip") ?? "?"}:${env.PEPPER}`);
+    const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM pc_find_log WHERE ip_hash = ? AND at > ?").bind(ip, Date.now() - 600_000).first<{ n: number }>();
+    if ((n?.n ?? 0) >= 12) return fail(429, "Too many tries. Wait 10 minutes and try again.");
+    await env.DB.batch([
+      env.DB.prepare("INSERT INTO pc_find_log (ip_hash, at) VALUES (?, ?)").bind(ip, Date.now()),
+      env.DB.prepare("DELETE FROM pc_find_log WHERE at < ?").bind(Date.now() - 86_400_000),
+    ]);
+    const row = await env.DB.prepare("SELECT bridge_id FROM pc_links WHERE code_hash = ? AND updated > ? ORDER BY updated DESC LIMIT 1").bind(await sha256(code), Date.now() - 30 * 86_400_000).first<{ bridge_id: string }>();
+    if (!row) return fail(404, "No PC with that code is online. Check the code in Glidepath on your PC, and that the Bridge is running.");
+    const online = await env.RELAY.get(env.RELAY.idFromName(`pc:${row.bridge_id}`)).fetch(new Request("https://relay/status", { headers: { "x-gp-role": "status" } })).then((r) => r.json<{ online: boolean }>()).catch(() => ({ online: false }));
+    if (!online.online) return fail(404, "Your PC isn't online right now. Open Glidepath on the PC and try again.");
+    return json(200, { bid: row.bridge_id });
+  }
+  if (p === "/relay/pcapp") {
+    const bid = url.searchParams.get("bid") ?? "";
+    if (!/^[A-Za-z0-9_-]{6,64}$/.test(bid)) return fail(400, "Bad link.");
+    // Joining needs nothing else: the Bridge itself refuses everything until the device shows its pairing key.
+    return env.RELAY.get(env.RELAY.idFromName(`pc:${bid}`)).fetch(withRole(req, "app"));
+  }
   // Connect anywhere: the Bridge and signed-in devices meet in the account's relay.
   if (p === "/relay/bridge") {
     const key = url.searchParams.get("key") ?? "";

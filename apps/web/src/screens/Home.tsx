@@ -155,7 +155,7 @@ function PairWithCode() {
   };
   return (
     <form className="pair-form" onSubmit={go}>
-      <p className="muted" style={{ margin: "10px 0 12px" }}>Type the 6-digit code from your PC: it is in the black Bridge window, at the top of localhost:4810, and in Glidepath code.txt on your Desktop.</p>
+      <p className="muted" style={{ margin: "10px 0 12px" }}>Type the 6-digit code from your PC. It's in Glidepath on the PC (Settings), and in Glidepath code.txt on its Desktop.</p>
       <div className="row wrap">
         <input className="pair-code" inputMode="numeric" autoComplete="one-time-code" maxLength={7} placeholder="000 000" aria-label="Code from your PC" value={code} onChange={(e) => setCode(e.target.value.replace(/[^\d ]/g, ""))} />
         <button className="btn primary" disabled={busy || code.replace(/\D/g, "").length !== 6}>{busy ? "Connecting…" : "Connect"}</button>

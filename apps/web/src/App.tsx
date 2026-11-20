@@ -1,4 +1,5 @@
 import { Support } from "./screens/Support";
+import { UpdatesScreen } from "./screens/Updates";
 import { Fragment } from "react";
 import { useWallpaper } from "./components/Wallpaper";
 import { ChartsScreen } from "./screens/Charts";
@@ -19,6 +20,7 @@ import { SideClock } from "./components/Clock";
 import { initSync } from "./data/sync";
 import { settingsStore, store, useApp, useSettings } from "./data/store";
 import { startPlanSync } from "./data/plan";
+import { cloudBases } from "./data/cloud";
 import { CockpitScreen } from "./screens/Cockpit";
 import { WeatherScreen } from "./screens/Weather";
 import { GlideslopeBanners, useFlightMessages, useApproachCoach } from "./components/Glideslope";
@@ -58,7 +60,7 @@ if (typeof window !== "undefined") {
     requestAnimationFrame(() => { const m = document.getElementById("main"); if (m) m.scrollTop = back ? scrollMemory.get(to) ?? 0 : 0; if (!back) window.scrollTo(0, 0); });
   });
 }
-const TITLES: Record<string, string> = { home: "", map: "Live map", flight: "Flight", remote: "Remote", logbook: "Logbook", review: "Flight review", copilot: "Copilot", charts: "Charts", checklists: "Checklists", tools: "Pilot tools", cockpit: "Cockpit tools", weather: "Weather", airports: "Airports", glance: "Glance", career: "Career", challenge: "Landing challenge", account: "Account", settings: "Settings" };
+const TITLES: Record<string, string> = { home: "", map: "Live map", flight: "Flight", remote: "Remote", logbook: "Logbook", review: "Flight review", copilot: "Copilot", charts: "Charts", checklists: "Checklists", tools: "Pilot tools", cockpit: "Cockpit tools", weather: "Weather", airports: "Airports", glance: "Glance", career: "Career", challenge: "Landing challenge", account: "Account", settings: "Settings", updates: "Updates", support: "Support" };
 
 /* ---------- hash router (works on GitHub Pages and on the Bridge) ---------- */
 export function useRoute(): string[] {
@@ -76,7 +78,14 @@ export const go = (path: string) => { location.hash = `#/${path}`; };
 /* ---------- connection start-up ---------- */
 export function connectFromSettings(): void {
   const url = detectBridgeUrl();
-  const { token } = settingsStore.get();
+  const { token, pcRelay } = settingsStore.get();
+  // Paired by code through the relay (the direct link was blocked on that network).
+  if (pcRelay && token && location.protocol === "https:") {
+    const go = () => setActiveBridge(new BridgeClient(location.origin, token, { urls: cloudBases(), token: "", pc: { bid: pcRelay, key: token } }));
+    // The service address loads a moment after the app opens.
+    if (cloudBases().length) go(); else { let n = 0; const t = window.setInterval(() => { if (cloudBases().length || ++n > 40) { clearInterval(t); if (cloudBases().length) go(); } }, 150); }
+    return;
+  }
   if (url && token) setActiveBridge(new BridgeClient(url, token));
 }
 
@@ -210,6 +219,7 @@ export function App() {
     case "settings": body = <SettingsScreen />; break;
     case "account": body = <Account />; break;
     case "support": body = <Support />; break;
+    case "updates": body = <UpdatesScreen />; break;
     case "forgot": body = <ForgotPassword />; break;
     case "career": body = <CareerScreen />; break;
     case "challenge": body = <ChallengeScreen />; break;
@@ -258,7 +268,7 @@ export function App() {
           {NAV.filter((n) => n.mobile).map((n) => (
             <a key={n.id} className={`tab${screen === n.id ? " on" : ""}`} href={`#/${n.id}`}>{n.icon()}{n.label === "Live map" ? "Map" : n.label}</a>
           ))}
-          <a className={`tab${["airports", "settings", "glance", "account", "support", "forgot", "reset", "career", "challenge", "cockpit", "weather", "checklists", "tools", "copilot", "charts"].includes(screen ?? "") ? " on" : ""}`} href="#/settings">{Icon.more()}More</a>
+          <a className={`tab${["airports", "settings", "glance", "account", "support", "updates", "forgot", "reset", "career", "challenge", "cockpit", "weather", "checklists", "tools", "copilot", "charts"].includes(screen ?? "") ? " on" : ""}`} href="#/settings">{Icon.more()}More</a>
         </nav>
       )}
     </>

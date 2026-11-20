@@ -78,7 +78,7 @@ function keepPairingForHomeScreen(): void {
 }
 
 /** Connect anywhere: reach the PC through the account's relay instead of the local network. */
-export interface RelayTarget { urls: string[]; token: string }
+export interface RelayTarget { urls: string[]; token: string; /** Paired by code: the PC's link id and the pairing key it checks. */ pc?: { bid: string; key: string } }
 
 interface Pending { resolve: (r: Response) => void; reject: (e: Error) => void; ctrl?: ReadableStreamDefaultController<Uint8Array>; timer: number }
 
@@ -122,11 +122,17 @@ export class BridgeClient {
     if (m.$ === "bridge") {
       this.relayOnline = !!m.online;
       if (m.online) {
+        // Paired by code: show the pairing key first; the PC ignores everything else until then.
+        if (this.relay?.pc) this.ws?.send(JSON.stringify({ $: "auth", token: this.relay.pc.key }));
         this.ws?.send(JSON.stringify({ type: "hello", protocolVersion: 1, client: "glidepath-app", lastSeq: this.lastSeq }));
       } else {
         store.set({ conn: "unreachable", connMessage: "Your PC isn't online. Open Glidepath Bridge on the PC; it connects by itself once it's signed in to this account." });
         for (const [id, q] of this.reqs) { window.clearTimeout(q.timer); q.reject(new Error("Your PC went offline.")); this.reqs.delete(id); }
       }
+      return;
+    }
+    if (m.$ === "auth") {
+      if (!(m as { ok?: boolean }).ok) store.set({ conn: "unauthorised", connMessage: "Your PC didn't accept this device any more. Type the code from your PC again." });
       return;
     }
     const q = m.id ? this.reqs.get(m.id) : undefined;
@@ -295,7 +301,7 @@ export class BridgeClient {
     const r = this.relay!;
     const base = r.urls[this.relayAt % r.urls.length]!;
     let ws: WebSocket;
-    try { ws = new WebSocket(`${base.replace(/^http/, "ws")}/relay/app?token=${encodeURIComponent(r.token)}`); }
+    try { ws = new WebSocket(r.pc ? `${base.replace(/^http/, "ws")}/relay/pcapp?bid=${encodeURIComponent(r.pc.bid)}` : `${base.replace(/^http/, "ws")}/relay/app?token=${encodeURIComponent(r.token)}`); }
     catch { store.set({ conn: "unreachable", connMessage: "Couldn't reach Glidepath. Check your internet connection." }); return; }
     this.ws = ws;
     let opened = false;

@@ -13,6 +13,7 @@
  *   most twice a second per device to stay inside the free plan.
  */
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createHash, randomBytes } from "node:crypto";
 import { hostname } from "node:os";
 import { join } from "node:path";
 import WebSocket from "ws";
@@ -27,7 +28,7 @@ export const RELAY_HEADER = "x-glidepath-relay";
 interface Saved { key: string; email: string; name: string | null; base?: string }
 export interface CloudLinkStatus { signedIn: boolean; email: string | null; online: boolean; error: string | null; devices: number }
 
-interface Device { local: WebSocket | null; queue: string[]; lastFrame: number; closed: boolean }
+interface Device { local: WebSocket | null; queue: string[]; lastFrame: number; closed: boolean; authed: boolean }
 
 const FRAME_GAP_MS = 450;
 const CHUNK = 192 * 1024;
@@ -45,10 +46,22 @@ export class CloudLink {
   private devices = new Map<string, Device>();
   private readonly file: string;
 
-  constructor(private readonly o: { dataDir: string; port: number; host: string; bridgeId: string; version: string; token: () => string; log: Logger }) {
-    this.file = join(o.dataDir, "cloud.json");
+  /**
+   * pc: pairing by code with no account. The Bridge keeps this link open all the time, posting only a
+   * fingerprint of its code. Devices that join get nothing until they show the pairing key (or pair
+   * with the code, which the Bridge checks itself, lockout included).
+   */
+  constructor(private readonly o: { dataDir: string; port: number; host: string; bridgeId: string; version: string; token: () => string; log: Logger; pc?: { code: () => string; onCodeTaken: () => void } }) {
+    this.file = join(o.dataDir, o.pc ? "pclink.json" : "cloud.json");
     try { if (existsSync(this.file)) this.saved = JSON.parse(readFileSync(this.file, "utf8")) as Saved; } catch { this.saved = null; }
+    if (o.pc && !this.saved?.key) {
+      this.saved = { key: randomBytes(24).toString("base64url"), email: "", name: null };
+      try { writeFileSync(this.file, JSON.stringify(this.saved), { mode: 0o600 }); } catch { /* kept in memory */ }
+    }
   }
+
+  /** The code changed: post the new fingerprint. */
+  codeChanged(): void { if (this.o.pc && !this.stopped) { this.ws?.terminate(); } }
 
   status(): CloudLinkStatus {
     return { signedIn: !!this.saved, email: this.saved?.email ?? null, online: this.online, error: this.error, devices: this.devices.size };
@@ -133,14 +146,16 @@ export class CloudLink {
     if (this.timer) { clearTimeout(this.timer); this.timer = null; }
     const bases = this.saved.base ? [this.saved.base, ...CLOUD_BASES.filter((b) => b !== this.saved!.base)] : CLOUD_BASES;
     const base = bases[(this.attempt++) % bases.length]!;
-    const url = base.replace(/^http/, "ws") + `/relay/bridge?key=${this.saved.key}`;
+    const url = this.o.pc
+      ? base.replace(/^http/, "ws") + `/relay/pc?bid=${encodeURIComponent(this.o.bridgeId)}&key=${encodeURIComponent(this.saved.key)}&code=${createHash("sha256").update(this.o.pc.code()).digest("hex")}`
+      : base.replace(/^http/, "ws") + `/relay/bridge?key=${this.saved.key}`;
     const ws = new WebSocket(url, { headers: { "User-Agent": this.ua }, handshakeTimeout: 15_000, maxPayload: 4 * 1024 * 1024 });
     this.ws = ws;
     ws.on("open", () => {
       this.online = true; this.error = null; this.retry = 2000; this.alive = true;
       if (this.saved && this.saved.base !== base) { this.saved.base = base; try { writeFileSync(this.file, JSON.stringify(this.saved, null, 2), { mode: 0o600 }); } catch { /* ignore */ } }
       this.attempt = 0;
-      this.o.log.info("Connect anywhere is on");
+      this.o.log.info(this.o.pc ? "Pairing by code works from any network" : "Connect anywhere is on");
       if (this.beat) clearInterval(this.beat);
       // Protocol pings are free on the relay and tell us quickly if the line died.
       this.beat = setInterval(() => {
@@ -152,6 +167,12 @@ export class CloudLink {
     ws.on("pong", () => { this.alive = true; });
     ws.on("message", (data) => this.fromRelay(String(data)));
     ws.on("unexpected-response", (_req, res) => {
+      if (this.o.pc) {
+        if (res.statusCode === 409) { this.o.log.info("Another PC has this code; picking a new one"); this.o.pc.onCodeTaken(); }
+        else if (res.statusCode === 401) { this.o.log.warn("The pairing link key was refused; making a new one"); this.saved = { key: randomBytes(24).toString("base64url"), email: "", name: null }; try { writeFileSync(this.file, JSON.stringify(this.saved), { mode: 0o600 }); } catch { /* memory */ } }
+        this.error = `Glidepath answered ${res.statusCode}.`;
+        return;
+      }
       if (res.statusCode === 401) {
         this.error = "This PC was signed out of your account. Sign in again.";
         this.o.log.warn("Connect anywhere: the key was refused; signing out");
@@ -193,22 +214,45 @@ export class CloudLink {
     if (body.startsWith('{"$"')) {
       let m: { $: string; id?: string; method?: string; path?: string; body?: unknown };
       try { m = JSON.parse(body); } catch { return; }
-      if (m.$ === "open") { this.openDevice(cid); return; }
+      if (m.$ === "open") { if (this.o.pc) this.pending(cid); else this.openDevice(cid); return; }
+      if (m.$ === "auth" && this.o.pc) {
+        const d = this.pending(cid);
+        const t = (m as { token?: unknown }).token;
+        d.authed = typeof t === "string" && t.length > 0 && t === this.o.token();
+        this.sendUp(cid, JSON.stringify({ $: "auth", ok: d.authed }));
+        if (d.authed) this.openDevice(cid);
+        return;
+      }
       if (m.$ === "close") { const d = this.devices.get(cid); if (d) { d.closed = true; d.local?.close(); this.devices.delete(cid); } return; }
-      if (m.$ === "req" && typeof m.id === "string") { void this.request(cid, m.id, m.method ?? "GET", m.path ?? "", m.body); return; }
+      if (m.$ === "req" && typeof m.id === "string") {
+        // Pairing link: only pairing by code until the device shows its key.
+        if (this.o.pc && !this.devices.get(cid)?.authed && !(m.method === "POST" && m.path === "/api/pair")) { this.sendUp(cid, JSON.stringify({ $: "res", id: m.id, status: 401, ct: "application/json", text: '{"error":"Pair with the code first."}' })); return; }
+        void this.request(cid, m.id, m.method ?? "GET", m.path ?? "", m.body, this.o.pc ? !this.devices.get(cid)?.authed : false);
+        return;
+      }
       return;
     }
     // A live-stream message from the app (hello, command, rtc…).
+    if (this.o.pc && !this.devices.get(cid)?.authed) return;
     let d = this.devices.get(cid);
     if (!d) d = this.openDevice(cid);
     if (d.local?.readyState === WebSocket.OPEN) d.local.send(body);
     else if (d.queue.length < 50) d.queue.push(body);
   }
 
+  /** A device on the pairing link that hasn't shown its key yet: no connection to the Bridge. */
+  private pending(cid: string): Device {
+    const d = this.devices.get(cid);
+    if (d) return d;
+    const n: Device = { local: null, queue: [], lastFrame: 0, closed: false, authed: false };
+    this.devices.set(cid, n);
+    return n;
+  }
+
   private openDevice(cid: string): Device {
     const old = this.devices.get(cid);
-    if (old && !old.closed) return old;
-    const d: Device = { local: null, queue: [], lastFrame: 0, closed: false };
+    if (old && !old.closed && old.local) return old;
+    const d: Device = old && !old.closed ? old : { local: null, queue: [], lastFrame: 0, closed: false, authed: !this.o.pc };
     this.devices.set(cid, d);
     const ws = new WebSocket(`ws://${this.localHost}:${this.o.port}/ws?client=glidepath-relay&token=${encodeURIComponent(this.o.token())}`, { headers: { [RELAY_HEADER]: "1" } });
     d.local = ws;
@@ -228,13 +272,13 @@ export class CloudLink {
   }
 
   /** An HTTP request from a device, made to this Bridge on its behalf. */
-  private async request(cid: string, id: string, method: string, path: string, body: unknown): Promise<void> {
+  private async request(cid: string, id: string, method: string, path: string, body: unknown, noKey = false): Promise<void> {
     const reply = (m: Record<string, unknown>) => this.sendUp(cid, JSON.stringify({ $: m.$, id, ...m }));
     if (!path.startsWith("/api/") || path.includes("..") || !(["GET", "POST"].includes(method) || (method === "DELETE" && /^\/api\/flights\/[0-9a-f-]{36}$/.test(path)))) { reply({ $: "res", status: 403, ct: "application/json", text: '{"error":"Not available through Connect anywhere."}' }); return; }
     try {
       const r = await fetch(`http://${this.localHost}:${this.o.port}${path}`, {
         method,
-        headers: { Authorization: `Bearer ${this.o.token()}`, [RELAY_HEADER]: "1", ...(body !== undefined ? { "Content-Type": "application/json" } : {}) },
+        headers: { ...(noKey ? {} : { Authorization: `Bearer ${this.o.token()}` }), [RELAY_HEADER]: "1", ...(body !== undefined ? { "Content-Type": "application/json" } : {}) },
         body: method === "POST" && body !== undefined ? JSON.stringify(body) : undefined,
       });
       const ct = r.headers.get("content-type") ?? "application/octet-stream";

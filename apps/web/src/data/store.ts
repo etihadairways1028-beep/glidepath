@@ -42,6 +42,8 @@ export const MAP_STYLES: Array<{ id: MapStyle; label: string; hint: string }> = 
 
 export interface Settings {
   bridgeUrl: string;
+  /** Paired by code through the Glidepath relay (any network): the PC's link id. */
+  pcRelay?: string | null;
   token: string;
   simbriefUser: string;
   showVatsim: boolean;

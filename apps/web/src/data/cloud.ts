@@ -320,6 +320,9 @@ export function relayTarget(): { urls: string[]; token: string } | null {
   return { urls: [...(bases.length ? bases : [api])], token };
 }
 
+/** The Glidepath service addresses, website proxy first (some networks block workers.dev). */
+export const cloudBases = (): string[] => bases.length ? [...bases] : api ? [api] : [];
+
 export interface RelayStatus { linked: boolean; online: boolean; name: string | null }
 /** Is a PC signed in to this account (linked), and is it connected now (online)? */
 export async function relayStatus(): Promise<RelayStatus | null> {

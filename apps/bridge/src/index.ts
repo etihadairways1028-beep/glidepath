@@ -138,6 +138,9 @@ async function main(): Promise<void> {
   server.discord = discord;
   const cloud = new CloudLink({ dataDir: cfg.dataDir, port: cfg.port, host: cfg.host, bridgeId: identity.bridgeId, version: BRIDGE_VERSION, token: () => identity.pairingToken, log: log.child("cloud") });
   server.cloud = cloud;
+  // Pairing by code from any network: the device types the code and stays on its page.
+  const pcLink = process.env.GLIDEPATH_PC_LINK === "0" ? null : new CloudLink({ dataDir: cfg.dataDir, port: cfg.port, host: cfg.host, bridgeId: identity.bridgeId, version: BRIDGE_VERSION, token: () => identity.pairingToken, log: log.child("pair"),
+    pc: { code: () => server.pairCode, onCodeTaken: () => { server.newPairCode(); } } });
   const updater = new Updater({
     version: BRIDGE_VERSION, dataDir: cfg.dataDir, log: log.child("update"),
     // Updates install themselves, but only while the simulator is closed, so the Windows prompt never lands on top of MSFS.
@@ -190,6 +193,7 @@ async function main(): Promise<void> {
     throw e;
   }
   cloud.start();
+  pcLink?.start();
   if (process.env.GLIDEPATH_UPDATES !== "0") updater.start();
   await adapter.start();
 
@@ -203,6 +207,7 @@ async function main(): Promise<void> {
     await adapter.stop();
     session.shutdown();
     cloud.stop();
+    pcLink?.stop();
     updater.stop();
     await server.stop();
     recorder.close();
@@ -246,6 +251,7 @@ async function main(): Promise<void> {
     log.info(`New pairing code: ${sp}`);
     try { process.title = `Glidepath Bridge - code ${sp}`; } catch { /* ignore */ }
     writeCodeFile(sp, cfg.port, log);
+    pcLink?.codeChanged();
   };
   if (cfg.openBrowser) openAppWindow(`http://localhost:${cfg.port}/app/`);
 }

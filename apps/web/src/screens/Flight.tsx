@@ -42,15 +42,15 @@ export function FlightScreen() {
   return (
     <div className="stack">
       <div className="between wrap"><h1 className="title">Flight</h1>{mode === "demo" && <span className="pill demo"><span className="dot" />Demo flight: synthetic data</span>}</div>
-      <ShareLive />
+      {L.completed && <DebriefPanel flight={L.flight} />}
+      <LiveCard />
+      {L.plan ? <FlightPlanCard plan={L.plan} frame={f} completed={L.completed} /> : <LoadPlanCard />}
       <AircraftHero icaoType={L.flight.aircraft?.icaoType ?? L.plan?.aircraftIcao} title={L.flight.aircraft?.title} tilt={Math.max(-5, Math.min(6, -(f.speed.vsFpm ?? 0) / 450))}>
           <p className="fh-type">{L.flight.aircraft?.icaoType ?? L.plan?.aircraftIcao ?? "Your aircraft"}</p>
           <p className="fh-meta">{[L.plan?.callsign ?? L.flight.callsign, L.flight.aircraft?.registration ?? L.plan?.registration, L.flight.aircraft?.title].filter(Boolean).join(", ") || "Waiting on aircraft details from the sim"}</p>
           <p className="fh-meta data" style={{ fontSize: 15, color: "var(--ink)", marginTop: 10 }}>{(L.flight.departureIcao ?? L.plan?.origin.icao ?? "····") + "  →  " + (L.flight.arrivalIcao ?? L.plan?.destination.icao ?? "····")}</p>
       </AircraftHero>
-      {L.completed && <DebriefPanel flight={L.flight} />}
-      <LiveCard />
-      {L.plan ? <FlightPlanCard plan={L.plan} frame={f} completed={L.completed} /> : <LoadPlanCard />}
+      <ShareLive />
       <Procedures />
 
       <div className="grid cols-4">
