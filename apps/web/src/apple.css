@@ -1421,3 +1421,8 @@ html:root :is(.quick-a, .more-tile, .cr-tile):hover:active { transform: scale(.9
   .fp-table td, .fp-table th { padding: 7px 5px; }
   .fp-head { gap: 8px; } .fp-proc { display: none; }
 }
+
+.pc-code { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 16px; padding: 16px 18px; }
+.pc-code-n { font-size: clamp(28px, 4vw, 40px); letter-spacing: .06em; white-space: nowrap; }
+@media (max-width: 640px) { .pc-code { grid-template-columns: minmax(0, 1fr); } }
+.fix-sheet .btn.danger { color: #FF6961; }

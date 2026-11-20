@@ -14,6 +14,30 @@ import { loadPlan } from "../data/external";
 import { fmt, zulu } from "../data/derive";
 import { settingsStore, store, useApp, useSettings } from "../data/store";
 
+/** Running on the sim PC itself: show the iPad code here, so the Bridge page is never needed. */
+function OnThisPc() {
+  const [code, setCode] = useState<string | null>(null);
+  const onPc = location.protocol === "http:" && location.pathname.startsWith("/app") && /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+  useEffect(() => {
+    if (!onPc) return;
+    let off = false;
+    const get = () => fetch("/api/local-token", { cache: "no-store" }).then((r) => r.ok ? r.json() : null).then((j: { code?: string } | null) => { if (!off && j?.code) setCode(j.code); }).catch(() => undefined);
+    void get(); const t = window.setInterval(get, 30_000);
+    return () => { off = true; clearInterval(t); };
+  }, [onPc]);
+  if (!onPc || !code) return null;
+  return (
+    <section className="glass pc-code">
+      <div>
+        <p className="lp-h" style={{ marginTop: 0 }}>Connect your iPad or phone</p>
+        <p className="muted" style={{ margin: 0, fontSize: 13.5 }}>On the same Wi-Fi, open <b className="data">glidepath-ad9.pages.dev/app</b>, tap <b>Connect to my PC</b> and type this code. Or sign in with the same Glidepath account on both.</p>
+      </div>
+      <b className="data pc-code-n" aria-label={`Pairing code ${code.split("").join(" ")}`}>{code.slice(0, 3)} {code.slice(3)}</b>
+      <a className="btn small" href="/">Bridge details</a>
+    </section>
+  );
+}
+
 export function SettingsScreen() {
   const s = useSettings();
   const mode = useApp((st) => st.mode);
@@ -36,6 +60,7 @@ export function SettingsScreen() {
   return (
     <div className="stack">
       <h1 className="title">Settings</h1>
+      <OnThisPc />
       <nav className="more-grid" aria-label="More screens">
         {([
           ["charts", "Charts", Icon.chart], ["copilot", "Copilot", Icon.headset], ["checklists", "Checklists", Icon.checklist],

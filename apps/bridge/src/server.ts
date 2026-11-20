@@ -387,7 +387,7 @@ export class LanServer {
     if (p === "/api/local-token") {
       const host = String(req.headers.host ?? "");
       if (!atThisPc || !/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(host)) return json(res, 403, { error: "Only on this PC" });
-      return json(res, 200, { token: this.identity.pairingToken });
+      return json(res, 200, { token: this.identity.pairingToken, code: this.pairCode });
     }
     if (p === "/api/pair" && req.method === "POST") {
       if (Date.now() < this.pairLockedUntil) return json(res, 429, { error: "Too many wrong codes. Pairing is paused for a few minutes; the code on your PC has changed." });

@@ -244,7 +244,7 @@ details.other .two{margin-top:0}
 .upd-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}.upd-steps span{text-align:center;font-size:13px;font-weight:600;padding:9px 6px;border-radius:999px;color:var(--faint);background:rgba(255,255,255,.06)}
 .upd-steps span.on{color:#fff;background:linear-gradient(180deg,#3A9BFF,#0A6CFF)}.upd-steps span.done{color:#30D158;background:rgba(48,209,88,.12)}
 #upd-msg{min-height:20px;margin:16px 0 0;line-height:1.5}.upd.ok #upd-dest{fill:#30D158;stroke:#30D158}</style></head><body><main id="root">
-<div class="head"><span class="logo">${LOGO}</span><div><h1>Glidepath Bridge</h1><div class="label">${esc(s.hostname)} · <span class="badge mono">v${esc(s.bridgeVersion)}</span></div></div>${p.local && here ? `<a class="btnp" href="${esc(here)}" target="_blank" rel="noreferrer">Open Glidepath</a>` : ""}</div>
+<div class="head"><span class="logo">${LOGO}</span><div><h1>Glidepath Bridge</h1><div class="label">${esc(s.hostname)} · <span class="badge mono">v${esc(s.bridgeVersion)}</span></div></div>${p.local && here ? `<a class="btnp" href="${esc(here)}">Open Glidepath</a>` : ""}</div>
 ${p.local ? readyCard(s, p.cloud ?? null) : ""}<div class="grid">
 ${tile("#64D2FF", "#0A84FF", SVG.sim, "Simulator", `<span class="dot ${stateDot}"></span>${esc(s.simulator?.name ?? "Not connected")}`, esc(s.message ?? s.simState))}
 ${tile("#FFB340", "#FF7A00", SVG.plane, "Aircraft", esc(s.aircraft?.title ?? "—"), `Profile: ${esc(s.aircraft?.profileId ?? "—")}`)}

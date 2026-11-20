@@ -3,6 +3,8 @@ import { useMemo, useState } from "react";
 import { MapView } from "../components/MapView";
 import { TrafficSheet } from "../components/TrafficSheet";
 import { TrafficPanel } from "../components/TrafficPanel";
+import { courseDeg, holdEntry, type Hold } from "../data/hold";
+import { routeProgress } from "@glidepath/flight-engine";
 import { Icon } from "../components/ui";
 import { fmt, PHASE_LABEL, useLive } from "../data/derive";
 import { getStands, NETWORK_LABEL, usePoll, type NetworkPilot, type Stand } from "../data/external";
@@ -24,6 +26,9 @@ export function MapScreen() {
   const [layers, setLayers] = useState(false);
   const [panel, setPanel] = useState(false);
   const [fly, setFly] = useState<{ lon: number; lat: number; zoom: number; key: number } | null>(null);
+  const [fixSel, setFixSel] = useState<number | null>(null);
+  const [holds, setHolds] = useState<Hold[]>(() => { try { return JSON.parse(sessionStorage.getItem("glidepath.holds") ?? "[]") as Hold[]; } catch { return []; } });
+  const saveHolds = (h: Hold[]) => { setHolds(h); try { sessionStorage.setItem("glidepath.holds", JSON.stringify(h)); } catch { /* storage off */ } };
   useEffect(() => {
     if (!layers) return;
     const k = (e: KeyboardEvent) => { if (e.key === "Escape") setLayers(false); };
@@ -106,6 +111,8 @@ export function MapScreen() {
     standsAt.current = here;
     getStands(here.lat, here.lon).then(setStands).catch(() => undefined);
   }, [bridge, nearGround, f ? Math.round(f.position.lat * 50) : 0, f ? Math.round(f.position.lon * 50) : 0]);
+  const planRoute = useMemo(() => L.plan ? [{ lat: L.plan.origin.lat, lon: L.plan.origin.lon }, ...L.plan.fixes, { lat: L.plan.destination.lat, lon: L.plan.destination.lon }] : null, [L.plan]);
+  const nextFix = planRoute && f && !L.completed && !f.position.onGround ? routeProgress(planRoute, f.position)?.legIndex ?? null : null;
   const aircraft = f && f.attitude.headingTrueDeg !== null ? { lat: f.position.lat, lon: f.position.lon, hdg: f.attitude.headingTrueDeg, alt: f.position.altMslFt } : null;
   const airports = [
     ...(L.plan ? [{ code: L.plan.origin.icao, lat: L.plan.origin.lat, lon: L.plan.origin.lon, role: "dep" as const }, { code: L.plan.destination.icao, lat: L.plan.destination.lat, lon: L.plan.destination.lon, role: "arr" as const }] : []),
@@ -113,7 +120,7 @@ export function MapScreen() {
 
   return (
     <div className="map-wrap">
-      <MapView trail={trail} plan={L.plan} aircraft={aircraft} airports={airports} traffic={traffic} atc={atc} centres={centres} metars={metars} radarTiles={s.showRadar ? radar.data ?? null : null} onSelectAtc={(c) => { setAtcSel(c); setSel(null); setWxSel(null); }} onSelectMetar={(w) => { setWxSel(w); setSel(null); setAtcSel(null); }} onView={(bbox, zoom) => setView({ bbox, zoom })} follow={follow} threeD={s.map3d} stands={stands} agl={f?.position.altAglFt ?? null} onGround={!!f?.position.onGround} onSelectTraffic={(p) => { setSel(p); if (p) { setAtcSel(null); setWxSel(null); } }} onUserMove={() => setFollow(false)} selTrack={selInfo?.track ?? null} flyTo={fly} />
+      <MapView trail={trail} plan={L.plan} aircraft={aircraft} airports={airports} traffic={traffic} atc={atc} centres={centres} metars={metars} radarTiles={s.showRadar ? radar.data ?? null : null} onSelectAtc={(c) => { setAtcSel(c); setSel(null); setWxSel(null); }} onSelectMetar={(w) => { setWxSel(w); setSel(null); setAtcSel(null); }} onView={(bbox, zoom) => setView({ bbox, zoom })} follow={follow} threeD={s.map3d} stands={stands} agl={f?.position.altAglFt ?? null} onGround={!!f?.position.onGround} onSelectTraffic={(p) => { setSel(p); if (p) { setAtcSel(null); setWxSel(null); } }} onUserMove={() => setFollow(false)} selTrack={selInfo?.track ?? null} flyTo={fly} holds={holds} nextFix={nextFix} onSelectFix={(i) => { setFixSel(i); setSel(null); setAtcSel(null); setWxSel(null); }} />
       {/* The flight panel steps aside while a traffic, ATC or weather card is open, so the two never overlap. */}
       <div className={`map-hud glass strong pad${selLive || atcSel || wxSel ? " behind" : ""}`} style={{ padding: "14px 16px" }}>
         {L.flight ? (
@@ -179,6 +186,41 @@ export function MapScreen() {
           {atcSel.atis.length > 0 && <p className="muted" style={{ fontSize: 13, marginTop: 8, maxHeight: 120, overflow: "auto" }}>{atcSel.atis.join(" ")}</p>}
         </div>
       )}
+      {fixSel !== null && L.plan && L.plan.fixes[fixSel] && (() => {
+        const plan = L.plan!, fx = plan.fixes[fixSel]!;
+        const prev = fixSel === 0 ? plan.origin : plan.fixes[fixSel - 1]!;
+        const inbound = Math.round(courseDeg(prev, fx));
+        const held = holds.find((h) => h.ident === fx.ident && Math.abs(h.lat - fx.lat) < 1e-6);
+        const kt = Math.max(180, Math.min(265, f?.speed.tasKt ?? f?.speed.gsKt ?? 230));
+        const make = (right: boolean, legMin: number): Hold => ({ ident: fx.ident, lat: fx.lat, lon: fx.lon, inboundDeg: held?.inboundDeg ?? inbound, right, legMin, kt: Math.round(kt), altFt: fx.altitudeFt ?? null });
+        const put = (h: Hold) => saveHolds([...holds.filter((x) => x !== held), h]);
+        const hdg = f?.attitude.headingTrueDeg ?? null;
+        const alt = fx.altitudeFt;
+        return (
+          <div className="map-sheet glass strong pad fix-sheet">
+            <div className="between"><span><span className="data" style={{ fontWeight: 700, fontSize: 20 }}>{fx.ident}</span>{fx.name && fx.name !== fx.ident && <span className="muted" style={{ marginLeft: 8, fontSize: 13.5 }}>{fx.name}</span>}</span><button className="btn small" aria-label="Close" onClick={() => setFixSel(null)}><span style={{ width: 16, height: 16 }}>{Icon.close()}</span></button></div>
+            <div className="grid cols-2" style={{ gap: 8, marginTop: 12 }}>
+              <Mini k="PLANNED" v={alt == null ? "—" : alt >= 10000 ? `FL${String(Math.round(alt / 100)).padStart(3, "0")}` : `${fmt(alt)} ft`} />
+              <Mini k="VIA" v={fx.via ?? (fx.proc === "sid" ? plan.sid ?? "SID" : fx.proc === "star" ? plan.star ?? "STAR" : "DCT")} />
+              <Mini k="INBOUND" v={`${String(inbound).padStart(3, "0")}°`} />
+              <Mini k="FROM YOU" v={f ? `${fmt(nm(f.position, fx))} nm` : "—"} />
+            </div>
+            <p className="lp-h" style={{ marginTop: 14 }}>Hold at {fx.ident}</p>
+            {held ? (<>
+              <p style={{ margin: "0 0 10px", fontSize: 14 }}>Inbound <b className="data">{String(Math.round(held.inboundDeg)).padStart(3, "0")}°</b>, {held.right ? "right" : "left"} turns, {held.legMin} min legs at {held.kt} kt.{hdg !== null && <> Entry from your heading: <b>{holdEntry(held, hdg)}</b>.</>}</p>
+              <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+                <button className="btn small" onClick={() => put({ ...held, right: !held.right })}>{held.right ? "Left turns" : "Right turns"}</button>
+                <button className="btn small" onClick={() => put({ ...held, legMin: held.legMin === 1 ? 1.5 : 1 })}>{held.legMin === 1 ? "1.5 min legs" : "1 min legs"}</button>
+                <button className="btn small" onClick={() => put({ ...held, inboundDeg: (held.inboundDeg + 180) % 360 })}>Reverse inbound</button>
+                <button className="btn small danger" onClick={() => saveHolds(holds.filter((x) => x !== held))}>Remove hold</button>
+              </div>
+            </>) : (<>
+              <p className="muted" style={{ margin: "0 0 10px", fontSize: 13.5 }}>Draw a standard holding pattern here, sized to your speed. Use the hold ATC or your chart gives you; Glidepath doesn't have published holds.</p>
+              <button className="btn primary small" onClick={() => put(make(true, (alt ?? 0) > 14000 ? 1.5 : 1))}>Add hold</button>
+            </>)}
+          </div>
+        );
+      })()}
       {wxSel && (
         <div className="map-sheet glass strong pad">
           <div className="between"><span className="data" style={{ fontWeight: 700, fontSize: 18 }}>{wxSel.icao} <span className={`pill wx-${wxSel.category || "na"}`} style={{ fontSize: 12, marginLeft: 6 }}>{wxSel.category || "No category"}</span></span><button className="btn small" aria-label="Close" onClick={() => setWxSel(null)}><span style={{ width: 16, height: 16 }}>{Icon.close()}</span></button></div>

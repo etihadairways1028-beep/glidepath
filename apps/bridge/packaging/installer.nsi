@@ -63,14 +63,16 @@ Section "Install"
   SetOutPath "$INSTDIR"
 
   CreateDirectory "$SMPROGRAMS\Glidepath"
-  CreateShortcut "$SMPROGRAMS\Glidepath\Glidepath Bridge.lnk" "$INSTDIR\GlidepathBridge.exe" "" "$INSTDIR\glidepath.ico"
+  CreateShortcut "$SMPROGRAMS\Glidepath\Glidepath.lnk" "$INSTDIR\GlidepathBridge.exe" "" "$INSTDIR\glidepath.ico" 0 SW_SHOWMINIMIZED
+  Delete "$SMPROGRAMS\Glidepath\Glidepath Bridge.lnk"
   CreateShortcut "$SMPROGRAMS\Glidepath\Glidepath demo flight.lnk" "$INSTDIR\Run demo flight.bat" "" "$INSTDIR\glidepath.ico"
   CreateShortcut "$SMPROGRAMS\Glidepath\Test MSFS connection.lnk" "$INSTDIR\Test MSFS connection.bat" "" "$INSTDIR\glidepath.ico"
   CreateShortcut "$SMPROGRAMS\Glidepath\Read me first.lnk" "$INSTDIR\README-FIRST.txt"
   CreateDirectory "$APPDATA\Glidepath\Bridge\logs"
   CreateShortcut "$SMPROGRAMS\Glidepath\Bridge logs (send these if something breaks).lnk" "$APPDATA\Glidepath\Bridge\logs"
   CreateShortcut "$SMPROGRAMS\Glidepath\Uninstall Glidepath Bridge.lnk" "$INSTDIR\Uninstall.exe"
-  CreateShortcut "$DESKTOP\Glidepath Bridge.lnk" "$INSTDIR\GlidepathBridge.exe" "" "$INSTDIR\glidepath.ico"
+  Delete "$DESKTOP\Glidepath Bridge.lnk"
+  CreateShortcut "$DESKTOP\Glidepath.lnk" "$INSTDIR\GlidepathBridge.exe" "" "$INSTDIR\glidepath.ico" 0 SW_SHOWMINIMIZED
 
   ; Firewall: let devices on your network reach the Bridge (all network types,
   ; because Windows often marks home Wi-Fi as "Public").
@@ -106,6 +108,7 @@ Section "Uninstall"
   nsExec::Exec 'netsh advfirewall firewall delete rule name="Glidepath Bridge"'
   Sleep 800
   Delete "$DESKTOP\Glidepath Bridge.lnk"
+  Delete "$DESKTOP\Glidepath.lnk"
   RMDir /r "$SMPROGRAMS\Glidepath"
   RMDir /r "$INSTDIR"
   DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\GlidepathBridge"

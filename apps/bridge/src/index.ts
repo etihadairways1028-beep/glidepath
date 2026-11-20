@@ -9,7 +9,7 @@ import { CloudLink } from "./cloudlink.js";
 import { Updater } from "./updater.js";
 import { PROTOCOL_VERSION, type AircraftInfo, type BridgeStatus, type SimConnectionState, type SimulatorInfo } from "@glidepath/protocol";
 import { BRIDGE_VERSION, HOSTNAME, loadConfig, loadIdentity } from "./config.js";
-import { exec } from "node:child_process";
+import { exec, spawn } from "node:child_process";
 import { platform, homedir } from "node:os";
 import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -173,8 +173,8 @@ async function main(): Promise<void> {
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === "EADDRINUSE") {
       // Most likely the Bridge is already open in another window.
-      console.log(`\n  Glidepath Bridge is already running on this PC (port ${cfg.port} is in use).\n  Opening it in your browser. You can close this window.\n`);
-      if (cfg.openBrowser) openInBrowser(`http://localhost:${cfg.port}`);
+      console.log(`\n  Glidepath Bridge is already running on this PC (port ${cfg.port} is in use).\n  Opening the Glidepath window. You can close this one.\n`);
+      if (cfg.openBrowser) openAppWindow(`http://localhost:${cfg.port}/app/`);
       await holdWindow(8000);
       process.exit(0);
     }
@@ -238,7 +238,7 @@ async function main(): Promise<void> {
     try { process.title = `Glidepath Bridge - code ${sp}`; } catch { /* ignore */ }
     writeCodeFile(sp, cfg.port, log);
   };
-  if (cfg.openBrowser) openInBrowser(`http://localhost:${cfg.port}`);
+  if (cfg.openBrowser) openAppWindow(`http://localhost:${cfg.port}/app/`);
 }
 
 /** Put the pairing code on the Desktop too, so it is easy to find while flying. */
@@ -249,6 +249,28 @@ function writeCodeFile(code: string, port: number, log: { info(m: string): void 
   for (const d of desks) {
     try { writeFileSync(join(d, "Glidepath code.txt"), text); log.info(`Pairing code also saved to ${join(d, "Glidepath code.txt")}`); } catch { /* not writable */ }
   }
+}
+
+/**
+ * Open Glidepath in its own app window, not a browser tab: no tabs, no address bar, its own taskbar entry.
+ * Uses Microsoft Edge (part of every Windows 10 and 11) in app mode with its own profile, so it never mixes
+ * with your normal browser and the connection is remembered. Falls back to Chrome, then the default browser.
+ */
+function openAppWindow(url: string): void {
+  if (platform() !== "win32") return openInBrowser(url);
+  const pf = [process.env["ProgramFiles(x86)"], process.env.ProgramFiles, process.env.LOCALAPPDATA].filter(Boolean) as string[];
+  const candidates = [
+    ...pf.map((d) => join(d, "Microsoft", "Edge", "Application", "msedge.exe")),
+    ...pf.map((d) => join(d, "Google", "Chrome", "Application", "chrome.exe")),
+  ];
+  const exe = candidates.find((p) => { try { return existsSync(p); } catch { return false; } });
+  if (!exe) return openInBrowser(url);
+  const profile = join(process.env.LOCALAPPDATA ?? process.env.APPDATA ?? ".", "Glidepath", "Window");
+  try {
+    const child = spawn(exe, [`--app=${url}`, `--user-data-dir=${profile}`, "--window-size=1320,880", "--no-first-run", "--no-default-browser-check", "--disable-features=Translate"], { detached: true, stdio: "ignore", windowsHide: false });
+    child.on("error", () => openInBrowser(url));
+    child.unref();
+  } catch { openInBrowser(url); }
 }
 
 function openInBrowser(url: string): void {

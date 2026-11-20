@@ -5,10 +5,12 @@
  */
 import { useEffect, useState } from "react";
 
-export const APP_VERSION = "1.0.3";
+export const APP_VERSION = "1.0.4";
 const KEY = "glidepath.seenVersion";
 
 export const WHATS_NEW: { t: string; d: string }[] = [
+  { t: "Glidepath in its own window", d: "On your PC, the Bridge opens Glidepath in its own app window, connected, with your iPad code in Settings." },
+  { t: "Your plan on the live map", d: "Route, SID and STAR with every waypoint's planned altitude, top of climb and descent, your active leg, and holds you can place at any waypoint." },
   { t: "A full flight plan", d: "Your SimBrief plan on the Flight screen: route, every waypoint with airway, altitude and distance, where you are along it, fuel and weights." },
   { t: "Connects by itself", d: "Open Glidepath on the sim PC and it's connected. Paired devices stay paired and reconnect when the Bridge opens." },
   { t: "Online now", d: "Search any callsign or airport on the live map, see the busiest airports, follow pilots with a star, and spot emergencies." },
