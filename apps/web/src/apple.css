@@ -896,7 +896,7 @@ button, .btn, .seg, .tabbar { -webkit-user-select: none; user-select: none; }
   background: radial-gradient(380px circle at var(--mx, -400px) var(--my, -400px), rgba(255,255,255,.12), rgba(255,255,255,.03) 40%, transparent 65%) !important; opacity: 1 !important; }
 :root[data-theme="light"] .glass::after { background: radial-gradient(380px circle at var(--mx, -400px) var(--my, -400px), rgba(255,255,255,.55), rgba(255,255,255,.12) 40%, transparent 65%) !important; }
 /* Cards get a positioned box for the light; floating glass (tab bar, messages, sheets) stays pinned. */
-:root .glass:not(.tabbar):not(.gs-msg):not(.fc-sheet):not(.side):not(.upd-bar):not(.map-hud):not(.map-sheet) { position: relative; }
+:root .glass:not(.tabbar):not(.gs-msg):not(.fc-sheet):not(.side):not(.upd-bar):not(.map-hud):not(.map-sheet):not(.layers-pop):not(.map-search):not(.replay-read):not(.toast):not(.map-note) { position: relative; }
 :root .tabbar.glass { position: fixed !important; }
 :root .live-card.glass::after { opacity: .6 !important; }
 
@@ -1465,3 +1465,24 @@ html:root :is(.quick-a, .more-tile, .cr-tile):hover:active { transform: scale(.9
 .l-flown { background: #6C5CFF !important; } .l-before { background: repeating-linear-gradient(90deg, #6C5CFF 0 3px, transparent 3px 6px) !important; }
 .map-search.shifted { left: calc(50% + 190px); width: min(400px, calc(100% - 600px)); }
 @media (max-width: 1250px) { .map-search.shifted { display: none; } }
+
+/* ---- Fit pass 2 ---- */
+/* "Map couldn't load" note: inside small map cards, not below them. */
+:root .apt-map .map-note, :root .as-map .map-note, :root .wx-radar .map-note, :root .gc-map .map-note, :root .lb-map .map-note { position: absolute !important; top: auto !important; bottom: 12px !important; left: 50% !important; transform: translateX(-50%) !important; width: max-content; max-width: calc(100% - 24px); }
+:root .apt-map .map-note .notice, :root .as-map .map-note .notice, :root .wx-radar .map-note .notice, :root .gc-map .map-note .notice { font-size: 12.5px; padding: 8px 12px; }
+/* Runway table fits on phones and iPad portrait: the less-used columns go. */
+@media (max-width: 900px) {
+  .rwy-layout table.t th:nth-child(3), .rwy-layout table.t td:nth-child(3), .rwy-layout table.t th:nth-child(6), .rwy-layout table.t td:nth-child(6) { display: none; }
+  .rwy-layout table.t td, .rwy-layout table.t th { padding-left: 6px; padding-right: 6px; }
+}
+@media (max-width: 420px) { .rwy-layout table.t th:nth-child(5), .rwy-layout table.t td:nth-child(5) { display: none; } }
+/* Glance clock on phones: UTC only. */
+@media (max-width: 420px) { :root .clock-pill .cp-loc { display: none !important; } }
+/* Remote engines: tiles shrink on small phones. */
+:root .rc-eng-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr)) !important; }
+:root .rc-eng { min-width: 0; overflow: hidden; }
+:root .replay-read { max-width: calc(100% - 24px); flex-wrap: wrap; row-gap: 6px; }
+:root section.replay { overflow: hidden; }
+@media (max-width: 420px) { :root .clock-pill { padding-left: 12px !important; padding-right: 12px !important; font-size: 15px; } :root .rc-eng { padding: 10px 4px !important; } :root .rc-eng-grid { gap: 6px !important; } }
+@media (max-width: 420px) { :root .clock-pill .cp-sep { display: none !important; } :root .clock-pill { flex: none; overflow: visible; max-width: none; } :root .clock-pill + *, :root .gc-top { min-width: 0; } }
+@media (max-width: 420px) { :root .gc-top { flex-wrap: wrap; gap: 8px; } :root .gc-top > .row { flex-wrap: wrap; } }

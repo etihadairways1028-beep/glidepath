@@ -1132,3 +1132,30 @@ html:root :is(.btn, .ai-chips a, .seg button, .play):not(:disabled):active { tra
 .trailer-modal video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #000; }
 .tm-close { position: absolute; right: 10px; top: 10px; z-index: 2; width: 40px; height: 40px; border-radius: 50%; border: 0; background: rgba(0,0,0,.6); color: #fff; font-size: 26px; line-height: 1; cursor: pointer; }
 @media (max-width: 640px) { .trailer-frame { border-radius: 20px; } .trailer-play { bottom: 14px; padding: 8px 16px 8px 8px; font-size: 14px; } .tp-ic { width: 38px; height: 38px; } }
+
+/* ---- Fit pass (phones) ---- */
+.t-map .tile-over { margin: 0 !important; }
+.ai-chips a { white-space: normal; max-width: 100%; }
+.n10-vis { padding: 10px; }
+@media (max-width: 480px) {
+  .n10-clock { gap: 8px; padding: 10px; } .n10-clock div { padding: 10px 6px; min-width: 0; } .n10-clock b { font-size: 21px; } .n10-clock small { font-size: 11px; }
+  .n10-sync { gap: 5px; } .n10-sync span { padding: 8px 8px; font-size: 12px; } .n10-sync i { width: 16px; }
+  .n10-types span { padding: 5px 9px; font-size: 12px; }
+  .speed { padding: 0 10px; }
+  .btn { white-space: normal; text-align: center; height: auto; min-height: 44px; padding-top: 10px; padding-bottom: 10px; }
+}
+/* Compatibility table: one card per aircraft on phones, no sideways scrolling. */
+@media (max-width: 700px) {
+  .compat { overflow: visible; padding: 6px 6px 12px; }
+  .compat table { min-width: 0; display: block; }
+  .compat thead { display: none; }
+  .compat tbody, .compat tr { display: block; }
+  .compat tr { padding: 14px 12px; border-bottom: 1px solid rgba(255,255,255,.07); }
+  .compat tbody th, .compat td { display: block; padding: 3px 4px; border: 0; white-space: normal; }
+  .compat tbody th { font-size: 16px; margin-bottom: 4px; }
+  .compat td:nth-of-type(1)::before { content: "Tracking: "; color: var(--faint); font-size: 12.5px; }
+  .compat td:nth-of-type(2)::before { content: "Add-on extras: "; color: var(--faint); font-size: 12.5px; }
+  table.weights { display: table; overflow: visible; font-size: 13.5px; }
+  .weights th, .weights td { padding: 10px 5px; }
+  .weights td.num { white-space: normal; }
+}

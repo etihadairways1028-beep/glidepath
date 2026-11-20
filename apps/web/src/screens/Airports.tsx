@@ -98,7 +98,7 @@ export function AirportPage({ code }: { code: string }) {
           <div className="rwy-layout">
           <div className="rwy-pic"><RunwayDiagram runways={apt.runways} windDir={m && typeof m.windDir === "number" ? m.windDir : null} windKt={m?.windKt ?? null} label={apt.code} /></div>
           <div className="scroll-x"><table className="t">
-            <thead><tr><th>Runway</th><th>Length</th><th>Width</th><th>Heading (true)</th><th>Surface</th><th>Lights</th></tr></thead>
+            <thead><tr><th>Runway</th><th>Length</th><th>Width</th><th>Heading</th><th>Surface</th><th>Lights</th></tr></thead>
             <tbody>{apt.runways.map((r) => (
               <tr key={r.ends[0].ident + r.ends[1].ident}>
                 <td className="n">{r.ends[0].ident} / {r.ends[1].ident}</td><td className="n">{fmt(r.lengthFt)} ft</td><td className="n">{fmt(r.widthFt)} ft</td>
