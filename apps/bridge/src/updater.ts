@@ -52,6 +52,8 @@ export class Updater {
     version: string; dataDir: string; log: Logger;
     /** Where the running exe lives; updates install only for an installed Bridge. */
     execPath?: string;
+    /** Install new versions by itself whenever this says it's a good moment (no flight in progress). */
+    autoInstall?: () => boolean;
     /** Test hooks. */
     fetchImpl?: typeof fetch; run?: (file: string, args: string[]) => void; platform?: NodeJS.Platform;
   }) {
@@ -65,7 +67,9 @@ export class Updater {
 
   start(): void {
     void this.check();
-    this.timer = setInterval(() => { if (this.st.state === "idle" || this.st.state === "current" || this.st.state === "available" || this.st.state === "error") void this.check(); }, 6 * 3600_000);
+    this.timer = setInterval(() => {
+      if (this.st.state === "idle" || this.st.state === "current" || this.st.state === "available" || this.st.state === "error") void this.check();
+    }, 60 * 60_000);
     this.timer.unref?.();
   }
   stop(): void { if (this.timer) clearInterval(this.timer); }
@@ -98,7 +102,14 @@ export class Updater {
       this.st.latest = m.version;
       this.st.notes = m.notes ?? null;
       this.st.state = newer(m.version, this.o.version) ? "available" : "current";
-      if (this.st.state === "available") this.o.log.info(`Bridge ${m.version} is available (this is ${this.o.version})`);
+      if (this.st.state === "available") {
+        this.o.log.info(`Bridge ${m.version} is available (this is ${this.o.version})`);
+        // Not mid-flight: install it now, so you never have to.
+        if (this.st.canInstall && this.o.autoInstall?.()) {
+          this.o.log.info("Installing the update by itself (no flight in progress)");
+          setTimeout(() => { if (this.st.state === "available" && this.o.autoInstall?.()) void this.install(); }, 5000);
+        }
+      }
     } catch (e) {
       this.st.state = "error";
       this.st.message = `Couldn't check for updates: ${(e as Error).message}`;

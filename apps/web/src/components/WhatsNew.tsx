@@ -5,10 +5,11 @@
  */
 import { useEffect, useState } from "react";
 
-export const APP_VERSION = "1.0.7";
+export const APP_VERSION = "1.0.8";
 const KEY = "glidepath.seenVersion";
 
 export const WHATS_NEW: { t: string; d: string }[] = [
+  { t: "Updates by itself", d: "The app on your iPad, phone and PC switches to the newest version by itself. The Bridge installs its updates by itself while the sim is closed." },
   { t: "Your MSFS flight plan on the map", d: "Plan in the MSFS world map (or load a .PLN) and Glidepath shows the route, SID and STAR by itself. SimBrief loads by itself too once you've saved your SimBrief name." },
   { t: "Safer with the simulator", d: "The Bridge only reads your own aircraft again. Sim AI traffic and the sim's SID/STAR lists are off, so they can't upset MSFS." },
   { t: "A new Bridge", d: "A cleaner Bridge window: live altitude, speed and heading, and one place to connect your iPad by code, account or QR." },

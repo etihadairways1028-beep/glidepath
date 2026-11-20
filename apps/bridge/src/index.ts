@@ -140,6 +140,8 @@ async function main(): Promise<void> {
   server.cloud = cloud;
   const updater = new Updater({
     version: BRIDGE_VERSION, dataDir: cfg.dataDir, log: log.child("update"),
+    // Updates install themselves, but only while the simulator is closed, so the Windows prompt never lands on top of MSFS.
+    autoInstall: () => process.env.GLIDEPATH_AUTO_UPDATE !== "0" && !session.activeFlight && simState !== "connected",
     // Test only: pretend to run the installer (used to check the update flow off Windows).
     ...(process.env.GLIDEPATH_UPDATE_FAKE_RUN === "1" ? { run: (f: string) => { log.info(`(test) would run ${f}`); setTimeout(() => process.exit(0), 1500); } } : {}),
   });
