@@ -10,6 +10,7 @@
  * guesses. Ten wrong passwords lock that email for 15 minutes.
  */
 import { esc } from "./mails";
+import { parseSimbrief, simbriefUrl } from "../../../packages/protocol/src/simbrief";
 import { composeMonthlyBrief } from "../../../packages/flight-engine/src/brief";
 import { sendGmail } from "./gmail";
 import { addTrail, cleanLive, cleanName, leaderboard, monthRange, shareId } from "./social";
@@ -217,6 +218,26 @@ async function weather(url: URL, ctx?: ExecutionContext): Promise<Response> {
   return new Response(text, { headers: { ...CORS, "Content-Type": "application/json; charset=utf-8", "Cache-Control": `public, max-age=${Math.min(ttl, 120)}` } });
 }
 
+/** The pilot's latest SimBrief plan, read and trimmed here (SimBrief doesn't allow browsers to call it). */
+async function simbrief(url: URL, ctx?: ExecutionContext): Promise<Response> {
+  const user = (url.searchParams.get("user") ?? "").trim();
+  if (!/^[A-Za-z0-9_.-]{2,40}$/.test(user)) return fail(400, "Type your SimBrief username or Pilot ID.");
+  const upstream = simbriefUrl(user);
+  const key = new Request(upstream);
+  const cache = (globalThis as unknown as { caches?: { default: Cache } }).caches?.default;
+  const hit = cache ? await cache.match(key) : undefined;
+  if (hit) return new Response(hit.body, { headers: { ...CORS, "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" } });
+  const r = await fetch(upstream, { headers: { "User-Agent": "Glidepath (https://glidepath-ad9.pages.dev)" } });
+  let j: unknown;
+  try { j = await r.json(); } catch { return fail(502, "SimBrief didn't answer. Try again in a minute."); }
+  let text: string;
+  try { text = JSON.stringify(parseSimbrief(j)); }
+  catch (e) { return fail(404, (e as Error).message || "No SimBrief plan found for that name."); }
+  const out = new Response(text, { headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "public, max-age=60" } });
+  if (cache) { const put = cache.put(key, out.clone()); if (ctx) ctx.waitUntil(put); else await put; }
+  return new Response(text, { headers: { ...CORS, "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" } });
+}
+
 async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
   const url = new URL(req.url);
   const p = url.pathname.replace(/\/+$/, "") || "/";
@@ -229,6 +250,7 @@ async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Re
   // Live weather for any device: aviationweather.gov doesn't allow browsers to ask directly, so this passes
   // its METAR/TAF answers through (read-only, inputs checked, cached at the edge for a few minutes).
   if (p.startsWith("/wx/") && req.method === "GET") return weather(url, ctx);
+  if (p === "/simbrief" && req.method === "GET") return simbrief(url, ctx);
 
   // Web Push: the public key devices subscribe with.
   if (p === "/push/key" && req.method === "GET") {

@@ -8,7 +8,7 @@ import type { FlightPlan, TelemetryFrame } from "@glidepath/protocol";
 import { distanceNm, routeProgress, type LatLon } from "@glidepath/flight-engine";
 import { Kv, Section } from "./ui";
 import { fmt, fuel } from "../data/derive";
-import { loadPlan } from "../data/external";
+import { loadLatestPlan as loadPlan } from "../data/plan";
 import { settingsStore, useApp, useSettings } from "../data/store";
 
 const fl = (ft: number | null | undefined) => ft == null ? "—" : ft >= 10000 ? `FL${String(Math.round(ft / 100)).padStart(3, "0")}` : `${Math.round(ft).toLocaleString("en-US")} ft`;
@@ -141,7 +141,7 @@ export function LoadPlanCard() {
   const mode = useApp((st) => st.mode);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
-  const can = mode === "bridge";
+  const can = mode !== "demo";
   const go = async () => {
     setBusy(true); setMsg(null);
     try { const p = await loadPlan(s.simbriefUser.trim()); setMsg({ ok: true, t: `Loaded ${p.origin.icao} to ${p.destination.icao}${p.callsign ? ` (${p.callsign})` : ""}.` }); }
@@ -155,7 +155,7 @@ export function LoadPlanCard() {
         <input className="input" aria-label="SimBrief username or Pilot ID" value={s.simbriefUser} onChange={(e) => settingsStore.set({ simbriefUser: e.target.value })} placeholder="SimBrief username or Pilot ID" autoComplete="username" />
         <button className="btn primary" type="submit" disabled={!can || !s.simbriefUser.trim() || busy}>{busy ? "Loading…" : "Load my latest plan"}</button>
       </form>
-      {!can && <p className="faint" style={{ fontSize: 12.5, margin: "8px 0 0" }}>Plans load through your Bridge. Connect it first.</p>}
+      {!can && <p className="faint" style={{ fontSize: 12.5, margin: "8px 0 0" }}>Stop the demo to load your own plan.</p>}
       {msg && <p className={msg.ok ? "on-time" : "late"} style={{ fontSize: 13, margin: "8px 0 0" }} role="status">{msg.t}</p>}
     </Section>
   );

@@ -33,4 +33,5 @@ jobs:
           curl -fsS https://local-ip.sh/server.pem -o /tmp/c.pem && openssl x509 -in /tmp/c.pem -noout -subject -enddate || echo "::warning::local-ip.sh certificate download failed"
           curl -fsS -o /dev/null -w "ntfy: HTTP %{http_code}\n" "https://ntfy.sh/glidepath-test/json?poll=1" || echo "::warning::ntfy unreachable"
           getent hosts 192-168-1-20.local-ip.sh || echo "::warning::local-ip.sh DNS failed"
+          echo "simbrief: $(curl -sS -m 20 'https://glidepath-accounts.webeyepagesdev.workers.dev/simbrief?user=glidepath_nobody_xyz' | head -c 200)"
           [ -z "$FAIL" ]

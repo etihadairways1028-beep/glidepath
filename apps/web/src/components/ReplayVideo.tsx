@@ -29,7 +29,7 @@ async function prepare(track: ArtPt[]): Promise<Prepared | null> {
     cum.push(cum[i - 1]! + d + dt * 0.02);
   }
   const box = { x: 0, y: 0, w: S, h: S };
-  const pr = fit(pts, { x: 40, y: 150, w: S - 80, h: S - 330 }, 0.1);
+  const pr = fit(pts, { x: 40, y: 150, w: S - 80, h: S - 420 }, 0.1);
   const base = document.createElement("canvas"); base.width = S; base.height = S;
   const c = base.getContext("2d")!;
   c.fillStyle = "#10141D"; c.fillRect(0, 0, S, S);
@@ -61,7 +61,20 @@ function frame(c: CanvasRenderingContext2D, P: Prepared, f: FlightSummary, t: nu
   c.fillStyle = "rgba(11,13,18,.9)"; c.fillRect(0, S - 170, S, 170);
   const alt = Math.round(here.alt ?? 0), climb = (here.alt ?? 0) - (pts[Math.max(0, i - 6)]!.alt ?? 0);
   const phase = alt < 300 && (here.gs ?? 0) < 60 ? "Taxi" : climb > 300 ? "Climbing" : climb < -300 ? "Descending" : alt > 10000 ? "Cruise" : "Flying";
-  const cells: Array<[string, string]> = [["TIME", zulu(here.t) || "—"], ["ALTITUDE", alt >= 18000 ? `FL${String(Math.round(alt / 100)).padStart(3, "0")}` : `${alt.toLocaleString("en-US")} ft`], ["SPEED", `${Math.round(here.gs ?? 0)} kt`], ["PHASE", phase]];
+  // Vertical speed now, in fpm, from altitude over the last few points' time.
+  const back = pts[Math.max(0, i - 4)]!;
+  const dtMin = here.t && back.t ? (here.t - back.t) / 60000 : 0;
+  const vs = dtMin > 0.05 ? Math.round(((here.alt ?? 0) - (back.alt ?? 0)) / dtMin / 50) * 50 : 0;
+  const cells: Array<[string, string]> = [["TIME", zulu(here.t) || "—"], ["ALTITUDE", alt >= 18000 ? `FL${String(Math.round(alt / 100)).padStart(3, "0")}` : `${alt.toLocaleString("en-US")} ft`], ["SPEED", `${Math.round(here.gs ?? 0)} kt`], [`V/S · ${phase.toUpperCase()}`, `${vs > 0 ? "+" : ""}${vs.toLocaleString("en-US")} fpm`]];
+  // Altitude profile strip just above the readout, with where we are on it.
+  const top = Math.max(...pts.map((q) => q.alt ?? 0), 1000), sx = (j: number) => 56 + ((S - 112) * cum[j]!) / cum.at(-1)!, sy = (a: number) => S - 182 - (Math.max(0, a) / top) * 62;
+  c.fillStyle = "rgba(11,13,18,.72)"; c.fillRect(0, S - 256, S, 86);
+  c.beginPath(); c.moveTo(sx(0), sy(0)); pts.forEach((q, j) => c.lineTo(sx(j), sy(q.alt ?? 0))); c.lineTo(sx(pts.length - 1), sy(0)); c.closePath();
+  c.fillStyle = "rgba(10,132,255,.16)"; c.fill();
+  c.beginPath(); pts.forEach((q, j) => (j ? c.lineTo(sx(j), sy(q.alt ?? 0)) : c.moveTo(sx(j), sy(q.alt ?? 0)))); c.strokeStyle = "rgba(255,255,255,.28)"; c.lineWidth = 2; c.stroke();
+  c.save(); c.beginPath(); c.rect(0, S - 256, sx(i), 86); c.clip();
+  c.beginPath(); pts.forEach((q, j) => (j ? c.lineTo(sx(j), sy(q.alt ?? 0)) : c.moveTo(sx(j), sy(q.alt ?? 0)))); c.strokeStyle = "#64B5FF"; c.lineWidth = 3.5; c.stroke(); c.restore();
+  c.beginPath(); c.arc(sx(i), sy(here.alt ?? 0), 8, 0, Math.PI * 2); c.fillStyle = "#fff"; c.fill(); c.lineWidth = 3; c.strokeStyle = "#0A84FF"; c.stroke();
   cells.forEach(([kk, v], j) => {
     const cx = 56 + j * ((S - 112) / 4);
     c.font = `700 22px ${FONT}`; c.fillStyle = QUIET; c.fillText(kk, cx, S - 108);

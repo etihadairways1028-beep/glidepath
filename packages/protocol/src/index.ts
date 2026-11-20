@@ -546,3 +546,4 @@ export function emptyFrame(seq: number, t: number, lat: number, lon: number): Te
 }
 export * from "./pilot";
 export * from "./weather";
+export * from "./simbrief";

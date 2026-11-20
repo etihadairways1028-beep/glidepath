@@ -180,82 +180,123 @@ function readyCard(s: BridgeStatus, c: CloudCard | null): string {
   return `<div class="panel ready${all ? " all" : ""}"><div class="rd-title">${all ? "Ready to fly" : sim ? "Almost ready" : "Getting ready"}</div><ol class="rd-steps">${steps.map(([ok, t, sub]) => `<li class="${ok ? "ok" : ""}"><span class="rd-ic">${ok ? "✓" : ""}</span><div><b>${t}</b><span>${sub}</span></div></li>`).join("")}</ol></div>`;
 }
 
-export function statusPage(p: { update?: UpdateCard | null; cloud?: CloudCard | null; local: boolean; pairCode: string; status: BridgeStatus; token: string | null; addresses: string[]; port: number; logs: string[] }): string {
+export interface LiveNumbers { altFt: number | null; gsKt: number | null; hdg: number | null; vsFpm: number | null; onGround: boolean }
+
+export function statusPage(p: { update?: UpdateCard | null; cloud?: CloudCard | null; local: boolean; pairCode: string; status: BridgeStatus; token: string | null; addresses: string[]; port: number; logs: string[]; live?: LiveNumbers | null }): string {
   const s = p.status;
-  const stateDot = s.simState === "connected" ? "live" : s.simState === "error" ? "err" : "warn";
+  const sim = s.simState === "connected";
+  const stateDot = sim ? "live" : s.simState === "error" ? "err" : "warn";
   const code = `${esc(p.pairCode.slice(0, 3))} ${esc(p.pairCode.slice(3))}`;
-  const links = p.token
-    ? p.addresses.map((ip) => {
-        const u = `http://${ip}:${p.port}/app/#token=${encodeURIComponent(p.token!)}`;
-        return `<div class="pairrow"><div class="qr">${qrSvg(u)}</div><div><div class="label">Scan with your iPad or phone camera, or open:</div><a class="mono" href="${esc(u)}">${esc(u)}</a></div></div>`;
-      }).join("")
-    : "";
   const here = p.token ? `http://localhost:${p.port}/app/#token=${encodeURIComponent(p.token)}` : null;
   const ip = p.addresses[0];
-  const sameWifi = `<div class="two">
-<div class="panel codecard"><div class="cap">Your pairing code</div><div class="bigcode mono">${code}</div><div class="label">It stays the same every time the Bridge starts, and is saved on your Desktop as <b>Glidepath code.txt</b>. Devices you've paired reconnect by themselves.</div><button class="btng" id="newcode" type="button" style="margin-top:12px;align-self:center">New code</button></div>
-<div class="panel easy"><div class="cap">Connect your iPad in 2 steps</div>
-  <ol class="steps"><li><div>On the iPad, open <b>Safari</b> and go to<br><span class="big mono">${ip ? `${esc(ip)}:${p.port}` : `glidepath.local:${p.port}`}</span></div></li>
-  <li><div>Type this code:<br><span class="big mono code">${code}</span></div></li></ol>
-  <div class="label">Or open the Glidepath website on the iPad, tap Connect and type the same code. Tap Share, then Add to Home Screen, to keep it as an app.</div>
-</div></div>
-<details class="panel sec"><summary><span class="cap">Or scan a QR code with the iPad camera</span></summary><div style="margin-top:10px">
-${links || "<p class='label'>No network address found. Is this PC connected to Wi-Fi or Ethernet?</p>"}
-<div class="label" style="margin-top:10px">This link contains your pairing key. Only open it on your own devices. If Windows asks, allow Glidepath Bridge on <b>private</b> networks.</div></div></details>`;
-  const tile = (c1: string, c2: string, icon: string, k: string, v: string, sub: string) =>
-    `<div class="panel tile"><div class="tile-h"><span class="ic" style="--c1:${c1};--c2:${c2}">${icon}</span><span class="cap">${k}</span></div><div class="v">${v}</div><div class="label">${sub}</div></div>`;
+  const c = p.cloud ?? null;
+  const anywhere = !!c?.signedIn && c.online;
+  const devices = s.clients;
+  const ready = sim && (devices > 0 || anywhere);
+  const lv = p.live && sim ? p.live : null;
+  const n = (v: number | null | undefined, unit = "") => v == null || !Number.isFinite(v) ? "—" : `${Math.round(v).toLocaleString("en-US")}${unit}`;
+  const head = ready ? "Ready to fly" : sim ? "Simulator connected" : s.simState === "error" ? "Can't reach the simulator" : "Waiting for the simulator";
+  const sub = sim
+    ? (s.aircraft?.title ? esc(s.aircraft.title) : "Load into a flight.") + (s.activeFlightId ? " · Recording this flight" : "")
+    : esc(s.message ?? "Start Microsoft Flight Simulator. The Bridge connects by itself.");
+  const links = p.token
+    ? p.addresses.map((a) => {
+        const u = `http://${a}:${p.port}/app/#token=${encodeURIComponent(p.token!)}`;
+        return `<div class="qrrow"><div class="qr">${qrSvg(u)}</div><div><b>Scan with the iPad or phone camera</b><div class="label">Or open <a class="mono" href="${esc(u)}">${esc(a)}:${p.port}</a>. The link holds your pairing key, so only use it on your own devices.</div></div></div>`;
+      }).join("")
+    : "<p class='label'>No network address found. Is this PC on Wi-Fi or Ethernet?</p>";
+  const rail = (ok: boolean | null, t: string, v: string) => `<li><span class="dot ${ok === null ? "" : ok ? "live" : "warn"}"></span><div><span>${t}</span><b>${v}</b></div></li>`;
+  const cloudBody = c ? cloudCard(c).replace('<div class="panel sec anywhere', '<div class="anywhere-in') : `<p class="label">Connect anywhere isn't available on this Bridge.</p>`;
+
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Glidepath Bridge</title><style>${BASE_CSS}
-main{max-width:900px;margin:0 auto;padding:36px 22px 60px}
-.head{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.head .logo svg{width:52px;height:52px;border-radius:13px;box-shadow:0 12px 26px -12px rgba(47,107,255,.85)}
-h1{font-size:30px;font-weight:700;letter-spacing:-.02em;margin:0;line-height:1.1}.head .label{margin-top:3px}.head .btnp{margin-left:auto}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin:0 0 14px}
-.tile{padding:16px 16px 15px}.tile-h{display:flex;align-items:center;gap:10px;margin-bottom:12px}.tile .v{font-size:19px;font-weight:600;letter-spacing:-.01em;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:14px}@media(max-width:720px){.two{grid-template-columns:minmax(0,1fr)}.head .btnp{margin-left:0;width:100%}}
-.codecard{padding:26px 22px;text-align:center;display:flex;flex-direction:column;justify-content:center}.bigcode{font-size:clamp(40px,11vw,58px);font-weight:700;letter-spacing:6px;margin:8px 0 6px;background:linear-gradient(180deg,#fff,#B9D6FF);-webkit-background-clip:text;background-clip:text;color:transparent}
-.easy{padding:22px}.steps{list-style:none;margin:14px 0 14px;padding:0;counter-reset:n}.steps li{counter-increment:n;display:flex;gap:14px;align-items:flex-start;margin:0 0 16px;font-size:16px}
-.steps li::before{content:counter(n);flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px;background:linear-gradient(180deg,#3A9BFF,#0A6CFF);box-shadow:inset 0 1px .5px rgba(255,255,255,.6)}
-.big{display:inline-block;margin-top:4px;font-size:clamp(19px,5.4vw,24px);overflow-wrap:anywhere;font-weight:700;color:#fff}.big.code{color:#64B5FF;letter-spacing:.12em}
-.sec{padding:18px 20px;margin-top:14px}.pairrow{display:flex;gap:16px;align-items:center;padding:12px 0;border-top:.5px solid var(--line)}.pairrow:first-of-type{border-top:0}
-.qr{width:128px;height:128px;flex:none;background:#fff;border-radius:16px;padding:7px}.qr svg{width:100%;height:100%;display:block}.pairrow a{word-break:break-all;font-size:13px}
-details.sec summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}details.sec summary::-webkit-details-marker{display:none}details.sec summary::after{content:"›";font-size:22px;color:var(--faint);transition:transform .2s}details[open].sec summary::after{transform:rotate(90deg)}
-pre{white-space:pre-wrap;font-size:12px;color:var(--quiet);max-height:320px;overflow:auto;margin:12px 0 0;padding:14px;border-radius:14px;background:rgba(0,0,0,.28)}
-.foot{margin-top:18px;text-align:center}
-.ready{padding:22px 24px;margin:22px 0 14px}.rd-title{font-size:26px;font-weight:750;letter-spacing:-.02em;margin-bottom:14px}.ready.all .rd-title{background:linear-gradient(92deg,#7CF2A8,#64D2FF);-webkit-background-clip:text;background-clip:text;color:transparent}
-.rd-steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}@media(max-width:760px){.rd-steps{grid-template-columns:1fr}}
-.rd-steps li{display:flex;gap:12px;align-items:flex-start;padding:14px;border-radius:18px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 .5px rgba(255,255,255,.12)}
-.rd-steps li b{display:block;font-size:15px;margin-bottom:2px}.rd-steps li span{font-size:13px;color:var(--quiet);line-height:1.4}
-.rd-ic{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:14px;color:#fff;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.25)}
-.rd-steps li.ok .rd-ic{background:linear-gradient(180deg,#4ADE80,#1FA84A);box-shadow:inset 0 1px .5px rgba(255,255,255,.6),0 6px 14px -6px rgba(31,168,74,.8)}
-.rd-steps li:not(.ok){box-shadow:inset 0 0 0 1px rgba(255,159,10,.35)}
-.or-line{display:flex;align-items:center;gap:14px;margin:22px 4px 14px;color:var(--faint);font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase}.or-line::before,.or-line::after{content:"";flex:1;height:1px;background:rgba(255,255,255,.12)}
-details.other .two{margin-top:0}
-.anywhere{margin:0 0 14px;padding:20px}.any-h{display:flex;gap:14px;align-items:flex-start}.ic.big{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;flex:none}.ic.big svg{width:24px;height:24px}
-.any-t{font-size:19px;font-weight:700;letter-spacing:-.01em;margin:1px 0 3px}.anywhere .label{line-height:1.45}
-.cl-form{display:flex;gap:10px;margin:16px 0 8px;flex-wrap:wrap}.cl-form input{flex:1 1 200px;min-width:0;padding:13px 16px;border-radius:14px;border:0;background:rgba(255,255,255,.1);box-shadow:inset 0 0 0 .5px rgba(255,255,255,.25);color:#fff;font:inherit;font-size:16px;outline:none}
-.cl-form input:focus{box-shadow:inset 0 0 0 2px #0A84FF}.cl-form .btnp{flex:0 0 auto;padding:12px 26px}.cl-msg{min-height:20px;margin-bottom:6px;color:#FF9F0A;font-size:14px}.cl-msg.ok{color:#30D158}
-.any-foot{margin-top:14px;display:flex;justify-content:flex-end}.btng{border:0;border-radius:999px;padding:9px 16px;font:inherit;font-size:14px;font-weight:600;color:#fff;background:rgba(255,255,255,.12);box-shadow:inset 0 .5px 0 rgba(255,255,255,.4);cursor:pointer}.btng:active{opacity:.6}
-@media(max-width:720px){.cl-form .btnp{width:100%}}
-.upd-avail .any-h{align-items:center}.upd-avail .btnp{flex:none}
+body::before{background:radial-gradient(60% 50% at 70% -10%,rgba(56,110,230,.28),transparent 70%),linear-gradient(180deg,#04060f,#070c1e 60%,#0a1230)}
+.app{display:grid;grid-template-columns:260px minmax(0,1fr);min-height:100vh}
+.rail{padding:26px 20px;display:flex;flex-direction:column;gap:22px;background:rgba(10,14,30,.55);border-right:1px solid rgba(255,255,255,.07);position:sticky;top:0;height:100vh}
+.brand{display:flex;gap:12px;align-items:center}.brand svg{width:42px;height:42px;border-radius:11px;box-shadow:0 10px 22px -10px rgba(47,107,255,.9)}
+.brand b{display:block;font-size:17px;letter-spacing:-.01em}.brand span{font-size:12px;color:var(--faint)}
+.rlist{list-style:none;margin:0;padding:0;display:grid;gap:4px}.rlist li{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.03)}
+.rlist li .dot{margin:0;flex:none}.rlist li span{display:block;font-size:11.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.05em}.rlist li b{display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px}
+.rail .btnp{width:100%;margin-top:auto;padding:14px}.rail .host{font-size:12px;color:var(--faint);text-align:center}
+.main{padding:28px 32px 40px;display:grid;gap:18px;align-content:start;max-width:1040px;width:100%}
+.hero{padding:26px 28px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:22px;align-items:center;overflow:hidden}
+.radar{width:86px;height:86px;border-radius:50%;position:relative;display:grid;place-items:center;background:radial-gradient(circle,rgba(10,132,255,.25),rgba(10,132,255,.04) 70%);box-shadow:inset 0 0 0 1px rgba(100,181,255,.35)}
+.radar::before,.radar::after{content:"";position:absolute;inset:0;border-radius:50%;border:1.5px solid rgba(100,181,255,.5);animation:ping 2.6s cubic-bezier(.2,.6,.3,1) infinite}.radar::after{animation-delay:1.3s}
+.radar svg{width:34px;height:34px;color:#fff;filter:drop-shadow(0 4px 10px rgba(10,132,255,.8))}
+.hero.ok .radar{background:radial-gradient(circle,rgba(48,209,88,.28),rgba(48,209,88,.04) 70%);box-shadow:inset 0 0 0 1px rgba(48,209,88,.45)}.hero.ok .radar::before,.hero.ok .radar::after{border-color:rgba(48,209,88,.55)}
+.hero.idle .radar::before,.hero.idle .radar::after{animation-duration:3.6s}
+@keyframes ping{0%{transform:scale(.55);opacity:1}100%{transform:scale(1.5);opacity:0}}
+@media (prefers-reduced-motion:reduce){.radar::before,.radar::after{animation:none;opacity:.4}}
+.hero h1{margin:0;font-size:30px;font-weight:750;letter-spacing:-.025em;line-height:1.1}.hero.ok h1{background:linear-gradient(92deg,#7CF2A8,#64D2FF);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{margin:6px 0 0;color:var(--quiet);font-size:15px}
+.nums{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.num{padding:16px 18px}.num span{display:block;font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}.num b{display:block;margin-top:6px;font-size:26px;font-weight:700;letter-spacing:-.01em}.num.off b{color:var(--faint)}
+.card{padding:22px 24px}.card h2{margin:0 0 4px;font-size:19px;letter-spacing:-.01em}.card>.label{margin:0 0 16px}
+.tabs{display:inline-flex;gap:4px;padding:4px;border-radius:14px;background:rgba(255,255,255,.06);margin-bottom:18px;flex-wrap:wrap}
+.tabs button{border:0;background:transparent;color:var(--quiet);font:inherit;font-size:14px;font-weight:600;padding:9px 16px;border-radius:10px}
+.tabs button.on{background:rgba(255,255,255,.14);color:#fff;box-shadow:inset 0 .5px 0 rgba(255,255,255,.35)}
+.pane{display:none}.pane.on{display:block;animation:fadeIn .25s ease}@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.codewrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:22px;align-items:center}
+.bigcode{font-size:clamp(44px,6vw,64px);font-weight:750;letter-spacing:8px;line-height:1;background:linear-gradient(180deg,#fff,#B9D6FF);-webkit-background-clip:text;background-clip:text;color:transparent}
+.steps{list-style:none;margin:0;padding:0;counter-reset:n;display:grid;gap:14px}.steps li{counter-increment:n;display:flex;gap:12px;align-items:flex-start;font-size:15px}
+.steps li::before{content:counter(n);flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;background:linear-gradient(180deg,#3A9BFF,#0A6CFF)}
+.steps .big{display:block;margin-top:3px;font-size:20px;font-weight:700}
+.qrrow{display:flex;gap:18px;align-items:center;padding:10px 0}.qr{width:140px;height:140px;flex:none;background:#fff;border-radius:16px;padding:8px}.qr svg{width:100%;height:100%;display:block}
+.cl-form{display:flex;gap:10px;margin:14px 0 8px;flex-wrap:wrap}.cl-form input{flex:1 1 200px;min-width:0;padding:13px 16px;border-radius:12px;border:0;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);color:#fff;font:inherit;font-size:15px;outline:none}
+.cl-form input:focus{box-shadow:inset 0 0 0 2px #0A84FF}.cl-msg{min-height:20px;margin-bottom:6px;color:#FF9F0A;font-size:14px}.cl-msg.ok{color:#30D158}
+.any-h{display:flex;gap:14px;align-items:flex-start}.ic.big{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;flex:none}.ic.big svg{width:22px;height:22px}.any-t{font-size:17px;font-weight:700;margin:1px 0 3px}.any-foot{margin-top:14px}
+.btng{border:0;border-radius:999px;padding:9px 16px;font:inherit;font-size:14px;font-weight:600;color:#fff;background:rgba(255,255,255,.12);cursor:pointer}
+.upd-avail{padding:18px 22px}.upd-avail .any-h{align-items:center}.upd-avail .btnp{flex:none}
+details.log summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between}details.log summary::-webkit-details-marker{display:none}details.log summary::after{content:"›";font-size:20px;color:var(--faint)}details.log[open] summary::after{transform:rotate(90deg)}
+pre{white-space:pre-wrap;font-size:12px;color:var(--quiet);max-height:300px;overflow:auto;margin:12px 0 0;padding:14px;border-radius:12px;background:rgba(0,0,0,.3)}
 .upd{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:20px;background:rgba(2,4,14,.55);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}.upd[hidden]{display:none}
 .upd-card{width:min(720px,100%);padding:30px 32px 26px}.upd-map{width:100%;height:auto;display:block;margin:16px 0 6px;border-radius:16px;background:rgba(0,0,0,.22)}
 .upd-v{font:600 13px/1 "SF Mono",ui-monospace,Consolas,monospace;fill:rgba(235,235,245,.7)}
-.upd-row{display:flex;justify-content:space-between;align-items:baseline;margin-top:20px;font-size:24px;font-weight:700;letter-spacing:-.01em}.upd-row .mono{font-size:17px;color:var(--quiet)}
+.upd-row{display:flex;justify-content:space-between;align-items:baseline;margin-top:20px;font-size:24px;font-weight:700}.upd-row .mono{font-size:17px;color:var(--quiet)}
 .upd-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}.upd-steps span{text-align:center;font-size:13px;font-weight:600;padding:9px 6px;border-radius:999px;color:var(--faint);background:rgba(255,255,255,.06)}
 .upd-steps span.on{color:#fff;background:linear-gradient(180deg,#3A9BFF,#0A6CFF)}.upd-steps span.done{color:#30D158;background:rgba(48,209,88,.12)}
-#upd-msg{min-height:20px;margin:16px 0 0;line-height:1.5}.upd.ok #upd-dest{fill:#30D158;stroke:#30D158}</style></head><body><main id="root">
-<div class="head"><span class="logo">${LOGO}</span><div><h1>Glidepath Bridge</h1><div class="label">${esc(s.hostname)} · <span class="badge mono">v${esc(s.bridgeVersion)}</span></div></div>${p.local && here ? `<a class="btnp" href="${esc(here)}">Open Glidepath</a>` : ""}</div>
-${p.local ? readyCard(s, p.cloud ?? null) : ""}<div class="grid">
-${tile("#64D2FF", "#0A84FF", SVG.sim, "Simulator", `<span class="dot ${stateDot}"></span>${esc(s.simulator?.name ?? "Not connected")}`, esc(s.message ?? s.simState))}
-${tile("#FFB340", "#FF7A00", SVG.plane, "Aircraft", esc(s.aircraft?.title ?? "—"), `Profile: ${esc(s.aircraft?.profileId ?? "—")}`)}
-${tile("#5EE07F", "#1FA84A", SVG.wave, "Telemetry", `<span class="mono">${s.framesPerSecond.toFixed(1)} fps</span>`, s.lastFrameAt ? "Last frame " + new Date(s.lastFrameAt).toLocaleTimeString() : "No frames yet")}
-${tile("#D18CFF", "#8A3FFC", SVG.dev, "Devices", `<span class="mono">${s.clients}</span> connected`, s.activeFlightId ? "Recording flight " + esc(s.activeFlightId.slice(0, 8)) : "No active flight")}
-</div>
-${p.local ? `${updateCard(p.update ?? null)}${cloudCard(p.cloud ?? null)}${p.cloud?.signedIn ? `<details class="panel sec other"><summary><span class="cap">Other ways to connect (same Wi-Fi)</span></summary><div style="margin-top:14px">${sameWifi}</div></details>` : `<div class="or-line"><span>or on the same Wi-Fi, with a code</span></div>${sameWifi}`}
-<details class="panel sec"><summary><span class="cap">Recent log</span></summary><pre class="mono">${esc(p.logs.join("\n")) || "—"}</pre></details>
-<div class="label foot">Keep the Bridge window open while you fly. This page updates by itself.</div>` : `<div class="panel sec"><p class="label" style="margin:0">Pairing details are only shown on the simulator PC itself.</p></div>`}
-</main>${p.local ? updateOverlay() : ""}
+#upd-msg{min-height:20px;margin:16px 0 0}.upd.ok #upd-dest{fill:#30D158;stroke:#30D158}
+@media(max-width:860px){.app{grid-template-columns:1fr}.rail{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center}.rlist{display:none}.rail .btnp{width:auto;margin:0 0 0 auto}.main{padding:20px}.nums{grid-template-columns:repeat(2,minmax(0,1fr))}.codewrap{grid-template-columns:1fr}.hero{grid-template-columns:1fr}}
+</style></head><body><main id="root"><div class="app">
+<aside class="rail">
+  <div class="brand">${LOGO}<div><b>Glidepath Bridge</b><span class="mono">v${esc(s.bridgeVersion)}</span></div></div>
+  ${p.local ? `<ul class="rlist">
+    ${rail(true, "Bridge", "Running")}
+    ${rail(sim, "Simulator", esc(sim ? s.simulator?.name ?? "Connected" : "Not connected"))}
+    ${rail(devices > 0 ? true : null, "Devices", `${devices} connected`)}
+    ${rail(c?.signedIn ? c.online : null, "Connect anywhere", c?.signedIn ? (c.online ? "On" : "Connecting…") : "Off")}
+    ${rail(s.framesPerSecond > 0 ? true : null, "Telemetry", `${s.framesPerSecond.toFixed(0)} updates/s`)}
+  </ul>` : ""}
+  ${p.local && here ? `<a class="btnp" href="${esc(here)}">Open Glidepath</a>` : ""}
+  <div class="host">${esc(s.hostname)}</div>
+</aside>
+<section class="main">
+  <div class="panel hero ${ready ? "ok" : sim ? "" : "idle"}"><div class="radar">${SVG.plane}</div><div><h1>${head}</h1><p>${sub}</p></div></div>
+  <div class="nums">
+    <div class="panel num${lv ? "" : " off"}"><span>Altitude</span><b class="mono">${lv ? n(lv.altFt, " ft") : "—"}</b></div>
+    <div class="panel num${lv ? "" : " off"}"><span>Ground speed</span><b class="mono">${lv ? n(lv.gsKt, " kt") : "—"}</b></div>
+    <div class="panel num${lv ? "" : " off"}"><span>Heading</span><b class="mono">${lv && lv.hdg != null ? String(Math.round(lv.hdg) % 360).padStart(3, "0") + "°" : "—"}</b></div>
+    <div class="panel num${lv ? "" : " off"}"><span>${lv?.onGround ? "On ground" : "Vertical speed"}</span><b class="mono">${lv ? (lv.onGround ? "Yes" : n(lv.vsFpm, " fpm")) : "—"}</b></div>
+  </div>
+  ${p.local ? `${updateCard(p.update ?? null)}
+  <div class="panel card">
+    <h2>Connect your iPad or phone</h2><p class="label">Pair once. It reconnects by itself every time the Bridge opens.</p>
+    <div class="tabs" role="tablist"><button data-tab="code" class="on" role="tab">Code</button><button data-tab="any" role="tab">Any Wi-Fi (account)</button><button data-tab="qr" role="tab">QR code</button></div>
+    <div class="pane on" data-pane="code"><div class="codewrap">
+      <div><div class="cap">Your pairing code</div><div class="bigcode mono" style="margin:10px 0 12px">${code}</div><button class="btng" id="newcode" type="button">New code</button></div>
+      <ol class="steps"><li><div>On the same Wi-Fi, open Safari and go to<span class="big mono">${ip ? `${esc(ip)}:${p.port}` : `glidepath.local:${p.port}`}</span></div></li><li><div>Or open <b>glidepath-ad9.pages.dev/app</b> and tap <b>Connect to my PC</b></div></li><li><div>Type the code. Done.</div></li></ol>
+    </div></div>
+    <div class="pane" data-pane="any">${cloudBody}</div>
+    <div class="pane" data-pane="qr">${links}</div>
+  </div>
+  <details class="panel card log"><summary><span class="cap">Recent log</span></summary><pre class="mono">${esc(p.logs.join("\n")) || "—"}</pre></details>
+  <p class="label" style="text-align:center;margin:0">Keep the Bridge running while you fly. This window updates by itself.</p>` : `<div class="panel card"><p class="label" style="margin:0">Pairing details are only shown on the simulator PC itself.</p></div>`}
+</section></div></main>${p.local ? updateOverlay() : ""}
 ${POP_JS}<script>
+function tab(t){if(!t)t=${anywhere ? '"any"' : '"code"'};[].forEach.call(document.querySelectorAll(".tabs button"),function(b){b.classList.toggle("on",b.getAttribute("data-tab")===t);});[].forEach.call(document.querySelectorAll(".pane"),function(x){x.classList.toggle("on",x.getAttribute("data-pane")===t);});}
+tab(localStorage.getItem("gp-tab"));
+document.addEventListener("click",function(e){var b=e.target&&e.target.closest&&e.target.closest(".tabs button");if(!b)return;var t=b.getAttribute("data-tab");try{localStorage.setItem("gp-tab",t);}catch(_){}tab(t);});
+
 var open=function(){return [].map.call(document.querySelectorAll("details"),function(d){return d.open;});};
 [].forEach.call(document.querySelectorAll(".rd-steps li.ok"),function(l){l.classList.add("now");});
 var busy=false;
@@ -286,7 +327,7 @@ document.addEventListener("click",function(e){if(!e.target||e.target.id!=="newco
 document.addEventListener("click",function(e){if(!e.target||e.target.id!=="co")return;e.target.classList.add("busy");e.target.textContent="Signing out…";fetch("/api/cloud/logout",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"}).then(function(){location.reload();});});
 setInterval(function(){if(busy||typing()||document.hidden||(window.getSelection&&String(window.getSelection())))return;
 fetch(location.href,{cache:"no-store"}).then(function(r){return r.ok?r.text():null;}).then(function(t){if(!t)return;var m=t.match(/<main id="root">([\\s\\S]*)<\\/main>/);if(!m)return;
-var o=open(),pre=document.querySelector("pre"),sc=pre?pre.scrollTop:0,was=[].map.call(document.querySelectorAll(".rd-steps li"),function(l){return l.classList.contains("ok");});document.getElementById("root").innerHTML=m[1];
+var o=open(),pre=document.querySelector("pre"),sc=pre?pre.scrollTop:0,was=[].map.call(document.querySelectorAll(".rd-steps li"),function(l){return l.classList.contains("ok");});document.getElementById("root").innerHTML=m[1];tab(localStorage.getItem("gp-tab"));
 [].forEach.call(document.querySelectorAll(".rd-steps li"),function(l,i){if(l.classList.contains("ok")&&!was[i])l.classList.add("now");});
 [].forEach.call(document.querySelectorAll("details"),function(d,i){d.open=!!o[i];});var p2=document.querySelector("pre");if(p2)p2.scrollTop=sc;}).catch(function(){});},5000);
 </script></body></html>`;

@@ -30,7 +30,7 @@ export function FlightScreen() {
       <div className="stack">
         <h1 className="title">Flight</h1>
         <section className="glass pad empty"><div className="h2">No live flight</div><p className="muted">{mode === "none" ? "Connect your Bridge in Settings, or start the demo from Home." : "Waiting for the simulator."}</p></section>
-        {mode === "bridge" && <LoadPlanCard />}
+        {L.plan ? <FlightPlanCard plan={L.plan} frame={null} completed={false} /> : <LoadPlanCard />}
       </div>
     );
   }

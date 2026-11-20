@@ -54,6 +54,8 @@ export function TrafficSheet({ p, info, me, onClose }: { p: NetworkPilot; info: 
 
   return (
     <div className="map-sheet glass strong pad traffic-sheet" role="dialog" aria-label={`${p.callsign} details`}>
+      <div className="ts-hero">
+      <div className="ts-kicker">{p.network === "sim" ? "Sim AI aircraft" : "Flight"}</div>
       <div className="ts-head">
         <span className="ts-logo" aria-hidden="true">{(airline?.code ?? p.callsign).slice(0, 3)}</span>
         <div className="ts-id">
@@ -83,7 +85,9 @@ export function TrafficSheet({ p, info, me, onClose }: { p: NetworkPilot; info: 
         <span>{eta ? `Arrives ${zulu(eta)} est.` : ""}</span>
       </div>
       {info.total !== null && info.toGo !== null && <div className="ts-dist faint">{fmt(Math.max(0, info.total - info.toGo))} nm flown · {fmt(info.toGo)} nm to go{fromMe !== null ? ` · ${fmt(fromMe)} nm from you` : ""}</div>}
+      </div>
 
+      <div className="ts-sub ts-live">Live data</div>
       <div className="ts-grid">
         <Cell k="Altitude" v={`${level(p.altFt)}${vs !== null && vs > 300 ? " ↑" : vs !== null && vs < -300 ? " ↓" : ""}`} />
         <Cell k="Speed" v={`${fmt(p.gsKt)} kt`} />
@@ -99,7 +103,7 @@ export function TrafficSheet({ p, info, me, onClose }: { p: NetworkPilot; info: 
       {err && <p className="faint ts-note">The flight plan couldn't be loaded right now.</p>}
       {d === null && <p className="faint ts-note">{p.network === "sim" ? "An AI aircraft in your simulator. Position, altitude and speed come from the sim through your Bridge." : `${p.callsign} has no flight plan on ${NETWORK_LABEL[p.network]}.`}</p>}
       {d && (d.route || d.alternate || d.eteMin || d.enduranceMin || d.pob || d.remarks) && (
-        <details className="ts-more">
+        <details className="ts-more" open>
           <summary>Flight plan</summary>
           <div className="ts-kv">
             {d.eteMin && <div><span>Planned flight time</span><b>{dur(d.eteMin)}</b></div>}

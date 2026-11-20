@@ -1426,3 +1426,42 @@ html:root :is(.quick-a, .more-tile, .cr-tile):hover:active { transform: scale(.9
 .pc-code-n { font-size: clamp(28px, 4vw, 40px); letter-spacing: .06em; white-space: nowrap; }
 @media (max-width: 640px) { .pc-code { grid-template-columns: minmax(0, 1fr); } }
 .fix-sheet .btn.danger { color: #FF6961; }
+
+.hud-next { all: unset; cursor: pointer; display: flex; align-items: baseline; gap: 8px; margin-top: 10px; padding: 7px 10px; border-radius: 10px; background: rgba(224,92,255,.12); font-size: 13px; max-width: 100%; box-sizing: border-box; }
+.hud-next > span:first-child { color: #F0A6FF; font-weight: 600; font-size: 12px; }
+.hud-next b { font-size: 14.5px; color: #fff; } .hud-next span:last-child { color: rgba(235,240,250,.75); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hud-next:hover { background: rgba(224,92,255,.2); }
+
+/* Aircraft card, Webeye-style: a bold header block, then live data tiles, then plan sections. */
+:root .traffic-sheet { padding: 12px !important; }
+.ts-hero { margin: -2px -2px 12px; padding: 16px 16px 14px; border-radius: 18px; background: linear-gradient(160deg, #1747C9 0%, #0E2E8C 100%); color: #fff; box-shadow: 0 10px 30px rgba(14,46,140,.35), inset 0 1px 0 rgba(255,255,255,.18); }
+.ts-kicker { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.7); margin-bottom: 4px; }
+.ts-hero .ts-id b { font-size: 26px; letter-spacing: .01em; color: #fff; }
+.ts-hero .ts-id .muted, .ts-hero .faint, .ts-hero small { color: rgba(255,255,255,.72) !important; }
+.ts-hero .ts-type { color: rgba(255,255,255,.85); }
+.ts-hero .ts-logo { background: rgba(255,255,255,.16); color: #fff; }
+.ts-hero .btn.round { background: rgba(255,255,255,.14) !important; color: #fff; border-color: transparent !important; }
+.ts-hero .ts-route b { font-size: 24px; color: #fff; }
+.ts-hero .ts-bar { background: rgba(255,255,255,.22) !important; } .ts-hero .ts-bar span { background: #fff !important; } .ts-hero .ts-bar i { background: #fff !important; box-shadow: 0 0 0 4px rgba(255,255,255,.25); }
+.ts-hero .ts-chip { background: rgba(255,255,255,.16) !important; color: #fff !important; }
+.ts-hero .ts-chip.emerg { background: #FF453A !important; }
+.ts-live { margin-top: 2px; }
+:root .traffic-sheet .ts-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 8px !important; }
+:root .traffic-sheet .ts-cell { text-align: center; padding: 11px 6px !important; border-radius: 12px; background: rgba(23,71,201,.14) !important; border: 1px solid rgba(100,150,255,.14); }
+:root .traffic-sheet .ts-cell b { font-size: 17px; display: block; } :root .traffic-sheet .ts-cell span { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; order: 2; }
+:root .traffic-sheet .ts-cell { display: flex; flex-direction: column-reverse; gap: 3px; }
+.ts-more { border-radius: 14px; background: rgba(127,127,127,.07); border: 1px solid rgba(255,255,255,.06); padding: 10px 12px; margin-top: 10px; }
+@media (min-width: 900px) {
+  :root .traffic-sheet { top: 16px !important; bottom: 16px !important; max-height: none !important; width: 360px !important; overflow: auto; }
+}
+/* Map search bar (top centre) */
+.map-search { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 6; display: flex; align-items: center; gap: 10px; width: min(440px, calc(100% - 180px)); padding: 0 12px; height: 44px; border-radius: 14px; cursor: text; color: rgba(235,240,250,.7); font-size: 14.5px; border: 0; font-family: inherit; }
+.map-search kbd { margin-left: auto; font: 600 11px/1 var(--data, ui-monospace, monospace); padding: 4px 6px; border-radius: 6px; background: rgba(255,255,255,.1); color: rgba(235,240,250,.75); }
+.map-search span.i { width: 18px; height: 18px; display: inline-flex; }
+@media (max-width: 899px) { .map-search { display: none; } }
+.map-zoom { display: grid; gap: 0; border-radius: 22px; overflow: hidden; }
+.map-zoom .btn { border-radius: 0 !important; }
+.map-zoom .btn { font-size: 22px; font-weight: 500; line-height: 1; }
+.l-flown { background: #6C5CFF !important; } .l-before { background: repeating-linear-gradient(90deg, #6C5CFF 0 3px, transparent 3px 6px) !important; }
+.map-search.shifted { left: calc(50% + 190px); width: min(400px, calc(100% - 600px)); }
+@media (max-width: 1250px) { .map-search.shifted { display: none; } }

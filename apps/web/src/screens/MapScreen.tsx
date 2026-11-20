@@ -27,6 +27,10 @@ export function MapScreen() {
   const [panel, setPanel] = useState(false);
   const [fly, setFly] = useState<{ lon: number; lat: number; zoom: number; key: number } | null>(null);
   const [fixSel, setFixSel] = useState<number | null>(null);
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f") { e.preventDefault(); setPanel(true); setLayers(false); } else if (e.key === "Escape") { setPanel(false); } };
+    window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k);
+  }, []);
   const [holds, setHolds] = useState<Hold[]>(() => { try { return JSON.parse(sessionStorage.getItem("glidepath.holds") ?? "[]") as Hold[]; } catch { return []; } });
   const saveHolds = (h: Hold[]) => { setHolds(h); try { sessionStorage.setItem("glidepath.holds", JSON.stringify(h)); } catch { /* storage off */ } };
   useEffect(() => {
@@ -135,6 +139,18 @@ export function MapScreen() {
               <Mini k="V/S" v={fmt(f?.speed.vsFpm)} />
               <Mini k="HDG" v={f?.attitude.headingMagDeg === null || !f ? "—" : String(Math.round(f.attitude.headingMagDeg) % 360).padStart(3, "0")} />
             </div>
+            {nextFix !== null && L.plan && f && (() => {
+              const nx = nextFix < L.plan.fixes.length ? L.plan.fixes[nextFix]! : null;
+              const to = nx ?? L.plan.destination;
+              const d = nm(f.position, to), gs = f.speed.gsKt ?? 0;
+              const alt = nx?.altitudeFt;
+              return (
+                <button className="hud-next" onClick={() => { if (nx) { setFixSel(nextFix); setFollow(false); setFly({ lon: nx.lon, lat: nx.lat, zoom: 8.5, key: Date.now() }); } }}>
+                  <span>Next</span><b className="data">{nx ? (/^TO?[CD]$|^T\/[CD]$/.test(nx.ident) ? (/C$/.test(nx.ident) ? "T/C" : "T/D") : nx.ident) : L.plan.destination.icao}</b>
+                  <span className="data">{fmt(d)} nm{gs > 40 ? ` · ${Math.max(1, Math.round((d / gs) * 60))} min` : ""}{alt != null ? ` · ${alt >= 10000 ? `FL${String(Math.round(alt / 100)).padStart(3, "0")}` : `${fmt(alt)} ft`}` : ""}</span>
+                </button>
+              );
+            })()}
             {L.toGoNm !== null && <div className="muted" style={{ fontSize: 13, marginTop: 10 }}>{fmt(L.toGoNm)} nm to go{L.tod && !L.tod.pastTod && L.tod.minutesToTod !== null ? `, top of descent in about ${Math.max(1, Math.round(L.tod.minutesToTod))} min` : ""}</div>}
           </>
         ) : (
@@ -151,7 +167,9 @@ export function MapScreen() {
         )}
         {mode === "demo" && <div className="est" style={{ marginTop: 8 }}>Demo flight: synthetic data</div>}
       </div>
+      <button className={`map-search glass strong${selLive && selInfo ? " shifted" : ""}`} onClick={() => { setPanel(true); setLayers(false); }} aria-label="Search callsign, airline or airport"><span className="i">{Icon.search()}</span>Search callsign, airline or airport<kbd>{/Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl"} F</kbd></button>
       <div className="map-tools">
+        <div className="map-zoom glass"><button className="btn glass" aria-label="Zoom in" onClick={() => window.dispatchEvent(new CustomEvent("glidepath-zoom", { detail: 1 }))}>+</button><button className="btn glass" aria-label="Zoom out" onClick={() => window.dispatchEvent(new CustomEvent("glidepath-zoom", { detail: -1 }))}>−</button></div>
         <button className={`btn glass${follow ? " on" : ""}`} aria-pressed={follow} aria-label="Follow my aircraft" title="Follow my aircraft" onClick={() => setFollow(!follow)}><span style={{ width: 22, height: 22 }}>{Icon.target()}</span></button>
         <button className={`btn glass map3d${s.map3d ? " on" : ""}`} aria-pressed={s.map3d} aria-label="3D chase view" title="3D chase view" onClick={() => { settingsStore.set({ map3d: !s.map3d }); if (!s.map3d) setFollow(true); }}>3D</button>
         <button className={`btn glass${panel ? " on" : ""}`} aria-expanded={panel} aria-label="Search and online now" title="Search callsigns and airports, busiest airports, favourites" onClick={() => { setPanel(!panel); setLayers(false); }}><span style={{ width: 22, height: 22 }}>{Icon.search()}</span></button>

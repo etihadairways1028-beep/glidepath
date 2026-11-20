@@ -14,6 +14,7 @@ on:
     paths:
       - "cloud/cloudflare/**"
       - "packages/flight-engine/src/**"
+      - "packages/protocol/src/**"
       - ".github/workflows/accounts.yml"
 
 permissions:

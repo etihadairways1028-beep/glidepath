@@ -115,6 +115,21 @@ function themeNow(): "dark" | "light" {
   return document.documentElement.dataset.theme === "light" ? "light" : "dark";
 }
 
+/** A clean, smooth line through a recorded track: drop jitter, then round the corners (Chaikin). */
+export function smoothTrack(pts: number[][], passes = 3): number[][] {
+  if (pts.length < 3) return pts;
+  const keep: number[][] = [pts[0]!];
+  for (const q of pts.slice(1)) { const l = keep[keep.length - 1]!; const d = Math.hypot((q[0]! - l[0]!) * Math.cos((q[1]! * Math.PI) / 180), q[1]! - l[1]!) * 60; if (d > 0.6) keep.push(q); }
+  const last = pts[pts.length - 1]!; if (keep[keep.length - 1] !== last) keep.push(last);
+  let out = keep;
+  for (let k = 0; k < passes && out.length > 2; k++) {
+    const n: number[][] = [out[0]!];
+    for (let i = 0; i < out.length - 1; i++) { const a = out[i]!, b = out[i + 1]!; n.push([a[0]! * 0.75 + b[0]! * 0.25, a[1]! * 0.75 + b[1]! * 0.25], [a[0]! * 0.25 + b[0]! * 0.75, a[1]! * 0.25 + b[1]! * 0.75]); }
+    n.push(out[out.length - 1]!); out = n;
+  }
+  return out;
+}
+
 export interface MapViewProps {
   trail: TrailPoint[];
   plan?: FlightPlan | null;
@@ -275,11 +290,12 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     m.addLayer({ id: "atc-halo", type: "circle", source: "atc", filter: ["==", ["get", "kind"], "app"], paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 2, ["match", ["get", "kind"], "ctr", 14, "app", 8, 4], 9, ["match", ["get", "kind"], "ctr", 46, "app", 34, 18]], "circle-color": ["get", "col"], "circle-opacity": 0.12, "circle-stroke-color": ["get", "col"], "circle-stroke-width": 1.2, "circle-stroke-opacity": 0.55 } });
     m.addLayer({ id: "atc", type: "circle", source: "atc", filter: ["!=", ["get", "kind"], "twr"], paint: { "circle-radius": 4, "circle-color": ["get", "col"], "circle-stroke-color": "#fff", "circle-stroke-width": 1.4 } });
     m.addLayer({ id: "atc-label", type: "symbol", source: "atc", minzoom: 4, filter: ["!=", ["get", "kind"], "twr"], layout: { "text-field": ["concat", ["get", "callsign"], "\n", ["get", "freq"]], "text-font": ["Noto Sans Bold"], "text-size": 10.5, "text-offset": [0, 1.3], "text-anchor": "top", "text-optional": true }, paint: { "text-color": ["get", "col"], "text-halo-color": light ? "rgba(255,255,255,.92)" : "rgba(0,0,0,.8)", "text-halo-width": 1.4 } });
-    m.addLayer({ id: "sel-before", type: "line", source: "sel-before", layout: { "line-cap": "round" }, paint: { "line-color": "#FFD60A", "line-width": 2.5, "line-opacity": 0.55, "line-dasharray": [0.6, 2] } });
-    m.addLayer({ id: "sel-ahead", type: "line", source: "sel-ahead", layout: { "line-cap": "round" }, paint: { "line-color": "#ffffff", "line-width": 2, "line-opacity": 0.7, "line-dasharray": [2, 2] } });
-    m.addLayer({ id: "sel-flown-glow", type: "line", source: "sel-flown", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#FFD60A", "line-width": 9, "line-opacity": 0.25, "line-blur": 4 } });
-    m.addLayer({ id: "sel-flown", type: "line", source: "sel-flown", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#FFD60A", "line-width": 3.5 } });
+    m.addLayer({ id: "sel-before", type: "line", source: "sel-before", layout: { "line-cap": "round" }, paint: { "line-color": "#6C5CFF", "line-width": 3, "line-opacity": 0.55, "line-dasharray": [0.8, 1.6] } });
+    m.addLayer({ id: "sel-ahead", type: "line", source: "sel-ahead", layout: { "line-cap": "round" }, paint: { "line-color": light ? "#3A6FD8" : "#9DB8FF", "line-width": 2.2, "line-opacity": 0.85, "line-dasharray": [2.4, 1.8] } });
+    m.addLayer({ id: "sel-flown-glow", type: "line", source: "sel-flown", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": light ? "rgba(255,255,255,.95)" : "rgba(0,0,0,.55)", "line-width": 7.5 } });
+    m.addLayer({ id: "sel-flown", type: "line", source: "sel-flown", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#6C5CFF", "line-width": 4 } });
     m.addLayer({ id: "sel-at", type: "circle", source: "sel-at", paint: { "circle-radius": 17, "circle-color": "rgba(255,214,10,0.18)", "circle-stroke-color": "#FFD60A", "circle-stroke-width": 2 } });
+    m.addLayer({ id: "traffic-label", type: "symbol", source: "traffic", minzoom: 6.2, layout: { "text-field": ["get", "cs"], "text-font": ["Noto Sans Bold"], "text-size": 10.5, "text-offset": [0, 1.35], "text-anchor": "top", "text-optional": true }, paint: { "text-color": light ? "#1C1C1E" : "#EAF0FA", "text-halo-color": light ? "rgba(255,255,255,.95)" : "rgba(5,8,14,.85)", "text-halo-width": 1.4 } });
     m.addLayer({ id: "traffic", type: "symbol", source: "traffic", layout: { "icon-image": ["concat", "traffic-", ["get", "net"]], "icon-rotate": ["get", "hdg"], "icon-rotation-alignment": "map", "icon-allow-overlap": true, "icon-size": ["interpolate", ["linear"], ["zoom"], 2, 0.55, 9, 1] }, paint: { "icon-opacity": 0.95 } });
   };
 
@@ -371,8 +387,8 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
   useEffect(() => {
     const m = map.current;
     if (!m || !ready) return;
-    (m.getSource("sel-before") as GeoJSONSource | undefined)?.setData(line(selTrack?.before ?? []));
-    (m.getSource("sel-flown") as GeoJSONSource | undefined)?.setData(line(selTrack?.flown ?? []));
+    (m.getSource("sel-before") as GeoJSONSource | undefined)?.setData(line(smoothTrack(selTrack?.before ?? [])));
+    (m.getSource("sel-flown") as GeoJSONSource | undefined)?.setData(line(smoothTrack(selTrack ? [...selTrack.flown, selTrack.at] : [])));
     (m.getSource("sel-ahead") as GeoJSONSource | undefined)?.setData(line(selTrack?.ahead ?? []));
     (m.getSource("sel-at") as GeoJSONSource | undefined)?.setData({ type: "FeatureCollection", features: selTrack ? [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: selTrack.at } }] : [] });
     if (selTrack && selFitted.current !== selTrack.key) {
@@ -427,6 +443,12 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
       m.fitBounds(b, { padding: 60, duration: 0, maxZoom: 9 });
     }
   }, [ready, plan]);
+
+  // Zoom buttons on the map screen.
+  useEffect(() => {
+    const z = (e: Event) => { const m = map.current; if (m) m.easeTo({ zoom: m.getZoom() + Number((e as CustomEvent).detail ?? 0), duration: 300 }); };
+    window.addEventListener("glidepath-zoom", z); return () => window.removeEventListener("glidepath-zoom", z);
+  }, []);
 
   // Holding patterns.
   const holdsKey = JSON.stringify(holds);
@@ -487,7 +509,7 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     if (!m || !ready) return;
     const fc = {
       type: "FeatureCollection" as const,
-      features: traffic.map((p) => ({ type: "Feature" as const, properties: { hdg: p.hdg, net: p.network, raw: JSON.stringify(p) }, geometry: { type: "Point" as const, coordinates: [p.lon, p.lat] } })),
+      features: traffic.map((p) => ({ type: "Feature" as const, properties: { hdg: p.hdg, net: p.network, cs: p.callsign, raw: JSON.stringify(p) }, geometry: { type: "Point" as const, coordinates: [p.lon, p.lat] } })),
     };
     data.current.traffic = fc;
     (m.getSource("traffic") as GeoJSONSource | undefined)?.setData(fc);

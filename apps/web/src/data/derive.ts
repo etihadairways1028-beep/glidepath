@@ -2,6 +2,7 @@
  * Values derived from telemetry + the plan. Everything here is either a
  * direct reading or a clearly-labelled estimate (`estimate: true`).
  */
+import { useSavedPlan } from "./plan";
 import { useMemo } from "react";
 import type { FlightEvent, FlightPhase, FlightPlan, FlightSummary, TelemetryFrame } from "@glidepath/protocol";
 import { altWords, clockAt, computeTimings, computeTopOfDescent, distanceNm, routeProgress, type FlightTimings, type LatLon, type TodResult } from "@glidepath/flight-engine";
@@ -37,7 +38,8 @@ export function useLive(): Live {
   const phase = useApp((s) => s.phase);
   const mode = useApp((s) => s.mode);
   const events = useApp((s) => s.events);
-  return useMemo(() => derive(frame, flight, phase, mode === "demo", events), [frame, flight, phase, mode, events]);
+  const saved = useSavedPlan();
+  return useMemo(() => derive(frame, flight, phase, mode === "demo", events, mode === "demo" ? null : saved), [frame, flight, phase, mode, events, saved]);
 }
 
 /** Times of the first event of a type (top of climb / descent are not on the flight summary). */
@@ -88,9 +90,10 @@ export function localAt(ms: number | null, plan: FlightPlan | null, side: "origi
   return clockAt(ms, side === "origin" ? plan.originUtcOffsetH : plan.destinationUtcOffsetH);
 }
 
-export function derive(frame: TelemetryFrame | null, flight: FlightSummary | null, phase: FlightPhase, isDemo: boolean, events: FlightEvent[] = []): Live {
-  const plan = flight?.plan ?? null;
+export function derive(frame: TelemetryFrame | null, flight: FlightSummary | null, phase: FlightPhase, isDemo: boolean, events: FlightEvent[] = [], saved: FlightPlan | null = null): Live {
   const completed = flight?.status === "completed";
+  // The flight's own plan; otherwise the plan you loaded, until a flight finishes.
+  const plan = flight?.plan ?? (completed ? null : saved);
   const dest = plan
     ? { lat: plan.destination.lat, lon: plan.destination.lon, icao: plan.destination.icao, name: plan.destination.name, elevationFt: plan.destination.elevationFt }
     : null;

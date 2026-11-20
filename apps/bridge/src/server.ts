@@ -39,7 +39,7 @@ import type { SimAdapter } from "./adapters/types.js";
 import type { ChartService } from "./charts.js";
 
 /** Websites allowed to call this Bridge from a browser (the hosted Glidepath app). */
-const ALLOWED_ORIGINS = [/^https:\/\/etihadairways1028-beep\.github\.io$/, /^http:\/\/localhost(:\d+)?$/, /^http:\/\/127\.0\.0\.1(:\d+)?$/];
+const ALLOWED_ORIGINS = [/^https:\/\/etihadairways1028-beep\.github\.io$/, /^https:\/\/([a-z0-9-]+\.)?glidepath-ad9\.pages\.dev$/, /^http:\/\/localhost(:\d+)?$/, /^http:\/\/127\.0\.0\.1(:\d+)?$/];
 
 interface Client {
   ws: WebSocket;
@@ -381,7 +381,7 @@ export class LanServer {
     if (req.method !== "GET" && !(req.method === "POST" && POSTS.includes(p)) && !(req.method === "DELETE" && DELETABLE)) return text(res, 405, "Method not allowed");
     if (p === "/") {
       if (!local) return html(res, pairPage());
-      return html(res, statusPage({ update: this.updater?.status() ?? null, cloud: this.cloud?.status() ?? null, local, pairCode: this.pairCode, status: this.getStatus(), token: local ? this.identity.pairingToken : null, addresses: lanAddresses(), port: this.cfg.port, logs: local ? this.log.recent().slice(-60) : [] }));
+      return html(res, statusPage({ update: this.updater?.status() ?? null, cloud: this.cloud?.status() ?? null, local, pairCode: this.pairCode, status: this.getStatus(), token: local ? this.identity.pairingToken : null, addresses: lanAddresses(), port: this.cfg.port, logs: local ? this.log.recent().slice(-60) : [], live: this.lastFrame ? { altFt: this.lastFrame.position.altMslFt, gsKt: this.lastFrame.speed.gsKt, hdg: this.lastFrame.attitude.headingMagDeg ?? this.lastFrame.attitude.headingTrueDeg, vsFpm: this.lastFrame.speed.vsFpm, onGround: this.lastFrame.position.onGround } : null }));
     }
     // The app opened on this PC (typed address, bookmark, desktop shortcut) pairs itself: no code needed.
     if (p === "/api/local-token") {

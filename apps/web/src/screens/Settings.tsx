@@ -10,7 +10,7 @@ import { DiscordStatus } from "../components/DiscordStatus";
 import { useCloud } from "../data/cloud";
 import { activeBridge, setActiveBridge } from "../data/bridge";
 import { startDemo, stopDemo } from "../data/demo";
-import { loadPlan } from "../data/external";
+import { loadLatestPlan as loadPlan } from "../data/plan";
 import { fmt, zulu } from "../data/derive";
 import { settingsStore, store, useApp, useSettings } from "../data/store";
 
@@ -99,9 +99,9 @@ export function SettingsScreen() {
             <div className="stack" style={{ gap: 12 }}>
               <div className="field"><label htmlFor="sb">SimBrief username or Pilot ID</label><input id="sb" className="input" value={s.simbriefUser} onChange={(e) => settingsStore.set({ simbriefUser: e.target.value })} placeholder="Your Navigraph alias" /></div>
               <div className="row wrap">
-                <button className="btn primary" disabled={!s.simbriefUser.trim() || mode !== "bridge" || busy} onClick={async () => {
+                <button className="btn primary" disabled={!s.simbriefUser.trim() || mode === "demo" || busy} onClick={async () => {
                   setBusy(true); setPlanMsg(null);
-                  try { const p = await loadPlan(s.simbriefUser); setPlanMsg(`Loaded ${p.origin.icao} → ${p.destination.icao}${p.callsign ? ` (${p.callsign})` : ""}. It's linked to your current flight.`); }
+                  try { const p = await loadPlan(s.simbriefUser); setPlanMsg(`Loaded ${p.origin.icao} → ${p.destination.icao}${p.callsign ? ` (${p.callsign})` : ""}.${mode === "bridge" ? " It's linked to your current flight." : " It's on your map and Flight screen."}`); }
                   catch (e) { setPlanMsg((e as Error).message); }
                   setBusy(false);
                 }}>{busy ? "Loading…" : "Load my latest plan"}</button>
