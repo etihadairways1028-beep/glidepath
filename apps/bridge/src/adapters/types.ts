@@ -11,6 +11,8 @@ export interface AdapterEvents {
   frame: (frame: RawFrame) => void;
   /** The sim (or replay) ended the current session, e.g. returned to the main menu. */
   sessionEnd: () => void;
+  /** The simulator activated a flight plan file (.PLN). */
+  planFile: (file: string) => void;
 }
 
 export interface SimAdapter extends EventEmitter {

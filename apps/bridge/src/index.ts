@@ -18,6 +18,7 @@ import { ChartService } from "./charts.js";
 import { createLogger } from "./log.js";
 import { Recorder } from "./recorder.js";
 import { FlightSession } from "./session.js";
+import { SimPlanWatcher } from "./simplan.js";
 import { LanServer } from "./server.js";
 import { ExternalData } from "./external.js";
 import { AiService } from "./ai.js";
@@ -95,6 +96,12 @@ async function main(): Promise<void> {
 
   const ai = new AiService(cfg.dataDir, log);
   const server = new LanServer(cfg, identity, session, recorder, status, log, external, airports, ai);
+
+  // The flight plan you load in MSFS (world map, or a .PLN from any planner). A SimBrief plan you loaded wins.
+  const simPlan = new SimPlanWatcher(log);
+  simPlan.onPlan = (plan) => { const cur = session.currentPlan; if (!cur || cur.source === "msfs") session.setPlan(plan); };
+  adapter.on("planFile", (file: string) => simPlan.reported(file));
+  simPlan.start();
 
   adapter.on("state", (s, m) => {
     if (s !== simState || m !== simMessage) {

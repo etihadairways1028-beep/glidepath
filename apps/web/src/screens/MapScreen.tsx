@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { MapView } from "../components/MapView";
 import { TrafficSheet } from "../components/TrafficSheet";
 import { TrafficPanel } from "../components/TrafficPanel";
+import { LoadPlanCard } from "../components/FlightPlanCard";
 import { courseDeg, holdEntry, type Hold } from "../data/hold";
 import { routeProgress } from "@glidepath/flight-engine";
 import { Icon } from "../components/ui";
@@ -27,6 +28,7 @@ export function MapScreen() {
   const [panel, setPanel] = useState(false);
   const [fly, setFly] = useState<{ lon: number; lat: number; zoom: number; key: number } | null>(null);
   const [fixSel, setFixSel] = useState<number | null>(null);
+  const [planAsk, setPlanAsk] = useState(false);
   useEffect(() => {
     const k = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f") { e.preventDefault(); setPanel(true); setLayers(false); } else if (e.key === "Escape") { setPanel(false); } };
     window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k);
@@ -202,6 +204,16 @@ export function MapScreen() {
           <div className="muted" style={{ marginTop: 2 }}>{atcSel.facility} on {NETWORK_LABEL[atcSel.network]}</div>
           {atcSel.frequency && <div className="data" style={{ fontSize: 26, fontWeight: 700, marginTop: 10 }}>{atcSel.frequency}</div>}
           {atcSel.atis.length > 0 && <p className="muted" style={{ fontSize: 13, marginTop: 8, maxHeight: 120, overflow: "auto" }}>{atcSel.atis.join(" ")}</p>}
+        </div>
+      )}
+      {!L.plan && mode !== "demo" && !sel && !atcSel && !wxSel && (
+        <button className="map-noplan glass strong" onClick={() => setPlanAsk(!planAsk)}><span className="dot-warn" />No flight plan on the map<b>Add one</b></button>
+      )}
+      {planAsk && !L.plan && (
+        <div className="map-sheet glass strong pad plan-ask">
+          <div className="between"><b style={{ fontSize: 17 }}>Add your flight plan</b><button className="btn small" aria-label="Close" onClick={() => setPlanAsk(false)}><span style={{ width: 16, height: 16 }}>{Icon.close()}</span></button></div>
+          <p className="muted" style={{ fontSize: 13.5, margin: "8px 0 10px" }}><b>Planned in MSFS?</b> Set your route in the world map and start the flight. The Bridge picks it up by itself within a few seconds.</p>
+          <LoadPlanCard />
         </div>
       )}
       {fixSel !== null && L.plan && L.plan.fixes[fixSel] && (() => {

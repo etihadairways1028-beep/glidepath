@@ -38,6 +38,8 @@ import type { RawFrame, SimAdapter } from "./types.js";
 import { ALL_EVENTS, type Step } from "../remote.js";
 
 // AI traffic around the user (the sim's own AI, and traffic injected by tools like SayIntentions)
+/** Extra simulator requests (AI traffic, procedure lists). Off by default: start the Bridge with --sim-extras to try them. */
+const simExtras = () => process.env.GLIDEPATH_SIM_EXTRAS === "1";
 const DEF_AI = 20001, REQ_AI = 20002, AI_RADIUS_M = 120_000, AI_EVERY_MS = 10_000;
 /** Strings first, then numbers: the order is the data layout. */
 const AI_STRINGS: Array<[string, "s32" | "s256"]> = [["ATC ID", "s32"], ["ATC AIRLINE", "s32"], ["ATC FLIGHT NUMBER", "s32"], ["ATC MODEL", "s32"], ["TITLE", "s256"]];
@@ -143,6 +145,7 @@ const EVT_PAUSE = 10;
 const EVT_SIM = 11;
 const EVT_AIRCRAFT_LOADED = 12;
 const EVT_FLIGHT_LOADED = 13;
+const EVT_PLAN_ACTIVATED = 14;
 const EVT_CRASHED = 14;
 
 export interface MsfsAdapterOptions {
@@ -217,7 +220,8 @@ export class MsfsAdapter extends EventEmitter implements SimAdapter {
       this.subscribe(handle);
       this.buildTelemetryDefinition(handle);
       this.requestIdent(handle);
-      this.startAiTraffic(handle);
+      // Off unless switched on: asking MSFS for every AI aircraft is untested and may destabilise the sim.
+      if (simExtras()) this.startAiTraffic(handle);
     } catch (err) {
       this.log.debug("SimConnect not available yet", err instanceof Error ? err.message : String(err));
       this.handle = null;
@@ -239,6 +243,7 @@ export class MsfsAdapter extends EventEmitter implements SimAdapter {
       if (ev.clientEventId === EVT_CRASHED) this.log.info("Simulator reported a crash");
     });
     h.on("eventFilename", (ev: RecvEventFilename) => {
+      if (ev.clientEventId === EVT_PLAN_ACTIVATED && ev.fileName) { this.emit("planFile", ev.fileName); return; }
       if (ev.clientEventId === EVT_AIRCRAFT_LOADED || ev.clientEventId === EVT_FLIGHT_LOADED) {
         this.log.info("Aircraft/flight loaded", ev.fileName);
         this.requestIdent(h);
@@ -261,6 +266,7 @@ export class MsfsAdapter extends EventEmitter implements SimAdapter {
 
   /** SIDs, STARs and approaches for an airport, from the simulator's own navigation data. */
   procedures(icao: string): Promise<AirportProcedures> {
+    if (!simExtras()) return Promise.reject(new Error("SID and STAR lists from the simulator are switched off to keep MSFS stable. Your SimBrief plan still shows its SID and STAR."));
     const h = this.handle;
     if (!h) return Promise.reject(new Error("Procedure lists come from Microsoft Flight Simulator. Start the sim, then try again."));
     const code = icao.trim().toUpperCase();
@@ -284,6 +290,7 @@ export class MsfsAdapter extends EventEmitter implements SimAdapter {
     h.subscribeToSystemEvent(EVT_SIM, "Sim");
     h.subscribeToSystemEvent(EVT_AIRCRAFT_LOADED, "AircraftLoaded");
     h.subscribeToSystemEvent(EVT_FLIGHT_LOADED, "FlightLoaded");
+    h.subscribeToSystemEvent(EVT_PLAN_ACTIVATED, "FlightPlanActivated");
     h.subscribeToSystemEvent(EVT_CRASHED, "Crashed");
     // Remote control: map each key event once, plus a definition for the camera.
     ALL_EVENTS.forEach((name, i) => h.mapClientEventToSimEvent(EVT_REMOTE_BASE + i, name));

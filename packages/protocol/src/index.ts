@@ -345,7 +345,8 @@ export const PlanFix = z.object({ ident: z.string(), lat: z.number(), lon: z.num
   trackDeg: z.number().nullable().optional(), windDirDeg: z.number().nullable().optional(), windKt: z.number().nullable().optional(), oatC: z.number().nullable().optional() });
 
 export const FlightPlan = z.object({
-  source: z.literal("simbrief"),
+  /** Where the plan came from: SimBrief, or the flight plan loaded in Microsoft Flight Simulator. */
+  source: z.enum(["simbrief", "msfs"]),
   ofpId: z.string().nullable(),
   callsign: z.string().nullable(),
   flightNumber: z.string().nullable(),
@@ -547,3 +548,4 @@ export function emptyFrame(seq: number, t: number, lat: number, lon: number): Te
 export * from "./pilot";
 export * from "./weather";
 export * from "./simbrief";
+export * from "./pln";

@@ -478,6 +478,7 @@ export class LanServer {
       return json(res, 200, flight);
     }
 
+    if (p === "/api/plan" && req.method === "GET") return json(res, 200, { plan: this.session.currentPlan });
     if (p === "/api/plan" && req.method === "POST") {
       if (!this.external) return json(res, 503, { error: "External data is disabled" });
       const body = await readBody(req);

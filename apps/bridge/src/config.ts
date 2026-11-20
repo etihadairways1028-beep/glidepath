@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir, hostname, platform } from "node:os";
 import { join } from "node:path";
 
-export const BRIDGE_VERSION = process.env.GLIDEPATH_TEST_VERSION ?? "1.0.6";
+export const BRIDGE_VERSION = process.env.GLIDEPATH_TEST_VERSION ?? "1.0.7";
 
 export type AdapterChoice = "auto" | "msfs" | "replay";
 
@@ -83,6 +83,7 @@ export function loadConfig(argv = process.argv.slice(2)): BridgeConfig {
       case "--simconnect-interval": cfg.simconnectInterval = Math.max(1, Number(need())); break;
       case "--no-mdns": cfg.mdns = false; break;
       case "--no-open": cfg.openBrowser = false; break;
+      case "--sim-extras": process.env.GLIDEPATH_SIM_EXTRAS = "1"; break;
       case "--debug": cfg.logLevel = "debug"; break;
       case "--help":
         console.log(HELP);

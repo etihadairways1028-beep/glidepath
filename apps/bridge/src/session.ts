@@ -86,6 +86,9 @@ export class FlightSession extends EventEmitter {
     }
   }
 
+  /** The plan for the current (or next) flight. */
+  get currentPlan(): FlightPlan | null { return this.plan; }
+
   /** Attach a SimBrief plan to the current (or next) flight. */
   setPlan(plan: FlightPlan | null): void {
     this.plan = plan;

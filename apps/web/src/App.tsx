@@ -18,6 +18,7 @@ import { APP_VERSION, WhatsNew } from "./components/WhatsNew";
 import { SideClock } from "./components/Clock";
 import { initSync } from "./data/sync";
 import { settingsStore, store, useApp, useSettings } from "./data/store";
+import { startPlanSync } from "./data/plan";
 import { CockpitScreen } from "./screens/Cockpit";
 import { WeatherScreen } from "./screens/Weather";
 import { GlideslopeBanners, useFlightMessages, useApproachCoach } from "./components/Glideslope";
@@ -104,6 +105,7 @@ const NAV: Array<{ id: string; label: string; icon: () => ReactNode; mobile: boo
 
 export function App() {
   const route = useRoute();
+  useEffect(() => startPlanSync(() => settingsStore.get().simbriefUser ?? "", () => activeBridge()), []);
   useEffect(() => { const t = TITLES[route[0] ?? "home"]; document.title = t ? `${t} · Glidepath` : "Glidepath"; }, [route[0]]);
   const s = useSettings();
   const mode = useApp((st) => st.mode);
