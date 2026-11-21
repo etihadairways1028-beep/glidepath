@@ -6,12 +6,15 @@
 import { useEffect, useState } from "react";
 import { Icon } from "./ui";
 
-export const APP_VERSION = "1.0.9";
+export const APP_VERSION = "1.1.0";
 const KEY = "glidepath.seenVersion";
 
 export type WnIcon = "map" | "flight" | "remote" | "book" | "gear" | "spark" | "download" | "search" | "tower" | "cloud" | "layers" | "target";
 export interface WnItem { v: string; ic: WnIcon; t: string; d: string }
 export const WHATS_NEW: WnItem[] = [
+  { v: "1.1.0", ic: "spark", t: "A new Home while you fly", d: "A live dashboard: the map, altitude, speed, vertical speed and fuel with their trend, your next waypoint, and the weather where you're going." },
+  { v: "1.1.0", ic: "search", t: "Easier to read", d: "Bigger labels everywhere, smoother text and numbers that line up, so you can read it at a glance." },
+  { v: "1.1.0", ic: "layers", t: "A cleaner, more modern look", d: "Glowing highlights, quick actions as compact buttons, and cards that react when you tap them." },
   { v: "1.0.9", ic: "remote", t: "Pair by code on any Wi-Fi", d: "Type the code on your iPad and stay right where you are. If your router blocks the direct link, Glidepath goes through its own relay instead. Your PC still checks the code." },
   { v: "1.0.9", ic: "download", t: "A new Updates page", d: "See which version of the app and the Bridge you have, check for updates and watch them install." },
   { v: "1.0.9", ic: "spark", t: "Better on iPad and phone", d: "Bigger tab bar, notifications that stay out of the way, and your live flight first on the Flight screen." },

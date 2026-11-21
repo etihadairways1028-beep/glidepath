@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ClockPill } from "../components/Clock";
 import type { FlightSummary } from "@glidepath/protocol";
 import { FlightFeed, LiveCard } from "../components/LiveCard";
+import { Bento } from "../components/Bento";
 import { MapView } from "../components/MapView";
 import { YourPcs } from "./Account";
 import { InstallCard } from "../components/InstallCard";
@@ -35,11 +36,10 @@ export function Home() {
       <CockpitReady />
       {mode === "bridge" && conn !== "live" && msg && <Notice>{msg} <a href="#/settings">Connection settings</a></Notice>}
       {mode !== "none" && flight?.status === "completed" && <DebriefTeaser />}
-      {mode !== "none" && flight && <><LiveCard /><FlightFeed /></>}
+      {mode !== "none" && flight && <LiveCard />}
+      {mode !== "none" && flight && flight.status !== "completed" ? <Bento /> : mode !== "none" && flight ? <FlightFeed /> : null}
       {mode !== "none" && <QuickActions />}
-      {mode !== "none" && flight && flight.status !== "completed" && <HomeMap />}
       {mode !== "none" && flight && <HomeAircraft />}
-      {mode !== "none" && flight && flight.status !== "completed" && <Instruments />}
       {mode !== "none" && flight && flight.status !== "completed" && <SoFar />}
       {mode !== "none" && flight && <HomeTimings />}
       {mode !== "none" && flight && <CopilotLine />}

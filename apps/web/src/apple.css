@@ -896,7 +896,7 @@ button, .btn, .seg, .tabbar { -webkit-user-select: none; user-select: none; }
   background: radial-gradient(380px circle at var(--mx, -400px) var(--my, -400px), rgba(255,255,255,.12), rgba(255,255,255,.03) 40%, transparent 65%) !important; opacity: 1 !important; }
 :root[data-theme="light"] .glass::after { background: radial-gradient(380px circle at var(--mx, -400px) var(--my, -400px), rgba(255,255,255,.55), rgba(255,255,255,.12) 40%, transparent 65%) !important; }
 /* Cards get a positioned box for the light; floating glass (tab bar, messages, sheets) stays pinned. */
-:root .glass:not(.tabbar):not(.gs-msg):not(.fc-sheet):not(.side):not(.upd-bar):not(.map-hud):not(.map-sheet):not(.layers-pop):not(.map-search):not(.map-noplan):not(.gp-updating):not(.wn-sheet):not(.replay-read):not(.toast):not(.map-note) { position: relative; }
+:root .glass:not(.tabbar):not(.gs-msg):not(.fc-sheet):not(.side):not(.upd-bar):not(.map-hud):not(.map-sheet):not(.layers-pop):not(.map-search):not(.map-noplan):not(.gp-updating):not(.wn-sheet):not(.b-map):not(.b-tile):not(.b-card):not(.replay-read):not(.toast):not(.map-note) { position: relative; }
 :root .tabbar.glass { position: fixed !important; }
 :root .live-card.glass::after { opacity: .6 !important; }
 
@@ -1596,9 +1596,97 @@ body:has(.wn-scrim) .gs-stack { display: none !important; }
 }
 @media (max-width: 600px) {
   :root .gs-msg { padding: 8px 12px 9px !important; }
-  :root .gs-msg > *:first-child { font-size: 10.5px !important; }
+  :root .gs-msg > *:first-child { font-size: 11.5px !important; }
   /* Page titles get a little more room under the status bar. */
   :root .title { font-size: 30px !important; }
 }
 :root .wn-scrim { z-index: 3000; }
 body:has(.wn-scrim) .tabbar, body:has(.upd-ov) .tabbar { visibility: hidden; }
+
+/* ---- Home dashboard (bento) ---- */
+.bento { display: grid; gap: 14px; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: minmax(124px, auto); grid-template-areas: "map map t1 t2" "map map t3 t4" "map map nx wx" "fd fd fd fd"; }
+.b-map { grid-area: map; position: relative; min-height: 420px; border-radius: 26px !important; overflow: hidden; padding: 0 !important; }
+.b-map { display: block; } .b-map .map, .b-map .maplibregl-map { position: absolute !important; inset: 0; height: 100% !important; } .b-map .map-note { display: none; }
+.b-map .home-map-tag { z-index: 3; }
+.b-tile:nth-of-type(1) { grid-area: t1; } .b-tile:nth-of-type(2) { grid-area: t2; } .b-tile:nth-of-type(3) { grid-area: t3; } .b-tile:nth-of-type(4) { grid-area: t4; }
+.b-next { grid-area: nx; } .b-wx { grid-area: wx; } .b-feed { grid-area: fd; }
+.b-tile, .b-card { position: relative; overflow: hidden; border-radius: 22px !important; padding: 15px 16px 14px !important; display: flex; flex-direction: column; gap: 3px; min-width: 0; color: inherit; text-decoration: none; transition: transform .25s cubic-bezier(.2,1,.3,1), box-shadow .25s ease; animation: bIn .55s cubic-bezier(.2,1.1,.35,1) both; }
+.bento > :nth-child(2) { animation-delay: .04s; } .bento > :nth-child(3) { animation-delay: .08s; } .bento > :nth-child(4) { animation-delay: .12s; } .bento > :nth-child(5) { animation-delay: .16s; } .bento > :nth-child(6) { animation-delay: .2s; } .bento > :nth-child(7) { animation-delay: .24s; }
+a.b-card:hover { box-shadow: 0 18px 40px -22px rgba(10,132,255,.7), inset 0 0 0 1px rgba(100,181,255,.25) !important; }
+.bt-k { font-size: 11.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: rgba(235,240,250,.55); }
+.bt-v { font-size: clamp(24px, 2.4vw, 32px); font-weight: 720; letter-spacing: -.02em; color: #fff; line-height: 1.1; margin-top: 2px; display: flex; align-items: baseline; gap: 2px; }
+.bt-v small { font-size: .5em; font-weight: 600; color: rgba(235,240,250,.6); }
+.bt-tone { font-style: normal; font-size: .42em; margin-left: 6px; align-self: center; } .bt-tone.up { color: #30D158; } .bt-tone.down { color: #FF9F0A; }
+.bt-sub { font-size: 12.5px; color: rgba(235,240,250,.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; z-index: 1; }
+.bt-spark { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 46%; pointer-events: none; opacity: .95; }
+.bt-spark.empty { display: none; }
+.b-tile .bt-k, .b-tile .bt-v, .b-tile .bt-sub { position: relative; z-index: 1; }
+.bn-id { font-size: 30px; font-weight: 750; letter-spacing: .01em; color: #fff; margin-top: 2px; }
+.bn-meta { font-size: 13.5px; color: #F0A6FF; }
+.bn-bar { display: block; height: 4px; border-radius: 4px; background: rgba(255,255,255,.08); margin: 8px 0 4px; overflow: hidden; } .bn-bar i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, #BF5AF2, #FF4FD8); transition: width .8s ease; }
+.b-next { background: linear-gradient(160deg, rgba(191,90,242,.16), rgba(255,255,255,.03)) !important; }
+.bw-row { display: flex; align-items: center; gap: 10px; margin-top: 2px; } .bw-row b { font-size: 30px; font-weight: 720; color: #fff; }
+.bw-cat { font-size: 11.5px; font-weight: 800; letter-spacing: .05em; padding: 4px 8px; border-radius: 8px; color: #04210c; background: #30D158; }
+.bw-cat.mvfr { background: #64B5FF; color: #021a33; } .bw-cat.ifr { background: #FF453A; color: #fff; } .bw-cat.lifr { background: #BF5AF2; color: #fff; }
+.bw-wind { font-size: 13.5px; color: rgba(235,240,250,.8); }
+.b-feed .lc-feed { margin: 0; }
+@media (max-width: 1100px) {
+  .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "map map" "map map" "t1 t2" "t3 t4" "nx wx" "fd fd"; }
+  .b-map { min-height: 320px; }
+}
+@media (max-width: 600px) {
+  .bento { gap: 10px; grid-auto-rows: minmax(110px, auto); }
+  .b-map { min-height: 260px; border-radius: 22px !important; }
+  .b-tile, .b-card { padding: 13px 14px 12px !important; border-radius: 20px !important; }
+  .bt-v { font-size: 24px; } .bn-id, .bw-row b { font-size: 25px; }
+}
+.bento:not(:has(.b-next)) { grid-template-areas: "map map t1 t2" "map map t3 t4" "map map wx wx" "fd fd fd fd"; }
+@media (max-width: 1100px) { .bento:not(:has(.b-next)) { grid-template-areas: "map map" "map map" "t1 t2" "t3 t4" "wx wx" "fd fd"; } }
+@keyframes bIn { from { opacity: 0; transform: translateY(12px) scale(.985); } }
+@media (prefers-reduced-motion: reduce) { .b-tile, .b-card { animation: none; } }
+
+/* ---- Modern finish (1.0.10) ---- */
+/* Page titles: crisp white with a cool sheen. */
+:root h1.title, :root .home-head h1 { background: linear-gradient(180deg, #FFFFFF 30%, #C9DCFF 100%); -webkit-background-clip: text; background-clip: text; color: transparent; letter-spacing: -.035em; }
+/* Primary buttons: depth, a soft glow, and a press. */
+:root .btn.primary { box-shadow: 0 10px 26px -12px rgba(10,122,255,.85), inset 0 1px 0 rgba(255,255,255,.35) !important; transition: transform .18s cubic-bezier(.2,1,.3,1), box-shadow .25s ease, filter .2s ease; }
+@media (hover: hover) { :root .btn.primary:hover { box-shadow: 0 14px 34px -12px rgba(10,122,255,1), inset 0 1px 0 rgba(255,255,255,.4) !important; filter: brightness(1.06); } }
+:root .btn:active { transform: scale(.97); }
+/* Sidebar: the page you're on glows. */
+:root .nav-a.on { background: linear-gradient(90deg, rgba(10,132,255,.26), rgba(94,92,230,.10)) !important; box-shadow: inset 0 0 0 1px rgba(100,181,255,.28), 0 8px 22px -14px rgba(10,132,255,.9) !important; }
+:root .nav-a { transition: background .2s ease, color .2s ease; }
+/* Tab bar: a lit pill behind the current tab. */
+:root .tabbar .tab.on { color: #fff !important; }
+:root .tabbar .tab.on svg { filter: drop-shadow(0 0 8px rgba(100,181,255,.75)); }
+/* Cards you can tap respond. */
+@media (hover: hover) { :root a.glass:not(.b-map):not(.quick-a):hover { transform: translateY(-2px); } }
+:root a.glass { transition: transform .25s cubic-bezier(.2,1,.3,1), box-shadow .25s ease; }
+/* Trend lines sit low in their tile, under the numbers. */
+:root .bt-spark { height: 38%; -webkit-mask-image: linear-gradient(180deg, transparent, #000 35%); mask-image: linear-gradient(180deg, transparent, #000 35%); }
+/* Quick actions: compact chips rather than big boxes. */
+:root .quick { display: flex !important; flex-wrap: wrap; gap: 8px !important; }
+:root .quick-a { flex: 1 1 auto; flex-direction: row !important; justify-content: center; gap: 10px !important; padding: 10px 16px !important; min-height: 52px; border-radius: 16px !important; }
+:root .quick-a .nav-ic { width: 30px !important; height: 30px !important; border-radius: 9px !important; }
+:root .quick-a .nav-ic svg { width: 17px !important; height: 17px !important; }
+:root .quick-a > span:last-child { font-size: 14px; font-weight: 650; }
+@media (max-width: 600px) { :root .quick-a { flex: 1 1 calc(50% - 8px); justify-content: flex-start; } }
+@media (prefers-reduced-motion: reduce) { :root a.glass:hover { transform: none; } }
+
+/* ---- Readable everywhere ---- */
+html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; -webkit-text-size-adjust: 100%; }
+:root .data, :root .bt-v, :root .bn-id { font-variant-numeric: tabular-nums; }
+:root body { line-height: 1.45; }
+/* Nothing smaller than 12 px, apart from the map legend. */
+:root .lc-ap small, :root .fp-table td small, :root .sc-k, :root .tm-strip .k, :root .tm-short, :root .tm-local, :root .lc .under, :root .gs-from, :root .cl-now, :root .lb-row em, :root .rc-eng span, :root .rc-eng small, :root .map-hud .faint, :root .home-head .faint, :root .lc .faint, :root .sofar span { font-size: max(12px, 1em) !important; }
+:root small { font-size: max(12px, .82em); }
+:root .tabbar .tab { font-size: 11.5px !important; }
+:root .muted { color: rgba(235,240,250,.74); }
+:root .faint { color: rgba(235,240,250,.6); }
+html:root .gs-from { font-size: 11.5px !important; }
+html:root div.under, html:root .lb-row em, html:root em.cl-now, html:root span.faint { font-size: max(12px, 1em) !important; }
+html:root small { font-size: max(12px, .8em) !important; }
+html:root .bt-v small { font-size: .5em !important; } html:root .data small, html:root .v small, html:root .lc-v small { font-size: max(12px, .6em) !important; }
+html:root .clock-pill small { font-size: 12px !important; }
+html:root .side .sc small, html:root .side-clock small { font-size: 11px !important; } html:root .side .sc, html:root .side-clock { white-space: nowrap; }
+html:root .badge-bar em, html:root .lh-line em { font-size: 12px !important; }
+html:root .side-clock .sc-k { font-size: 11.5px !important; } html:root .side-clock .sc-row { white-space: nowrap; flex-wrap: nowrap; }
