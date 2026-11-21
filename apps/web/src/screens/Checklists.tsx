@@ -172,8 +172,19 @@ export function ChecklistsScreen() {
           <section key={l.id} className="glass strong cl-card page-enter">
             <div className="between">
               <div><h2 className="h2" style={{ margin: 0 }}>{l.title}</h2><span className="faint" style={{ fontSize: 13 }}>{l.when}</span></div>
-              <span className="pill">{status(l)} of {l.items.length}</span>
+              <ClRing done={status(l)} total={l.items.length} />
             </div>
+            {status(l) === l.items.length && (() => {
+              const i = all.findIndex((x) => x.id === l.id);
+              const nx = all[i + 1];
+              return (
+                <div className="cl-done" role="status">
+                  <span className="cl-done-ic" aria-hidden="true">✓</span>
+                  <div><b>Checklist complete</b><span>{nx ? `Next up: ${nx.title}` : "That's every checklist for this flight."}</span></div>
+                  {nx && <button className="btn primary small" onClick={() => setOpen(nx.id)}>Next checklist</button>}
+                </div>
+              );
+            })()}
             <ol className="cl-items">
               {l.items.map((it, i) => {
                 const k = `${l.id}:${i}`;
@@ -197,5 +208,20 @@ export function ChecklistsScreen() {
         ))}
       </div>
     </>
+  );
+}
+
+/** How far through this checklist: a ring that fills as you tick. */
+function ClRing({ done, total }: { done: number; total: number }) {
+  const r = 26, c = 2 * Math.PI * r, p = total ? done / total : 0;
+  return (
+    <span className={`cl-bigring${p === 1 ? " full" : ""}`} role="img" aria-label={`${done} of ${total} done`}>
+      <svg viewBox="0 0 64 64">
+        <defs><linearGradient id="clg" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stopColor="#64D2FF" /><stop offset="1" stopColor="#30D158" /></linearGradient></defs>
+        <circle cx="32" cy="32" r={r} fill="none" stroke="rgba(255,255,255,.1)" strokeWidth="6" />
+        <circle cx="32" cy="32" r={r} fill="none" stroke="url(#clg)" strokeWidth="6" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - p)} transform="rotate(-90 32 32)" className="clr-arc" />
+      </svg>
+      <b className="data">{done}<small>/{total}</small></b>
+    </span>
   );
 }

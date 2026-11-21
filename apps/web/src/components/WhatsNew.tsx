@@ -6,12 +6,15 @@
 import { useEffect, useState } from "react";
 import { Icon } from "./ui";
 
-export const APP_VERSION = "1.1.1";
+export const APP_VERSION = "1.1.2";
 const KEY = "glidepath.seenVersion";
 
 export type WnIcon = "map" | "flight" | "remote" | "book" | "gear" | "spark" | "download" | "search" | "tower" | "cloud" | "layers" | "target";
 export interface WnItem { v: string; ic: WnIcon; t: string; d: string }
 export const WHATS_NEW: WnItem[] = [
+  { v: "1.1.2", ic: "remote", t: "A real autopilot panel", d: "Remote now looks like the glareshield: glowing orange displays, chunky keys and green bars that light when AP, FD or A/THR are on." },
+  { v: "1.1.2", ic: "target", t: "Checklists that feel good", d: "A ring that fills as you tick, items that turn green, and a jump straight to the next checklist when you finish." },
+  { v: "1.1.2", ic: "book", t: "Your rank, on your shoulder", d: "Career shows a gold-striped shoulder board for your rank. The logbook welcomes you properly before your first flight." },
   { v: "1.1.1", ic: "target", t: "Your landing, celebrated", d: "Touch down and your grade lands on screen with your fpm and g. Nail it and there's confetti." },
   { v: "1.1.1", ic: "cloud", t: "A sky that flies with you", d: "Clouds drift behind the app, the sun or moon follows the time where your aircraft is, and stars come out at night and in cruise." },
   { v: "1.1.1", ic: "spark", t: "A glowing flight card", d: "Your live flight card has a soft light running around its edge." },

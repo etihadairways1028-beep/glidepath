@@ -44,6 +44,31 @@ export function useFlights(): { flights: FlightSummary[] | null; error: string |
   return { flights, error, fromCloud };
 }
 
+/** Before your first finished flight: what the logbook will hold, instead of rows of zeros. */
+function LogbookWelcome({ demo }: { demo: boolean }) {
+  return (
+    <section className="glass strong lb-welcome">
+      <svg className="lbw-art" viewBox="0 0 320 160" aria-hidden="true">
+        <defs><linearGradient id="lbwl" x1="0" x2="1"><stop offset="0" stopColor="#64D2FF" /><stop offset="1" stopColor="#BF5AF2" /></linearGradient></defs>
+        <circle cx="160" cy="250" r="190" fill="none" stroke="rgba(100,181,255,.18)" />
+        <circle cx="160" cy="250" r="150" fill="none" stroke="rgba(100,181,255,.1)" />
+        <path id="lbw-p" d="M40 130 C 100 20, 220 20, 280 130" fill="none" stroke="url(#lbwl)" strokeWidth="3" strokeLinecap="round" strokeDasharray="5 7" className="lbw-path" />
+        <circle cx="40" cy="130" r="6" fill="#64D2FF" /><circle cx="280" cy="130" r="6" fill="#BF5AF2" />
+        <g className="lbw-plane"><path d="M15 0C15-1.3 13.4-2.2 11.5-2.2H3L-5.5-14h-3l4 11.8H-11L-14.5-7h-2l1.6 4.8V2.2L-16.5 7h2L-11 2.2h6.5l-4 11.8h3L3 2.2h8.5C13.4 2.2 15 1.3 15 0z" fill="#fff" /></g>
+      </svg>
+      <div className="lbw-text">
+        <h2>Your logbook starts with your first flight</h2>
+        <p className="muted">{demo ? "Demo flights don't go in your logbook. Fly for real and they'll appear here." : "Fly gate to gate with the Bridge running. Glidepath logs the flight by itself."}</p>
+        <ul className="lbw-list">
+          <li><span>1</span>Every flight with its route on the map and a replay video</li>
+          <li><span>2</span>Your landings graded, with fpm, g and centreline</li>
+          <li><span>3</span>Hours, distance, airports, badges and your career rank</li>
+        </ul>
+      </div>
+    </section>
+  );
+}
+
 export function Logbook() {
   const { flights, error, fromCloud } = useFlights();
   const mode = useApp((s) => s.mode);
@@ -73,7 +98,8 @@ export function Logbook() {
       {fromCloud && <Notice info>Showing the flights saved to your account. Connect your Bridge for full replays and maps of each flight.</Notice>}
       {done.length > 0 && <AllFlightsMap flights={done} />}
       {error && <Notice>{error}</Notice>}
-      {(mode !== "none" || fromCloud) && flights && <><Career flights={flights} /><LandingHistory flights={flights} /><Badges flights={flights} /></>}
+      {(mode !== "none" || fromCloud) && flights && done.length === 0 && <><LogbookWelcome demo={mode === "demo"} /><Badges flights={flights} /></>}
+      {(mode !== "none" || fromCloud) && flights && done.length > 0 && <><Career flights={flights} /><LandingHistory flights={flights} /><Badges flights={flights} /></>}
       <section className="glass pad">
         <div className="row wrap" style={{ marginBottom: 10 }}>
           <input className="input" style={{ flex: "1 1 220px", maxWidth: 360 }} placeholder="Search airport, aircraft or callsign" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search flights" />

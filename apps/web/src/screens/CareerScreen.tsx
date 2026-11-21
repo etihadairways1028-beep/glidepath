@@ -11,10 +11,24 @@ const hrs = (h: number) => (h >= 100 ? Math.round(h).toLocaleString("en-US") : h
 const mins = (m: number) => `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`;
 
 function Stripes({ n }: { n: number }) {
+  // A pilot's shoulder board: gold stripes for the rank (four for captain), the button at the top.
+  const ys = [118, 100, 82, 64];
   return (
-    <div className="epaulette" aria-hidden="true">
-      {Array.from({ length: 4 }, (_, i) => <span key={i} className={i < n ? "on" : ""} />)}
-    </div>
+    <svg className="epaulette2" viewBox="0 0 80 140" role="img" aria-label={`${n} ${n === 1 ? "stripe" : "stripes"}`}>
+      <defs>
+        <linearGradient id="epB" x1="0" x2="1"><stop offset="0" stopColor="#0E1A3A" /><stop offset=".5" stopColor="#1A2B5C" /><stop offset="1" stopColor="#0E1A3A" /></linearGradient>
+        <linearGradient id="epG" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#FFF1B8" /><stop offset=".45" stopColor="#F5C451" /><stop offset="1" stopColor="#B7862A" /></linearGradient>
+        <linearGradient id="epS" x1="0" x2="1"><stop offset="0" stopColor="#fff" stopOpacity="0" /><stop offset=".5" stopColor="#fff" stopOpacity=".55" /><stop offset="1" stopColor="#fff" stopOpacity="0" /></linearGradient>
+        <clipPath id="epC"><path d="M8 18 Q40 2 72 18 L72 134 Q72 138 68 138 L12 138 Q8 138 8 134 Z" /></clipPath>
+      </defs>
+      <path d="M8 18 Q40 2 72 18 L72 134 Q72 138 68 138 L12 138 Q8 138 8 134 Z" fill="url(#epB)" stroke="rgba(255,255,255,.18)" />
+      <g clipPath="url(#epC)">
+        {ys.map((y, i) => <rect key={i} x="8" y={y} width="64" height="9" fill={i < n ? "url(#epG)" : "rgba(255,255,255,.07)"} className={i < n ? "ep-on" : ""} style={{ animationDelay: `${0.15 + i * 0.12}s` }} />)}
+        <rect className="ep-shine" x="-40" y="0" width="30" height="140" fill="url(#epS)" transform="skewX(-18)" />
+      </g>
+      <circle cx="40" cy="26" r="7" fill="url(#epG)" stroke="#8A6420" strokeWidth=".8" />
+      <circle cx="40" cy="26" r="3" fill="none" stroke="#8A6420" strokeWidth=".8" />
+    </svg>
   );
 }
 
