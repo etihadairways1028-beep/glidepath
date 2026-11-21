@@ -6,12 +6,15 @@
 import { useEffect, useState } from "react";
 import { Icon } from "./ui";
 
-export const APP_VERSION = "1.1.0";
+export const APP_VERSION = "1.1.1";
 const KEY = "glidepath.seenVersion";
 
 export type WnIcon = "map" | "flight" | "remote" | "book" | "gear" | "spark" | "download" | "search" | "tower" | "cloud" | "layers" | "target";
 export interface WnItem { v: string; ic: WnIcon; t: string; d: string }
 export const WHATS_NEW: WnItem[] = [
+  { v: "1.1.1", ic: "target", t: "Your landing, celebrated", d: "Touch down and your grade lands on screen with your fpm and g. Nail it and there's confetti." },
+  { v: "1.1.1", ic: "cloud", t: "A sky that flies with you", d: "Clouds drift behind the app, the sun or moon follows the time where your aircraft is, and stars come out at night and in cruise." },
+  { v: "1.1.1", ic: "spark", t: "A glowing flight card", d: "Your live flight card has a soft light running around its edge." },
   { v: "1.1.0", ic: "spark", t: "A new Home while you fly", d: "A live dashboard: the map, altitude, speed, vertical speed and fuel with their trend, your next waypoint, and the weather where you're going." },
   { v: "1.1.0", ic: "search", t: "Easier to read", d: "Bigger labels everywhere, smoother text and numbers that line up, so you can read it at a glance." },
   { v: "1.1.0", ic: "layers", t: "A cleaner, more modern look", d: "Glowing highlights, quick actions as compact buttons, and cards that react when you tap them." },

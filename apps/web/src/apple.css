@@ -1690,3 +1690,47 @@ html:root .clock-pill small { font-size: 12px !important; }
 html:root .side .sc small, html:root .side-clock small { font-size: 11px !important; } html:root .side .sc, html:root .side-clock { white-space: nowrap; }
 html:root .badge-bar em, html:root .lh-line em { font-size: 12px !important; }
 html:root .side-clock .sc-k { font-size: 11.5px !important; } html:root .side-clock .sc-row { white-space: nowrap; flex-wrap: nowrap; }
+
+/* ---- Living sky ---- */
+html:root .sky > .sky-scene { display: block !important; position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.sky-scene > * { position: absolute; display: block; }
+.ss-sun { width: 46vmax; height: 46vmax; right: -12vmax; top: -18vmax; border-radius: 50%; background: radial-gradient(circle, rgba(255,214,140,.42) 0%, rgba(255,170,90,.16) 35%, transparent 65%); filter: blur(4px); animation: ssBreathe 9s ease-in-out infinite; transition: opacity 2s ease; }
+.sky[data-day="night"] .ss-sun { background: radial-gradient(circle, rgba(200,215,255,.20) 0%, rgba(140,160,255,.06) 32%, transparent 60%); width: 30vmax; height: 30vmax; right: -6vmax; top: -10vmax; }
+.ss-stars { inset: 0; opacity: 0; transition: opacity 3s ease; background-image: radial-gradient(1.4px 1.4px at 12% 18%, #fff, transparent), radial-gradient(1px 1px at 28% 40%, #fff, transparent), radial-gradient(1.2px 1.2px at 46% 12%, #fff, transparent), radial-gradient(1px 1px at 63% 33%, #fff, transparent), radial-gradient(1.6px 1.6px at 78% 8%, #fff, transparent), radial-gradient(1px 1px at 88% 44%, #fff, transparent), radial-gradient(1.2px 1.2px at 8% 62%, #fff, transparent), radial-gradient(1px 1px at 36% 70%, #fff, transparent), radial-gradient(1.3px 1.3px at 57% 58%, #fff, transparent), radial-gradient(1px 1px at 92% 72%, #fff, transparent), radial-gradient(1px 1px at 20% 88%, #fff, transparent), radial-gradient(1.4px 1.4px at 70% 86%, #fff, transparent); animation: ssTwinkle 6s ease-in-out infinite; }
+.sky[data-day="night"] .ss-stars, .sky[data-sky="cruise"] .ss-stars { opacity: .75; }
+.sky[data-day="night"][data-sky="cruise"] .ss-stars { opacity: 1; }
+.ss-shoot { top: 14%; left: -10%; width: 140px; height: 1.5px; background: linear-gradient(90deg, transparent, #fff); opacity: 0; transform: rotate(-18deg); }
+.sky[data-day="night"] .ss-shoot { animation: ssShoot 14s linear infinite 4s; }
+.ss-clouds { left: 0; width: 220%; height: 34vh; bottom: -6vh; fill: rgba(255,255,255,.075); animation: ssDrift 120s linear infinite; }
+.ss-clouds.b { bottom: -12vh; height: 26vh; fill: rgba(255,255,255,.055); animation-duration: 75s; animation-direction: reverse; }
+.sky[data-sky="climb"] .ss-clouds { animation-duration: 60s; } .sky[data-sky="climb"] .ss-clouds.b { animation-duration: 38s; }
+.sky[data-sky="cruise"] .ss-clouds { bottom: -22vh; opacity: .7; }
+.sky[data-sky="descent"] .ss-clouds { fill: rgba(255,200,160,.05); }
+.sky[data-day="day"] .ss-clouds { fill: rgba(255,255,255,.06); }
+@keyframes ssDrift { to { transform: translateX(-50%); } }
+@keyframes ssBreathe { 50% { transform: scale(1.06); opacity: .85; } }
+@keyframes ssTwinkle { 50% { opacity: .35; } }
+@keyframes ssShoot { 0%, 92% { opacity: 0; transform: translate(0, 0) rotate(-18deg); } 93% { opacity: .9; } 100% { opacity: 0; transform: translate(70vw, 22vh) rotate(-18deg); } }
+:root[data-theme="light"] .sky-scene { opacity: .5; }
+@media (prefers-reduced-motion: reduce) { .sky-scene * { animation: none !important; } }
+
+/* ---- Landing celebration ---- */
+.cel { position: fixed; inset: 0; z-index: 2500; display: grid; place-items: center; background: radial-gradient(circle at 50% 45%, rgba(10,20,60,.55), rgba(2,4,12,.75)); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); animation: wnFade .35s ease both; cursor: pointer; }
+.cel-cv { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.cel-card { position: relative; display: grid; justify-items: center; gap: 6px; padding: 30px 40px 26px; border-radius: 32px; text-align: center; background: linear-gradient(180deg, rgba(30,40,80,.9), rgba(12,16,34,.92)); box-shadow: 0 40px 120px -30px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.15); animation: celIn .7s cubic-bezier(.2,1.5,.35,1) both; max-width: min(420px, calc(100vw - 32px)); }
+.cel-k { font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: rgba(235,240,250,.7); }
+.cel-grade { font-size: 120px; line-height: 1; font-weight: 850; letter-spacing: -.04em; background: linear-gradient(180deg, #fff, #9FD0FF); -webkit-background-clip: text; background-clip: text; color: transparent; animation: celGrade .9s .15s cubic-bezier(.2,1.6,.35,1) both; filter: drop-shadow(0 10px 30px rgba(10,132,255,.6)); }
+.g-Ap .cel-grade, .g-A .cel-grade { background-image: linear-gradient(180deg, #FFF6C9, #FFD60A 60%, #FF9F0A); filter: drop-shadow(0 10px 34px rgba(255,214,10,.55)); }
+.g-D .cel-grade, .g-F .cel-grade { background-image: linear-gradient(180deg, #fff, #FF9F80); filter: drop-shadow(0 10px 30px rgba(255,69,58,.45)); }
+.cel-fpm { font-size: 22px; font-weight: 700; color: #fff; }
+.cel-v { font-size: 15px; color: rgba(235,240,250,.75); margin-bottom: 10px; }
+@keyframes celIn { from { opacity: 0; transform: translateY(40px) scale(.85); } }
+@keyframes celGrade { from { opacity: 0; transform: scale(2.2) rotate(-8deg); } }
+@media (prefers-reduced-motion: reduce) { .cel-card, .cel-grade { animation: none; } }
+
+/* ---- The flight card's edge glows and slowly turns ---- */
+@property --lca { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+:root .live-card { position: relative; isolation: isolate; }
+:root .live-card::after { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.5px; pointer-events: none; z-index: 2; background: conic-gradient(from var(--lca), rgba(100,181,255,0) 0deg, rgba(100,181,255,.85) 60deg, rgba(191,90,242,.7) 120deg, rgba(100,181,255,0) 180deg, rgba(100,181,255,0) 360deg); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: lcSpin 7s linear infinite; }
+@keyframes lcSpin { to { --lca: 360deg; } }
+@media (prefers-reduced-motion: reduce) { :root .live-card::after { animation: none; } }

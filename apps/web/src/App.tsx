@@ -1,5 +1,6 @@
 import { Support } from "./screens/Support";
 import { UpdatesScreen } from "./screens/Updates";
+import { Celebrate } from "./components/Celebrate";
 import { Fragment } from "react";
 import { useWallpaper } from "./components/Wallpaper";
 import { ChartsScreen } from "./screens/Charts";
@@ -258,6 +259,7 @@ export function App() {
         <main className="main" id="main">
           <BridgeIconTip />
           <UpdateCenter />
+          <Celebrate />
           <FlightCompletePrompt />
           <WhatsNew />
           <div key={screen || "home"} className={`page page-enter${full ? " full" : ""}`}><ScreenGuard where={location.hash || "#/home"}>{body}</ScreenGuard></div>
@@ -277,16 +279,32 @@ export function App() {
 
 export { store };
 
-/** The sky behind the glass follows the flight: apron dusk, climb, high cruise, descent. */
+const CLOUD = "M0 240 C 60 200 120 210 160 230 C 190 180 270 170 310 215 C 350 190 400 200 430 230 C 470 170 560 160 600 220 C 640 195 700 200 730 232 C 770 180 860 175 900 225 C 940 200 990 205 1020 232 C 1060 190 1140 185 1200 235 L 1200 300 L 0 300 Z";
+
+/** The sky behind the glass follows the flight: apron dusk, climb, high cruise, descent, day or night. */
 function Sky() {
   const phase = useApp((st) => st.phase);
   const hasFlight = useApp((st) => !!(st.lastFlight ?? st.flight));
+  // Day or night where the aircraft is (or here): from the sun's hour angle, good enough for a sky.
+  const lon = useApp((st) => st.frame?.position.lon ?? null);
+  const [, tick] = useState(0);
+  useEffect(() => { const t = window.setInterval(() => tick((n) => n + 1), 60_000); return () => clearInterval(t); }, []);
+  const now = new Date();
+  const solarH = ((now.getUTCHours() + now.getUTCMinutes() / 60 + (lon ?? -now.getTimezoneOffset() / 4) / 15) % 24 + 24) % 24;
+  const day = solarH > 6.3 && solarH < 18.2;
   const sky = !hasFlight ? "ground"
     : phase === "TAKEOFF" || phase === "CLIMB" ? "climb"
     : phase === "CRUISE" ? "cruise"
     : phase === "DESCENT" || phase === "APPROACH" || phase === "LANDING" ? "descent" : "ground";
   return (
-    <div className="sky" data-sky={sky} aria-hidden="true">
+    <div className="sky" data-sky={sky} data-day={day ? "day" : "night"} aria-hidden="true">
+      <div className="sky-scene">
+        <div className="ss-sun" />
+        <div className="ss-stars" />
+        <div className="ss-shoot" />
+        <svg className="ss-clouds a" viewBox="0 0 1200 300" preserveAspectRatio="none"><path d={CLOUD} /></svg>
+        <svg className="ss-clouds b" viewBox="0 0 1200 300" preserveAspectRatio="none"><path d={CLOUD} /></svg>
+      </div>
       <div className="stars" />
       <div className="light a" /><div className="light b" /><div className="light c" />
       <div className="grain" />
