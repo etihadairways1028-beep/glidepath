@@ -1,7 +1,7 @@
 /** Account: sign in (several accounts per device), monthly brief, saved PCs, flight sync. */
 import { useEffect, useState, type ReactElement } from "react";
 import { Icon, Notice, Section } from "../components/ui";
-import { deleteAccount, forgotPassword, resetPassword, setEmailPrefs, forgetBridge, savedBridges, sendBriefPreview, setMonthlyEmail, signIn, signOut, signUp, switchAccount, useCloud, type SavedBridge } from "../data/cloud";
+import { authed, deleteAccount, forgotPassword, resetPassword, setEmailPrefs, forgetBridge, savedBridges, sendBriefPreview, setMonthlyEmail, signIn, signOut, signUp, switchAccount, useCloud, type SavedBridge } from "../data/cloud";
 
 export function Account() {
   const c = useCloud();
@@ -48,11 +48,44 @@ export function Account() {
           </Section>
           {active && <MonthlyBrief monthly={c.profile?.monthly_email ?? true} email={active.email} />}
           {active && <EmailSettings />}
+          {active && <FeedbackInbox key={`fb-${active.slot}`} />}
           {active && <SavedPcs key={active.slot} />}
           {active && <DeleteAccount email={active.email} />}
         </div>
       )}
     </div>
+  );
+}
+
+type Ticket = { ref: string; at: number; email: string; topic: string; title: string; message: string; meta: Record<string, string> };
+/** Every message sent from Support. Shown only to the account that owns the support inbox; the server decides. */
+function FeedbackInbox() {
+  const [items, setItems] = useState<Ticket[] | null>(null);
+  const [allowed, setAllowed] = useState(false);
+  const [filter, setFilter] = useState("all");
+  useEffect(() => {
+    let live = true;
+    authed<{ items: Ticket[] }>("/support/inbox").then((r) => { if (live) { setItems(r.items); setAllowed(true); } }).catch(() => { if (live) setAllowed(false); });
+    return () => { live = false; };
+  }, []);
+  if (!allowed || !items) return null;
+  const topics = Array.from(new Set(items.map((i) => i.topic)));
+  const shown = filter === "all" ? items : items.filter((i) => i.topic === filter);
+  return (
+    <Section title="Feedback inbox" right={<span className="faint" style={{ fontSize: 12.5 }}>{items.length} message{items.length === 1 ? "" : "s"}</span>}>
+      {topics.length > 1 && <div className="seg" style={{ marginBottom: 12, flexWrap: "wrap" }}><button className={filter === "all" ? "on" : ""} onClick={() => setFilter("all")}>All</button>{topics.map((t) => <button key={t} className={filter === t ? "on" : ""} onClick={() => setFilter(t)}>{items.find((i) => i.topic === t)?.title.split(" ").slice(0, 3).join(" ")}</button>)}</div>}
+      {shown.length === 0 && <p className="muted">No messages yet. Everything sent from Support lands here.</p>}
+      <div className="fb-list">
+        {shown.map((t) => (
+          <details key={t.ref} className="fb-item">
+            <summary><b>{t.title}</b><span className="faint">{new Date(t.at).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · {t.ref}</span><span className="fb-snip">{t.message.slice(0, 120)}</span></summary>
+            <p style={{ whiteSpace: "pre-wrap", margin: "8px 0" }}>{t.message}</p>
+            {Object.keys(t.meta).length > 0 && <p className="faint" style={{ fontSize: 12.5 }}>{Object.entries(t.meta).map(([k, v]) => `${k}: ${v}`).join(" · ")}</p>}
+            <a className="btn small" href={`mailto:${t.email}?subject=${encodeURIComponent(`Re: ${t.title} (${t.ref})`)}`}>Reply to {t.email}</a>
+          </details>
+        ))}
+      </div>
+    </Section>
   );
 }
 

@@ -1,4 +1,6 @@
 import { Support } from "./screens/Support";
+import { PerformanceScreen } from "./screens/Performance";
+import { currentLook } from "./components/Look";
 import { UpdatesScreen } from "./screens/Updates";
 import { Celebrate } from "./components/Celebrate";
 import { Fragment } from "react";
@@ -61,7 +63,7 @@ if (typeof window !== "undefined") {
     requestAnimationFrame(() => { const m = document.getElementById("main"); if (m) m.scrollTop = back ? scrollMemory.get(to) ?? 0 : 0; if (!back) window.scrollTo(0, 0); });
   });
 }
-const TITLES: Record<string, string> = { home: "", map: "Live map", flight: "Flight", remote: "Remote", logbook: "Logbook", review: "Flight review", copilot: "Copilot", charts: "Charts", checklists: "Checklists", tools: "Pilot tools", cockpit: "Cockpit tools", weather: "Weather", airports: "Airports", glance: "Glance", career: "Career", challenge: "Landing challenge", account: "Account", settings: "Settings", updates: "Updates", support: "Support" };
+const TITLES: Record<string, string> = { home: "", map: "Live map", flight: "Flight", remote: "Remote", logbook: "Logbook", review: "Flight review", copilot: "Copilot", charts: "Charts", checklists: "Checklists", performance: "Performance", tools: "Pilot tools", cockpit: "Cockpit tools", weather: "Weather", airports: "Airports", glance: "Glance", career: "Career", challenge: "Landing challenge", account: "Account", settings: "Settings", updates: "Updates", support: "Support" };
 
 /* ---------- hash router (works on GitHub Pages and on the Bridge) ---------- */
 export function useRoute(): string[] {
@@ -121,6 +123,7 @@ const NAV: Array<{ id: string; label: string; icon: () => ReactNode; mobile: boo
   { id: "logbook", label: "Logbook", icon: Icon.book, mobile: true },
   { id: "copilot", label: "Copilot", icon: Icon.headset, mobile: false },
   { id: "charts", label: "Charts", icon: Icon.chart, mobile: false },
+  { id: "performance", label: "Performance", icon: Icon.perf, mobile: false },
   { id: "checklists", label: "Checklists", icon: Icon.checklist, mobile: false },
   { id: "tools", label: "Pilot tools", icon: Icon.calc, mobile: false },
   { id: "cockpit", label: "Cockpit tools", icon: Icon.panel, mobile: false },
@@ -196,13 +199,15 @@ export function App() {
     const apply = () => {
       // ?theme=dark|light (used by the website's iPad preview) overrides without saving.
       const forced = new URLSearchParams(location.search).get("theme");
-      const theme = forced === "dark" || forced === "light" ? forced : (s.theme ?? "system") === "system" ? (mq.matches ? "light" : "dark") : s.theme;
+      // Cockpit, Sunset and Neon are dark designs: they always use the dark theme.
+      const theme = currentLook() !== "glass" ? "dark" : forced === "dark" || forced === "light" ? forced : (s.theme ?? "system") === "system" ? (mq.matches ? "light" : "dark") : s.theme;
       document.documentElement.dataset.theme = theme;
       document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "light" ? "#DCE8F7" : "#03050C");
     };
     apply();
     mq.addEventListener("change", apply);
-    return () => mq.removeEventListener("change", apply);
+    window.addEventListener("glidepath-look", apply);
+    return () => { mq.removeEventListener("change", apply); window.removeEventListener("glidepath-look", apply); };
   }, [s.theme]);
 
   // The glass highlight follows the pointer (desktop / Apple Pencil hover).
@@ -250,6 +255,7 @@ export function App() {
     case "copilot": body = <CopilotScreen />; break;
     case "cockpit": body = <CockpitScreen initial={rest[0]} />; break;
     case "checklists": body = <ChecklistsScreen />; break;
+    case "performance": body = <PerformanceScreen />; break;
     case "tools": body = <ToolsScreen />; break;
     case "remote": body = <RemoteScreen />; break;
     case "charts": body = <ChartsScreen />; break;
@@ -291,7 +297,7 @@ export function App() {
           {NAV.filter((n) => n.mobile).map((n) => (
             <a key={n.id} className={`tab${screen === n.id ? " on" : ""}`} href={`#/${n.id}`}>{n.icon()}{n.label === "Live map" ? "Map" : n.label}</a>
           ))}
-          <a className={`tab${["airports", "settings", "glance", "account", "support", "updates", "forgot", "reset", "career", "challenge", "cockpit", "weather", "checklists", "tools", "copilot", "charts"].includes(screen ?? "") ? " on" : ""}`} href="#/settings">{Icon.more()}More</a>
+          <a className={`tab${["airports", "settings", "glance", "account", "support", "updates", "forgot", "reset", "career", "challenge", "cockpit", "weather", "checklists", "performance", "tools", "copilot", "charts"].includes(screen ?? "") ? " on" : ""}`} href="#/settings">{Icon.more()}More</a>
         </nav>
       )}
     </>

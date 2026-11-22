@@ -1,5 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { applyLook } from "./components/Look";
 import { App } from "./App";
 import "./styles.css";
 import "./extra.css";
@@ -13,6 +14,7 @@ installPop();
 
 // iPad and iPhone Safari only show the pressed (:active) look when the page listens for touches.
 document.addEventListener("touchstart", () => {}, { passive: true });
+applyLook();
 createRoot(document.getElementById("root")!).render(<StrictMode><App /></StrictMode>);
 
 // Offline app shell, only where browsers allow service workers (the hosted https site).

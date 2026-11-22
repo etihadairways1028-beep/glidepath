@@ -5,6 +5,7 @@ import { BaseMapPicker, TrafficSources } from "../components/MapLayers";
 import { connectFromSettings } from "../App";
 import { ConnPill, Icon, Kv, Notice, Section } from "../components/ui";
 import { WallpaperPicker } from "../components/Wallpaper";
+import { LookPicker } from "../components/Look";
 import { EmailSettings } from "./Account";
 import { DiscordStatus } from "../components/DiscordStatus";
 import { useCloud } from "../data/cloud";
@@ -63,7 +64,7 @@ export function SettingsScreen() {
       <OnThisPc />
       <nav className="more-grid" aria-label="More screens">
         {([
-          ["charts", "Charts", Icon.chart], ["copilot", "Copilot", Icon.headset], ["checklists", "Checklists", Icon.checklist],
+          ["performance", "Performance", Icon.perf], ["charts", "Charts", Icon.chart], ["copilot", "Copilot", Icon.headset], ["checklists", "Checklists", Icon.checklist],
           ["tools", "Pilot tools", Icon.calc], ["cockpit", "Cockpit tools", Icon.panel], ["weather", "Weather", Icon.cloud],
           ["airports", "Airports", Icon.tower], ["glance", "Glance mode", Icon.expand], ["career", "Career", Icon.career],
           ["challenge", "Landing challenge", Icon.trophy], ["account", "Account", Icon.person],
@@ -139,7 +140,11 @@ export function SettingsScreen() {
             <TrafficSources />
             <p className="faint" style={{ fontSize: 12.5, margin: "10px 0 0" }}>Your Bridge fetches each network once and shares it with every device, within each network's refresh limits. SayIntentions shows its public tracker: people flying with its AI ATC.</p>
           </Section>
+          <Section title="Look">
+            <LookPicker />
+          </Section>
           <Section title="Background">
+            <p className="faint" style={{ fontSize: 12.5, margin: "0 0 10px" }}>Used by the Liquid glass look. The other looks bring their own sky.</p>
             <WallpaperPicker />
           </Section>
           <Section title="Units">

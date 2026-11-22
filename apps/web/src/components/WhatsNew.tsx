@@ -6,12 +6,15 @@
 import { useEffect, useState } from "react";
 import { Icon } from "./ui";
 
-export const APP_VERSION = "1.1.3";
+export const APP_VERSION = "1.1.4";
 const KEY = "glidepath.seenVersion";
 
 export type WnIcon = "map" | "flight" | "remote" | "book" | "gear" | "spark" | "download" | "search" | "tower" | "cloud" | "layers" | "target";
 export interface WnItem { v: string; ic: WnIcon; t: string; d: string }
 export const WHATS_NEW: WnItem[] = [
+  { v: "1.1.4", ic: "flight", t: "Takeoff and landing performance", d: "A new Performance page, EFB style: V1, VR, V2, flex, trim, Vapp, autobrake and runway distances for over 40 aircraft, filled in from your plan and the live METAR. Change the runway, SID and STAR right there." },
+  { v: "1.1.4", ic: "layers", t: "Pick your look", d: "Settings → Look: Liquid glass, Cockpit (avionics readouts), Sunset or Neon night. It changes every screen, on every device." },
+  { v: "1.1.4", ic: "spark", t: "Light mode fixed", d: "On a device set to light mode, page titles and the Home tiles were hard to read. They're clear now." },
   { v: "1.1.3", ic: "remote", t: "The code keeps you in the app", d: "Typing the code never takes you to another page. Opening your PC's address on an iPad now moves you to the newest Glidepath, already connected." },
   { v: "1.1.3", ic: "layers", t: "Polished liquid glass", d: "Soft colour drifts behind every panel, so the glass really looks like glass: brighter edges, deeper shadows, a floating sidebar and tab bar." },
   { v: "1.1.3", ic: "spark", t: "More room on iPad", d: "In landscape, the sidebar becomes a slim icon rail so the map and dashboard get the space." },

@@ -190,6 +190,17 @@ async function support(req: Request, env: Env, ctx?: ExecutionContext): Promise<
   return json(200, { ok: true, ref });
 }
 
+/** The feedback inbox: every message sent from Support, readable only by the account whose email is the support inbox. */
+async function supportInbox(req: Request, env: Env): Promise<Response> {
+  const who = await userFrom(req, env).catch(() => null);
+  if (!who) return fail(401, "Sign in first.");
+  const owner = (env.SUPPORT_EMAIL ?? env.GMAIL_USER ?? "").trim().toLowerCase();
+  if (!owner || who.email.toLowerCase() !== owner) return fail(403, "Only the Glidepath support inbox can read feedback.");
+  const rows = await env.DB.prepare("SELECT ref, created_at, email, topic, message, meta FROM support_tickets ORDER BY created_at DESC LIMIT 300").all<{ ref: string; created_at: number; email: string; topic: string; message: string; meta: string | null }>();
+  const items = (rows.results ?? []).map((r) => ({ ref: r.ref, at: r.created_at, email: r.email, topic: r.topic, title: SUPPORT_TOPICS[r.topic] ?? r.topic, message: r.message, meta: (() => { try { return JSON.parse(r.meta ?? "{}") as Record<string, string>; } catch { return {}; } })() }));
+  return json(200, { items });
+}
+
 async function weather(url: URL, ctx?: ExecutionContext): Promise<Response> {
   const kind = url.pathname.replace(/\/+$/, "").slice(4);
   let upstream: string, ttl: number;
@@ -246,6 +257,7 @@ async function route(req: Request, env: Env, ctx?: ExecutionContext): Promise<Re
 
   // Support Centre: a message from the website or the app, kept with a reference and emailed to support and to the sender.
   if (p === "/support" && req.method === "POST") return support(req, env, ctx);
+  if (p === "/support/inbox" && req.method === "GET") return supportInbox(req, env);
 
   // Live weather for any device: aviationweather.gov doesn't allow browsers to ask directly, so this passes
   // its METAR/TAF answers through (read-only, inputs checked, cached at the edge for a few minutes).
