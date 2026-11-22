@@ -77,6 +77,26 @@ export function useRoute(): string[] {
 export const go = (path: string) => { location.hash = `#/${path}`; };
 
 /* ---------- connection start-up ---------- */
+/**
+ * Opened from the PC's address on another device (http://192.168…:4810/app): that's the Bridge's own copy.
+ * When the PC's relay link is up, move to the newest app on the website, already paired.
+ */
+function handOffToNewestApp(): void {
+  const lan = location.protocol === "http:" && location.pathname.startsWith("/app") && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+  if (!lan) return;
+  const go = async () => {
+    const { token } = settingsStore.get();
+    if (!token) return;
+    try {
+      const r = await fetch("/api/pclink", { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
+      if (!r.ok) return;
+      const j = (await r.json()) as { online?: boolean; bid?: string };
+      if (j.online && j.bid) location.replace(`https://glidepath-ad9.pages.dev/app/#pc=${encodeURIComponent(j.bid)}&token=${encodeURIComponent(token)}`);
+    } catch { /* stay on this copy */ }
+  };
+  window.setTimeout(() => void go(), 600);
+}
+
 export function connectFromSettings(): void {
   const url = detectBridgeUrl();
   const { token, pcRelay } = settingsStore.get();
@@ -128,6 +148,7 @@ export function App() {
     consumePairingLink();
     connectFromSettings();
     void adoptLocalToken().then((ok) => { if (ok) connectFromSettings(); });
+    handOffToNewestApp();
     if (!settingsStore.get().token && new URLSearchParams(location.search).get("demo") === "1") startDemo();
     void initCloud().then(() => { initAutoConnect(); initSync(); });
   }, []);
@@ -245,12 +266,12 @@ export function App() {
       <div className="shell" style={screen === "glance" ? { gridTemplateColumns: "1fr" } : undefined}>
         {screen !== "glance" && (
           <nav className="glass side" aria-label="Main">
-            <a className="brand" href="#/home"><Mark />Glidepath</a>
+            <a className="brand" href="#/home" aria-label="Glidepath home"><Mark /><span className="nav-l">Glidepath</span></a>
             <SideClock />
             {NAV.map((n) => (
               <Fragment key={n.id}>
                 {SECTION_BEFORE[n.id] && <div className="nav-sec">{SECTION_BEFORE[n.id]}</div>}
-                <a className={`nav-a${screen === n.id || (!screen && n.id === "home") ? " on" : ""}`} href={`#/${n.id}`}><span className={`nav-ic ic-${n.id}`}>{n.icon()}</span>{n.label}</a>
+                <a className={`nav-a${screen === n.id || (!screen && n.id === "home") ? " on" : ""}`} href={`#/${n.id}`} title={n.label}><span className={`nav-ic ic-${n.id}`}>{n.icon()}</span><span className="nav-l">{n.label}</span></a>
               </Fragment>
             ))}
             <div className="side-foot faint">{mode === "demo" ? "Demo flight: synthetic data" : `Glidepath ${APP_VERSION}${status?.bridgeVersion && status.bridgeVersion !== "demo" ? ` · Bridge ${status.bridgeVersion}` : ""}`}</div>
@@ -299,6 +320,7 @@ function Sky() {
   return (
     <div className="sky" data-sky={sky} data-day={day ? "day" : "night"} aria-hidden="true">
       <div className="sky-scene">
+        <div className="ss-orb o1" /><div className="ss-orb o2" /><div className="ss-orb o3" />
         <div className="ss-sun" />
         <div className="ss-stars" />
         <div className="ss-shoot" />

@@ -6,12 +6,15 @@
 import { useEffect, useState } from "react";
 import { Icon } from "./ui";
 
-export const APP_VERSION = "1.1.2";
+export const APP_VERSION = "1.1.3";
 const KEY = "glidepath.seenVersion";
 
 export type WnIcon = "map" | "flight" | "remote" | "book" | "gear" | "spark" | "download" | "search" | "tower" | "cloud" | "layers" | "target";
 export interface WnItem { v: string; ic: WnIcon; t: string; d: string }
 export const WHATS_NEW: WnItem[] = [
+  { v: "1.1.3", ic: "remote", t: "The code keeps you in the app", d: "Typing the code never takes you to another page. Opening your PC's address on an iPad now moves you to the newest Glidepath, already connected." },
+  { v: "1.1.3", ic: "layers", t: "Polished liquid glass", d: "Soft colour drifts behind every panel, so the glass really looks like glass: brighter edges, deeper shadows, a floating sidebar and tab bar." },
+  { v: "1.1.3", ic: "spark", t: "More room on iPad", d: "In landscape, the sidebar becomes a slim icon rail so the map and dashboard get the space." },
   { v: "1.1.2", ic: "remote", t: "A real autopilot panel", d: "Remote now looks like the glareshield: glowing orange displays, chunky keys and green bars that light when AP, FD or A/THR are on." },
   { v: "1.1.2", ic: "target", t: "Checklists that feel good", d: "A ring that fills as you tick, items that turn green, and a jump straight to the next checklist when you finish." },
   { v: "1.1.2", ic: "book", t: "Your rank, on your shoulder", d: "Career shows a gold-striped shoulder board for your rank. The logbook welcomes you properly before your first flight." },

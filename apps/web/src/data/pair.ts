@@ -69,13 +69,8 @@ export async function pairWithCode(rawCode: string, address?: string): Promise<v
     // Many routers (and iCloud Private Relay) block the secure local name even on the same Wi-Fi.
     // Pair through the Glidepath relay instead, and stay on this page.
     if (await pairViaRelay(code)) return;
-    // Older Bridges: the PC's own plain address still works. Go there and pair.
-    const ip = plainAddress(base);
-    if (ip) {
-      location.href = `http://${ip}:4810/?code=${code}`;
-      throw new Error("Opening your PC directly…");
-    }
-    throw new Error("Found your PC but couldn't reach it. In Safari, type the address shown in the Bridge window on your PC (like 192.168.1.20:4810).");
+    // Never leave this page: tell the pilot what to do instead.
+    throw new Error("Found your PC, but couldn't connect to it from this network. Open Glidepath on the PC once so the Bridge updates itself (it does when MSFS is closed), then try the code again. Or sign in with the same Glidepath account on both.");
   }
   const j = await r.json().catch(() => ({})) as { token?: string; error?: string };
   if (!r.ok || !j.token) throw new Error(j.error ?? "Your PC didn't accept the code. Check it and try again.");

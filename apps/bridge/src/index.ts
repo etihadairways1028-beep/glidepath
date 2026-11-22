@@ -194,6 +194,7 @@ async function main(): Promise<void> {
   }
   cloud.start();
   pcLink?.start();
+  server.pcLink = pcLink;
   if (process.env.GLIDEPATH_UPDATES !== "0") updater.start();
   await adapter.start();
 

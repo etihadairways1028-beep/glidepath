@@ -42,11 +42,18 @@ export async function adoptLocalToken(): Promise<boolean> {
 export function consumePairingLink(): boolean {
   keepPairingForHomeScreen();
   const h = location.hash;
-  const q = h.includes("?") ? h.slice(h.indexOf("?") + 1) : h.startsWith("#bridge=") || h.startsWith("#token=") ? h.slice(1) : "";
+  const q = h.includes("?") ? h.slice(h.indexOf("?") + 1) : h.startsWith("#bridge=") || h.startsWith("#token=") || h.startsWith("#pc=") ? h.slice(1) : "";
   if (!q) return false;
   const params = new URLSearchParams(q);
   const token = params.get("token");
   const bridge = params.get("bridge");
+  const pc = params.get("pc");
+  // Handed over from the PC: the newest app, connected through the Glidepath relay.
+  if (pc && token && location.protocol === "https:") {
+    settingsStore.set({ token, pcRelay: pc, bridgeUrl: "" });
+    history.replaceState(null, "", location.pathname + "#/home");
+    return true;
+  }
   if (!token && !bridge) return false;
   const patch: { token?: string; bridgeUrl?: string } = {};
   if (token) patch.token = token;

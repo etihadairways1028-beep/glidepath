@@ -100,7 +100,7 @@ button.btnp{width:100%;max-width:300px;padding:15px;font-size:17px}
 ${POP_JS}<script>
 var f=document.getElementById("f");f.onsubmit=async function(e){if(e)e.preventDefault();var m=document.getElementById("m"),g=document.getElementById("go");m.textContent="";g.classList.add("busy");g.textContent="Connecting…";
 try{var r=await fetch("/api/pair",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code:document.getElementById("c").value})});var j=await r.json();
-if(r.ok&&j.token){location.replace("/app/#token="+encodeURIComponent(j.token));return;}else{m.textContent=j.error||"That code was not accepted. Check it and try again.";f.classList.remove("shake");void f.offsetWidth;f.classList.add("shake");}}catch(_){m.textContent="Your PC cannot be reached. Check that Glidepath Bridge is open.";}g.classList.remove("busy");g.textContent="Connect";};
+if(r.ok&&j.token){location.replace(j.app||("/app/#token="+encodeURIComponent(j.token)));return;}else{m.textContent=j.error||"That code was not accepted. Check it and try again.";f.classList.remove("shake");void f.offsetWidth;f.classList.add("shake");}}catch(_){m.textContent="Your PC cannot be reached. Check that Glidepath Bridge is open.";}g.classList.remove("busy");g.textContent="Connect";};
 var q=new URLSearchParams(location.search).get("code");if(q&&/^\\d{6}$/.test(q)){document.getElementById("c").value=q;f.onsubmit();}
 </script></main></body></html>`;
 }
@@ -182,7 +182,7 @@ function readyCard(s: BridgeStatus, c: CloudCard | null): string {
 
 export interface LiveNumbers { altFt: number | null; gsKt: number | null; hdg: number | null; vsFpm: number | null; onGround: boolean }
 
-export function statusPage(p: { update?: UpdateCard | null; cloud?: CloudCard | null; local: boolean; pairCode: string; status: BridgeStatus; token: string | null; addresses: string[]; port: number; logs: string[]; live?: LiveNumbers | null }): string {
+export function statusPage(p: { update?: UpdateCard | null; cloud?: CloudCard | null; local: boolean; pairCode: string; status: BridgeStatus; token: string | null; addresses: string[]; port: number; logs: string[]; live?: LiveNumbers | null; hosted?: string | null }): string {
   const s = p.status;
   const sim = s.simState === "connected";
   const stateDot = sim ? "live" : s.simState === "error" ? "err" : "warn";
@@ -201,7 +201,8 @@ export function statusPage(p: { update?: UpdateCard | null; cloud?: CloudCard | 
     : esc(s.message ?? "Start Microsoft Flight Simulator. The Bridge connects by itself.");
   const links = p.token
     ? p.addresses.map((a) => {
-        const u = `http://${a}:${p.port}/app/#token=${encodeURIComponent(p.token!)}`;
+        // The newest app through the relay when it's up; this PC's own copy otherwise.
+        const u = p.hosted ?? `http://${a}:${p.port}/app/#token=${encodeURIComponent(p.token!)}`;
         return `<div class="qrrow"><div class="qr">${qrSvg(u)}</div><div><b>Scan with the iPad or phone camera</b><div class="label">Or open <a class="mono" href="${esc(u)}">${esc(a)}:${p.port}</a>. The link holds your pairing key, so only use it on your own devices.</div></div></div>`;
       }).join("")
     : "<p class='label'>No network address found. Is this PC on Wi-Fi or Ethernet?</p>";

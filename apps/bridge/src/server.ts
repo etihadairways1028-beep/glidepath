@@ -96,6 +96,13 @@ export class LanServer {
   updater: Updater | null = null;
   /** Connect anywhere (set by index.ts). */
   cloud: CloudLink | null = null;
+  /** The always-on pairing link (code pairing from any network). */
+  pcLink: CloudLink | null = null;
+  /** The newest Glidepath app, already paired with this PC through the relay (when the link is up). */
+  hostedApp(token: string): string | null {
+    if (!this.pcLink?.status().online) return null;
+    return `https://glidepath-ad9.pages.dev/app/#pc=${encodeURIComponent(this.identity.bridgeId)}&token=${encodeURIComponent(token)}`;
+  }
   /** Discord status (set by index.ts). */
   discord: DiscordPresence | null = null;
   /** Secure (https) address for this PC, when the secure link is running. */
@@ -381,7 +388,7 @@ export class LanServer {
     if (req.method !== "GET" && !(req.method === "POST" && POSTS.includes(p)) && !(req.method === "DELETE" && DELETABLE)) return text(res, 405, "Method not allowed");
     if (p === "/") {
       if (!local) return html(res, pairPage());
-      return html(res, statusPage({ update: this.updater?.status() ?? null, cloud: this.cloud?.status() ?? null, local, pairCode: this.pairCode, status: this.getStatus(), token: local ? this.identity.pairingToken : null, addresses: lanAddresses(), port: this.cfg.port, logs: local ? this.log.recent().slice(-60) : [], live: this.lastFrame ? { altFt: this.lastFrame.position.altMslFt, gsKt: this.lastFrame.speed.gsKt, hdg: this.lastFrame.attitude.headingMagDeg ?? this.lastFrame.attitude.headingTrueDeg, vsFpm: this.lastFrame.speed.vsFpm, onGround: this.lastFrame.position.onGround } : null }));
+      return html(res, statusPage({ update: this.updater?.status() ?? null, cloud: this.cloud?.status() ?? null, local, pairCode: this.pairCode, status: this.getStatus(), token: local ? this.identity.pairingToken : null, addresses: lanAddresses(), port: this.cfg.port, hosted: local ? this.hostedApp(this.identity.pairingToken) : null, logs: local ? this.log.recent().slice(-60) : [], live: this.lastFrame ? { altFt: this.lastFrame.position.altMslFt, gsKt: this.lastFrame.speed.gsKt, hdg: this.lastFrame.attitude.headingMagDeg ?? this.lastFrame.attitude.headingTrueDeg, vsFpm: this.lastFrame.speed.vsFpm, onGround: this.lastFrame.position.onGround } : null }));
     }
     // The app opened on this PC (typed address, bookmark, desktop shortcut) pairs itself: no code needed.
     if (p === "/api/local-token") {
@@ -396,7 +403,8 @@ export class LanServer {
       if (code.length === 6 && code === this.pairCode) {
         this.pairFails = 0;
         this.log.info(`Paired a device by code (${req.socket.remoteAddress ?? "?"})`);
-        return json(res, 200, { token: this.identity.pairingToken });
+        // On this PC's own pairing page, send the device to the newest app rather than this Bridge's copy.
+        return json(res, 200, { token: this.identity.pairingToken, app: req.headers[RELAY_HEADER] ? null : this.hostedApp(this.identity.pairingToken) });
       }
       this.pairFails++;
       this.log.warn(`Wrong pairing code from ${req.socket.remoteAddress ?? "?"}`);
@@ -478,6 +486,7 @@ export class LanServer {
       return json(res, 200, flight);
     }
 
+    if (p === "/api/pclink") return json(res, 200, { online: !!this.pcLink?.status().online, bid: this.identity.bridgeId });
     if (p === "/api/plan" && req.method === "GET") return json(res, 200, { plan: this.session.currentPlan });
     if (p === "/api/plan" && req.method === "POST") {
       if (!this.external) return json(res, 503, { error: "External data is disabled" });
