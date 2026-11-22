@@ -91,12 +91,30 @@ export function localAt(ms: number | null, plan: FlightPlan | null, side: "origi
   return clockAt(ms, side === "origin" ? plan.originUtcOffsetH : plan.destinationUtcOffsetH);
 }
 
+/**
+ * Which plan to show. A plan you loaded after your last flight ended is for the next flight. During a flight,
+ * your SimBrief plan beats a thinner plan for the same airports (the sim's own plan often has few or no waypoints).
+ */
+export function pickPlan(flight: FlightSummary | null, saved: FlightPlan | null, completed: boolean): FlightPlan | null {
+  const own = flight?.plan ?? null;
+  if (completed) return saved && saved.fetchedAt > (flight?.endedAt ?? 0) ? saved : own;
+  if (!own) return saved;
+  if (!saved) return own;
+  const same = saved.origin.icao === own.origin.icao && saved.destination.icao === own.destination.icao;
+  if (same && (own.source === "msfs" || saved.fixes.length > own.fixes.length)) return saved;
+  // A newer plan for the airports you're actually flying between.
+  const dep = flight?.departureIcao, arr = flight?.arrivalIcao;
+  if (!same && saved.fetchedAt > own.fetchedAt && (!dep || saved.origin.icao === dep) && (!arr || saved.destination.icao === arr)) return saved;
+  return own;
+}
+
 export function derive(frame: TelemetryFrame | null, flight: FlightSummary | null, phase: FlightPhase, isDemo: boolean, events: FlightEvent[] = [], saved: FlightPlan | null = null): Live {
   const completed = flight?.status === "completed";
-  // The flight's own plan; otherwise the plan you loaded, until a flight finishes.
-  const plan0 = flight?.plan ?? (completed ? null : saved);
+  const plan0 = pickPlan(flight, saved, completed);
+  // A plan loaded after the last flight ended is for the next one.
+  const forNext = completed && !!plan0 && plan0 === saved;
   // Waypoints you skipped with a direct-to are dropped, so every screen shows the route you're really flying.
-  const plan = plan0 && !completed && !isDemo ? withDirects(plan0, frame) : plan0;
+  const plan = plan0 && (!completed || forNext) && !isDemo ? withDirects(plan0, frame) : plan0;
   const dest = plan
     ? { lat: plan.destination.lat, lon: plan.destination.lon, icao: plan.destination.icao, name: plan.destination.name, elevationFt: plan.destination.elevationFt }
     : null;

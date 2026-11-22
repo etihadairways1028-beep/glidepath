@@ -125,24 +125,95 @@ function useCallouts(a: LiveApproach) {
   }, [g, a.setup.voice]);
 }
 
+/** Plain instruction from the deviations: what to do, not just where you are. */
+function advice(g: ApproachGuide): { title: string; v: { word: string; dir: "up" | "down" | null; tone: Tone }; h: { word: string; dir: "left" | "right" | null; tone: Tone } } {
+  const vOk = Math.abs(g.vDots) <= 0.3, hOk = Math.abs(g.hDots) <= 0.25;
+  const v = vOk ? { word: "On glidepath", dir: null, tone: "good" as Tone }
+    : g.vDots > 0 ? { word: Math.abs(g.vDots) > 1 ? "Descend faster" : "Descend a bit more", dir: "down" as const, tone: g.vTone }
+    : { word: g.vTone === "warning" && g.hatFt < 1000 ? "Level off now" : Math.abs(g.vDots) > 1 ? "Descend slower" : "Ease the descent", dir: "up" as const, tone: g.vTone };
+  const h = hOk ? { word: "On centreline", dir: null, tone: "good" as Tone }
+    : g.latFt > 0 ? { word: Math.abs(g.hDots) > 1 ? "Turn left" : "Ease left", dir: "left" as const, tone: g.hTone }
+    : { word: Math.abs(g.hDots) > 1 ? "Turn right" : "Ease right", dir: "right" as const, tone: g.hTone };
+  const title = vOk && hOk ? "Perfect. Hold it there." : !vOk && !hOk ? `${v.word}, ${h.word.toLowerCase()}` : !vOk ? v.word : h.word;
+  return { title, v, h };
+}
+
+/** A target: the centre is the perfect path, the dot is you. Up is high, right is right of the centreline. */
+export function Bullseye({ g, size = 320 }: { g: ApproachGuide; size?: number }) {
+  const S = size, c = S / 2, R = S * 0.44, ring = R / 2.5;
+  const x = c + Math.max(-2.5, Math.min(2.5, g.hDots)) * ring;
+  const y = c - Math.max(-2.5, Math.min(2.5, g.vDots)) * ring;
+  const tone = g.vTone === "warning" || g.hTone === "warning" ? "warning" : g.vTone === "caution" || g.hTone === "caution" ? "caution" : "good";
+  const lbl = (t: string, tx: number, ty: number) => <text className="be-lbl" x={tx} y={ty} textAnchor="middle" dominantBaseline="middle">{t}</text>;
+  return (
+    <svg className={`be t-${tone}`} viewBox={`0 0 ${S} ${S}`} role="img" aria-label={`${g.vText}. ${g.hText}.`}>
+      <defs>
+        <radialGradient id="beBg" cx="50%" cy="50%" r="50%"><stop offset="0" stopColor="rgba(60,255,143,.16)" /><stop offset=".45" stopColor="rgba(10,20,40,.0)" /><stop offset="1" stopColor="rgba(255,90,90,.12)" /></radialGradient>
+      </defs>
+      <circle cx={c} cy={c} r={R} className="be-face" fill="url(#beBg)" />
+      <circle cx={c} cy={c} r={ring * 2} className="be-ring" />
+      <circle cx={c} cy={c} r={ring} className="be-ring in" />
+      <circle cx={c} cy={c} r={ring * 0.4} className="be-core" />
+      <line x1={c - R} x2={c + R} y1={c} y2={c} className="be-axis" />
+      <line y1={c - R} y2={c + R} x1={c} x2={c} className="be-axis" />
+      {lbl("HIGH", c, c - R - S * 0.035)}{lbl("LOW", c, c + R + S * 0.035)}
+      {lbl("L", c - R - S * 0.03, c)}{lbl("R", c + R + S * 0.03, c)}
+      <line x1={c} y1={c} x2={x} y2={y} className="be-link" />
+      <g className="be-me" style={{ transform: `translate(${x}px, ${y}px)` }}>
+        <circle r={S * 0.06} className="be-halo" />
+        <circle r={S * 0.032} className="be-dot" />
+      </g>
+    </svg>
+  );
+}
+
+/** Your descent rate against the one that holds the path. */
+function VsGauge({ vs, need }: { vs: number | null; need: number | null }) {
+  if (vs === null || need === null) return null;
+  const span = 1200, lo = need - span / 2;
+  const pos = (v: number) => `${Math.max(0, Math.min(100, ((v - lo) / span) * 100))}%`;
+  const off = vs - need, ok = Math.abs(off) <= 150;
+  return (
+    <div className="vsg">
+      <div className="vsg-k"><span>Descent rate</span><b className={ok ? "t-good" : Math.abs(off) > 400 ? "t-warning" : "t-caution"}>{fmt(Math.abs(vs))} <small>fpm</small></b><span className="vsg-need">need {fmt(Math.abs(need))}</span></div>
+      <div className="vsg-bar">
+        <span className="vsg-band" style={{ left: pos(need - 150), width: `${(300 / span) * 100}%` }} />
+        <span className="vsg-mid" style={{ left: pos(need) }} />
+        <span className={`vsg-me${ok ? " ok" : ""}`} style={{ left: pos(vs) }} />
+      </div>
+      <div className="vsg-ends"><span>Steeper</span><span>Shallower</span></div>
+    </div>
+  );
+}
+
 export function ApproachScreen() {
   const a = useApproach();
   const L = useLive();
   useCallouts(a);
   const g = a.guide;
   const [open, setOpen] = useState(false);
+  const [classic, setClassic] = useState(() => { try { return localStorage.getItem("glidepath.apClassic") === "1"; } catch { return false; } });
+  const setView = (v: boolean) => { setClassic(v); try { localStorage.setItem("glidepath.apClassic", v ? "1" : "0"); } catch { /* fine */ } };
   const airports = Array.from(new Set(a.ends.map((e) => e.airport)));
   const selAirport = a.setup.airport ?? a.end?.airport ?? airports[0] ?? "";
-  const vsGood = g && a.vsFpm !== null && g.requiredVsFpm !== null ? Math.abs(a.vsFpm - g.requiredVsFpm) < 200 : null;
+  const ad = g ? advice(g) : null;
+  const arrow = (d: string | null) => d === "up" ? "↑" : d === "down" ? "↓" : d === "left" ? "←" : d === "right" ? "→" : "✓";
+  const secs = g && a.gsKt ? Math.max(0, Math.round((g.distNm / a.gsKt) * 3600)) : null;
 
   return (
     <div className="stack approach">
       <div className="between wrap">
-        <h1 className="title">Approach</h1>
+        <div>
+          <h1 className="title">Landing helper</h1>
+          {a.end && <p className="ap-sub">{a.end.airport} runway <b>{a.end.ident}</b> · {a.setup.gpaDeg.toFixed(1)}° glidepath{a.auto ? " · lined up automatically" : ""}</p>}
+        </div>
         <div className="row wrap" style={{ gap: 8 }}>
-          {a.end && <span className="pill ap-pill"><b>{a.end.airport} {a.end.ident}</b> · {a.setup.gpaDeg.toFixed(1)}°{a.auto ? " · lined up" : ""}</span>}
+          <div className="seg" aria-label="View">
+            <button className={!classic ? "on" : ""} onClick={() => setView(false)}>Simple</button>
+            <button className={classic ? "on" : ""} onClick={() => setView(true)}>ILS view</button>
+          </div>
           <button className={`btn small${a.setup.voice ? " on" : ""}`} aria-pressed={a.setup.voice} onClick={() => { saveSetup({ voice: !a.setup.voice }); if (!a.setup.voice) { try { speechSynthesis.speak(new SpeechSynthesisUtterance("Callouts on")); } catch { /* no voice */ } } }}>{a.setup.voice ? "Callouts on" : "Callouts off"}</button>
-          <button className="btn small" onClick={() => setOpen((o) => !o)} aria-expanded={open}>Runway and path</button>
+          <button className="btn small" onClick={() => setOpen((o) => !o)} aria-expanded={open}>Runway</button>
         </div>
       </div>
 
@@ -176,34 +247,36 @@ export function ApproachScreen() {
       )}
 
       {!L.frame ? (
-        <section className="glass ap-empty"><h2 className="h2">Waiting for your flight</h2><p className="muted">Connect your Bridge and fly. From about 15 nm out, this shows where the glidepath and centreline are for your runway, on any device.</p></section>
-      ) : !a.end || !g ? (
-        <section className="glass ap-empty"><h2 className="h2">No runway yet</h2><p className="muted">Load a plan with an arrival runway, pick one under Runway and path, or line up with a runway within 20 nm.</p></section>
+        <section className="glass ap-empty"><h2 className="h2">Waiting for your flight</h2><p className="muted">Connect your Bridge and fly. From about 15 nm out, this shows whether you're high, low, left or right of the perfect path to your runway, on any device.</p></section>
+      ) : !a.end || !g || !ad ? (
+        <section className="glass ap-empty"><h2 className="h2">No runway yet</h2><p className="muted">Load a plan with an arrival runway, pick one under Runway, or line up with a runway within 20 nm.</p></section>
+      ) : g.state === "landed" ? (
+        <section className="glass ap-empty"><h2 className="h2">Landed on {a.end.ident}</h2><p className="muted">Nice one. Your landing review is in the Logbook.</p></section>
       ) : (
         <>
-          {g.state !== "established" && g.state !== "intercept" && (
-            <p className="ap-state">{g.state === "landed" ? "Landed. Nice one." : g.state === "behind" ? `You're past the threshold of ${a.end.ident}.` : `Not on final for ${a.end.ident} yet: ${g.distNm > 0 ? `${g.distNm.toFixed(1)} nm out` : ""}. Guidance is shown anyway.`}</p>
-          )}
           {g.unstable && <div className="ap-unstable" role="alert"><b>Unstable</b> {g.unstable}. Below 1,000 ft, consider a go-around.</div>}
-          {g.state !== "landed" && <div className="ap-main">
-            <section className="glass ap-raw">
-              <DeviationScales g={g} />
-              <div className={`ap-say t-${g.vTone}`}>{g.vText}</div>
-              <div className={`ap-say t-${g.hTone}`}>{g.hText}</div>
-            </section>
-            <section className="glass ap-nums">
-              <Num k="To threshold" v={g.distNm > 0 ? g.distNm.toFixed(1) : "0.0"} unit="nm" sub={a.gsKt ? `${Math.max(0, Math.round((g.distNm / a.gsKt) * 60 * 60))} s at ${fmt(a.gsKt)} kt` : undefined} />
-              <Num k="Above threshold" v={fmt(g.hatFt)} unit="ft" sub={`Path here: ${fmt(g.hatFt - g.vertFt)} ft`} tone={g.vTone} />
-              <Num k="Glidepath" v={`${g.vertFt >= 0 ? "+" : "−"}${fmt(Math.abs(g.vertFt))}`} unit="ft" sub={`${Math.abs(g.vDots).toFixed(1)} dot ${g.vDots >= 0 ? "high" : "low"}`} tone={g.vTone} />
-              <Num k="Centreline" v={`${fmt(Math.abs(g.latFt))}`} unit={`ft ${g.latFt > 0 ? "R" : g.latFt < 0 ? "L" : ""}`} sub={`${Math.abs(g.hDots).toFixed(1)} dot`} tone={g.hTone} />
-              <Num k="Vertical speed" v={a.vsFpm === null ? "—" : fmt(a.vsFpm)} unit="fpm" sub={g.requiredVsFpm !== null ? `Needed ${fmt(g.requiredVsFpm)}` : undefined} tone={vsGood === null ? undefined : vsGood ? "good" : "caution"} />
-              <Num k="Wind" v={a.windHead === null ? "—" : `${a.windHead >= 0 ? "H" : "T"}${Math.abs(a.windHead)}`} unit="kt" sub={a.windCross === null ? undefined : `${Math.abs(a.windCross)} kt from the ${a.windCross > 0 ? "right" : a.windCross < 0 ? "left" : "front"}`} tone={a.windHead !== null && a.windHead < -10 ? "warning" : undefined} />
-            </section>
-          </div>}
-          {g.state !== "landed" && <section className="glass ap-views">
-            <Profile g={g} gpa={a.setup.gpaDeg} tch={a.setup.tchFt} />
-            <PlanView g={g} />
-          </section>}
+          {g.state !== "established" && g.state !== "intercept" && <p className="ap-state">{g.state === "behind" ? `You're past the threshold of ${a.end.ident}.` : `Not on final for ${a.end.ident} yet (${g.distNm.toFixed(1)} nm out). Guidance shows anyway.`}</p>}
+          <section className={`glass ap-hero t-${ad.v.tone === "warning" || ad.h.tone === "warning" ? "warning" : ad.v.tone === "caution" || ad.h.tone === "caution" ? "caution" : "good"}`}>
+            <div className="ap-hero-vis">{classic ? <DeviationScales g={g} /> : <Bullseye g={g} />}</div>
+            <div className="ap-hero-r">
+              <h2 className="ap-cmd" aria-live="polite">{ad.title}</h2>
+              <div className="ap-pair">
+                <div className={`ap-chip t-${ad.v.tone}`}><span className="ap-arr" aria-hidden>{arrow(ad.v.dir)}</span><div><b>{ad.v.word}</b><small>{Math.abs(g.vDots) <= 0.3 ? `${fmt(Math.abs(g.vertFt))} ft off` : `${fmt(Math.abs(g.vertFt))} ft ${g.vertFt > 0 ? "high" : "low"}`}</small></div></div>
+                <div className={`ap-chip t-${ad.h.tone}`}><span className="ap-arr" aria-hidden>{arrow(ad.h.dir)}</span><div><b>{ad.h.word}</b><small>{Math.abs(g.hDots) <= 0.25 ? "lined up" : `${fmt(Math.abs(g.latFt))} ft ${g.latFt > 0 ? "right" : "left"} · track ${String(Math.round(g.correctTrackDeg) % 360).padStart(3, "0")}°`}</small></div></div>
+              </div>
+              <VsGauge vs={a.vsFpm} need={g.requiredVsFpm} />
+              <div className="ap-big3">
+                <div><em>To runway</em><b>{Math.max(0, g.distNm).toFixed(1)}<small>nm</small></b><span>{secs !== null ? `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")} to go` : ""}</span></div>
+                <div><em>Height</em><b>{fmt(g.hatFt)}<small>ft</small></b><span>path {fmt(g.hatFt - g.vertFt)} ft</span></div>
+                <div><em>Wind</em><b>{a.windHead === null ? "—" : `${Math.abs(a.windHead)}`}<small>{a.windHead === null ? "" : a.windHead >= 0 ? "kt head" : "kt tail"}</small></b><span>{a.windCross === null ? "" : `${Math.abs(a.windCross)} kt cross${a.windCross > 0 ? " from right" : a.windCross < 0 ? " from left" : ""}`}</span></div>
+              </div>
+              <ApproachRail g={g} />
+            </div>
+          </section>
+          <details className="glass ap-more" open={typeof window !== "undefined" && window.innerWidth > 1100}>
+            <summary>Side and top views</summary>
+            <div className="ap-views"><Profile g={g} gpa={a.setup.gpaDeg} tch={a.setup.tchFt} /><PlanView g={g} /></div>
+          </details>
         </>
       )}
       <p className="pf-legal">Built from the runway's position and your aircraft's true altitude, like a synthetic ILS. It doesn't read your aircraft's approach data, so check the glidepath angle and crossing height on the chart. For the sim only.</p>
@@ -211,18 +284,37 @@ export function ApproachScreen() {
   );
 }
 
-/** A small guide shown on Home and the map while you're on final. Tap for the full Approach screen. */
+/** Progress down final with the 1,000 and 500 ft gates. */
+function ApproachRail({ g }: { g: ApproachGuide }) {
+  const max = 10, d = Math.max(0, Math.min(max, g.distNm));
+  const nmAt = (ft: number) => ft / (Math.tan((3 * Math.PI) / 180) * 6076.12);
+  const pct = (nm: number) => `${Math.max(4, Math.min(96, 100 - (nm / max) * 100))}%`;
+  return (
+    <div className="ap-railw" aria-hidden>
+      <div className="ap-rail">
+        <span className="ap-rail-fill" style={{ width: pct(d) }} />
+        <span className="ap-gate" style={{ left: pct(nmAt(1000)) }}><i>1000</i></span>
+        <span className="ap-gate" style={{ left: pct(nmAt(500)) }}><i>500</i></span>
+        <span className="ap-rail-me" style={{ left: pct(d) }}>✈</span>
+        <span className="ap-rail-rwy" />
+      </div>
+      <div className="ap-rail-k"><span>10 nm</span><span>Runway</span></div>
+    </div>
+  );
+}
+
+/** A small guide shown on Home and the map while you're on final. Tap for the full landing helper. */
 export function MiniApproach() {
   const a = useApproach();
   const g = a.guide;
   if (!g || !a.end || !onFinal(g)) return null;
+  const ad = advice(g);
   return (
-    <a className="glass ap-mini" href="#/approach" aria-label="Open the approach guide">
-      <DeviationScales g={g} compact />
+    <a className="glass ap-mini" href="#/approach" aria-label="Open the landing helper">
+      <Bullseye g={g} size={120} />
       <div className="ap-mini-t">
         <span className="ap-mini-k">{a.end.airport} {a.end.ident} · {g.distNm.toFixed(1)} nm · {fmt(g.hatFt)} ft</span>
-        <b className={`t-${g.vTone}`}>{g.vText.split(":")[0]}</b>
-        <b className={`t-${g.hTone}`}>{g.hText.split(":")[0]}</b>
+        <b className={`t-${ad.v.tone === "warning" || ad.h.tone === "warning" ? "warning" : ad.v.tone === "caution" || ad.h.tone === "caution" ? "caution" : "good"}`}>{ad.title}</b>
         {g.unstable && <span className="ap-mini-u">Unstable: {g.unstable.toLowerCase()}</span>}
       </div>
     </a>

@@ -1,4 +1,5 @@
 import { MiniApproach } from "./Approach";
+import { MapRoutePanel } from "../components/RouteOverview";
 import { startDemo } from "../data/demo";
 import { useMemo, useState } from "react";
 import { MapView } from "../components/MapView";
@@ -28,6 +29,13 @@ export function MapScreen() {
   const [layers, setLayers] = useState(false);
   const [panel, setPanel] = useState(false);
   const [fly, setFly] = useState<{ lon: number; lat: number; zoom: number; key: number } | null>(null);
+  const [fitRoute, setFitRoute] = useState(0);
+  const [routeOpen, setRouteOpen] = useState(false);
+  // A newly loaded plan: show all of it once.
+  const planKey = L.plan ? `${L.plan.origin.icao}-${L.plan.destination.icao}-${L.plan.fetchedAt}` : "";
+  const seenPlan = useRef(planKey);
+  useEffect(() => { if (planKey && seenPlan.current !== planKey) { seenPlan.current = planKey; setFollow(false); setFitRoute(Date.now()); } }, [planKey]);
+  const showRoute = () => { setFollow(false); setFitRoute(Date.now()); };
   const [fixSel, setFixSel] = useState<number | null>(null);
   const [planAsk, setPlanAsk] = useState(false);
   useEffect(() => {
@@ -128,7 +136,7 @@ export function MapScreen() {
 
   return (
     <div className="map-wrap">
-      <MapView trail={trail} plan={L.plan} aircraft={aircraft} airports={airports} traffic={traffic} atc={atc} centres={centres} metars={metars} radarTiles={s.showRadar ? radar.data ?? null : null} onSelectAtc={(c) => { setAtcSel(c); setSel(null); setWxSel(null); }} onSelectMetar={(w) => { setWxSel(w); setSel(null); setAtcSel(null); }} onView={(bbox, zoom) => setView({ bbox, zoom })} follow={follow} threeD={s.map3d} stands={stands} agl={f?.position.altAglFt ?? null} onGround={!!f?.position.onGround} onSelectTraffic={(p) => { setSel(p); if (p) { setAtcSel(null); setWxSel(null); } }} onUserMove={() => setFollow(false)} selTrack={selInfo?.track ?? null} flyTo={fly} holds={holds} nextFix={nextFix} onSelectFix={(i) => { setFixSel(i); setSel(null); setAtcSel(null); setWxSel(null); }} />
+      <MapView trail={trail} plan={L.plan} aircraft={aircraft} airports={airports} traffic={traffic} atc={atc} centres={centres} metars={metars} radarTiles={s.showRadar ? radar.data ?? null : null} onSelectAtc={(c) => { setAtcSel(c); setSel(null); setWxSel(null); }} onSelectMetar={(w) => { setWxSel(w); setSel(null); setAtcSel(null); }} onView={(bbox, zoom) => setView({ bbox, zoom })} follow={follow} threeD={s.map3d} stands={stands} agl={f?.position.altAglFt ?? null} onGround={!!f?.position.onGround} onSelectTraffic={(p) => { setSel(p); if (p) { setAtcSel(null); setWxSel(null); } }} onUserMove={() => setFollow(false)} selTrack={selInfo?.track ?? null} flyTo={fly} fitRoute={fitRoute} holds={holds} nextFix={nextFix} onSelectFix={(i) => { setFixSel(i); setSel(null); setAtcSel(null); setWxSel(null); }} />
       {!sel && !atcSel && !wxSel && fixSel === null && <div className="map-ap"><MiniApproach /></div>}
       {/* The flight panel steps aside while a traffic, ATC or weather card is open, so the two never overlap. */}
       <div className={`map-hud glass strong pad${selLive || atcSel || wxSel ? " behind" : ""}`} style={{ padding: "14px 16px" }}>
@@ -174,6 +182,7 @@ export function MapScreen() {
       </div>
       <button className={`map-search glass strong${selLive && selInfo ? " shifted" : ""}`} onClick={() => { setPanel(true); setLayers(false); }} aria-label="Search callsign, airline or airport"><span className="i">{Icon.search()}</span>Search callsign, airline or airport<kbd>{/Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl"} F</kbd></button>
       <div className="map-tools">
+        {L.plan && <button className={`btn glass map-route-btn${routeOpen ? " on" : ""}`} aria-expanded={routeOpen} aria-label="Flight plan" title="Your flight plan: show the whole route" onClick={() => { const o = !routeOpen; setRouteOpen(o); if (o) { showRoute(); setSel(null); setAtcSel(null); setWxSel(null); setFixSel(null); } }}><span style={{ width: 22, height: 22 }}>{Icon.route()}</span></button>}
         <div className="map-zoom glass"><button className="btn glass" aria-label="Zoom in" onClick={() => window.dispatchEvent(new CustomEvent("glidepath-zoom", { detail: 1 }))}>+</button><button className="btn glass" aria-label="Zoom out" onClick={() => window.dispatchEvent(new CustomEvent("glidepath-zoom", { detail: -1 }))}>−</button></div>
         <button className={`btn glass${follow ? " on" : ""}`} aria-pressed={follow} aria-label="Follow my aircraft" title="Follow my aircraft" onClick={() => setFollow(!follow)}><span style={{ width: 22, height: 22 }}>{Icon.target()}</span></button>
         <button className={`btn glass map3d${s.map3d ? " on" : ""}`} aria-pressed={s.map3d} aria-label="3D chase view" title="3D chase view" onClick={() => { settingsStore.set({ map3d: !s.map3d }); if (!s.map3d) setFollow(true); }}>3D</button>
@@ -208,6 +217,10 @@ export function MapScreen() {
           {atcSel.frequency && <div className="data" style={{ fontSize: 26, fontWeight: 700, marginTop: 10 }}>{atcSel.frequency}</div>}
           {atcSel.atis.length > 0 && <p className="muted" style={{ fontSize: 13, marginTop: 8, maxHeight: 120, overflow: "auto" }}>{atcSel.atis.join(" ")}</p>}
         </div>
+      )}
+      {routeOpen && L.plan && !sel && !atcSel && !wxSel && fixSel === null && (
+        <MapRoutePanel plan={L.plan} nextFix={nextFix} onClose={() => setRouteOpen(false)} onFit={showRoute}
+          onPick={(i) => { const fx = L.plan!.fixes[i]; if (!fx) return; setFixSel(i); setFollow(false); setFly({ lon: fx.lon, lat: fx.lat, zoom: 8.5, key: Date.now() }); }} />
       )}
       {!L.plan && mode !== "demo" && !sel && !atcSel && !wxSel && (
         <button className="map-noplan glass strong" onClick={() => setPlanAsk(!planAsk)}><span className="dot-warn" />No flight plan on the map<b>Add one</b></button>

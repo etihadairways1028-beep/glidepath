@@ -21,6 +21,7 @@ export const Icon = {
   back: () => <svg viewBox="0 0 24 24" {...P}><path d="M15 5l-7 7 7 7" /></svg>,
   cloud: () => <svg viewBox="0 0 24 24" {...P}><path d="M7 18h10a4 4 0 0 0 .6-7.96A6 6 0 0 0 6.1 9.6 4.2 4.2 0 0 0 7 18Z" /></svg>,
   panel: () => <svg viewBox="0 0 24 24" {...P}><rect x="3" y="4" width="18" height="16" rx="2.5" /><path d="M7 8h10M7 12h4M7 16h4M14 12h3v4h-3z" /></svg>,
+  route: () => <svg viewBox="0 0 24 24" {...P}><circle cx="5" cy="18" r="2.2" /><circle cx="19" cy="6" r="2.2" /><path d="M7 17.2c3-1 2.5-4.6 5-5.6s3.7-2.6 5.2-4.4" strokeDasharray="2.4 2.4" /></svg>,
   approach: () => <svg viewBox="0 0 24 24" {...P}><path d="M3 6 21 16" /><path d="M14 19h8" /><path d="M6 4.5 7 9" /><circle cx="9" cy="8.5" r="1.6" /></svg>,
   perf: () => <svg viewBox="0 0 24 24" {...P}><path d="M3 18h18" /><path d="M5 18c3-1 6-4 8-8l2-4" /><path d="m13 6 2 0 0 2" /><circle cx="17" cy="14" r="3" /><path d="M17 12.6v1.6l1 .8" /></svg>,
   checklist: () => <svg viewBox="0 0 24 24" {...P}><rect x="4" y="3.5" width="16" height="17" rx="3" /><path d="m8 9 1.5 1.5L12 8M8 15l1.5 1.5L12 14M14.5 9.5H17M14.5 15.5H17" /></svg>,

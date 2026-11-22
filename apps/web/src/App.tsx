@@ -64,7 +64,7 @@ if (typeof window !== "undefined") {
     requestAnimationFrame(() => { const m = document.getElementById("main"); if (m) m.scrollTop = back ? scrollMemory.get(to) ?? 0 : 0; if (!back) window.scrollTo(0, 0); });
   });
 }
-const TITLES: Record<string, string> = { home: "", map: "Live map", flight: "Flight", remote: "Remote", logbook: "Logbook", review: "Flight review", copilot: "Copilot", charts: "Charts", checklists: "Checklists", performance: "Performance", approach: "Approach", tools: "Pilot tools", cockpit: "Cockpit tools", weather: "Weather", airports: "Airports", glance: "Glance", career: "Career", challenge: "Landing challenge", account: "Account", settings: "Settings", updates: "Updates", support: "Support" };
+const TITLES: Record<string, string> = { home: "", map: "Live map", flight: "Flight", remote: "Remote", logbook: "Logbook", review: "Flight review", copilot: "Copilot", charts: "Charts", checklists: "Checklists", performance: "Performance", approach: "Landing helper", tools: "Pilot tools", cockpit: "Cockpit tools", weather: "Weather", airports: "Airports", glance: "Glance", career: "Career", challenge: "Landing challenge", account: "Account", settings: "Settings", updates: "Updates", support: "Support" };
 
 /* ---------- hash router (works on GitHub Pages and on the Bridge) ---------- */
 export function useRoute(): string[] {
@@ -125,7 +125,7 @@ const NAV: Array<{ id: string; label: string; icon: () => ReactNode; mobile: boo
   { id: "copilot", label: "Copilot", icon: Icon.headset, mobile: false },
   { id: "charts", label: "Charts", icon: Icon.chart, mobile: false },
   { id: "performance", label: "Performance", icon: Icon.perf, mobile: false },
-  { id: "approach", label: "Approach", icon: Icon.approach, mobile: false },
+  { id: "approach", label: "Landing helper", icon: Icon.approach, mobile: false },
   { id: "checklists", label: "Checklists", icon: Icon.checklist, mobile: false },
   { id: "tools", label: "Pilot tools", icon: Icon.calc, mobile: false },
   { id: "cockpit", label: "Cockpit tools", icon: Icon.panel, mobile: false },

@@ -12,6 +12,7 @@ import { loadChoice } from "./Procedures";
 import { fmt, fuel } from "../data/derive";
 import { loadLatestPlan } from "../data/plan";
 import { settingsStore, useApp, useSettings } from "../data/store";
+import { Icon } from "./ui";
 
 const fl = (ft: number | null | undefined) => (ft == null ? "—" : ft >= 10000 ? `FL${String(Math.round(ft / 100)).padStart(3, "0")}` : `${fmt(ft)} ft`);
 const hm = (s: number | null | undefined) => (s == null ? "—" : `${Math.floor(s / 3600)}:${String(Math.round((s % 3600) / 60)).padStart(2, "0")}`);
@@ -39,6 +40,68 @@ export function SimbriefImport({ compact }: { compact?: boolean }) {
       </form>
       {!can && <p className="faint sb-note">Stop the demo to load your own plan.</p>}
       {msg && <p className={`sb-note ${msg.ok ? "on-time" : "late"}`} role="status">{msg.t}</p>}
+    </div>
+  );
+}
+
+/** Every waypoint in order: origin and runway, SID, airways, STAR, destination and runway. */
+export function RouteChips({ plan, nextIdx = null, onPick }: { plan: FlightPlan; nextIdx?: number | null; onPick?: (i: number) => void }) {
+  const ch = loadChoice(plan.origin.icao, plan.destination.icao);
+  const depRwy = ch.depRunway ?? plan.origin.runway, arrRwy = ch.arrRunway ?? plan.destination.runway;
+  const sid = ch.sid === "" ? null : ch.sid ?? plan.sid ?? null, star = ch.star === "" ? null : ch.star ?? plan.star ?? null;
+  const items = plan.fixes.map((f, i) => ({ f, i })).filter(({ f }) => !isTop(f.ident));
+  const kind = (p: FlightPlan["fixes"][number]) => (p.proc === "sid" ? "sid" : p.proc === "star" ? "star" : "en");
+  let sidShown = false, starShown = false;
+  return (
+    <ol className="rt-fixes" aria-label="Every waypoint">
+      <li className="rt-fix ap"><b>{plan.origin.icao}{depRwy ? `/${depRwy}` : ""}</b></li>
+      {items.map(({ f, i }) => {
+        const k = kind(f);
+        const head = k === "sid" && !sidShown ? (sidShown = true, <li key={`sid-${i}`} className="rt-proc sid">{sid ?? "SID"}</li>)
+          : k === "star" && !starShown ? (starShown = true, <li key={`star-${i}`} className="rt-proc star">{star ?? "STAR"}</li>) : null;
+        const cls = `rt-fix ${k}${nextIdx !== null && i < nextIdx ? " passed" : ""}${nextIdx === i ? " next" : ""}`;
+        const inner = <>{k === "en" && f.via && f.via !== "DCT" && <span className="rt-via">{f.via}</span>}<b>{f.ident}</b></>;
+        return [head, (
+          <li key={`${f.ident}-${i}`} className={cls} title={f.altitudeFt != null ? `${f.ident}, planned ${fl(f.altitudeFt)}` : f.ident}>
+            {onPick ? <button type="button" onClick={() => onPick(i)}>{inner}</button> : inner}
+          </li>
+        )];
+      })}
+      <li className="rt-fix ap"><b>{plan.destination.icao}{arrRwy ? `/${arrRwy}` : ""}</b></li>
+    </ol>
+  );
+}
+
+/** The flight plan panel on the live map. */
+export function MapRoutePanel({ plan, nextFix, onPick, onClose, onFit }: { plan: FlightPlan; nextFix: number | null; onPick: (i: number) => void; onClose: () => void; onFit: () => void }) {
+  const ch = loadChoice(plan.origin.icao, plan.destination.icao);
+  const depRwy = ch.depRunway ?? plan.origin.runway, arrRwy = ch.arrRunway ?? plan.destination.runway;
+  const sid = ch.sid === "" ? null : ch.sid ?? plan.sid ?? null, star = ch.star === "" ? null : ch.star ?? plan.star ?? null;
+  const dist = plan.distanceNm ?? Math.round(distanceNm(plan.origin, plan.destination));
+  const n = plan.fixes.filter((f) => !isTop(f.ident)).length;
+  return (
+    <div className="map-sheet glass strong map-route" role="dialog" aria-label="Flight plan">
+      <div className="mr-h">
+        <div>
+          <span className="rt-k">Flight plan{plan.callsign ? ` · ${plan.callsign}` : ""}</span>
+          <b className="mr-t">{plan.origin.icao} <span aria-hidden>→</span> {plan.destination.icao}</b>
+        </div>
+        <button className="btn small" aria-label="Close" onClick={onClose}><span style={{ width: 16, height: 16 }}>{Icon.close()}</span></button>
+      </div>
+      <div className="mr-ends">
+        <span className="rt-tag rwy">RWY {depRwy ?? "—"}</span><span className="rt-tag sid">{sid ?? "No SID"}</span>
+        <span className="mr-arrow" aria-hidden>→</span>
+        <span className="rt-tag star">{star ?? "No STAR"}</span><span className="rt-tag rwy">RWY {arrRwy ?? "—"}</span>
+      </div>
+      <p className="mr-sub">{fmt(dist)} nm · {fl(plan.cruiseAltitudeFt)} · {n} waypoints · tap one to go there</p>
+      <div className="mr-list"><RouteChips plan={plan} nextIdx={nextFix} onPick={onPick} /></div>
+      <DirectNote />
+      <div className="row wrap" style={{ gap: 8 }}>
+        <button className="btn small primary" onClick={onFit}>Show whole route</button>
+        <a className="btn small" href="#/flight">Navlog</a>
+        <a className="btn small" href="#/performance">Performance</a>
+        <a className="btn small" href="#/approach">Landing helper</a>
+      </div>
     </div>
   );
 }
@@ -115,15 +178,7 @@ export function RouteOverview({ plan, frame, live }: { plan: FlightPlan; frame: 
         </div>
       </div>
 
-      <ol className="rt-fixes" aria-label="Every waypoint">
-        <li className="rt-fix ap"><b>{plan.origin.icao}{depRwy ? `/${depRwy}` : ""}</b></li>
-        {sidFix.length > 0 && <li className="rt-proc sid">{sid ?? "SID"}</li>}
-        {sidFix.map((f, i) => chip(f, i, "sid"))}
-        {enroute.map((f, i) => chip(f, i, "en"))}
-        {starFix.length > 0 && <li className="rt-proc star">{star ?? "STAR"}</li>}
-        {starFix.map((f, i) => chip(f, i, "star"))}
-        <li className="rt-fix ap"><b>{plan.destination.icao}{arrRwy ? `/${arrRwy}` : ""}</b></li>
-      </ol>
+      <RouteChips plan={plan} nextIdx={prog ? prog.legIndex : null} />
       {live && <DirectNote />}
 
       <div className="rt-body">

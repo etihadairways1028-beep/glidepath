@@ -158,6 +158,8 @@ export interface MapViewProps {
   center?: [number, number];
   /** Move the camera here (change `key` to move again). */
   flyTo?: { lon: number; lat: number; zoom: number; key: number } | null;
+  /** Change this to fit the whole route (and your aircraft) on screen. */
+  fitRoute?: number;
   zoom?: number;
   /** Tilted chase view with 3D terrain. */
   threeD?: boolean;
@@ -181,7 +183,7 @@ export interface MapViewProps {
   nextFix?: number | null;
 }
 
-export function MapView({ trail, plan, aircraft, airports = [], traffic = [], atc = [], metars = [], radarTiles = null, centres = [], radarFrames = null, radarIndex = 0, radarOpacity = 0.7, onSelectAtc, onSelectMetar, onView, follow, center, zoom: startZoom, threeD = false, stands = [], agl = null, onGround = false, onSelectTraffic, onUserMove, interactive = true, history, selTrack, flyTo, holds = [], onSelectFix, nextFix = null }: MapViewProps) {
+export function MapView({ trail, plan, aircraft, airports = [], traffic = [], atc = [], metars = [], radarTiles = null, centres = [], radarFrames = null, radarIndex = 0, radarOpacity = 0.7, onSelectAtc, onSelectMetar, onView, follow, center, zoom: startZoom, threeD = false, stands = [], agl = null, onGround = false, onSelectTraffic, onUserMove, interactive = true, history, selTrack, flyTo, holds = [], onSelectFix, nextFix = null, fitRoute = 0 }: MapViewProps) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<MLMap | null>(null);
   const [ready, setReady] = useState(false);
@@ -416,6 +418,18 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
       m.fitBounds(b, { padding: 50, duration: 0, maxZoom: 6 });
     }
   }, [ready, history]);
+
+  // Show the whole route when asked.
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !ready || !fitRoute) return;
+    const pts = [...(data.current.route as Array<[number, number]>)];
+    if (aircraft) pts.push([aircraft.lon, aircraft.lat]);
+    if (pts.length < 2) return;
+    const b = pts.reduce((bb, p) => bb.extend(p), new maplibregl.LngLatBounds(pts[0], pts[0]));
+    const narrow = m.getContainer().clientWidth < 700;
+    m.fitBounds(b, { padding: narrow ? { top: 90, bottom: 230, left: 30, right: 30 } : { top: 90, bottom: 120, left: 70, right: 420 }, duration: 900, maxZoom: 10, pitch: 0, bearing: 0 });
+  }, [fitRoute, ready]);
 
   // Route (plan): only when the plan changes.
   useEffect(() => {

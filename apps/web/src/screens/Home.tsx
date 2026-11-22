@@ -368,7 +368,7 @@ function CopilotLine() {
 function QuickActions() {
   const items: Array<[string, string, () => React.ReactElement, string]> = [
     ["remote", "Remote", Icon.remote, "ic-remote"], ["map", "Live map", Icon.map, "ic-map"], ["performance", "Performance", Icon.perf, "ic-performance"],
-    ["approach", "Approach", Icon.approach, "ic-approach"], ["charts", "Charts", Icon.chart, "ic-charts"], ["checklists", "Checklists", Icon.checklist, "ic-checklists"],
+    ["approach", "Landing helper", Icon.approach, "ic-approach"], ["charts", "Charts", Icon.chart, "ic-charts"], ["checklists", "Checklists", Icon.checklist, "ic-checklists"],
     ["cockpit", "EFB & GSX", Icon.panel, "ic-cockpit"], ["copilot", "Copilot", Icon.headset, "ic-copilot"],
   ];
   return (

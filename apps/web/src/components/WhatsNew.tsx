@@ -6,12 +6,15 @@
 import { useEffect, useState } from "react";
 import { Icon } from "./ui";
 
-export const APP_VERSION = "1.1.5";
+export const APP_VERSION = "1.1.6";
 const KEY = "glidepath.seenVersion";
 
 export type WnIcon = "map" | "flight" | "remote" | "book" | "gear" | "spark" | "download" | "search" | "tower" | "cloud" | "layers" | "target";
 export interface WnItem { v: string; ic: WnIcon; t: string; d: string }
 export const WHATS_NEW: WnItem[] = [
+  { v: "1.1.6", ic: "target", t: "A simpler landing helper", d: "One target: the centre is the perfect path, the dot is you. A big plain instruction with arrows (\"Ease right\", \"Descend a bit more\"), a descent-rate gauge, and distance, height and wind. The ILS view is one tap away." },
+  { v: "1.1.6", ic: "map", t: "Your flight plan on the live map", d: "A new Flight plan button on the map shows the whole route, with runways, SID, STAR and every waypoint to tap. A newly loaded plan is shown in full straight away." },
+  { v: "1.1.6", ic: "spark", t: "New plan after a finished flight", d: "A SimBrief plan you load after landing now shows everywhere at once, instead of waiting for the next flight to start. Your SimBrief plan also beats a thinner plan from the sim." },
   { v: "1.1.5", ic: "target", t: "Approach guide for low visibility", d: "A synthetic ILS for any runway, RNAV approaches included: glidepath and centreline diamonds, a side and top view, the descent rate you need, a stable-approach check and optional spoken callouts. It pops up on Home and the map on final." },
   { v: "1.1.5", ic: "download", t: "Import your plan from Home", d: "Load SimBrief straight from Home and see the whole route: runways, SID, STAR and every waypoint with its airway, plus fuel, weights and times." },
   { v: "1.1.5", ic: "map", t: "Direct-to follows your MCDU", d: "Fly direct to a later waypoint and Glidepath notices within seconds, drops the waypoints you skipped from the map and navlog, and lets you put them back." },
