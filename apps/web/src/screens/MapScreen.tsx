@@ -1,3 +1,4 @@
+import { MiniApproach } from "./Approach";
 import { startDemo } from "../data/demo";
 import { useMemo, useState } from "react";
 import { MapView } from "../components/MapView";
@@ -128,6 +129,7 @@ export function MapScreen() {
   return (
     <div className="map-wrap">
       <MapView trail={trail} plan={L.plan} aircraft={aircraft} airports={airports} traffic={traffic} atc={atc} centres={centres} metars={metars} radarTiles={s.showRadar ? radar.data ?? null : null} onSelectAtc={(c) => { setAtcSel(c); setSel(null); setWxSel(null); }} onSelectMetar={(w) => { setWxSel(w); setSel(null); setAtcSel(null); }} onView={(bbox, zoom) => setView({ bbox, zoom })} follow={follow} threeD={s.map3d} stands={stands} agl={f?.position.altAglFt ?? null} onGround={!!f?.position.onGround} onSelectTraffic={(p) => { setSel(p); if (p) { setAtcSel(null); setWxSel(null); } }} onUserMove={() => setFollow(false)} selTrack={selInfo?.track ?? null} flyTo={fly} holds={holds} nextFix={nextFix} onSelectFix={(i) => { setFixSel(i); setSel(null); setAtcSel(null); setWxSel(null); }} />
+      {!sel && !atcSel && !wxSel && fixSel === null && <div className="map-ap"><MiniApproach /></div>}
       {/* The flight panel steps aside while a traffic, ATC or weather card is open, so the two never overlap. */}
       <div className={`map-hud glass strong pad${selLive || atcSel || wxSel ? " behind" : ""}`} style={{ padding: "14px 16px" }}>
         {L.flight ? (

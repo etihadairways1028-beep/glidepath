@@ -1,5 +1,6 @@
 import { Support } from "./screens/Support";
 import { PerformanceScreen } from "./screens/Performance";
+import { ApproachScreen } from "./screens/Approach";
 import { currentLook } from "./components/Look";
 import { UpdatesScreen } from "./screens/Updates";
 import { Celebrate } from "./components/Celebrate";
@@ -63,7 +64,7 @@ if (typeof window !== "undefined") {
     requestAnimationFrame(() => { const m = document.getElementById("main"); if (m) m.scrollTop = back ? scrollMemory.get(to) ?? 0 : 0; if (!back) window.scrollTo(0, 0); });
   });
 }
-const TITLES: Record<string, string> = { home: "", map: "Live map", flight: "Flight", remote: "Remote", logbook: "Logbook", review: "Flight review", copilot: "Copilot", charts: "Charts", checklists: "Checklists", performance: "Performance", tools: "Pilot tools", cockpit: "Cockpit tools", weather: "Weather", airports: "Airports", glance: "Glance", career: "Career", challenge: "Landing challenge", account: "Account", settings: "Settings", updates: "Updates", support: "Support" };
+const TITLES: Record<string, string> = { home: "", map: "Live map", flight: "Flight", remote: "Remote", logbook: "Logbook", review: "Flight review", copilot: "Copilot", charts: "Charts", checklists: "Checklists", performance: "Performance", approach: "Approach", tools: "Pilot tools", cockpit: "Cockpit tools", weather: "Weather", airports: "Airports", glance: "Glance", career: "Career", challenge: "Landing challenge", account: "Account", settings: "Settings", updates: "Updates", support: "Support" };
 
 /* ---------- hash router (works on GitHub Pages and on the Bridge) ---------- */
 export function useRoute(): string[] {
@@ -124,6 +125,7 @@ const NAV: Array<{ id: string; label: string; icon: () => ReactNode; mobile: boo
   { id: "copilot", label: "Copilot", icon: Icon.headset, mobile: false },
   { id: "charts", label: "Charts", icon: Icon.chart, mobile: false },
   { id: "performance", label: "Performance", icon: Icon.perf, mobile: false },
+  { id: "approach", label: "Approach", icon: Icon.approach, mobile: false },
   { id: "checklists", label: "Checklists", icon: Icon.checklist, mobile: false },
   { id: "tools", label: "Pilot tools", icon: Icon.calc, mobile: false },
   { id: "cockpit", label: "Cockpit tools", icon: Icon.panel, mobile: false },
@@ -256,6 +258,7 @@ export function App() {
     case "cockpit": body = <CockpitScreen initial={rest[0]} />; break;
     case "checklists": body = <ChecklistsScreen />; break;
     case "performance": body = <PerformanceScreen />; break;
+    case "approach": body = <ApproachScreen />; break;
     case "tools": body = <ToolsScreen />; break;
     case "remote": body = <RemoteScreen />; break;
     case "charts": body = <ChartsScreen />; break;
@@ -269,7 +272,7 @@ export function App() {
     <>
       <Sky />
       <GlideslopeBanners />
-      <div className="shell" style={screen === "glance" ? { gridTemplateColumns: "1fr" } : undefined}>
+      <div className={`shell${screen === "glance" ? " glance" : ""}`}>
         {screen !== "glance" && (
           <nav className="glass side" aria-label="Main">
             <a className="brand" href="#/home" aria-label="Glidepath home"><Mark /><span className="nav-l">Glidepath</span></a>
@@ -297,7 +300,7 @@ export function App() {
           {NAV.filter((n) => n.mobile).map((n) => (
             <a key={n.id} className={`tab${screen === n.id ? " on" : ""}`} href={`#/${n.id}`}>{n.icon()}{n.label === "Live map" ? "Map" : n.label}</a>
           ))}
-          <a className={`tab${["airports", "settings", "glance", "account", "support", "updates", "forgot", "reset", "career", "challenge", "cockpit", "weather", "checklists", "performance", "tools", "copilot", "charts"].includes(screen ?? "") ? " on" : ""}`} href="#/settings">{Icon.more()}More</a>
+          <a className={`tab${["airports", "settings", "glance", "account", "support", "updates", "forgot", "reset", "career", "challenge", "cockpit", "weather", "checklists", "performance", "approach", "tools", "copilot", "charts"].includes(screen ?? "") ? " on" : ""}`} href="#/settings">{Icon.more()}More</a>
         </nav>
       )}
     </>

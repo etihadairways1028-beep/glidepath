@@ -64,7 +64,7 @@ export function SettingsScreen() {
       <OnThisPc />
       <nav className="more-grid" aria-label="More screens">
         {([
-          ["performance", "Performance", Icon.perf], ["charts", "Charts", Icon.chart], ["copilot", "Copilot", Icon.headset], ["checklists", "Checklists", Icon.checklist],
+          ["performance", "Performance", Icon.perf], ["approach", "Approach", Icon.approach], ["charts", "Charts", Icon.chart], ["copilot", "Copilot", Icon.headset], ["checklists", "Checklists", Icon.checklist],
           ["tools", "Pilot tools", Icon.calc], ["cockpit", "Cockpit tools", Icon.panel], ["weather", "Weather", Icon.cloud],
           ["airports", "Airports", Icon.tower], ["glance", "Glance mode", Icon.expand], ["career", "Career", Icon.career],
           ["challenge", "Landing challenge", Icon.trophy], ["account", "Account", Icon.person],

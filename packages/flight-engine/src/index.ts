@@ -12,3 +12,5 @@ export * from "./badges.js";
 export * from "./pilotCareer.js";
 export * from "./approach.js";
 export * from "./perf.js";
+export * from "./guide.js";
+export * from "./direct.js";

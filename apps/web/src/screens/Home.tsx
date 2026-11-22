@@ -3,6 +3,7 @@ import { ClockPill } from "../components/Clock";
 import type { FlightSummary } from "@glidepath/protocol";
 import { FlightFeed, LiveCard } from "../components/LiveCard";
 import { Bento } from "../components/Bento";
+import { RouteOverview, SimbriefImport } from "../components/RouteOverview";
 import { MapView } from "../components/MapView";
 import { YourPcs } from "./Account";
 import { InstallCard } from "../components/InstallCard";
@@ -38,20 +39,68 @@ export function Home() {
       {mode !== "none" && flight?.status === "completed" && <DebriefTeaser />}
       {mode !== "none" && flight && <LiveCard />}
       {mode !== "none" && flight && flight.status !== "completed" ? <Bento /> : mode !== "none" && flight ? <FlightFeed /> : null}
-      {mode !== "none" && <QuickActions />}
+      {mode !== "none" && flight && <QuickActions />}
       {mode !== "none" && flight && <HomeAircraft />}
       {mode !== "none" && flight && flight.status !== "completed" && <SoFar />}
       {mode !== "none" && flight && <HomeTimings />}
       {mode !== "none" && flight && <CopilotLine />}
-      {mode === "bridge" && conn === "live" && !flight && (
-        <section className="glass pad empty">
-          <div className="h2">{sim === "connected" ? "Ready when you are" : "Start the sim"}</div>
-          <p className="muted">{sim === "connected" ? "Recording starts when you push back." : "The Bridge picks it up on its own."}</p>
-        </section>
-      )}
+      {mode !== "none" && !flight && <PreFlight />}
+      {mode === "none" && <PlanSection />}
+      {mode !== "none" && flight && flight.status !== "completed" && <PlanSection live />}
       <Totals />
       <InstallCard />
     </div>
+  );
+}
+
+/** Your plan: the full route once loaded, or the SimBrief import. */
+function PlanSection({ live }: { live?: boolean }) {
+  const L = useLive();
+  if (L.plan) return <RouteOverview plan={L.plan} frame={L.frame} live={!!live} />;
+  if (live) return null;
+  return (
+    <section className="glass strong pf-plan">
+      <div className="pf-plan-t">
+        <span className="pf-plan-ic" aria-hidden>{Icon.flight()}</span>
+        <div>
+          <h2 className="h2" style={{ margin: 0 }}>Import your flight plan</h2>
+          <p className="muted" style={{ margin: "4px 0 0" }}>Your latest SimBrief plan: runways, SID, STAR, every waypoint, fuel and weights. It shows on the map, the navlog and the Performance page. A plan loaded in MSFS is picked up by the Bridge too.</p>
+        </div>
+      </div>
+      <SimbriefImport />
+    </section>
+  );
+}
+
+/** Before a flight: where you stand, what to do next, and your plan. */
+function PreFlight() {
+  const L = useLive();
+  const mode = useApp((s) => s.mode);
+  const conn = useApp((s) => s.conn);
+  const sim = useApp((s) => s.status?.simState);
+  const bridgeOk = mode === "demo" || conn === "live";
+  const simOk = mode === "demo" || sim === "connected";
+  const steps: Array<[boolean, string, string]> = [
+    [bridgeOk, bridgeOk ? "Bridge connected" : conn === "connecting" || conn === "reconnecting" ? "Connecting to your PC…" : "Bridge not connected", bridgeOk ? "Live data from your PC" : "Open Glidepath on your PC"],
+    [simOk, simOk ? "Sim connected" : "Start the sim", simOk ? "Recording starts when you push back" : "The Bridge picks it up on its own"],
+    [!!L.plan, L.plan ? `Plan loaded: ${L.plan.origin.icao} to ${L.plan.destination.icao}` : "Import your plan", L.plan ? `${L.plan.fixes.filter((f) => !/^(TOC|TOD|T\/C|T\/D)$/i.test(f.ident)).length} waypoints${L.plan.sid ? `, ${L.plan.sid}` : ""}${L.plan.star ? `, ${L.plan.star}` : ""}` : "From SimBrief, below"],
+  ];
+  return (
+    <>
+      <section className="glass pre">
+        <div className="pre-radar" aria-hidden><span /><span /><span /><i /></div>
+        <ol className="pre-steps">
+          {steps.map(([ok, t, d], i) => (
+            <li key={i} className={ok ? "ok" : ""}>
+              <span className="pre-dot" aria-hidden>{ok ? "✓" : i + 1}</span>
+              <div><b>{t}</b><small>{d}</small></div>
+            </li>
+          ))}
+        </ol>
+      </section>
+      <PlanSection />
+      <QuickActions />
+    </>
   );
 }
 
@@ -63,7 +112,7 @@ function FlightHeading() {
   const from = f?.departureName ?? L.plan?.origin.name ?? f?.departureIcao ?? null;
   const to = f?.arrivalName ?? L.plan?.destination.name ?? f?.arrivalIcao ?? null;
   const short = (n: string | null) => (n ? n.replace(/ (International )?Airport$/i, "") : null);
-  const title = !f ? (mode === "none" ? "Welcome aboard" : "No flight yet") : from && to ? `${short(from)} to ${short(to)}` : from ? `From ${short(from)}` : "Flight in progress";
+  const title = !f ? (mode === "none" ? "Welcome aboard" : L.plan ? `Ready for ${L.plan.destination.icao}` : "Plan your next flight") : from && to ? `${short(from)} to ${short(to)}` : from ? `From ${short(from)}` : "Flight in progress";
   return (
     <header className="home-head">
       <div>
@@ -318,8 +367,9 @@ function CopilotLine() {
 /** The things you reach for most during a flight, one tap away. */
 function QuickActions() {
   const items: Array<[string, string, () => React.ReactElement, string]> = [
-    ["remote", "Remote", Icon.remote, "ic-remote"], ["map", "Live map", Icon.map, "ic-map"], ["charts", "Charts", Icon.chart, "ic-charts"],
-    ["cockpit", "EFB & GSX", Icon.panel, "ic-cockpit"], ["checklists", "Checklists", Icon.checklist, "ic-checklists"], ["copilot", "Copilot", Icon.headset, "ic-copilot"],
+    ["remote", "Remote", Icon.remote, "ic-remote"], ["map", "Live map", Icon.map, "ic-map"], ["performance", "Performance", Icon.perf, "ic-performance"],
+    ["approach", "Approach", Icon.approach, "ic-approach"], ["charts", "Charts", Icon.chart, "ic-charts"], ["checklists", "Checklists", Icon.checklist, "ic-checklists"],
+    ["cockpit", "EFB & GSX", Icon.panel, "ic-cockpit"], ["copilot", "Copilot", Icon.headset, "ic-copilot"],
   ];
   return (
     <nav className="quick" aria-label="Quick actions">

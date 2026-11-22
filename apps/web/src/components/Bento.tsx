@@ -2,6 +2,7 @@
  * Home while you fly: a dashboard of the things you glance at. Live map, the four numbers that
  * matter with their trend, the next waypoint, the weather where you're going, and what just happened.
  */
+import { MiniApproach } from "../screens/Approach";
 import { useEffect, useState } from "react";
 import type { Metar } from "@glidepath/protocol";
 import { routeProgress } from "@glidepath/flight-engine";
@@ -101,6 +102,8 @@ export function Bento() {
   const burnRaw = fw.length >= 15 ? (fw[0]! - fw.at(-1)!) / (((fw.length - 1) * 2) / 3600) : null;
   const burn = burnRaw !== null && burnRaw > 50 && burnRaw < 20000 ? burnRaw : null;
   return (
+    <>
+    <div className="home-ap"><MiniApproach /></div>
     <div className="bento">
       {aircraft && (
         <a className="glass b-map" href="#/map" aria-label="Open the live map">
@@ -116,5 +119,6 @@ export function Bento() {
       {dest && <DestWeather icao={dest} />}
       <div className="b-feed"><FlightFeed /></div>
     </div>
+    </>
   );
 }

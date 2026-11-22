@@ -3,6 +3,7 @@
  * direct reading or a clearly-labelled estimate (`estimate: true`).
  */
 import { useSavedPlan } from "./plan";
+import { withDirects } from "./direct";
 import { useMemo } from "react";
 import type { FlightEvent, FlightPhase, FlightPlan, FlightSummary, TelemetryFrame } from "@glidepath/protocol";
 import { altWords, clockAt, computeTimings, computeTopOfDescent, distanceNm, routeProgress, type FlightTimings, type LatLon, type TodResult } from "@glidepath/flight-engine";
@@ -93,7 +94,9 @@ export function localAt(ms: number | null, plan: FlightPlan | null, side: "origi
 export function derive(frame: TelemetryFrame | null, flight: FlightSummary | null, phase: FlightPhase, isDemo: boolean, events: FlightEvent[] = [], saved: FlightPlan | null = null): Live {
   const completed = flight?.status === "completed";
   // The flight's own plan; otherwise the plan you loaded, until a flight finishes.
-  const plan = flight?.plan ?? (completed ? null : saved);
+  const plan0 = flight?.plan ?? (completed ? null : saved);
+  // Waypoints you skipped with a direct-to are dropped, so every screen shows the route you're really flying.
+  const plan = plan0 && !completed && !isDemo ? withDirects(plan0, frame) : plan0;
   const dest = plan
     ? { lat: plan.destination.lat, lon: plan.destination.lon, icao: plan.destination.icao, name: plan.destination.name, elevationFt: plan.destination.elevationFt }
     : null;

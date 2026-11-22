@@ -9,11 +9,25 @@ import { distanceNm, routeProgress, type LatLon } from "@glidepath/flight-engine
 import { Kv, Section } from "./ui";
 import { fmt, fuel } from "../data/derive";
 import { loadLatestPlan as loadPlan } from "../data/plan";
+import { undoDirect, useLastDirect } from "../data/direct";
 import { settingsStore, useApp, useSettings } from "../data/store";
 
 const fl = (ft: number | null | undefined) => ft == null ? "—" : ft >= 10000 ? `FL${String(Math.round(ft / 100)).padStart(3, "0")}` : `${Math.round(ft).toLocaleString("en-US")} ft`;
 const hm = (s: number | null | undefined) => { if (s == null || !Number.isFinite(s)) return "—"; const m = Math.round(s / 60); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`; };
 const clock = (unixS: number) => { const d = new Date(unixS * 1000); return `${String(d.getUTCHours()).padStart(2, "0")}${String(d.getUTCMinutes()).padStart(2, "0")}Z`; };
+
+/** After a direct-to: which waypoints were dropped, with a way to put them back. */
+export function DirectNote() {
+  const d = useLastDirect();
+  if (!d) return null;
+  return (
+    <p className="fp-direct" role="status">
+      <span className="fp-direct-k">Direct to <b>{d.target}</b></span>
+      <span className="fp-direct-v">Skipped {d.idents.slice(0, 6).join(", ")}{d.idents.length > 6 ? ` and ${d.idents.length - 6} more` : ""}</span>
+      <button className="linkish" onClick={undoDirect}>Put back</button>
+    </p>
+  );
+}
 
 export function FlightPlanCard({ plan, frame, completed }: { plan: FlightPlan; frame: TelemetryFrame | null; completed: boolean }) {
   const { fuelUnit } = useSettings();
@@ -77,6 +91,7 @@ export function FlightPlanCard({ plan, frame, completed }: { plan: FlightPlan; f
       {next && (
         <p className="fp-next">Next: <b className="data">{next.f.ident}</b>{next.toFix !== null && next.toFix >= 0 ? <> in <b className="data">{fmt(next.toFix)} nm</b>{gs > 40 ? <>, about <b className="data">{Math.max(1, Math.round((next.toFix / gs) * 60))} min</b></> : null}</> : null}{next.f.altitudeFt != null ? <>, planned {fl(next.f.altitudeFt)}</> : null}</p>
       )}
+      {!completed && <DirectNote />}
 
       {rows.length > 0 ? (
         <div className="scroll-x fp-table-wrap">

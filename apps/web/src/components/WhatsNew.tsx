@@ -6,12 +6,16 @@
 import { useEffect, useState } from "react";
 import { Icon } from "./ui";
 
-export const APP_VERSION = "1.1.4";
+export const APP_VERSION = "1.1.5";
 const KEY = "glidepath.seenVersion";
 
 export type WnIcon = "map" | "flight" | "remote" | "book" | "gear" | "spark" | "download" | "search" | "tower" | "cloud" | "layers" | "target";
 export interface WnItem { v: string; ic: WnIcon; t: string; d: string }
 export const WHATS_NEW: WnItem[] = [
+  { v: "1.1.5", ic: "target", t: "Approach guide for low visibility", d: "A synthetic ILS for any runway, RNAV approaches included: glidepath and centreline diamonds, a side and top view, the descent rate you need, a stable-approach check and optional spoken callouts. It pops up on Home and the map on final." },
+  { v: "1.1.5", ic: "download", t: "Import your plan from Home", d: "Load SimBrief straight from Home and see the whole route: runways, SID, STAR and every waypoint with its airway, plus fuel, weights and times." },
+  { v: "1.1.5", ic: "map", t: "Direct-to follows your MCDU", d: "Fly direct to a later waypoint and Glidepath notices within seconds, drops the waypoints you skipped from the map and navlog, and lets you put them back." },
+  { v: "1.1.5", ic: "spark", t: "A Home that's ready before you fly", d: "Before a flight, Home shows your connection, sim and plan at a glance. Also fixed: the slim iPad sidebar could stay wide after Glance mode." },
   { v: "1.1.4", ic: "flight", t: "Takeoff and landing performance", d: "A new Performance page, EFB style: V1, VR, V2, flex, trim, Vapp, autobrake and runway distances for over 40 aircraft, filled in from your plan and the live METAR. Change the runway, SID and STAR right there." },
   { v: "1.1.4", ic: "layers", t: "Pick your look", d: "Settings → Look: Liquid glass, Cockpit (avionics readouts), Sunset or Neon night. It changes every screen, on every device." },
   { v: "1.1.4", ic: "spark", t: "Light mode fixed", d: "On a device set to light mode, page titles and the Home tiles were hard to read. They're clear now." },
