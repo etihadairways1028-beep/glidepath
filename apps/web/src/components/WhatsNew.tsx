@@ -6,12 +6,18 @@
 import { useEffect, useState } from "react";
 import { Icon } from "./ui";
 
-export const APP_VERSION = "1.1.6";
+export const APP_VERSION = "1.1.7";
 const KEY = "glidepath.seenVersion";
 
-export type WnIcon = "map" | "flight" | "remote" | "book" | "gear" | "spark" | "download" | "search" | "tower" | "cloud" | "layers" | "target";
+export type WnIcon = "map" | "flight" | "remote" | "book" | "gear" | "spark" | "download" | "search" | "tower" | "cloud" | "layers" | "target" | "headset";
 export interface WnItem { v: string; ic: WnIcon; t: string; d: string }
 export const WHATS_NEW: WnItem[] = [
+  { v: "1.1.7", ic: "map", t: "Your full route, even with Fenix and PMDG", d: "When the route is only in the aircraft's MCDU, the sim just knows \"direct to the destination\". Glidepath now spots that, fetches your SimBrief plan for the same flight by itself, and explains what to do if it can't." },
+  { v: "1.1.7", ic: "flight", t: "Climb, cruise and descent at a glance", d: "Your route card shows the vertical profile with top of climb and top of descent, how far away they are, and where you are now." },
+  { v: "1.1.7", ic: "headset", t: "A hands-free copilot", d: "Ask out loud with the mic button, have answers read back, and see phase, what's next, fuel at arrival and arrival time at the top." },
+  { v: "1.1.7", ic: "target", t: "Minimums and crab angle", d: "Set your minimums for an \"approaching minimums\" and \"minimums\" call and countdown. The landing helper also shows the crab angle the wind needs." },
+  { v: "1.1.7", ic: "remote", t: "A better remote and cockpit tools", d: "See your actual speed, heading, altitude and V/S next to what's set, drag a value like a knob, and read the active modes at a glance. Open several add-on screens as tabs, two side by side." },
+  { v: "1.1.7", ic: "book", t: "Logbook without the PC", d: "If Glidepath can't reach your PC, the logbook shows your last saved flights and says why, instead of \"Failed to fetch\"." },
   { v: "1.1.6", ic: "target", t: "A simpler landing helper", d: "One target: the centre is the perfect path, the dot is you. A big plain instruction with arrows (\"Ease right\", \"Descend a bit more\"), a descent-rate gauge, and distance, height and wind. The ILS view is one tap away." },
   { v: "1.1.6", ic: "map", t: "Your flight plan on the live map", d: "A new Flight plan button on the map shows the whole route, with runways, SID, STAR and every waypoint to tap. A newly loaded plan is shown in full straight away." },
   { v: "1.1.6", ic: "spark", t: "New plan after a finished flight", d: "A SimBrief plan you load after landing now shows everywhere at once, instead of waiting for the next flight to start. Your SimBrief plan also beats a thinner plan from the sim." },

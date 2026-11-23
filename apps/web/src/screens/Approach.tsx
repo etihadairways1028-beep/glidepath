@@ -118,11 +118,17 @@ function useCallouts(a: LiveApproach) {
         return;
       }
     }
+    if (a.toMinsFt !== null) {
+      for (const [h, t] of [[100, "Approaching minimums."], [0, "Minimums."]] as const) {
+        const k = -10000 - h;
+        if (a.toMinsFt <= h && a.toMinsFt > h - 120 && !heights.current.has(k)) { heights.current.add(k); say(t); return; }
+      }
+    }
     const now = Date.now();
     const key = g.vDots < -1.3 ? "Glidepath. Too low." : g.vDots > 1.5 ? "High on glidepath." : Math.abs(g.hDots) > 1.5 ? (g.hDots > 0 ? "Right of centreline." : "Left of centreline.") : "";
     if (key && (key !== last.current.key || now - last.current.t > 8000)) { last.current = { key, t: now }; say(key); }
     if (!key) last.current.key = "";
-  }, [g, a.setup.voice]);
+  }, [g, a.setup.voice, a.toMinsFt]);
 }
 
 /** Plain instruction from the deviations: what to do, not just where you are. */
@@ -239,6 +245,10 @@ export function ApproachScreen() {
             <input inputMode="numeric" defaultValue={String(a.setup.tchFt)} onBlur={(e) => { const n = Number(e.target.value); if (n >= 20 && n <= 100) saveSetup({ tchFt: n }); }} />
             <small>TCH on the chart, usually 50</small>
           </label>
+          <label className="pf-f"><span>Minimums ft (DA / MDA)</span>
+            <input inputMode="numeric" placeholder="e.g. 457" defaultValue={a.setup.minimumsFt === null ? "" : String(a.setup.minimumsFt)} onBlur={(e) => { const v = e.target.value.trim(); const n = Number(v); saveSetup({ minimumsFt: v && Number.isFinite(n) && n > -1500 && n < 15000 ? n : null }); }} />
+            <small>From the chart, on the altimeter</small>
+          </label>
           <label className="pf-f"><span>Threshold elevation ft</span>
             <input inputMode="numeric" placeholder={a.end ? String(a.end.elevFt) : ""} defaultValue={a.setup.thrElevFt === null ? "" : String(a.setup.thrElevFt)} onBlur={(e) => { const v = e.target.value.trim(); const n = Number(v); saveSetup({ thrElevFt: v && Number.isFinite(n) ? n : null }); }} />
             <small>Blank uses the airport elevation</small>
@@ -262,7 +272,7 @@ export function ApproachScreen() {
               <h2 className="ap-cmd" aria-live="polite">{ad.title}</h2>
               <div className="ap-pair">
                 <div className={`ap-chip t-${ad.v.tone}`}><span className="ap-arr" aria-hidden>{arrow(ad.v.dir)}</span><div><b>{ad.v.word}</b><small>{Math.abs(g.vDots) <= 0.3 ? `${fmt(Math.abs(g.vertFt))} ft off` : `${fmt(Math.abs(g.vertFt))} ft ${g.vertFt > 0 ? "high" : "low"}`}</small></div></div>
-                <div className={`ap-chip t-${ad.h.tone}`}><span className="ap-arr" aria-hidden>{arrow(ad.h.dir)}</span><div><b>{ad.h.word}</b><small>{Math.abs(g.hDots) <= 0.25 ? "lined up" : `${fmt(Math.abs(g.latFt))} ft ${g.latFt > 0 ? "right" : "left"} · track ${String(Math.round(g.correctTrackDeg) % 360).padStart(3, "0")}°`}</small></div></div>
+                <div className={`ap-chip t-${ad.h.tone}`}><span className="ap-arr" aria-hidden>{arrow(ad.h.dir)}</span><div><b>{ad.h.word}</b><small>{Math.abs(g.hDots) <= 0.25 ? "lined up" : `${fmt(Math.abs(g.latFt))} ft ${g.latFt > 0 ? "right" : "left"} · track ${String(Math.round(g.correctTrackDeg) % 360).padStart(3, "0")}°`}{a.crabDeg !== null && Math.abs(a.crabDeg) >= 2 ? ` · crab ${Math.abs(a.crabDeg)}° ${a.crabDeg > 0 ? "right" : "left"}` : ""}</small></div></div>
               </div>
               <VsGauge vs={a.vsFpm} need={g.requiredVsFpm} />
               <div className="ap-big3">
@@ -270,6 +280,13 @@ export function ApproachScreen() {
                 <div><em>Height</em><b>{fmt(g.hatFt)}<small>ft</small></b><span>path {fmt(g.hatFt - g.vertFt)} ft</span></div>
                 <div><em>Wind</em><b>{a.windHead === null ? "—" : `${Math.abs(a.windHead)}`}<small>{a.windHead === null ? "" : a.windHead >= 0 ? "kt head" : "kt tail"}</small></b><span>{a.windCross === null ? "" : `${Math.abs(a.windCross)} kt cross${a.windCross > 0 ? " from right" : a.windCross < 0 ? " from left" : ""}`}</span></div>
               </div>
+              {a.toMinsFt !== null && (
+                <div className={`ap-mins${a.toMinsFt <= 0 ? " at" : a.toMinsFt <= 100 ? " near" : ""}`}>
+                  <em>Minimums {fmt(a.setup.minimumsFt!)} ft</em>
+                  <b>{a.toMinsFt <= 0 ? "MINIMUMS" : `${fmt(a.toMinsFt)} ft to go`}</b>
+                  <span>{a.toMinsFt <= 0 ? "Runway in sight? Land. If not, go around." : a.toMinsFt <= 100 ? "Approaching minimums: look for the runway" : `Callouts at ${fmt(a.setup.minimumsFt! + 100)} and ${fmt(a.setup.minimumsFt!)} ft`}</span>
+                </div>
+              )}
               <ApproachRail g={g} />
             </div>
           </section>

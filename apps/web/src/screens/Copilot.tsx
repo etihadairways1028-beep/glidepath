@@ -14,6 +14,8 @@ import { Icon, Notice, Section } from "../components/ui";
 import { activeBridge } from "../data/bridge";
 import { factsFor, speakTest, useCopilot } from "../data/copilot";
 import { settingsStore, useApp, useSettings } from "../data/store";
+import { fuel } from "../data/derive";
+import type { CopilotSnapshot } from "@glidepath/flight-engine";
 import { glidepathAiStatus, streamGlidepathAi, useCloud } from "../data/cloud";
 
 interface Msg { role: "user" | "assistant"; content: string; by: "copilot" | "ai" | "error"; /** What the AI gets, when it differs from the shown text. */ send?: string }
@@ -52,6 +54,64 @@ function guessQuestion(q: string): QuickQuestion | null {
   return null;
 }
 
+type Rec = { start: () => void; stop: () => void; abort: () => void; lang: string; interimResults: boolean; continuous: boolean; onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }> }) => void) | null; onend: (() => void) | null; onerror: ((e: { error: string }) => void) | null };
+const RecCtor = (): (new () => Rec) | null => { const w = window as unknown as { SpeechRecognition?: new () => Rec; webkitSpeechRecognition?: new () => Rec }; return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null; };
+const READ_KEY = "glidepath.copilotRead";
+
+/** Push to talk: hold or tap the mic and ask out loud. Uses the device's own speech recognition. */
+function useMic(onText: (t: string) => void) {
+  const [on, setOn] = useState(false);
+  const [heard, setHeard] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  const rec = useRef<Rec | null>(null);
+  const supported = typeof window !== "undefined" && !!RecCtor();
+  const start = () => {
+    const C = RecCtor(); if (!C || on) return;
+    try { speechSynthesis.cancel(); } catch { /* no voice */ }
+    const r = new C(); rec.current = r;
+    r.lang = navigator.language || "en-GB"; r.interimResults = true; r.continuous = false;
+    let final = "";
+    r.onresult = (e) => { let t = ""; for (let i = 0; i < e.results.length; i++) { const x = e.results[i]!; t += x[0]!.transcript; if (x.isFinal) final = t; } setHeard(t); };
+    r.onerror = (e) => { setErr(e.error === "not-allowed" ? "Allow the microphone for Glidepath to ask by voice." : e.error === "no-speech" ? "Didn't hear anything. Try again." : "Voice input stopped."); };
+    r.onend = () => { setOn(false); const t = (final || "").trim(); setHeard(""); if (t) onText(t); };
+    setErr(null); setOn(true);
+    try { r.start(); } catch { setOn(false); }
+  };
+  const stop = () => { try { rec.current?.stop(); } catch { /* already stopped */ } };
+  return { supported, on, heard, err, start, stop };
+}
+
+function speak(text: string) {
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text.replace(/[•✦]/g, "").replace(/\n+/g, ". ").slice(0, 600));
+    u.rate = 1.04; speechSynthesis.speak(u);
+  } catch { /* no voice on this device */ }
+}
+
+/** What matters right now, at a glance. */
+function CopilotNow({ snap, live }: { snap: CopilotSnapshot; live: boolean }) {
+  const { fuelUnit } = useSettings();
+  if (!live) return null;
+  const min = (ms: number | null | undefined) => (ms == null ? null : Math.max(0, Math.round(ms / 60000)));
+  const t = snap.timings;
+  const next = !snap.airborne && t?.toTakeoffMs != null ? { k: "Takeoff", v: min(t.toTakeoffMs) }
+    : snap.tod && !snap.tod.pastTod && snap.tod.minutesToTod != null ? { k: "Top of descent", v: Math.round(snap.tod.minutesToTod) }
+    : t?.toLandingMs != null ? { k: "Landing", v: min(t.toLandingMs) } : t?.toGateMs != null ? { k: "At the gate", v: min(t.toGateMs) } : null;
+  const fa = snap.fuelAtDestinationKg, fp = snap.plannedLandingFuelKg;
+  const fuelTone = fa == null ? "" : fp != null && fa < fp * 0.85 ? "bad" : fp != null && fa < fp ? "warn" : "ok";
+  const w = snap.arrivalWeather;
+  const phase = snap.phase.replace(/_/g, " ").toLowerCase();
+  return (
+    <div className="cp-now" role="group" aria-label="Right now">
+      <div className="cp-n"><em>Phase</em><b className="cap">{phase}</b><span>{snap.altFt != null ? `${Math.round(snap.altFt).toLocaleString()} ft` : ""}{snap.gsKt != null ? ` · ${Math.round(snap.gsKt)} kt` : ""}</span></div>
+      <div className="cp-n"><em>Next</em><b>{next ? (next.v === 0 ? "Now" : `${next.v} min`) : "—"}</b><span>{next?.k ?? "Nothing due"}</span></div>
+      <div className={`cp-n ${fuelTone}`}><em>Fuel at {snap.arrival ?? "arrival"}</em><b>{fa == null ? "—" : fuel(fa, fuelUnit)}</b><span>{fp != null ? `planned ${fuel(fp, fuelUnit)}` : "no plan figure"}</span></div>
+      <div className={`cp-n ${t?.arrival?.tone === "late" ? "warn" : t?.arrival ? "ok" : ""}`}><em>Arrival</em><b>{t?.arrival?.label ?? "—"}</b><span>{w ? `${w.icao} ${w.windDir === null ? "" : w.windDir === "VRB" ? "VRB" : String(w.windDir).padStart(3, "0")}/${w.windKt ?? "—"}${w.gustKt ? `G${w.gustKt}` : ""}${w.qnhHpa ? ` · Q${w.qnhHpa}` : ""}` : "No weather yet"}</span></div>
+    </div>
+  );
+}
+
 export function CopilotScreen() {
   const { snapshot, alerts, live } = useCopilot();
   const mode = useApp((s) => s.mode);
@@ -66,6 +126,9 @@ export function CopilotScreen() {
     saveChat(flightKey, msgs);
   }, [msgs, flightKey]);
   const [input, setInput] = useState("");
+  const [readAloud, setReadAloud] = useState(() => { try { return localStorage.getItem(READ_KEY) === "1"; } catch { return false; } });
+  const toggleRead = () => { const v = !readAloud; setReadAloud(v); try { localStorage.setItem(READ_KEY, v ? "1" : "0"); } catch { /* fine */ } if (!v) { try { speechSynthesis.cancel(); } catch { /* none */ } } };
+  const spoken = useRef(-1);
   const [busy, setBusy] = useState(false);
   const [ai, setAi] = useState<AiStatus | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -76,6 +139,12 @@ export function CopilotScreen() {
     bridge.get<AiStatus>("/api/ai/status").then(setAi).catch(() => setAi(null));
   }, [mode]);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [msgs]);
+  // Read each finished answer aloud, once.
+  useEffect(() => {
+    const i = msgs.length - 1, m = msgs[i];
+    if (!readAloud || !m || m.role !== "assistant" || !m.content || busy || spoken.current === i) return;
+    spoken.current = i; speak(m.content);
+  }, [msgs, busy, readAloud]);
   useEffect(() => {
     if (live.flight) setMsgs((m) => (m.length === 0 ? [{ role: "assistant", content: copilotAnswer("status", snapshot), by: "copilot" }] : m));
   }, [live.flight?.id]);
@@ -158,6 +227,8 @@ export function CopilotScreen() {
     }
   };
 
+  const mic = useMic((t) => void ask(t));
+
   // A question handed over from elsewhere (the flight review's "How do I improve?").
   const handed = useRef(false);
   useEffect(() => {
@@ -176,9 +247,12 @@ export function CopilotScreen() {
         </div>
         <div className="row" style={{ gap: 8, alignItems: "center" }}>
         {msgs.length > 1 && !busy && <button className="btn small ghost" onClick={() => setMsgs(live.flight ? [{ role: "assistant", content: copilotAnswer("status", snapshot), by: "copilot" }] : [])}>New chat</button>}
+        <button className={`btn small${readAloud ? " on" : ""}`} aria-pressed={readAloud} onClick={toggleRead} title="Speak each answer out loud">{readAloud ? "Reading answers" : "Read answers aloud"}</button>
         <span className={`pill ${aiReady ? "live" : ""}`}><span className="dot" />{ownAi ? `AI: ${ai!.model}` : gpReady ? `Glidepath AI${gpLeft != null ? ` · ${gpLeft} left today` : ""}` : "Built-in copilot"}</span>
         </div>
       </div>
+
+      <CopilotNow snap={snapshot} live={!!live.flight} />
 
       <div className="copilot-grid">
         <section className="glass strong chat" aria-label="Conversation">
@@ -206,9 +280,12 @@ export function CopilotScreen() {
             ))}
           </div>
           <form className="composer" onSubmit={(e) => { e.preventDefault(); void ask(input); }}>
-            <input className="input" value={input} onChange={(e) => setInput(e.target.value)} placeholder={aiReady ? (live.flight ? "When do we start down?" : "How do I connect my iPad?") : "Descent, fuel, runway…"} aria-label="Your question" disabled={!live.flight && !aiReady} />
+            <input className="input" value={input} onChange={(e) => setInput(e.target.value)} placeholder={mic.on ? "Listening…" : aiReady ? (live.flight ? "When do we start down?" : "How do I connect my iPad?") : "Descent, fuel, runway…"} aria-label="Your question" disabled={!live.flight && !aiReady} />
+            {mic.supported && (live.flight || aiReady) && <button type="button" className={`btn mic${mic.on ? " on" : ""}`} aria-label={mic.on ? "Stop listening" : "Ask by voice"} aria-pressed={mic.on} onClick={() => (mic.on ? mic.stop() : mic.start())} disabled={busy}><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></svg></button>}
             <button className={`btn primary send${busy ? " busy" : ""}`} type="submit" disabled={busy || !input.trim()} aria-label="Send" aria-busy={busy}>{Icon.send()}</button>
           </form>
+          {(mic.on || mic.heard) && <p className="cp-heard" aria-live="polite"><span className="cp-wave" aria-hidden><i /><i /><i /><i /></span>{mic.heard || "Listening…"}</p>}
+          {mic.err && <p className="faint" style={{ fontSize: 12.5, margin: "8px 4px 0", color: "#FFB340" }}>{mic.err}</p>}
           {!aiReady && !signed ? <p className="faint" style={{ fontSize: 12, margin: "8px 4px 0" }}>Answers come straight from the sim. <a href="#/account">Sign in</a> (free) and Glidepath AI answers anything, in plain words.</p> : null}
           {gpReady ? <p className="faint" style={{ fontSize: 12, margin: "8px 4px 0" }}>Glidepath AI sees your question and this flight's numbers, not your account. Glidepath doesn't store them. Free: {gpLeft ?? 40} questions a day.</p> : null}
         </section>

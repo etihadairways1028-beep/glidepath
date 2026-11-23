@@ -23,10 +23,24 @@ export function useSavedPlan(): FlightPlan | null {
   return useSyncExternalStore((f) => { subs.add(f); return () => { subs.delete(f); }; }, () => current);
 }
 
+const sameAirports = (a: FlightPlan, b: FlightPlan) => a.origin.icao === b.origin.icao && a.destination.icao === b.destination.icao;
+/** A plan with no real route: what MSFS has when the route lives in the aircraft's own FMS (Fenix, PMDG…). */
+export const isThin = (p: FlightPlan | null) => !!p && p.fixes.filter((f) => !/^(TOC|TOD|T\/C|T\/D)$/i.test(f.ident)).length < 2;
+
+/** Why the full route isn't showing, for the map and Home to explain. */
+export type PlanNote = { kind: "no-user" } | { kind: "mismatch"; simbrief: string; flying: string } | { kind: "failed"; msg: string } | null;
+let note: PlanNote = null;
+const noteSubs = new Set<() => void>();
+const setNote = (n: PlanNote) => { if (JSON.stringify(n) === JSON.stringify(note)) return; note = n; noteSubs.forEach((f) => f()); };
+export function usePlanNote(): PlanNote {
+  return useSyncExternalStore((f) => { noteSubs.add(f); return () => { noteSubs.delete(f); }; }, () => note);
+}
+
 /** A plan the Bridge has (from MSFS, or SimBrief loaded on another device). */
 export function adoptPlan(p: FlightPlan): void {
   const cur = current;
-  if (cur && cur.source === "simbrief" && p.source === "msfs" && Date.now() - cur.fetchedAt < 12 * 3600_000) return; // your SimBrief plan wins
+  // Your SimBrief plan wins over the sim's plan for the same airports, and over any sim plan for 12 hours.
+  if (cur && cur.source === "simbrief" && p.source === "msfs" && (sameAirports(cur, p) || Date.now() - cur.fetchedAt < 12 * 3600_000)) return;
   if (cur && JSON.stringify(cur.fixes) === JSON.stringify(p.fixes) && cur.origin.icao === p.origin.icao) return;
   set(p);
 }
@@ -39,10 +53,30 @@ export function startPlanSync(getUser: () => string, getBridge: () => { get: <T>
   let lastSb = 0;
   const tick = async () => {
     const b = getBridge();
-    if (b && appStore.get().mode === "bridge") {
-      try { const r = await b.get<{ plan: unknown }>("/api/plan"); if (r.plan) { adoptPlan(FlightPlanSchema.parse(r.plan)); return; } } catch { /* older Bridge or offline */ }
-    }
     const u = getUser().trim();
+    if (b && appStore.get().mode === "bridge") {
+      try {
+        const r = await b.get<{ plan: unknown }>("/api/plan");
+        if (r.plan) {
+          const sim = FlightPlanSchema.parse(r.plan);
+          adoptPlan(sim);
+          // What the flight will show: your saved plan if it's for these airports, else the sim's.
+          const shown = current && sameAirports(current, sim) ? current : sim;
+          // The sim only has "direct to the destination": the real route is in SimBrief.
+          if (isThin(shown)) {
+            if (!u) { setNote({ kind: "no-user" }); return; }
+            if (Date.now() - lastSb > 3 * 60_000) {
+              lastSb = Date.now();
+              try {
+                const sb = await loadLatestPlan(u);
+                setNote(sameAirports(sb, sim) ? null : { kind: "mismatch", simbrief: `${sb.origin.icao} to ${sb.destination.icao}`, flying: `${sim.origin.icao} to ${sim.destination.icao}` });
+              } catch (e) { setNote({ kind: "failed", msg: (e as Error).message }); }
+            }
+          } else setNote(null);
+          return;
+        }
+      } catch { /* older Bridge or offline */ }
+    }
     if (u && appStore.get().mode !== "demo" && (!current || Date.now() - current.fetchedAt > 6 * 3600_000) && Date.now() - lastSb > 10 * 60_000) {
       lastSb = Date.now();
       try { await loadLatestPlan(u); } catch { /* no plan or offline */ }
@@ -65,5 +99,6 @@ export async function loadLatestPlan(user: string): Promise<FlightPlan> {
     p = FlightPlanSchema.parse(await publicGet<unknown>(`/simbrief?user=${encodeURIComponent(u)}`));
   }
   set(p);
+  setNote(null);
   return p;
 }

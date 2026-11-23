@@ -1,5 +1,6 @@
 import { MiniApproach } from "./Approach";
-import { MapRoutePanel } from "../components/RouteOverview";
+import { MapRoutePanel, SimbriefImport } from "../components/RouteOverview";
+import { isThin, usePlanNote } from "../data/plan";
 import { startDemo } from "../data/demo";
 import { useMemo, useState } from "react";
 import { MapView } from "../components/MapView";
@@ -30,6 +31,8 @@ export function MapScreen() {
   const [panel, setPanel] = useState(false);
   const [fly, setFly] = useState<{ lon: number; lat: number; zoom: number; key: number } | null>(null);
   const [fitRoute, setFitRoute] = useState(0);
+  const thin = isThin(L.plan);
+  const pnote = usePlanNote();
   const [routeOpen, setRouteOpen] = useState(false);
   // A newly loaded plan: show all of it once.
   const planKey = L.plan ? `${L.plan.origin.icao}-${L.plan.destination.icao}-${L.plan.fetchedAt}` : "";
@@ -222,14 +225,22 @@ export function MapScreen() {
         <MapRoutePanel plan={L.plan} nextFix={nextFix} onClose={() => setRouteOpen(false)} onFit={showRoute}
           onPick={(i) => { const fx = L.plan!.fixes[i]; if (!fx) return; setFixSel(i); setFollow(false); setFly({ lon: fx.lon, lat: fx.lat, zoom: 8.5, key: Date.now() }); }} />
       )}
-      {!L.plan && mode !== "demo" && !sel && !atcSel && !wxSel && (
-        <button className="map-noplan glass strong" onClick={() => setPlanAsk(!planAsk)}><span className="dot-warn" />No flight plan on the map<b>Add one</b></button>
+      {(!L.plan || thin) && mode !== "demo" && !sel && !atcSel && !wxSel && !routeOpen && (
+        <button className="map-noplan glass strong" onClick={() => setPlanAsk(!planAsk)}><span className="dot-warn" />{!L.plan ? "No flight plan on the map" : `Only a straight line ${L.plan.origin.icao} → ${L.plan.destination.icao}`}<b>{thin && pnote?.kind === "mismatch" ? "Why?" : "Get full route"}</b></button>
       )}
-      {planAsk && !L.plan && (
+      {planAsk && (!L.plan || thin) && (
         <div className="map-sheet glass strong pad plan-ask">
-          <div className="between"><b style={{ fontSize: 17 }}>Add your flight plan</b><button className="btn small" aria-label="Close" onClick={() => setPlanAsk(false)}><span style={{ width: 16, height: 16 }}>{Icon.close()}</span></button></div>
-          <p className="muted" style={{ fontSize: 13.5, margin: "8px 0 10px" }}><b>Planned in MSFS?</b> Set your route in the world map and start the flight. The Bridge picks it up by itself within a few seconds.</p>
-          <LoadPlanCard />
+          <div className="between"><b style={{ fontSize: 17 }}>{thin ? "Show your full route" : "Add your flight plan"}</b><button className="btn small" aria-label="Close" onClick={() => setPlanAsk(false)}><span style={{ width: 16, height: 16 }}>{Icon.close()}</span></button></div>
+          {thin ? (
+            <p className="muted" style={{ fontSize: 13.5, margin: "8px 0 10px" }}>
+              {pnote?.kind === "mismatch"
+                ? <>Your latest SimBrief plan is <b>{pnote.simbrief}</b>, but you're flying <b>{pnote.flying}</b>. Make a new flight plan in SimBrief for this flight, then press Import.</>
+                : <>The sim only knows <b>{L.plan!.origin.icao} direct to {L.plan!.destination.icao}</b>. That's normal when you put the route into the aircraft's own MCDU (Fenix, PMDG, iniBuilds and others): the sim never sees it. Import the same plan from SimBrief and the map shows every waypoint, SID and STAR.{pnote?.kind === "failed" ? ` (Last try: ${pnote.msg})` : ""}</>}
+            </p>
+          ) : (
+            <p className="muted" style={{ fontSize: 13.5, margin: "8px 0 10px" }}><b>Planned in MSFS?</b> Set your route in the world map and start the flight. The Bridge picks it up by itself within a few seconds.</p>
+          )}
+          <SimbriefImport />
         </div>
       )}
       {fixSel !== null && L.plan && L.plan.fixes[fixSel] && (() => {

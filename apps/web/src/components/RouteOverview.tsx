@@ -10,7 +10,7 @@ import { MapView } from "./MapView";
 import { DirectNote } from "./FlightPlanCard";
 import { loadChoice } from "./Procedures";
 import { fmt, fuel } from "../data/derive";
-import { loadLatestPlan } from "../data/plan";
+import { isThin, loadLatestPlan } from "../data/plan";
 import { settingsStore, useApp, useSettings } from "../data/store";
 import { Icon } from "./ui";
 
@@ -106,6 +106,72 @@ export function MapRoutePanel({ plan, nextFix, onPick, onClose, onFit }: { plan:
   );
 }
 
+/**
+ * The vertical profile: climb, cruise and descent along the route, with top of climb and top of
+ * descent where your plan puts them (or estimated from the cruise level), and where you are now.
+ */
+export function RouteProfile({ plan, frame, live }: { plan: FlightPlan; frame: TelemetryFrame | null; live: boolean }) {
+  const pts = [{ lat: plan.origin.lat, lon: plan.origin.lon, ident: plan.origin.icao }, ...plan.fixes, { lat: plan.destination.lat, lon: plan.destination.lon, ident: plan.destination.icao }];
+  const cum: number[] = [0];
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1]! + distanceNm(pts[i - 1]!, pts[i]!));
+  const total = Math.max(1, cum.at(-1)!);
+  const cruise = plan.cruiseAltitudeFt ?? Math.max(...plan.fixes.map((f) => f.altitudeFt ?? 0), 10000);
+  const find = (re: RegExp) => { const i = plan.fixes.findIndex((f) => re.test(f.ident)); return i >= 0 ? cum[i + 1]! : null; };
+  // From the plan when it has them; otherwise roughly 3.5 nm per 1,000 ft up and 3 nm per 1,000 ft down.
+  let toc = find(/^(TOC|T\/C)$/i) ?? Math.min(total * 0.45, (cruise / 1000) * 3.5);
+  let tod = find(/^(TOD|T\/D)$/i) ?? Math.max(total * 0.55, total - (cruise / 1000) * 3);
+  const estimated = find(/^(TOC|T\/C)$/i) === null;
+  if (tod <= toc) { const mid = (toc + tod) / 2; toc = mid; tod = mid; }
+  const prog = live && frame ? routeProgress(pts, frame.position) : null;
+  const at = prog ? Math.max(0, Math.min(total, total - prog.distanceRemainingNm)) : null;
+  const W = 600, H = 120, padX = 14, top = 26, base = 92;
+  const x = (nm: number) => padX + (nm / total) * (W - padX * 2);
+  const yFor = (ft: number) => base - (Math.max(0, ft) / cruise) * (base - top);
+  const altNow = frame?.position.altMslFt ?? null;
+  const fmtFl = fl(cruise);
+  const minTo = (nm: number) => (frame?.speed.gsKt && frame.speed.gsKt > 60 ? Math.round((nm / frame.speed.gsKt) * 60) : null);
+  const toTod = at !== null && at < tod ? tod - at : null;
+  const toToc = at !== null && at < toc ? toc - at : null;
+  const path = `M${x(0)},${base} L${x(toc)},${yFor(cruise)} L${x(tod)},${yFor(cruise)} L${x(total)},${base}`;
+  return (
+    <div className="rp">
+      <svg className="rp-svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Climb to ${fmtFl} by ${Math.round(toc)} nm, start down ${Math.round(total - tod)} nm before ${plan.destination.icao}`}>
+        <defs>
+          <linearGradient id="rpLine" x1="0" x2="1"><stop offset="0" stopColor="#3CE0FF" /><stop offset=".5" stopColor="#FF4FD8" /><stop offset="1" stopColor="#FFB340" /></linearGradient>
+          <linearGradient id="rpFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="rgba(255,79,216,.28)" /><stop offset="1" stopColor="rgba(255,79,216,0)" /></linearGradient>
+        </defs>
+        <path d={`${path} L${x(total)},${base} L${x(0)},${base} Z`} fill="url(#rpFill)" />
+        <line x1={x(0)} x2={x(total)} y1={base} y2={base} className="rp-ground" />
+        {at !== null && <path d={path} className="rp-flown" style={{ clipPath: `inset(0 ${100 - (x(at) / W) * 100}% 0 0)` }} />}
+        <path d={path} className="rp-line" stroke="url(#rpLine)" />
+        {[["TOC", toc, "rp-c"], ["TOD", tod, "rp-d"]].map(([k, nm, c]) => (
+          <g key={k as string} className={c as string}>
+            <line x1={x(nm as number)} x2={x(nm as number)} y1={yFor(cruise)} y2={base} className="rp-drop" />
+            <circle cx={x(nm as number)} cy={yFor(cruise)} r={5} />
+            <text x={x(nm as number)} y={yFor(cruise) - 10} textAnchor="middle" className="rp-k">{k as string}</text>
+          </g>
+        ))}
+        <text x={(x(toc) + x(tod)) / 2} y={yFor(cruise) + 20} textAnchor="middle" className="rp-fl">{fmtFl}</text>
+        <text x={x(0)} y={base + 20} className="rp-ap">{plan.origin.icao}</text>
+        <text x={x(total)} y={base + 20} textAnchor="end" className="rp-ap">{plan.destination.icao}</text>
+        <text x={(x(0) + x(toc)) / 2} y={base + 20} textAnchor="middle" className="rp-nm">{Math.round(toc)} nm</text>
+        <text x={(x(toc) + x(tod)) / 2} y={base + 20} textAnchor="middle" className="rp-nm">{Math.round(tod - toc)} nm cruise</text>
+        <text x={(x(tod) + x(total)) / 2} y={base + 20} textAnchor="middle" className="rp-nm">{Math.round(total - tod)} nm</text>
+        {at !== null && (
+          <g className="rp-me" style={{ transform: `translate(${x(at)}px, ${altNow !== null ? yFor(altNow) : base}px)` }}>
+            <circle r={9} className="rp-halo" /><circle r={5.5} className="rp-dot" />
+          </g>
+        )}
+      </svg>
+      <div className="rp-facts">
+        <span><i className="rp-sw c" />Top of climb <b>{Math.round(toc)} nm</b> after departure{toToc !== null ? <> · in <b>{Math.round(toToc)} nm</b>{minTo(toToc) !== null ? ` (${minTo(toToc)} min)` : ""}</> : ""}</span>
+        <span><i className="rp-sw d" />Top of descent <b>{Math.round(total - tod)} nm</b> before {plan.destination.icao}{toTod !== null ? <> · in <b>{Math.round(toTod)} nm</b>{minTo(toTod) !== null ? ` (${minTo(toTod)} min)` : ""}</> : at !== null && at >= tod ? " · descending" : ""}</span>
+        {estimated && <span className="faint">Estimated from the cruise level: this plan doesn't mark TOC and TOD.</span>}
+      </div>
+    </div>
+  );
+}
+
 export function RouteOverview({ plan, frame, live }: { plan: FlightPlan; frame: TelemetryFrame | null; live: boolean }) {
   const { fuelUnit } = useSettings();
   const ch = loadChoice(plan.origin.icao, plan.destination.icao);
@@ -163,8 +229,8 @@ export function RouteOverview({ plan, frame, live }: { plan: FlightPlan; frame: 
           </div>
         </div>
         <div className="rt-mid" aria-hidden>
-          <span className="rt-line" />
-          <span className="rt-mid-v">{fmt(dist)} nm · {fl(plan.cruiseAltitudeFt)}</span>
+          <span className="rt-mid-big">{fmt(dist)}<small>nm</small></span>
+          <span className="rt-mid-v">{fl(plan.cruiseAltitudeFt)}{plan.airTimeS ? ` · ${hm(plan.airTimeS)} air` : ""}</span>
         </div>
         <div className="rt-end right">
           <span className="rt-k">Arrival</span>
@@ -178,6 +244,8 @@ export function RouteOverview({ plan, frame, live }: { plan: FlightPlan; frame: 
         </div>
       </div>
 
+      <RouteProfile plan={plan} frame={frame} live={live} />
+      {isThin(plan) && <p className="rt-thin">Only a straight line: the sim doesn't know your route (it's in the aircraft's MCDU). Import the same plan from SimBrief below to see every waypoint.</p>}
       <RouteChips plan={plan} nextIdx={prog ? prog.legIndex : null} />
       {live && <DirectNote />}
 
@@ -201,7 +269,7 @@ export function RouteOverview({ plan, frame, live }: { plan: FlightPlan; frame: 
         </dl>
       </div>
       <details className="rt-raw"><summary>ATC route</summary><p className="data">{plan.route || "No route string in this plan."}</p></details>
-      {plan.source === "simbrief" && <SimbriefImport compact />}
+      {(plan.source === "simbrief" || isThin(plan)) && <SimbriefImport compact={!isThin(plan)} />}
     </section>
   );
 }

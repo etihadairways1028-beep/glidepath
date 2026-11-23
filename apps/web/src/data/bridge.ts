@@ -112,6 +112,10 @@ export class BridgeClient {
       return fetch(this.base + path, {
         method: init.method ?? "GET", signal: init.signal, body: init.body,
         headers: { Authorization: `Bearer ${this.token}`, ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}) },
+      }).catch((e: Error) => {
+        if (e.name === "AbortError") throw e;
+        // The browser's own "Failed to fetch" says nothing useful.
+        throw new Error("Can't reach Glidepath on your PC. Check it's running (the Glidepath icon by the clock) and that this device is on the same network.");
       });
     }
     return new Promise<Response>((resolve, reject) => {

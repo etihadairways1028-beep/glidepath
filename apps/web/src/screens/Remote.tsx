@@ -7,7 +7,7 @@
  * sim reports the change. Study-level add-ons (PMDG, Fenix, FSLabs) run their
  * own systems and may ignore some of these, which the app says plainly.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { TelemetryFrame } from "@glidepath/protocol";
 import { activeBridge } from "../data/bridge";
 import { useApp } from "../data/store";
@@ -43,7 +43,7 @@ function Toggle({ label, on, k, cap, s, confirm }: { label: string; on: boolean 
   );
 }
 
-function Target({ label, value, unit, k, cap, step, big, min, max, s, fmt }: { label: string; value: number | null; unit: string; k: string; cap: string; step: number; big: number; min: number; max: number; s: ReturnType<typeof useSend>; fmt?: (v: number) => string }) {
+function Target({ label, value, unit, k, cap, step, big, min, max, s, fmt, now, wrap }: { label: string; value: number | null; unit: string; k: string; cap: string; step: number; big: number; min: number; max: number; s: ReturnType<typeof useSend>; fmt?: (v: number) => string; now?: number | null; wrap?: boolean }) {
   const [edit, setEdit] = useState<string | null>(null);
   // Quick taps add up: aim from the value you asked for, not the sim's last answer.
   const [want, setWant] = useState<{ n: number; at: number } | null>(null);
@@ -54,8 +54,22 @@ function Target({ label, value, unit, k, cap, step, big, min, max, s, fmt }: { l
     return () => window.clearTimeout(t);
   }, [want, value]);
   const v = want ? want.n : value ?? null;
-  const set = (n: number) => { const c = Math.max(min, Math.min(max, n)); setWant({ n: c, at: Date.now() }); s.send(k, cap, c); };
-  const show = v === null ? "—" : fmt ? fmt(v) : Math.round(v).toLocaleString("en-US");
+  const set = (n: number) => { const c = wrap ? ((Math.round(n) % 360) + 360) % 360 : Math.max(min, Math.min(max, n)); setWant({ n: c, at: Date.now() }); s.send(k, cap, c); try { navigator.vibrate?.(6); } catch { /* no haptics */ } };
+  // Drag up or down on the value like turning a knob; it sends once you let go.
+  const drag = useRef<{ y: number; base: number; moved: boolean } | null>(null);
+  const [preview, setPreview] = useState<number | null>(null);
+  const onDown = (e: React.PointerEvent) => { if (v === null) return; drag.current = { y: e.clientY, base: v, moved: false }; (e.target as HTMLElement).setPointerCapture?.(e.pointerId); };
+  const onMove = (e: React.PointerEvent) => {
+    const d = drag.current; if (!d) return;
+    const ticks = Math.trunc((d.y - e.clientY) / 10);
+    if (ticks !== 0) d.moved = true;
+    if (d.moved) { const raw = d.base + ticks * step; setPreview(wrap ? ((raw % 360) + 360) % 360 : Math.max(min, Math.min(max, raw))); }
+  };
+  const justDragged = useRef(false);
+  const onUp = () => { const d = drag.current; drag.current = null; justDragged.current = !!d?.moved; if (d?.moved && preview !== null) set(preview); setPreview(null); };
+  const sh = preview ?? v;
+  const show = sh === null ? "—" : fmt ? fmt(sh) : Math.round(sh).toLocaleString("en-US");
+  const nowTxt = now == null ? null : fmt ? fmt(now) : Math.round(now).toLocaleString("en-US");
   return (
     <div className={`rc-target${s.busy === k ? " busy" : ""}${want ? " aiming" : ""}`}>
       <span className="rc-k">{label}</span>
@@ -63,7 +77,8 @@ function Target({ label, value, unit, k, cap, step, big, min, max, s, fmt }: { l
         <form onSubmit={(e) => { e.preventDefault(); const n = Number(edit); if (Number.isFinite(n)) set(n); setEdit(null); }}>
           <input autoFocus inputMode="numeric" value={edit} onChange={(e) => setEdit(e.target.value)} onBlur={() => setEdit(null)} className="rc-edit" />
         </form>
-      ) : <button className="rc-v data" onClick={() => setEdit(v === null ? "" : String(Math.round(v)))} title="Tap to type a value">{show}<small>{unit}</small></button>}
+      ) : <button className={`rc-v data${preview !== null ? " turning" : ""}`} onClick={() => { if (justDragged.current) { justDragged.current = false; return; } setEdit(v === null ? "" : String(Math.round(v))); }} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={() => { drag.current = null; setPreview(null); }} title="Tap to type, or drag up and down to turn" style={{ touchAction: "none" }}>{show}<small>{unit}</small></button>}
+      {nowTxt !== null && <span className="rc-now">now <b className="data">{nowTxt}</b></span>}
       <div className="rc-steps">
         <button onClick={() => v !== null && set(v - big)} aria-label={`${label} down a lot`}>«</button>
         <button onClick={() => v !== null && set(v - step)} aria-label={`${label} down`}>−</button>
@@ -161,11 +176,16 @@ export function RemoteScreen() {
 
         <section className="glass rc-card rc-ap">
           <div className="between"><h2 className="h2">Autopilot</h2><span className={`rc-chip${ap?.master ? " on" : ""}`}>{ap?.master ? "AP engaged" : "AP off"}</span></div>
+          <div className="rc-fma" aria-label="Active modes">
+            {([["A/THR", ap?.autothrottle], ["HDG", ap?.headingHold], ["NAV", ap?.navHold], ["APPR", ap?.approachHold], ["FD", ap?.flightDirector], ["AP", ap?.master]] as const).map(([l, on]) => (
+              <span key={l} className={`rc-fma-c${on ? " on" : ""}${l === "AP" && on ? " ap" : ""}`}>{l}</span>
+            ))}
+          </div>
           <div className="rc-targets">
-            <Target label="SPD" value={ap?.selectedSpeedKt ?? null} unit="kt" k="spd" cap="ap.speed" step={1} big={10} min={60} max={400} s={s} />
-            <Target label="HDG" value={ap?.selectedHeadingDeg ?? null} unit="°" k="hdg" cap="ap.heading" step={1} big={10} min={0} max={359} s={s} fmt={(v) => String(Math.round(v) % 360).padStart(3, "0")} />
-            <Target label="ALT" value={ap?.selectedAltitudeFt ?? null} unit="ft" k="alt" cap="ap.altitude" step={100} big={1000} min={0} max={50000} s={s} />
-            <Target label="V/S" value={ap?.selectedVsFpm ?? null} unit="fpm" k="vs" cap="ap.vs" step={100} big={500} min={-6000} max={6000} s={s} />
+            <Target label="SPD" value={ap?.selectedSpeedKt ?? null} unit="kt" k="spd" cap="ap.speed" step={1} big={10} min={60} max={400} s={s} now={f?.speed.iasKt ?? null} />
+            <Target label="HDG" value={ap?.selectedHeadingDeg ?? null} unit="°" k="hdg" cap="ap.heading" step={1} big={10} min={0} max={359} s={s} fmt={(v) => String(((Math.round(v) % 360) + 360) % 360).padStart(3, "0")} now={f?.attitude.headingMagDeg ?? null} wrap />
+            <Target label="ALT" value={ap?.selectedAltitudeFt ?? null} unit="ft" k="alt" cap="ap.altitude" step={100} big={1000} min={0} max={50000} s={s} now={f?.position.altMslFt ?? null} />
+            <Target label="V/S" value={ap?.selectedVsFpm ?? null} unit="fpm" k="vs" cap="ap.vs" step={100} big={500} min={-6000} max={6000} s={s} now={f?.speed.vsFpm ?? null} />
           </div>
           <div className="rc-toggles">
             <Toggle label="AP" on={ap?.master ?? null} k="ap" cap="ap.master" s={s} />

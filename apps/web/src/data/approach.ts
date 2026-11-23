@@ -11,9 +11,9 @@ import { airportDetail, loadAirportDb, type AirportDetail } from "./airports";
 import { useLive } from "./derive";
 import { loadChoice } from "../components/Procedures";
 
-export interface ApproachSetup { gpaDeg: number; tchFt: number; airport: string | null; runway: string | null; voice: boolean; thrElevFt: number | null }
+export interface ApproachSetup { gpaDeg: number; tchFt: number; airport: string | null; runway: string | null; voice: boolean; thrElevFt: number | null; /** Decision altitude / MDA from the chart, feet on the altimeter. */ minimumsFt: number | null }
 const KEY = "glidepath.approach";
-const DEFAULTS: ApproachSetup = { gpaDeg: 3, tchFt: 50, airport: null, runway: null, voice: false, thrElevFt: null };
+const DEFAULTS: ApproachSetup = { gpaDeg: 3, tchFt: 50, airport: null, runway: null, voice: false, thrElevFt: null, minimumsFt: null };
 
 export function loadSetup(): ApproachSetup {
   try { return { ...DEFAULTS, ...(JSON.parse(localStorage.getItem(KEY) ?? "{}") as Partial<ApproachSetup>) }; } catch { return DEFAULTS; }
@@ -84,6 +84,10 @@ export interface LiveApproach {
   vsFpm: number | null;
   windHead: number | null;
   windCross: number | null;
+  /** Degrees to point into the wind to hold the centreline; positive = nose right. */
+  crabDeg: number | null;
+  /** Feet above your minimums (altimeter), when set. */
+  toMinsFt: number | null;
 }
 
 export function useApproach(): LiveApproach {
@@ -126,7 +130,11 @@ export function useApproach(): LiveApproach {
     const a = ((w.windDirDeg - end.headingTrueDeg) * Math.PI) / 180;
     windHead = Math.round(w.windKt * Math.cos(a)); windCross = Math.round(w.windKt * Math.sin(a));
   }
-  return { guide, end, ends, auto: pick?.auto ?? false, setup, gsKt: f?.speed.gsKt ?? null, vsFpm: f?.speed.vsFpm ?? null, windHead, windCross };
+  const tas = f?.speed.tasKt ?? f?.speed.iasKt ?? null;
+  const crabDeg = windCross !== null && tas && tas > 60 ? Math.round((Math.asin(Math.max(-1, Math.min(1, windCross / tas))) * 180) / Math.PI) : null;
+  const ind = f?.position.altMslFt ?? null;
+  const toMinsFt = setup.minimumsFt !== null && ind !== null ? Math.round(ind - setup.minimumsFt) : null;
+  return { guide, end, ends, auto: pick?.auto ?? false, setup, gsKt: f?.speed.gsKt ?? null, vsFpm: f?.speed.vsFpm ?? null, windHead, windCross, crabDeg, toMinsFt };
 }
 
 /** On an approach worth showing guidance for. */

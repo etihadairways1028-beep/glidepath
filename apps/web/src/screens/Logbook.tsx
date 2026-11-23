@@ -23,6 +23,8 @@ import { LandingSummary } from "./Flight";
 import { touchdownWords } from "@glidepath/flight-engine";
 import { gradeOf } from "./Home";
 
+const LOG_CACHE = "glidepath.logbookCache";
+
 export function useFlights(): { flights: FlightSummary[] | null; error: string | null; fromCloud: boolean } {
   const mode = useApp((s) => s.mode);
   const cloud = useCloud();
@@ -39,7 +41,19 @@ export function useFlights(): { flights: FlightSummary[] | null; error: string |
       else setFlights(null);
       return;
     }
-    b.get<FlightSummary[]>("/api/flights?limit=500").then((f) => { setFlights(f); setError(null); }).catch((e) => setError(e.message));
+    b.get<FlightSummary[]>("/api/flights?limit=500")
+      .then((f) => { setFlights(f); setError(null); try { localStorage.setItem(LOG_CACHE, JSON.stringify({ at: Date.now(), f })); } catch { /* storage full: fine */ } })
+      .catch(async (e: Error) => {
+        // Can't reach the PC: show what we have rather than nothing.
+        const why = /failed to fetch|networkerror|load failed|can.t reach|isn.t connected|didn.t answer|went offline/i.test(e.message)
+          ? "Can't reach Glidepath on your PC right now. Check it's running (the Glidepath icon by the clock). Showing your last saved flights."
+          : e.message;
+        let cached: FlightSummary[] | null = null;
+        try { const c = JSON.parse(localStorage.getItem(LOG_CACHE) ?? "null") as { f: FlightSummary[] } | null; cached = c?.f ?? null; } catch { /* none */ }
+        if (!cached && cloud.status === "ready" && cloud.active) { cached = await cloudFlights().catch(() => null); if (cached) setFromCloud(true); }
+        setFlights(cached ?? []);
+        setError(why);
+      });
   }, [mode, current?.id, current?.status, cloud.status, cloud.active]);
   return { flights, error, fromCloud };
 }
