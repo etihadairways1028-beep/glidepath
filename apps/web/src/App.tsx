@@ -1,3 +1,4 @@
+import { flushSync } from "react-dom";
 import { Support } from "./screens/Support";
 import { PerformanceScreen } from "./screens/Performance";
 import { ApproachScreen } from "./screens/Approach";
@@ -10,7 +11,7 @@ import { ChartsScreen } from "./screens/Charts";
 import { RemoteScreen } from "./screens/Remote";
 import { ToolsScreen } from "./screens/Tools";
 import { ChecklistsScreen } from "./screens/Checklists";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Icon, Mark } from "./components/ui";
 import { activeBridge, BridgeClient, adoptLocalToken, consumePairingLink, detectBridgeUrl, setActiveBridge } from "./data/bridge";
 import { findBridgeOnNetwork, initCloud, saveBridge, syncFlights, useCloud } from "./data/cloud";
@@ -69,8 +70,18 @@ const TITLES: Record<string, string> = { home: "", map: "Live map", flight: "Fli
 /* ---------- hash router (works on GitHub Pages and on the Bridge) ---------- */
 export function useRoute(): string[] {
   const [hash, setHash] = useState(location.hash);
+  const hashRef = useRef(location.hash);
   useEffect(() => {
-    const on = () => setHash(location.hash);
+    const on = () => {
+      const next = location.hash;
+      const top = (h: string) => h.replace(/^#\/?/, "").split(/[/?]/)[0] || "home";
+      const doc = document as Document & { startViewTransition?: (cb: () => void) => unknown };
+      // Cross-fade between screens (old one fades out while the new one rises in), where the browser can.
+      if (doc.startViewTransition && top(next) !== top(hashRef.current) && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        doc.startViewTransition(() => flushSync(() => setHash(next)));
+      } else setHash(next);
+      hashRef.current = next;
+    };
     window.addEventListener("hashchange", on);
     return () => window.removeEventListener("hashchange", on);
   }, []);

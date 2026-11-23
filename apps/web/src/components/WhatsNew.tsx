@@ -6,12 +6,13 @@
 import { useEffect, useState } from "react";
 import { Icon } from "./ui";
 
-export const APP_VERSION = "1.1.8";
+export const APP_VERSION = "1.1.9";
 const KEY = "glidepath.seenVersion";
 
 export type WnIcon = "map" | "flight" | "remote" | "book" | "gear" | "spark" | "download" | "search" | "tower" | "cloud" | "layers" | "target" | "headset";
 export interface WnItem { v: string; ic: WnIcon; t: string; d: string }
 export const WHATS_NEW: WnItem[] = [
+  { v: "1.1.9", ic: "spark", t: "Smoother everywhere", d: "Screens cross-fade into each other instead of jumping, cards arrive in a gentle cascade, panels glide in, and buttons ease instead of snapping." },
   { v: "1.1.8", ic: "map", t: "SimBrief waypoints fixed", d: "Newer SimBrief plans store the route differently, and Glidepath read them as having no waypoints, SID or STAR. Every waypoint from your latest SimBrief plan now comes through." },
   { v: "1.1.8", ic: "spark", t: "Direct-to can't empty your plan", d: "Before and after a flight you always see the full plan, it starts fresh after landing, and it never drops more than half the route or your TOC and TOD." },
   { v: "1.1.8", ic: "flight", t: "A calmer route card", d: "The climb and descent profile is now a compact, flat strip, easier to read at a glance." },

@@ -2423,3 +2423,35 @@ html:root .pre { grid-template-columns: minmax(0, 1fr); padding: 12px 14px; }
 :root[data-theme="light"] .rp-c circle, :root[data-theme="light"] .rp-d circle { fill: #fff; stroke: #2563C9; }
 :root[data-theme="light"] .rp-k, :root[data-theme="light"] .rp-fl, :root[data-theme="light"] .rp-nm { fill: rgba(20,30,55,.6); } :root[data-theme="light"] .rp-ap { fill: #0B1630; }
 :root[data-theme="light"] .rp-dot { fill: #0B1630; }
+
+/* ===== Flow: screens cross-fade, cards cascade, panels glide ===== */
+nav.glass.side { view-transition-name: gp-side; }
+.tabbar { view-transition-name: gp-tabs; }
+::view-transition-group(gp-side), ::view-transition-group(gp-tabs) { animation: none; }
+::view-transition-old(root) { animation: gpVtOut .26s cubic-bezier(.4,0,.2,1) both; }
+::view-transition-new(root) { animation: gpVtIn .38s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes gpVtOut { to { opacity: 0; transform: translateY(-8px) scale(.992); filter: blur(4px); } }
+@keyframes gpVtIn { from { opacity: 0; } }
+/* cards arrive in a short cascade */
+.page-enter > .stack > *, .page-enter > .stack > .stack > *, .page-enter > div > .bento > *, .page-enter .pf-cols > *, .page-enter .ap-main > *, .page-enter .ck-launch > *, .page-enter .cp-now > * {
+  animation: gpRise .55s cubic-bezier(.2,.8,.2,1) both;
+}
+.page-enter > .stack > *:nth-child(1) { animation-delay: 0ms; } .page-enter > .stack > *:nth-child(2) { animation-delay: 50ms; }
+.page-enter > .stack > *:nth-child(3) { animation-delay: 100ms; } .page-enter > .stack > *:nth-child(4) { animation-delay: 150ms; }
+.page-enter > .stack > *:nth-child(5) { animation-delay: 200ms; } .page-enter > .stack > *:nth-child(n+6) { animation-delay: 240ms; }
+.page-enter .cp-now > *:nth-child(2), .page-enter .ck-launch > *:nth-child(2) { animation-delay: 60ms; }
+.page-enter .cp-now > *:nth-child(3), .page-enter .ck-launch > *:nth-child(3) { animation-delay: 120ms; }
+.page-enter .cp-now > *:nth-child(4), .page-enter .ck-launch > *:nth-child(4) { animation-delay: 180ms; }
+@keyframes gpRise { from { opacity: 0; transform: translateY(16px) scale(.985); } }
+/* sheets and panels glide in */
+.map-sheet, .map-route, .ap-setup, .layers-pop, .plan-ask, .fix-sheet { animation: gpSheet .38s cubic-bezier(.2,.9,.25,1) both; }
+@keyframes gpSheet { from { opacity: 0; transform: translateY(18px) scale(.97); } }
+details[open] > :not(summary) { animation: gpRise .35s cubic-bezier(.2,.8,.2,1) both; }
+/* everything interactive eases instead of snapping */
+.btn, .seg button, .chip-btn, .rt-fix, .ck-tab, .ck-app, .nav-a, .tab, .rc-tog, .pf-seg button { transition: background-color .22s ease, color .22s ease, box-shadow .22s ease, transform .18s cubic-bezier(.2,.8,.3,1), opacity .2s ease; }
+.btn:active, .seg button:active, .chip-btn:active, .rc-tog:active { transform: scale(.97); }
+.b-tile .bt-v, .ap-num b, .pf-o b, .cp-n b, .rp-me, .ap-cmd { transition: color .35s ease; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+  .page-enter *, .map-sheet, .map-route, .ap-setup, details[open] > * { animation: none !important; }
+}
