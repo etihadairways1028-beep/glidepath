@@ -88,7 +88,6 @@ function PreFlight() {
   return (
     <>
       <section className="glass pre">
-        <div className="pre-radar" aria-hidden><span /><span /><span /><i /></div>
         <ol className="pre-steps">
           {steps.map(([ok, t, d], i) => (
             <li key={i} className={ok ? "ok" : ""}>

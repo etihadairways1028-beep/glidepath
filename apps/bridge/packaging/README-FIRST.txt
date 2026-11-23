@@ -1,4 +1,4 @@
-GLIDEPATH BRIDGE 1.1.7 - WINDOWS
+GLIDEPATH BRIDGE 1.1.8 - WINDOWS
 ====================================================
 
 The Bridge runs on the PC where you fly Microsoft Flight Simulator. It reads

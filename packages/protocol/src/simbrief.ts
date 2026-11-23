@@ -15,6 +15,12 @@ export function simbriefUrl(user: string): string {
 }
 
 /** SimBrief OFP (JSON v2) → the compact plan the app needs. */
+/** Seconds from "754" or "00:12:34" (newer plans). */
+const secs = (v: unknown): number | null => {
+  if (typeof v === "string" && /^\d{1,3}:\d{2}(:\d{2})?$/.test(v.trim())) { const p = v.trim().split(":").map(Number); return p.length === 3 ? p[0]! * 3600 + p[1]! * 60 + p[2]! : p[0]! * 60 + p[1]!; }
+  return num(v);
+};
+
 export function parseSimbrief(j: any, now = Date.now()): FlightPlan {
   if (j?.fetch?.status && !/success/i.test(j.fetch.status)) throw new Error(`SimBrief: ${j.fetch.status}`);
   const units: "kg" | "lb" = /lb/i.test(j?.params?.units ?? "kgs") ? "lb" : "kg";
@@ -23,7 +29,9 @@ export function parseSimbrief(j: any, now = Date.now()): FlightPlan {
     icao: String(a?.icao_code ?? "").toUpperCase(), name: str(a?.name), runway: str(a?.plan_rwy),
     lat: num(a?.pos_lat) ?? 0, lon: num(a?.pos_long) ?? 0, elevationFt: num(a?.elevation),
   });
-  const fixesRaw = j?.navlog?.fix ? (Array.isArray(j.navlog.fix) ? j.navlog.fix : [j.navlog.fix]) : [];
+  // Older plans: navlog.fix (one object or a list). Newer ones: navlog is the list itself.
+  const nav = j?.navlog;
+  const fixesRaw: any[] = Array.isArray(nav) ? nav : nav?.fix ? (Array.isArray(nav.fix) ? nav.fix : [nav.fix]) : Array.isArray(nav?.fixes) ? nav.fixes : [];
   // SID and STAR: SimBrief flags their fixes (is_sid_star) and names the procedure in via_airway.
   // The flagged run at the start of the route is the SID, the one at the end is the STAR.
   const flagged = (f: any) => String(f?.is_sid_star ?? "0") === "1" && str(f?.via_airway) !== null && !/^DCT$/i.test(String(f?.via_airway));
@@ -37,7 +45,7 @@ export function parseSimbrief(j: any, now = Date.now()): FlightPlan {
   const fixes = fixesRaw
     .map((f: any, i: number) => ({ ident: String(f.ident ?? ""), lat: num(f.pos_lat), lon: num(f.pos_long), altitudeFt: num(f.altitude_feet),
       name: str(f.name), via: str(f.via_airway), kind: str(f.type),
-      legNm: num(f.distance), timeS: num(f.time_total), fuelKg: toKg(f.fuel_plan_onboard),
+      legNm: num(f.distance), timeS: secs(f.time_total), fuelKg: toKg(f.fuel_plan_onboard),
       trackDeg: num(f.track_mag ?? f.track_true), windDirDeg: num(f.wind_dir), windKt: num(f.wind_spd), oatC: num(f.oat),
       proc: sid && i < firstPlain && flagged(f) ? "sid" as const : star && i > lastPlain && flagged(f) ? "star" as const : null }))
     .filter((f: any) => f.lat !== null && f.lon !== null) as FlightPlan["fixes"];

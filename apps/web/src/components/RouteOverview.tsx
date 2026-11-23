@@ -124,7 +124,7 @@ export function RouteProfile({ plan, frame, live }: { plan: FlightPlan; frame: T
   if (tod <= toc) { const mid = (toc + tod) / 2; toc = mid; tod = mid; }
   const prog = live && frame ? routeProgress(pts, frame.position) : null;
   const at = prog ? Math.max(0, Math.min(total, total - prog.distanceRemainingNm)) : null;
-  const W = 600, H = 120, padX = 14, top = 26, base = 92;
+  const W = 600, H = 86, padX = 10, top = 22, base = 64;
   const x = (nm: number) => padX + (nm / total) * (W - padX * 2);
   const yFor = (ft: number) => base - (Math.max(0, ft) / cruise) * (base - top);
   const altNow = frame?.position.altMslFt ?? null;
@@ -136,30 +136,26 @@ export function RouteProfile({ plan, frame, live }: { plan: FlightPlan; frame: T
   return (
     <div className="rp">
       <svg className="rp-svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Climb to ${fmtFl} by ${Math.round(toc)} nm, start down ${Math.round(total - tod)} nm before ${plan.destination.icao}`}>
-        <defs>
-          <linearGradient id="rpLine" x1="0" x2="1"><stop offset="0" stopColor="#3CE0FF" /><stop offset=".5" stopColor="#FF4FD8" /><stop offset="1" stopColor="#FFB340" /></linearGradient>
-          <linearGradient id="rpFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="rgba(255,79,216,.28)" /><stop offset="1" stopColor="rgba(255,79,216,0)" /></linearGradient>
-        </defs>
-        <path d={`${path} L${x(total)},${base} L${x(0)},${base} Z`} fill="url(#rpFill)" />
+        <path d={`${path} L${x(total)},${base} L${x(0)},${base} Z`} className="rp-area" />
         <line x1={x(0)} x2={x(total)} y1={base} y2={base} className="rp-ground" />
         {at !== null && <path d={path} className="rp-flown" style={{ clipPath: `inset(0 ${100 - (x(at) / W) * 100}% 0 0)` }} />}
-        <path d={path} className="rp-line" stroke="url(#rpLine)" />
+        <path d={path} className="rp-line" />
         {[["TOC", toc, "rp-c"], ["TOD", tod, "rp-d"]].map(([k, nm, c]) => (
           <g key={k as string} className={c as string}>
             <line x1={x(nm as number)} x2={x(nm as number)} y1={yFor(cruise)} y2={base} className="rp-drop" />
-            <circle cx={x(nm as number)} cy={yFor(cruise)} r={5} />
-            <text x={x(nm as number)} y={yFor(cruise) - 10} textAnchor="middle" className="rp-k">{k as string}</text>
+            <circle cx={x(nm as number)} cy={yFor(cruise)} r={3.2} />
+            <text x={x(nm as number)} y={yFor(cruise) - 7} textAnchor="middle" className="rp-k">{k as string}</text>
           </g>
         ))}
-        <text x={(x(toc) + x(tod)) / 2} y={yFor(cruise) + 20} textAnchor="middle" className="rp-fl">{fmtFl}</text>
-        <text x={x(0)} y={base + 20} className="rp-ap">{plan.origin.icao}</text>
-        <text x={x(total)} y={base + 20} textAnchor="end" className="rp-ap">{plan.destination.icao}</text>
-        <text x={(x(0) + x(toc)) / 2} y={base + 20} textAnchor="middle" className="rp-nm">{Math.round(toc)} nm</text>
-        <text x={(x(toc) + x(tod)) / 2} y={base + 20} textAnchor="middle" className="rp-nm">{Math.round(tod - toc)} nm cruise</text>
-        <text x={(x(tod) + x(total)) / 2} y={base + 20} textAnchor="middle" className="rp-nm">{Math.round(total - tod)} nm</text>
+        <text x={(x(toc) + x(tod)) / 2} y={yFor(cruise) - 7} textAnchor="middle" className="rp-fl">{fmtFl}</text>
+        <text x={x(0)} y={base + 16} className="rp-ap">{plan.origin.icao}</text>
+        <text x={x(total)} y={base + 16} textAnchor="end" className="rp-ap">{plan.destination.icao}</text>
+        <text x={(x(0) + x(toc)) / 2} y={base + 16} textAnchor="middle" className="rp-nm">{Math.round(toc)} nm</text>
+        <text x={(x(toc) + x(tod)) / 2} y={base + 16} textAnchor="middle" className="rp-nm">{Math.round(tod - toc)} nm cruise</text>
+        <text x={(x(tod) + x(total)) / 2} y={base + 16} textAnchor="middle" className="rp-nm">{Math.round(total - tod)} nm</text>
         {at !== null && (
           <g className="rp-me" style={{ transform: `translate(${x(at)}px, ${altNow !== null ? yFor(altNow) : base}px)` }}>
-            <circle r={9} className="rp-halo" /><circle r={5.5} className="rp-dot" />
+            <circle r={4.5} className="rp-dot" />
           </g>
         )}
       </svg>
@@ -245,7 +241,9 @@ export function RouteOverview({ plan, frame, live }: { plan: FlightPlan; frame: 
       </div>
 
       <RouteProfile plan={plan} frame={frame} live={live} />
-      {isThin(plan) && <p className="rt-thin">Only a straight line: the sim doesn't know your route (it's in the aircraft's MCDU). Import the same plan from SimBrief below to see every waypoint.</p>}
+      {isThin(plan) && <p className="rt-thin">{plan.source === "simbrief"
+        ? "This SimBrief plan has no waypoints, so it's drawn as a straight line. If you filed the route as DCT, add a route in SimBrief, generate the plan again and press Reload."
+        : "The sim only knows the departure and arrival (the route is in your aircraft's MCDU). Import the same plan from SimBrief below to see every waypoint."}</p>}
       <RouteChips plan={plan} nextIdx={prog ? prog.legIndex : null} />
       {live && <DirectNote />}
 

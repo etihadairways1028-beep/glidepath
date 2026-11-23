@@ -6,12 +6,15 @@
 import { useEffect, useState } from "react";
 import { Icon } from "./ui";
 
-export const APP_VERSION = "1.1.7";
+export const APP_VERSION = "1.1.8";
 const KEY = "glidepath.seenVersion";
 
 export type WnIcon = "map" | "flight" | "remote" | "book" | "gear" | "spark" | "download" | "search" | "tower" | "cloud" | "layers" | "target" | "headset";
 export interface WnItem { v: string; ic: WnIcon; t: string; d: string }
 export const WHATS_NEW: WnItem[] = [
+  { v: "1.1.8", ic: "map", t: "SimBrief waypoints fixed", d: "Newer SimBrief plans store the route differently, and Glidepath read them as having no waypoints, SID or STAR. Every waypoint from your latest SimBrief plan now comes through." },
+  { v: "1.1.8", ic: "spark", t: "Direct-to can't empty your plan", d: "Before and after a flight you always see the full plan, it starts fresh after landing, and it never drops more than half the route or your TOC and TOD." },
+  { v: "1.1.8", ic: "flight", t: "A calmer route card", d: "The climb and descent profile is now a compact, flat strip, easier to read at a glance." },
   { v: "1.1.7", ic: "map", t: "Your full route, even with Fenix and PMDG", d: "When the route is only in the aircraft's MCDU, the sim just knows \"direct to the destination\". Glidepath now spots that, fetches your SimBrief plan for the same flight by itself, and explains what to do if it can't." },
   { v: "1.1.7", ic: "flight", t: "Climb, cruise and descent at a glance", d: "Your route card shows the vertical profile with top of climb and top of descent, how far away they are, and where you are now." },
   { v: "1.1.7", ic: "headset", t: "A hands-free copilot", d: "Ask out loud with the mic button, have answers read back, and see phase, what's next, fuel at arrival and arrival time at the top." },

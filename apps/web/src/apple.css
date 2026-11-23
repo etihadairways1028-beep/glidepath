@@ -2400,3 +2400,26 @@ html:root .ck-stage.big { position: fixed !important; }
 .rc-fma-c.ap.on { color: #fff; background: rgba(60,255,143,.16); }
 @media (max-width: 900px) { .rc-grid .rc-ap { order: -1; } }
 :root[data-theme="light"] .rc-now b { color: #0E8A43; }
+.fp-card .rp { margin: 6px 0 12px; } .tools .clock .v, .clocks .v { white-space: nowrap; font-size: clamp(22px, 2.4vw, 30px) !important; }
+html:root .tl-clocks .v { white-space: nowrap; font-size: clamp(20px, 2.2vw, 28px) !important; }
+
+/* ===== Calmer route profile and pre-flight (flat, instrument-like) ===== */
+html:root .rp { padding: 10px 12px 8px; border-radius: 14px; background: rgba(255,255,255,.03); box-shadow: inset 0 0 0 1px rgba(255,255,255,.07); gap: 6px; }
+html:root .rp-area { fill: rgba(127,184,255,.08); }
+html:root .rp-line { fill: none; stroke: #8EC1FF; stroke-width: 2; stroke-linejoin: round; filter: none; }
+html:root .rp-flown { stroke: #fff; stroke-width: 3; opacity: .5; }
+html:root .rp-drop { stroke: rgba(255,255,255,.18); }
+html:root .rp-c circle, html:root .rp-d circle { fill: #0B1220; stroke: #8EC1FF; stroke-width: 1.6; }
+html:root .rp-k, html:root .rp-c .rp-k, html:root .rp-d .rp-k { font: 700 9.5px var(--a-font, system-ui); letter-spacing: .08em; fill: rgba(230,236,245,.7); }
+html:root .rp-fl { font: 600 9.5px var(--a-font, system-ui); fill: rgba(230,236,245,.5); }
+html:root .rp-ap { font: 700 10.5px "SF Mono", ui-monospace, Consolas, monospace; fill: rgba(240,244,250,.9); }
+html:root .rp-nm { font: 500 9.5px var(--a-font, system-ui); fill: rgba(230,236,245,.45); }
+html:root .rp-dot { fill: #fff; stroke: none; }
+html:root .rp-facts { font-size: 12.5px; gap: 2px 16px; }
+html:root .rp-sw { width: 7px; height: 7px; background: #8EC1FF !important; }
+html:root .rt-fix.next { box-shadow: inset 0 0 0 1.5px #8EC1FF; background: rgba(142,193,255,.14); }
+html:root .pre { grid-template-columns: minmax(0, 1fr); padding: 12px 14px; }
+:root[data-theme="light"] .rp-line { stroke: #2563C9; } :root[data-theme="light"] .rp-area { fill: rgba(37,99,201,.07); }
+:root[data-theme="light"] .rp-c circle, :root[data-theme="light"] .rp-d circle { fill: #fff; stroke: #2563C9; }
+:root[data-theme="light"] .rp-k, :root[data-theme="light"] .rp-fl, :root[data-theme="light"] .rp-nm { fill: rgba(20,30,55,.6); } :root[data-theme="light"] .rp-ap { fill: #0B1630; }
+:root[data-theme="light"] .rp-dot { fill: #0B1630; }

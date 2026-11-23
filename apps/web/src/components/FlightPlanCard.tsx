@@ -10,6 +10,7 @@ import { Kv, Section } from "./ui";
 import { fmt, fuel } from "../data/derive";
 import { loadLatestPlan as loadPlan } from "../data/plan";
 import { undoDirect, useLastDirect } from "../data/direct";
+import { RouteProfile } from "./RouteOverview";
 import { settingsStore, useApp, useSettings } from "../data/store";
 
 const fl = (ft: number | null | undefined) => ft == null ? "—" : ft >= 10000 ? `FL${String(Math.round(ft / 100)).padStart(3, "0")}` : `${Math.round(ft).toLocaleString("en-US")} ft`;
@@ -73,6 +74,7 @@ export function FlightPlanCard({ plan, frame, completed }: { plan: FlightPlan; f
         <div className="fp-od end">{head[2] && <span className="fp-proc">{head[2]}</span>}<b className="data">{head[3]}</b></div>
       </div>
       <p className="fp-names faint">{[plan.origin.name, plan.destination.name].filter(Boolean).join(" to ")}</p>
+      <RouteProfile plan={plan} frame={frame} live={!completed} />
 
       <div className="fp-stats">
         <div><span>Distance</span><b className="data">{fmt(plan.distanceNm ?? total)} nm</b></div>

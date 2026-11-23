@@ -42,8 +42,11 @@ function filtered(plan: FlightPlan, s: State): FlightPlan {
 /** The plan with any skipped waypoints removed; also checks this frame for a new direct-to. */
 export function withDirects(plan: FlightPlan, frame: TelemetryFrame | null): FlightPlan {
   const s = load(planKey(plan));
+  // Before or after a flight (no live data, or on the ground): always the full plan. Landing starts fresh.
+  if (!frame) return plan;
+  if (frame.position.onGround) { if (s.skipped.length || s.history.length) { s.skipped = []; s.history = []; s.ignore = []; tracker.reset(); save(); } return plan; }
   let eff = filtered(plan, s);
-  if (!frame || frame.position.onGround || (frame.position.altAglFt ?? 9999) < 1000) return eff;
+  if ((frame.position.altAglFt ?? 9999) < 1000) return eff;
   const pos = { lat: frame.position.lat, lon: frame.position.lon };
   // Ground track from positions at least 4 s and 0.2 nm apart.
   if (!last || frame.t < last.t || frame.t - last.t > 60_000) last = { ...pos, t: frame.t };
@@ -58,8 +61,10 @@ export function withDirects(plan: FlightPlan, frame: TelemetryFrame | null): Fli
   // A direct-to you put back isn't detected again.
   const rawKey = raw !== null && raw - 1 < eff.fixes.length ? fixKey(eff.fixes[raw - 1]!) : raw !== null ? "dest" : null;
   const j = tracker.update(rawKey && s.ignore?.includes(rawKey) ? null : raw, frame.t);
-  if (j !== null && j > nextIdx) {
-    const skipped = eff.fixes.slice(nextIdx - 1, j - 1);
+  const remaining = eff.fixes.length - (nextIdx - 1);
+  // Never the destination itself, never more than half of what's left, and TOC/TOD are never dropped.
+  if (j !== null && j > nextIdx && j <= eff.fixes.length && (j - nextIdx) <= Math.max(1, Math.floor(remaining / 2))) {
+    const skipped = eff.fixes.slice(nextIdx - 1, j - 1).filter((f) => !/^(TOC|TOD|T\/C|T\/D)$/i.test(f.ident));
     const target = j - 1 < eff.fixes.length ? eff.fixes[j - 1]!.ident : eff.destination.icao;
     if (skipped.length) {
       s.skipped.push(...skipped.map(fixKey));

@@ -9,23 +9,32 @@ const mem = new Map<string, string>();
 const O = { lat: 50, lon: 0 };
 const A = destinationPoint(O, 0, 40), B = destinationPoint(A, 90, 40), C = destinationPoint(B, 45, 40), D = destinationPoint(C, 0, 40);
 const fx = (ident: string, p: { lat: number; lon: number }) => ({ ident, lat: p.lat, lon: p.lon, altitudeFt: 30000, proc: null });
-const plan = { origin: { icao: "AAAA", lat: O.lat, lon: O.lon }, destination: { icao: "DDDD", lat: D.lat, lon: D.lon }, fixes: [fx("ALPHA", A), fx("BRAVO", B), fx("CHRLY", C)] } as unknown as FlightPlan;
+const base = { origin: { icao: "AAAA", lat: O.lat, lon: O.lon }, destination: { icao: "DDDD", lat: D.lat, lon: D.lon }, fixes: [fx("ALPHA", A), fx("BRAVO", B), fx("CHRLY", C)] } as unknown as FlightPlan;
 const frame = (p: { lat: number; lon: number }, t: number): TelemetryFrame => ({ t, seq: t, position: { lat: p.lat, lon: p.lon, altMslFt: 30000, altAglFt: 29000, onGround: false }, attitude: { bankDeg: 0, pitchDeg: 0, headingTrueDeg: 0, headingMagDeg: 0 } } as unknown as TelemetryFrame);
 
 describe("live direct-to", () => {
   beforeEach(() => restoreAll());
   it("keeps the plan while you follow it", () => {
+    const plan = base;
     let t = 0, p = O;
     for (let i = 0; i < 30; i++) { p = destinationPoint(p, 0, 1); t += 5000; expect(withDirects(plan, frame(p, t)).fixes.length).toBe(3); }
   });
   it("drops ALPHA after flying direct to BRAVO, and can put it back", () => {
+    const plan = { ...base, fixes: [...base.fixes, fx("DELTA", destinationPoint(C, 0, 20)), fx("ECHO", destinationPoint(C, 0, 30))] } as unknown as FlightPlan;
     let t = 0, p = destinationPoint(O, 0, 15);
     withDirects(plan, frame(p, t));
     let out = plan;
     for (let i = 0; i < 12; i++) { p = destinationPoint(p, bearingDeg(p, B), 1); t += 5000; out = withDirects(plan, frame(p, t)); }
-    expect(out.fixes.map((f) => f.ident)).toEqual(["BRAVO", "CHRLY"]);
+    expect(out.fixes.map((f) => f.ident)).toEqual(["BRAVO", "CHRLY", "DELTA", "ECHO"]);
     undoDirect();
     for (let i = 0; i < 8; i++) { p = destinationPoint(p, bearingDeg(p, B), 1); t += 5000; out = withDirects(plan, frame(p, t)); }
-    expect(out.fixes.length).toBe(3);
+    expect(out.fixes.length).toBe(5);
+  });
+});
+
+describe("direct-to never empties a plan", () => {
+  it("shows the full plan with no live data or on the ground", () => {
+    const p = { origin: { icao: "AAAA", lat: 50, lon: 0 }, destination: { icao: "DDDD", lat: 51, lon: 0 }, fixes: [{ ident: "X", lat: 50.5, lon: 0 }] } as unknown as FlightPlan;
+    expect(withDirects(p, null).fixes.length).toBe(1);
   });
 });
