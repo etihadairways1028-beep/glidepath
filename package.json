@@ -1,0 +1,3 @@
+{ "name": "@glidepath/site", "version": "0.1.0", "private": true, "type": "module",
+  "scripts": { "demo-data": "tsx scripts/build-demo.ts" },
+  "dependencies": { "@glidepath/flight-engine": "workspace:*", "@glidepath/protocol": "workspace:*", "@glidepath/testkit": "workspace:*" } }
