@@ -24,36 +24,53 @@ import { touchdownWords } from "@glidepath/flight-engine";
 import { gradeOf } from "./Home";
 
 const LOG_CACHE = "glidepath.logbookCache";
+let memCache: FlightSummary[] | null = null;
+function readLogCache(): FlightSummary[] | null {
+  if (memCache) return memCache;
+  try { const c = JSON.parse(localStorage.getItem(LOG_CACHE) ?? "null") as { f: FlightSummary[] } | null; memCache = c?.f ?? null; } catch { /* none */ }
+  return memCache;
+}
+function writeLogCache(f: FlightSummary[]) {
+  memCache = f;
+  // Only the parts the list needs, so the saved copy stays small.
+  const slim = f.map((x) => (x.plan ? { ...x, plan: { ...x.plan, fixes: [] } } : x));
+  try { localStorage.setItem(LOG_CACHE, JSON.stringify({ at: Date.now(), f: slim })); } catch { /* storage full: fine */ }
+}
 
 export function useFlights(): { flights: FlightSummary[] | null; error: string | null; fromCloud: boolean } {
   const mode = useApp((s) => s.mode);
   const cloud = useCloud();
   const [fromCloud, setFromCloud] = useState(false);
   const current = useApp((s) => s.lastFlight ?? s.flight);
-  const [flights, setFlights] = useState<FlightSummary[] | null>(null);
+  // Show the copy saved on this device straight away, then refresh it from your PC in the background.
+  const [flights, setFlights] = useState<FlightSummary[] | null>(() => (mode === "demo" ? null : readLogCache()));
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     if (mode === "demo") { setFlights(current ? [current] : []); return; }
     const b = activeBridge();
     setFromCloud(false);
     if (!b) {
-      if (cloud.status === "ready" && cloud.active) void cloudFlights().then((f) => { setFlights(f); setFromCloud(!!f); });
-      else setFlights(null);
+      const cached = readLogCache();
+      if (cached) setFlights(cached);
+      if (cloud.status === "ready" && cloud.active) void cloudFlights().then((f) => { if (f) { setFlights(f); setFromCloud(true); } });
+      else if (!cached) setFlights(null);
       return;
     }
-    b.get<FlightSummary[]>("/api/flights?limit=500")
-      .then((f) => { setFlights(f); setError(null); try { localStorage.setItem(LOG_CACHE, JSON.stringify({ at: Date.now(), f })); } catch { /* storage full: fine */ } })
+    let live = true;
+    b.get<FlightSummary[]>("/api/flights?limit=500&lite=1")
+      .then((f) => { if (!live) return; setFlights(f); setError(null); writeLogCache(f); })
       .catch(async (e: Error) => {
+        if (!live) return;
         // Can't reach the PC: show what we have rather than nothing.
         const why = /failed to fetch|networkerror|load failed|can.t reach|isn.t connected|didn.t answer|went offline/i.test(e.message)
           ? "Can't reach Glidepath on your PC right now. Check it's running (the Glidepath icon by the clock). Showing your last saved flights."
           : e.message;
-        let cached: FlightSummary[] | null = null;
-        try { const c = JSON.parse(localStorage.getItem(LOG_CACHE) ?? "null") as { f: FlightSummary[] } | null; cached = c?.f ?? null; } catch { /* none */ }
+        let cached = readLogCache();
         if (!cached && cloud.status === "ready" && cloud.active) { cached = await cloudFlights().catch(() => null); if (cached) setFromCloud(true); }
         setFlights(cached ?? []);
         setError(why);
       });
+    return () => { live = false; };
   }, [mode, current?.id, current?.status, cloud.status, cloud.active]);
   return { flights, error, fromCloud };
 }
@@ -89,6 +106,7 @@ export function Logbook() {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<"all" | "completed" | "incomplete">("all");
   const [sort, setSort] = useState<"new" | "long" | "best">("new");
+  const [shown, setShown] = useState(60);
   const list = useMemo(() => {
     let l = (flights ?? []).filter((f) => f.status !== "active" || f.offBlockAt);
     if (status !== "all") l = l.filter((f) => f.status === status);
@@ -124,7 +142,7 @@ export function Logbook() {
           <div className="empty"><div className="h2">{q ? "No flights match" : "No flights yet"}</div><p className="muted">{q ? "Try another airport code or aircraft." : "Fly gate to gate and the flight is logged by itself."}</p></div>
         ) : (
           <div className="list">
-            {list.map((f) => {
+            {list.slice(0, shown).map((f) => {
               const l = f.landings.at(-1);
               return (
                 <a className="li" key={f.id} href={`#/logbook/${f.id}`}>
@@ -143,6 +161,7 @@ export function Logbook() {
             })}
           </div>
         )}
+        {list.length > shown && <button className="btn" style={{ marginTop: 12, width: "100%" }} onClick={() => setShown((n) => n + 100)}>Show {Math.min(100, list.length - shown)} more of {list.length}</button>}
       </section>
     </div>
   );

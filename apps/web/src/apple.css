@@ -2455,3 +2455,24 @@ details[open] > :not(summary) { animation: gpRise .35s cubic-bezier(.2,.8,.2,1) 
   ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
   .page-enter *, .map-sheet, .map-route, .ap-setup, details[open] > * { animation: none !important; }
 }
+.list > .li { content-visibility: auto; contain-intrinsic-size: auto 72px; }
+
+/* ===== Logbook card on Home ===== */
+.logc { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px 20px; align-items: center; padding: 14px 18px; }
+@media (max-width: 760px) { .logc { grid-template-columns: minmax(0, 1fr); } }
+.logc-l { display: grid; gap: 4px; min-width: 0; }
+.logc-k { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 750; color: var(--a-ink2); }
+.logc.landed .logc-k { color: #FFC56B; } .logc.done .logc-k { color: #5CFFA6; }
+.logc-t { font-size: 18px; font-weight: 780; font-variant-numeric: tabular-nums; }
+.logc-t small { font-size: 13px; color: var(--a-ink2); font-weight: 650; }
+.logc-times { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 4px; }
+.logc-times span { display: grid; gap: 1px; font-size: 14px; font-variant-numeric: tabular-nums; font-weight: 650; }
+.logc-times em { font-style: normal; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--a-ink2); font-weight: 700; }
+.logc-times b { font-size: 16px; }
+.logc-r { display: grid; gap: 6px; justify-items: end; text-align: right; max-width: 300px; }
+@media (max-width: 760px) { .logc-r { justify-items: stretch; text-align: left; max-width: none; } }
+.logc-btn { font-size: 15px; padding: 12px 18px; }
+.logc.landed { box-shadow: inset 0 0 0 1.5px rgba(255,179,64,.5) !important; }
+.logc.done { box-shadow: inset 0 0 0 1.5px rgba(48,209,88,.45) !important; }
+.logc-err { margin: 6px 0 0; color: #FF8077; font-size: 13px; }
+:root[data-theme="light"] .logc.landed .logc-k { color: #9A5A00; } :root[data-theme="light"] .logc.done .logc-k { color: #0E8A43; }

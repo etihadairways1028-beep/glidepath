@@ -6,12 +6,14 @@
 import { useEffect, useState } from "react";
 import { Icon } from "./ui";
 
-export const APP_VERSION = "1.1.9";
+export const APP_VERSION = "1.2.0";
 const KEY = "glidepath.seenVersion";
 
 export type WnIcon = "map" | "flight" | "remote" | "book" | "gear" | "spark" | "download" | "search" | "tower" | "cloud" | "layers" | "target" | "headset";
 export interface WnItem { v: string; ic: WnIcon; t: string; d: string }
 export const WHATS_NEW: WnItem[] = [
+  { v: "1.2.0", ic: "book", t: "Every flight reaches your logbook", d: "Home shows what's being logged, with block and flight time as you go. After landing, press Finish flight to save it. If you close the sim after landing, or leave it at the gate, it's still saved as a finished flight with its times." },
+  { v: "1.2.0", ic: "spark", t: "A much faster logbook", d: "It opens instantly with the copy saved on this device, then refreshes from your PC with a list that's many times smaller than before." },
   { v: "1.1.9", ic: "spark", t: "Smoother everywhere", d: "Screens cross-fade into each other instead of jumping, cards arrive in a gentle cascade, panels glide in, and buttons ease instead of snapping." },
   { v: "1.1.8", ic: "map", t: "SimBrief waypoints fixed", d: "Newer SimBrief plans store the route differently, and Glidepath read them as having no waypoints, SID or STAR. Every waypoint from your latest SimBrief plan now comes through." },
   { v: "1.1.8", ic: "spark", t: "Direct-to can't empty your plan", d: "Before and after a flight you always see the full plan, it starts fresh after landing, and it never drops more than half the route or your TOC and TOD." },

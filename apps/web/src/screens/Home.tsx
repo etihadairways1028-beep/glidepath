@@ -37,6 +37,7 @@ export function Home() {
       <CockpitReady />
       {mode === "bridge" && conn !== "live" && msg && <Notice>{msg} <a href="#/settings">Connection settings</a></Notice>}
       {mode !== "none" && flight?.status === "completed" && <DebriefTeaser />}
+      {mode !== "none" && flight && <LogCard />}
       {mode !== "none" && flight && <LiveCard />}
       {mode !== "none" && flight && flight.status !== "completed" ? <Bento /> : mode !== "none" && flight ? <FlightFeed /> : null}
       {mode !== "none" && flight && <QuickActions />}
@@ -50,6 +51,62 @@ export function Home() {
       <Totals />
       <InstallCard />
     </div>
+  );
+}
+
+const hm = (ms: number | null) => (ms == null || ms < 0 ? "—" : `${Math.floor(ms / 3600000)}:${String(Math.floor((ms % 3600000) / 60000)).padStart(2, "0")}`);
+const z = (t: number | null | undefined) => (t ? `${new Date(t).toISOString().slice(11, 16)}Z` : "—");
+
+/**
+ * The logbook, on Home: what's being logged during the flight, a button to finish it once you've
+ * landed (block and air time worked out and saved), and a confirmation once it's in the logbook.
+ */
+function LogCard() {
+  const L = useLive();
+  const mode = useApp((s) => s.mode);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => { const i = window.setInterval(() => setNow(Date.now()), 15_000); return () => window.clearInterval(i); }, []);
+  const f = L.flight;
+  if (!f) return null;
+  const clock = L.frame?.t ?? now;
+  const done = f.status === "completed" || f.status === "incomplete";
+  const blockEnd = f.onBlockAt ?? (done ? f.endedAt ?? null : clock);
+  const airEnd = f.wheelsDownAt ?? (done ? null : clock);
+  const block = f.offBlockAt && blockEnd ? blockEnd - f.offBlockAt : null;
+  const air = f.wheelsUpAt && airEnd ? airEnd - f.wheelsUpAt : null;
+  const landed = !!f.wheelsDownAt && !L.airborne && !done;
+  const finish = async () => {
+    setBusy(true); setErr(null);
+    try {
+      if (mode === "bridge") await activeBridge()?.post("/api/flight/complete", {});
+      else if (mode === "demo") { const d = (await import("../data/demo")).activeDemo(); d?.seek(1); }
+    } catch (e) { setErr((e as Error).message); }
+    setBusy(false);
+  };
+  const route = `${f.departureIcao ?? "····"} → ${f.arrivalIcao ?? "····"}`;
+  return (
+    <section className={`glass logc${landed ? " landed" : done ? " done" : ""}`} aria-live="polite">
+      <div className="logc-l">
+        <span className="logc-k">{done ? (f.status === "completed" ? "Saved to your logbook" : "Saved as incomplete") : landed ? "You've landed" : f.offBlockAt ? "Logging this flight" : "Logging starts at pushback"}</span>
+        <b className="logc-t">{route}{f.aircraft?.icaoType ? <small> · {f.aircraft.icaoType}</small> : null}</b>
+        <div className="logc-times">
+          <span><em>Off block</em>{z(f.offBlockAt)}</span>
+          <span><em>Takeoff</em>{z(f.wheelsUpAt)}</span>
+          <span><em>Landing</em>{z(f.wheelsDownAt)}</span>
+          <span><em>Block time</em><b>{hm(block)}</b></span>
+          <span><em>Flight time</em><b>{hm(air)}</b></span>
+        </div>
+        {err && <p className="logc-err">{err}</p>}
+      </div>
+      <div className="logc-r">
+        {landed && <button className="btn primary logc-btn" onClick={() => void finish()} disabled={busy}>{busy ? "Saving…" : "Finish flight and save to logbook"}</button>}
+        {landed && <small className="faint">Or just park: it saves by itself when the engines are off.</small>}
+        {done && <a className="btn primary" href={`#/logbook/${f.id}`}>Open in logbook</a>}
+        {!done && !landed && f.offBlockAt && <small className="faint">Saves itself when you park. If you close the sim after landing, it's still saved.</small>}
+      </div>
+    </section>
   );
 }
 

@@ -134,6 +134,15 @@ export class FlightSession extends EventEmitter {
     }
     if (!this.flight) this.startFlight(frame);
     else if (this.lastFrame === null) this.maybeResume(frame);
+    else {
+      // The sim was left for a long time, or you loaded a new flight somewhere else after landing:
+      // close the old flight properly (it goes to the logbook) and start a new one.
+      const gap = frame.t - this.lastFrame.t;
+      const jumped = distanceNm(this.lastFrame.position, frame.position) > RESUME_RADIUS_NM;
+      const landed = !!this.flight.wheelsDownAt && frame.position.onGround;
+      // A long pause mid-flight in the same place carries on; only a landed flight, or a jump elsewhere after a long gap, ends it.
+      if ((landed && (gap > RESUME_WINDOW_MS || jumped)) || (gap > RESUME_WINDOW_MS && jumped)) { this.lastFrame = null; this.maybeResume(frame); }
+    }
     const flight = this.flight!;
 
     const prev = this.lastFrame;
@@ -264,7 +273,14 @@ export class FlightSession extends EventEmitter {
       return;
     }
     this.log.info(`Not resuming flight ${f.id} (${recent ? "moved too far" : "too long ago"}); marking it incomplete`);
-    if (f.offBlockAt || f.wheelsUpAt) {
+    if (f.wheelsDownAt) {
+      // You landed and then closed the sim before parking: that's a finished flight, not an incomplete one.
+      if (!f.onBlockAt) f.onBlockAt = last?.t ?? f.wheelsDownAt;
+      f.status = "completed";
+      f.endedAt = last?.t ?? f.wheelsDownAt;
+      this.recorder.saveFlight(f);
+      this.emit("flight", f);
+    } else if (f.offBlockAt || f.wheelsUpAt) {
       f.status = "incomplete";
       f.endedAt = last?.t ?? f.startedAt;
       this.recorder.saveFlight(f);
@@ -336,6 +352,21 @@ export class FlightSession extends EventEmitter {
   }
 
   /** The pilot says the flight is over (after landing). Returns the finished flight, or null if it can't be completed yet. */
+  /**
+   * A flight that landed but was never parked (sim closed, or left running at the gate) is saved as finished
+   * once nothing has happened for a while, so it always reaches the logbook.
+   */
+  settleIfStale(now = Date.now(), idleMs = 20 * 60_000): FlightSummary | null {
+    const f = this.flight;
+    if (!f || !f.wheelsDownAt) return null;
+    const lastT = this.lastFrame?.t ?? this.recorder.lastFrame(f.id)?.t ?? f.wheelsDownAt;
+    if (now - lastT < idleMs) return null;
+    if (this.lastFrame && !this.lastFrame.position.onGround) return null;
+    if (!f.onBlockAt) f.onBlockAt = lastT;
+    this.finish("completed");
+    return f;
+  }
+
   completeNow(): FlightSummary | null {
     const f = this.flight;
     if (!f || !f.wheelsDownAt || this.detector.isAirborne) return null;

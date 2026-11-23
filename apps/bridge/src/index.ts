@@ -63,6 +63,10 @@ async function main(): Promise<void> {
   external.startTrafficRecording();
   log.info(`Airport database: ${airports.size.toLocaleString("en-US")} airports (OurAirports)`);
   const session = new FlightSession(recorder, log, airports, external);
+  // A landed flight that was never parked still reaches the logbook: check now and every minute.
+  const settle = () => { try { session.settleIfStale(); } catch (e) { log.warn(`Couldn't settle the last flight: ${(e as Error).message}`); } };
+  settle();
+  setInterval(settle, 60_000).unref?.();
 
   let simState: SimConnectionState = "searching";
   let simMessage: string | null = null;

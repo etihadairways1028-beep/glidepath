@@ -19,6 +19,7 @@ import { randomInt, timingSafeEqual } from "node:crypto";
 import { WebSocketServer, type WebSocket } from "ws";
 import { RELAY_HEADER, type CloudLink } from "./cloudlink.js";
 import type { Updater } from "./updater.js";
+import type { FlightSummary } from "@glidepath/protocol";
 import { Bonjour } from "bonjour-service";
 import {
   ClientMessage, PROTOCOL_VERSION,
@@ -50,6 +51,13 @@ interface Client {
   msgCount: number;
   /** Short random id, used to route camera signalling. */
   id: string;
+}
+
+/** A flight summary without the heavy parts, for lists. */
+export function liteFlight(f: FlightSummary): FlightSummary {
+  if (!f.plan) return f;
+  const { fixes, ...rest } = f.plan;
+  return { ...f, plan: { ...rest, fixes: [], fixCount: fixes.length } as unknown as FlightSummary["plan"] };
 }
 
 export class LanServer {
@@ -469,7 +477,12 @@ export class LanServer {
       const f = this.session.completeNow();
       return f ? json(res, 200, f) : json(res, 409, { error: "The flight can be completed once you've landed." });
     }
-    if (p === "/api/flights") return json(res, 200, this.recorder.listFlights(Number(url.searchParams.get("limit") ?? 50)));
+    if (p === "/api/flights") {
+      const list = this.recorder.listFlights(Number(url.searchParams.get("limit") ?? 50));
+      // The logbook list doesn't need every waypoint of every plan: that made it megabytes over the relay.
+      if (url.searchParams.get("lite") === "1") return json(res, 200, list.map(liteFlight));
+      return json(res, 200, list);
+    }
     const m = /^\/api\/flights\/([0-9a-f-]{36})(\/frames|\/events|\/trail)?$/.exec(p);
     if (m) {
       const flight = this.recorder.getFlight(m[1]!);
