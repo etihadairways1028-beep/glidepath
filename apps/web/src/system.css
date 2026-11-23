@@ -1,0 +1,260 @@
+/*
+ * Glidepath design system 1.3: one set of components for every page.
+ * Loaded last. Shapes and spacing apply to every look; colours apply to Liquid glass
+ * (the default), so Cockpit, Sunset and Neon keep their own palettes.
+ */
+:root {
+  --ds-accent: #0A84FF;
+  --ds-accent-2: #409CFF;
+  --ds-good: #30D158;
+  --ds-warn: #FFB340;
+  --ds-bad: #FF453A;
+  --ds-r-card: 22px;
+  --ds-r-ctl: 12px;
+  --ds-h: 40px;
+  --ds-h-sm: 32px;
+  --ds-ease: cubic-bezier(.2, .8, .2, 1);
+}
+:root:not([data-theme="light"]) {
+  --ds-bg-1: #0B1222;
+  --ds-bg-2: #05080F;
+  --ds-card: rgba(255, 255, 255, .055);
+  --ds-card-2: rgba(255, 255, 255, .085);
+  --ds-line: rgba(255, 255, 255, .09);
+  --ds-line-2: rgba(255, 255, 255, .16);
+  --ds-hi: rgba(255, 255, 255, .10);
+  --ds-ink: #F3F6FB;
+  --ds-ink-2: rgba(232, 238, 248, .72);
+  --ds-ink-3: rgba(232, 238, 248, .5);
+  --ds-field: rgba(0, 0, 0, .28);
+  --ds-ctl: rgba(255, 255, 255, .08);
+  --ds-ctl-hover: rgba(255, 255, 255, .13);
+  --ds-shadow: 0 1px 0 rgba(255, 255, 255, .04) inset, 0 20px 50px -30px rgba(0, 0, 0, .9);
+}
+:root[data-theme="light"] {
+  --ds-bg-1: #EEF2F8;
+  --ds-bg-2: #DFE6F1;
+  --ds-card: rgba(255, 255, 255, .72);
+  --ds-card-2: rgba(255, 255, 255, .9);
+  --ds-line: rgba(15, 30, 60, .09);
+  --ds-line-2: rgba(15, 30, 60, .16);
+  --ds-hi: rgba(255, 255, 255, .9);
+  --ds-ink: #0B1424;
+  --ds-ink-2: rgba(11, 20, 36, .68);
+  --ds-ink-3: rgba(11, 20, 36, .5);
+  --ds-field: rgba(255, 255, 255, .85);
+  --ds-ctl: rgba(15, 30, 60, .06);
+  --ds-ctl-hover: rgba(15, 30, 60, .1);
+  --ds-shadow: 0 1px 0 rgba(255, 255, 255, .8) inset, 0 16px 40px -28px rgba(20, 40, 80, .45);
+}
+
+/* ---------- Canvas: calm, deep, no confetti of colour ---------- */
+html:root:not([data-look]) .sky { background: radial-gradient(120% 80% at 50% -10%, var(--ds-bg-1), var(--ds-bg-2) 70%) !important; }
+html:root:not([data-look]) .sky .ss-orb { opacity: .16 !important; filter: blur(110px) !important; }
+html:root:not([data-look]) .sky .ss-stars, html:root:not([data-look]) .sky .ss-shoot { opacity: .35 !important; }
+html:root:not([data-look]) .sky .ss-clouds { opacity: .25 !important; }
+html:root[data-theme="light"]:not([data-look]) .sky .ss-orb { opacity: .1 !important; }
+
+/* ---------- Type ---------- */
+html:root main h1.title, html:root main .home-head h1 {
+  font-size: clamp(28px, 3.2vw, 36px) !important; font-weight: 800 !important; letter-spacing: -.025em !important; line-height: 1.08 !important;
+}
+html:root:not([data-look]) main h1.title, html:root:not([data-look]) main .home-head h1 {
+  background: none !important; -webkit-text-fill-color: currentColor !important; color: var(--ds-ink) !important; filter: none !important; text-shadow: none !important;
+}
+html:root main h1.title + p, html:root main .between > div > h1.title + p { font-size: 15px !important; color: var(--ds-ink-2) !important; margin-top: 6px !important; max-width: 70ch; }
+html:root main .h2, html:root main section.glass > h2, html:root main .section-title { font-size: 17px !important; font-weight: 720 !important; letter-spacing: -.01em !important; color: var(--ds-ink) !important; }
+html:root:not([data-look]) main .muted { color: var(--ds-ink-2) !important; }
+html:root:not([data-look]) main .faint { color: var(--ds-ink-3) !important; }
+html:root:not([data-look]) main :is(b, strong, span, em, div, small, h1, h2, h3, p) { text-shadow: none; }
+html:root main { font-feature-settings: "cv11", "ss01"; }
+
+/* ---------- Cards ---------- */
+html:root:not([data-look]) main section.glass, html:root:not([data-look]) main .glass.pad, html:root:not([data-look]) main details.glass, html:root:not([data-look]) main a.glass {
+  background: var(--ds-card) !important;
+  border: 1px solid var(--ds-line) !important;
+  box-shadow: var(--ds-shadow) !important;
+  backdrop-filter: blur(26px) saturate(1.6) !important; -webkit-backdrop-filter: blur(26px) saturate(1.6) !important;
+}
+html:root main section.glass, html:root main .glass.pad { border-radius: var(--ds-r-card) !important; }
+html:root:not([data-look]) main section.glass.strong { background: var(--ds-card-2) !important; }
+html:root:not([data-look]) main section.glass::before, html:root:not([data-look]) main section.glass::after { opacity: .35; }
+
+/* ---------- Buttons ---------- */
+html:root .btn {
+  min-height: var(--ds-h); padding: 0 16px !important; border-radius: var(--ds-r-ctl) !important;
+  font-size: 14.5px !important; font-weight: 650 !important; letter-spacing: -.005em;
+  display: inline-flex !important; align-items: center; justify-content: center; gap: 8px; white-space: nowrap;
+  transition: background-color .2s ease, box-shadow .2s ease, transform .16s var(--ds-ease), color .2s ease, opacity .2s ease !important;
+}
+html:root:not([data-look]) .btn {
+  background: var(--ds-ctl) !important; color: var(--ds-ink) !important;
+  border: 1px solid var(--ds-line) !important; box-shadow: inset 0 1px 0 var(--ds-hi) !important;
+}
+html:root:not([data-look]) .btn:hover:not(:disabled) { background: var(--ds-ctl-hover) !important; }
+html:root:not([data-look]) .btn.primary {
+  background: var(--ds-accent) !important; color: #fff !important; border-color: transparent !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 8px 20px -10px rgba(10, 132, 255, .8) !important;
+}
+html:root:not([data-look]) .btn.primary:hover:not(:disabled) { background: var(--ds-accent-2) !important; }
+html:root:not([data-look]) .btn.ghost { background: transparent !important; border-color: transparent !important; box-shadow: none !important; color: var(--ds-ink-2) !important; }
+html:root:not([data-look]) .btn.ghost:hover:not(:disabled) { background: var(--ds-ctl) !important; color: var(--ds-ink) !important; }
+html:root:not([data-look]) .btn.danger { color: var(--ds-bad) !important; }
+html:root:not([data-look]) .btn.on { background: rgba(10, 132, 255, .18) !important; border-color: rgba(10, 132, 255, .5) !important; color: var(--ds-ink) !important; }
+html:root .btn.small { min-height: var(--ds-h-sm); padding: 0 12px !important; font-size: 13.5px !important; border-radius: 10px !important; }
+html:root .btn.round { width: var(--ds-h-sm); min-width: var(--ds-h-sm); padding: 0 !important; border-radius: 50% !important; }
+html:root .btn.round svg { width: 16px; height: 16px; }
+html:root .btn:active:not(:disabled) { transform: scale(.97); }
+html:root .btn:disabled { opacity: .45 !important; cursor: default; }
+html:root .btn:focus-visible, html:root .seg button:focus-visible, html:root main a:focus-visible { outline: 2px solid var(--ds-accent) !important; outline-offset: 2px; }
+
+/* ---------- Segmented controls ---------- */
+html:root .seg { border-radius: var(--ds-r-ctl) !important; padding: 3px !important; gap: 2px; display: inline-flex; }
+html:root:not([data-look]) .seg { background: var(--ds-ctl) !important; border: 1px solid var(--ds-line) !important; box-shadow: none !important; }
+html:root .seg button { min-height: 30px; padding: 0 12px !important; border-radius: 9px !important; font-size: 13.5px !important; font-weight: 600 !important; transition: background-color .2s ease, color .2s ease, box-shadow .2s ease !important; }
+html:root:not([data-look]) .seg button { color: var(--ds-ink-2) !important; }
+html:root:not([data-look]) .seg button:hover:not(.on) { color: var(--ds-ink) !important; }
+html:root:not([data-look]) .seg button.on {
+  background: rgba(255, 255, 255, .16) !important; color: var(--ds-ink) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 4px 10px -6px rgba(0, 0, 0, .6) !important;
+}
+html:root[data-theme="light"]:not([data-look]) .seg button.on { background: #fff !important; box-shadow: 0 1px 3px rgba(15, 30, 60, .14), 0 0 0 .5px rgba(15, 30, 60, .06) !important; }
+
+/* ---------- Inputs ---------- */
+html:root main :is(.input, input[type="text"], input[type="search"], input[type="email"], input[type="password"], input[type="number"], input:not([type]), select, textarea):not(.switch):not([type="range"]) {
+  min-height: 42px; border-radius: var(--ds-r-ctl) !important; font-size: 15px !important;
+  transition: box-shadow .18s ease, background-color .18s ease, border-color .18s ease;
+}
+html:root:not([data-look]) main :is(.input, input[type="text"], input[type="search"], input[type="email"], input[type="password"], input[type="number"], input:not([type]), select, textarea):not(.switch):not([type="range"]) {
+  background: var(--ds-field) !important; color: var(--ds-ink) !important;
+  border: 1px solid var(--ds-line) !important; box-shadow: none !important;
+}
+html:root main :is(.input, input, select, textarea):not(.switch):not([type="range"]):focus {
+  outline: none !important; border-color: var(--ds-accent) !important; box-shadow: 0 0 0 4px rgba(10, 132, 255, .22) !important;
+}
+html:root main :is(input, textarea)::placeholder { color: var(--ds-ink-3) !important; }
+html:root main textarea { padding: 12px 14px !important; line-height: 1.45; }
+
+/* ---------- Switches ---------- */
+html:root .switch { width: 48px !important; height: 29px !important; border-radius: 999px !important; transition: background-color .25s ease !important; }
+html:root .switch::after { width: 25px !important; height: 25px !important; top: 2px !important; left: 2px !important; transition: transform .28s var(--ds-ease) !important; }
+html:root .switch:checked::after { transform: translateX(19px) !important; }
+html:root:not([data-look]) .switch:checked { background: var(--ds-good) !important; }
+
+/* ---------- Pills, chips, quick tiles ---------- */
+html:root main .pill { border-radius: 999px !important; font-size: 12.5px !important; font-weight: 650 !important; padding: 5px 10px !important; letter-spacing: .01em; }
+html:root:not([data-look]) main .pill:not(.phase):not(.demo):not(.live) { background: var(--ds-ctl) !important; color: var(--ds-ink-2) !important; box-shadow: inset 0 0 0 1px var(--ds-line) !important; }
+html:root main .chip-btn, html:root main .cl-link, html:root main .sup-topic { transition: background-color .2s ease, transform .16s var(--ds-ease), box-shadow .2s ease; }
+html:root:not([data-look]) main .chip-btn { background: var(--ds-ctl) !important; border: 1px solid var(--ds-line) !important; color: var(--ds-ink) !important; border-radius: 999px !important; font-weight: 600 !important; }
+html:root:not([data-look]) main .chip-btn:hover { background: var(--ds-ctl-hover) !important; }
+
+/* ---------- Notices ---------- */
+html:root main .notice { border-radius: 16px !important; padding: 12px 14px 12px 42px !important; position: relative; font-size: 14px !important; line-height: 1.45 !important; }
+html:root main .notice::before { content: "!"; position: absolute; left: 14px; top: 12px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font: 800 12px/1 var(--a-font, system-ui); color: #1B1300; background: var(--ds-warn); }
+html:root main .notice.info::before { content: "i"; color: #fff; background: var(--ds-accent); font-style: italic; font-family: Georgia, serif; }
+html:root:not([data-look]) main .notice { background: rgba(255, 179, 64, .1) !important; border: 1px solid rgba(255, 179, 64, .28) !important; color: var(--ds-ink) !important; box-shadow: none !important; }
+html:root:not([data-look]) main .notice.info { background: rgba(10, 132, 255, .09) !important; border-color: rgba(10, 132, 255, .26) !important; }
+
+/* ---------- Lists ---------- */
+html:root main .list { gap: 0 !important; }
+html:root:not([data-look]) main .list > .li { border-radius: 14px !important; background: transparent !important; box-shadow: none !important; border-bottom: 1px solid var(--ds-line) !important; transition: background-color .18s ease; }
+html:root:not([data-look]) main .list > .li:last-child { border-bottom: 0 !important; }
+html:root:not([data-look]) main .list > .li:hover { background: var(--ds-ctl) !important; }
+
+/* ---------- Sidebar and tab bar ---------- */
+html:root:not([data-look]) nav.glass.side {
+  background: rgba(14, 20, 34, .72) !important; border: 1px solid var(--ds-line) !important;
+  box-shadow: inset 0 1px 0 var(--ds-hi), 0 30px 60px -30px rgba(0, 0, 0, .9) !important;
+  backdrop-filter: blur(30px) saturate(1.7) !important; -webkit-backdrop-filter: blur(30px) saturate(1.7) !important;
+}
+html:root[data-theme="light"]:not([data-look]) nav.glass.side { background: rgba(255, 255, 255, .74) !important; }
+html:root nav.glass.side .nav-a { border-radius: 12px !important; transition: background-color .2s ease, color .2s ease !important; }
+html:root:not([data-look]) nav.glass.side .nav-a { color: var(--ds-ink-2) !important; }
+html:root:not([data-look]) nav.glass.side .nav-a:hover:not(.on) { background: var(--ds-ctl) !important; color: var(--ds-ink) !important; }
+html:root:not([data-look]) nav.glass.side .nav-a.on { background: rgba(10, 132, 255, .16) !important; color: var(--ds-ink) !important; box-shadow: inset 0 0 0 1px rgba(10, 132, 255, .38) !important; }
+html:root:not([data-look]) nav.glass.side .nav-a.on svg { color: var(--ds-accent-2); }
+html:root:not([data-look]) .tabbar { background: rgba(14, 20, 34, .78) !important; border: 1px solid var(--ds-line) !important; backdrop-filter: blur(30px) saturate(1.7) !important; -webkit-backdrop-filter: blur(30px) saturate(1.7) !important; }
+html:root[data-theme="light"]:not([data-look]) .tabbar { background: rgba(255, 255, 255, .8) !important; }
+
+/* ---------- Tables ---------- */
+html:root main table { border-collapse: collapse; }
+html:root:not([data-look]) main table th { color: var(--ds-ink-3) !important; font-size: 11.5px !important; letter-spacing: .06em; text-transform: uppercase; font-weight: 700 !important; }
+html:root:not([data-look]) main table td { border-color: var(--ds-line) !important; }
+
+/* ---------- Motion respect ---------- */
+@media (prefers-reduced-motion: reduce) { html:root .btn, html:root .seg button, html:root .switch::after { transition: none !important; } }
+
+/* ---------- Navlog ---------- */
+.nl-wrap { margin-top: 14px; overflow-x: auto; border-radius: 16px; border: 1px solid var(--ds-line); background: rgba(0, 0, 0, .14); }
+:root[data-theme="light"] .nl-wrap { background: rgba(255, 255, 255, .55); }
+.nl { width: 100%; border-collapse: separate !important; border-spacing: 0; font-size: 14px; }
+.nl th { position: sticky; top: 0; z-index: 1; padding: 10px 12px !important; text-align: left; background: var(--ds-card-2); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid var(--ds-line); white-space: nowrap; }
+.nl th.r, .nl td.r { text-align: right; }
+.nl td { padding: 9px 12px; border-bottom: 1px solid var(--ds-line); vertical-align: middle; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--ds-ink); }
+.nl tr:last-child td { border-bottom: 0; }
+.nl-id { position: relative; }
+.nl-id { display: flex !important; align-items: center; gap: 8px; min-width: 150px; }
+.nl-mark { width: 16px; flex: none; font-size: 12px; color: var(--ds-good); font-weight: 800; text-align: center; }
+.nl-idt { display: grid; gap: 1px; }
+.nl-idt b { font-size: 14.5px; font-weight: 750; letter-spacing: .02em; }
+.nl-idt small { font-size: 11.5px; color: var(--ds-ink-3); max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+.nl-next { font-style: normal; font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #fff; background: var(--ds-accent); padding: 2px 7px; border-radius: 999px; margin-left: 8px; vertical-align: 1px; }
+.nl-prog { position: absolute; left: 12px; right: 12px; bottom: 3px; height: 3px; border-radius: 3px; background: rgba(10, 132, 255, .18); overflow: hidden; }
+.nl-prog i { display: block; height: 100%; background: var(--ds-accent); border-radius: 3px; transition: width .8s ease; }
+.nl-row.next td { background: rgba(10, 132, 255, .1); }
+.nl-row.next td:first-child { box-shadow: inset 3px 0 0 var(--ds-accent); }
+.nl-row.passed td { color: var(--ds-ink-3); }
+.nl-row.passed .nl-idt b { font-weight: 600; }
+.nl-row.sid .nl-idt b { color: #6FD3FF; } .nl-row.star .nl-idt b { color: #FFC56B; }
+:root[data-theme="light"] .nl-row.sid .nl-idt b { color: #0B6C80; } :root[data-theme="light"] .nl-row.star .nl-idt b { color: #9A5A00; }
+.nl-row.passed.sid .nl-idt b, .nl-row.passed.star .nl-idt b { color: var(--ds-ink-3); }
+.nl-via { color: var(--ds-ink-2) !important; font-size: 13px; }
+.nl-alt { position: relative; min-width: 78px; }
+.nl-alt span { position: relative; z-index: 1; }
+.nl-alt i { position: absolute; right: 12px; bottom: 5px; height: 2px; max-width: calc(100% - 24px); border-radius: 2px; background: rgba(142, 193, 255, .45); }
+.nl-live { color: var(--ds-accent-2); }
+.nl-sec td { padding: 14px 12px 6px !important; border-bottom: 0 !important; background: transparent !important; }
+.nl-sec span { font-size: 11.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--ds-ink-3); }
+.nl-sec b { margin-left: 8px; font-size: 12px; font-weight: 750; padding: 2px 8px; border-radius: 6px; }
+.nl-sec.sid b { color: #04232B; background: #6FD3FF; } .nl-sec.star b { color: #2B1A00; background: #FFC56B; }
+.nl-top td { padding: 6px 12px !important; border-bottom: 0 !important; }
+.nl-top td { display: table-cell; }
+.nl-top td > * { vertical-align: middle; }
+.nl-top-t { display: inline-block; margin: 0 10px; font-size: 12px; font-weight: 700; letter-spacing: .04em; color: var(--ds-ink-2); }
+.nl-top-l { display: inline-block; width: calc(50% - 110px); height: 1px; background: repeating-linear-gradient(90deg, var(--ds-line-2) 0 6px, transparent 6px 12px); }
+.nl-top.toc .nl-top-t::before, .nl-top.tod .nl-top-t::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 7px; background: #8EC1FF; vertical-align: 1px; }
+.nl-top.passed .nl-top-t { color: var(--ds-ink-3); }
+.nl-apt td { padding: 12px !important; background: var(--ds-ctl); }
+.nl-apt-i { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.nl-apt-i b { font-size: 16px; font-weight: 800; letter-spacing: .02em; }
+.nl-rwy { font-size: 12px; font-weight: 750; padding: 3px 8px; border-radius: 6px; background: var(--ds-ink); color: var(--ds-bg-2); }
+.nl-apt-n { font-size: 13px; color: var(--ds-ink-2); }
+.nl-apt-r { margin-left: auto; font-size: 13px; color: var(--ds-ink-2); }
+.nl-more td { text-align: center; padding: 8px !important; }
+.nl-more .link { all: unset; cursor: pointer; font-size: 13px; font-weight: 700; color: var(--ds-accent-2); }
+@media (max-width: 700px) {
+  .nl .nl-via, .nl .nl-wind, .nl .nl-leg { display: none !important; }
+  .nl td, .nl th { padding-left: 9px !important; padding-right: 9px !important; }
+  .nl-id { min-width: 110px; }
+  .nl-top-l { width: 10%; }
+}
+@media (max-width: 420px) { .nl .nl-fuel { display: none !important; } }
+.nl th { border-left: 0 !important; border-right: 0 !important; box-shadow: none !important; }
+.nl td { border-left: 0 !important; border-right: 0 !important; }
+.nl-top.next .nl-top-t { color: var(--ds-accent-2); font-weight: 800; }
+.nl-top.next .nl-top-t::before { background: var(--ds-accent) !important; box-shadow: 0 0 0 4px rgba(10, 132, 255, .2); }
+.nl-top.next .nl-top-l { background: repeating-linear-gradient(90deg, rgba(10, 132, 255, .55) 0 6px, transparent 6px 12px); }
+:root[data-theme="light"] .nl-row.passed .nl-idt b { color: var(--ds-ink-3) !important; }
+/* readability floor for small labels */
+html:root .logc-times em, html:root .ts-kicker, html:root .cl-bigring b small { font-size: 11.5px !important; }
+@media (max-width: 400px) { .nl td, .nl th { padding-left: 7px !important; padding-right: 7px !important; font-size: 13px; } .nl-id { min-width: 96px; } .nl-idt small { display: none; } }
+html:root .trail-key .tk-l b { font-size: 11.5px !important; } html:root .side-clock .sc-v small { font-size: 11.5px !important; }
+/* light mode: text that was tuned for dark backgrounds */
+html:root[data-theme="light"] main .sup-f, html:root[data-theme="light"] main .tl-field, html:root[data-theme="light"] main .pf-f > span { color: var(--ds-ink-2) !important; }
+html:root main .sup-f { font-size: 13px; font-weight: 650; display: grid; gap: 6px; }
+html:root[data-theme="light"] main .lbw-list li, html:root[data-theme="light"] main .lbw-text p, html:root[data-theme="light"] main .lbw-list { color: var(--ds-ink-2) !important; }
+html:root[data-theme="light"] main .lbw-text h2 { color: var(--ds-ink) !important; }
+html:root[data-theme="light"] main .badge-t { color: var(--ds-ink) !important; }
+html:root[data-theme="light"] main .badge-s { color: var(--ds-ink-2) !important; }
+html:root[data-theme="light"] main .badge-ic { color: var(--ds-ink-2) !important; }
+html:root .map-note { max-width: min(520px, calc(100% - 24px)) !important; width: auto !important; } html:root .map-note .notice { padding-left: 38px !important; }

@@ -7,6 +7,7 @@ import "./extra.css";
 import "./liquid.css";
 import "./glass.css";
 import "./apple.css";
+import "./system.css";
 import { installHover, installPop, installRipple } from "./hover";
 installHover();
 installRipple();

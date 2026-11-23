@@ -17,6 +17,8 @@ const fl = (ft: number | null | undefined) => ft == null ? "—" : ft >= 10000 ?
 const hm = (s: number | null | undefined) => { if (s == null || !Number.isFinite(s)) return "—"; const m = Math.round(s / 60); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`; };
 const clock = (unixS: number) => { const d = new Date(unixS * 1000); return `${String(d.getUTCHours()).padStart(2, "0")}${String(d.getUTCMinutes()).padStart(2, "0")}Z`; };
 
+const isTopFix = (id: string) => /^(TOC|TOD|T\/C|T\/D)$/i.test(id);
+
 /** After a direct-to: which waypoints were dropped, with a way to put them back. */
 export function DirectNote() {
   const d = useLastDirect();
@@ -45,6 +47,8 @@ export function FlightPlanCard({ plan, frame, completed }: { plan: FlightPlan; f
   const flown = completed ? total : onGroundAtStart ? 0 : prog?.distanceFlownNm ?? null;
   const nextIdx = completed ? plan.fixes.length : prog ? (onGroundAtStart ? 0 : prog.legIndex) : -1; // index into plan.fixes
   const gs = frame?.speed.gsKt ?? 0;
+  const live = !completed && !!frame && !frame.position.onGround;
+  const cruise = plan.cruiseAltitudeFt ?? Math.max(0, ...plan.fixes.map((f) => f.altitudeFt ?? 0));
 
   const rows = plan.fixes.map((f, i) => {
     const at = cum[i + 1]!;
@@ -53,7 +57,7 @@ export function FlightPlanCard({ plan, frame, completed }: { plan: FlightPlan; f
     return { f, i, leg, toGoAfter: total - at, toFix, passed: nextIdx > i, next: nextIdx === i };
   });
   // Long plans: show a window around where you are, with the rest behind "Show all".
-  const LIMIT = 14;
+  const LIMIT = 16;
   const startAt = all || rows.length <= LIMIT ? 0 : Math.max(0, Math.min(rows.length - LIMIT, (nextIdx < 0 ? 0 : nextIdx) - 3));
   const shown = all || rows.length <= LIMIT ? rows : rows.slice(startAt, startAt + LIMIT);
   const next = rows.find((r) => r.next) ?? null;
@@ -96,28 +100,46 @@ export function FlightPlanCard({ plan, frame, completed }: { plan: FlightPlan; f
       {!completed && <DirectNote />}
 
       {rows.length > 0 ? (
-        <div className="scroll-x fp-table-wrap">
-          <table className="t fp-table">
-            <thead><tr><th>Waypoint</th><th>Via</th><th className="r">Altitude</th><th className="r">Leg</th><th className="r">To go</th><th className="r">Time</th><th className="r">Fuel</th><th className="r">Wind</th></tr></thead>
+        <div className="nl-wrap">
+          <table className="nl">
+            <thead><tr><th>Waypoint</th><th className="nl-via">Airway</th><th className="r">Altitude</th><th className="r nl-leg">Leg</th><th className="r">To go</th><th className="r">{live ? "ETA" : "Time"}</th><th className="r nl-fuel">Fuel</th><th className="r nl-wind">Wind</th></tr></thead>
             <tbody>
-              <tr className="fp-apt"><td><b className="data">{plan.origin.icao}</b><small>{plan.origin.runway ? `Runway ${plan.origin.runway}` : plan.origin.name ?? ""}</small></td><td /><td className="r data">{plan.origin.elevationFt != null ? `${fmt(plan.origin.elevationFt)} ft` : "—"}</td><td /><td className="r data">{fmt(total)}</td><td className="r data">0:00</td><td className="r data">{plan.fuelTakeoffKg != null ? fuel(plan.fuelTakeoffKg, fuelUnit) : "—"}</td><td /></tr>
-              {startAt > 0 && <tr className="fp-more"><td colSpan={8}><button className="link" onClick={() => setAll(true)}>{startAt} earlier waypoints</button></td></tr>}
-              {shown.map((r) => (
-                <tr key={r.i} className={r.next ? "next" : r.passed ? "passed" : ""}>
-                  <td><b className="data">{r.f.ident}</b>{r.f.name && r.f.name !== r.f.ident ? <small>{r.f.name}</small> : r.f.proc ? <small>{r.f.proc === "sid" ? "Departure" : "Arrival"}</small> : null}</td>
-                  <td className="data">{r.f.via ?? (r.f.proc === "sid" ? plan.sid : r.f.proc === "star" ? plan.star : null) ?? "DCT"}</td>
-                  <td className="r data">{fl(r.f.altitudeFt)}</td>
-                  <td className="r data">{fmt(r.leg)}</td>
-                  <td className="r data">{r.next && r.toFix !== null ? <span className="fp-live">{fmt(Math.max(0, r.toFix))} away</span> : fmt(r.toGoAfter)}</td>
-                  <td className="r data">{hm(r.f.timeS)}</td>
-                  <td className="r data">{r.f.fuelKg != null ? fuel(r.f.fuelKg, fuelUnit) : "—"}</td>
-                  <td className="r data">{r.f.windDirDeg != null && r.f.windKt != null ? `${String(Math.round(r.f.windDirDeg)).padStart(3, "0")}/${Math.round(r.f.windKt)}` : "—"}</td>
-                </tr>
-              ))}
-              {!all && startAt + LIMIT < rows.length && <tr className="fp-more"><td colSpan={8}><button className="link" onClick={() => setAll(true)}>{rows.length - startAt - LIMIT} more waypoints</button></td></tr>}
-              <tr className={`fp-apt${completed ? " passed" : ""}`}><td><b className="data">{plan.destination.icao}</b><small>{plan.destination.runway ? `Runway ${plan.destination.runway}` : plan.destination.name ?? ""}</small></td><td /><td className="r data">{plan.destination.elevationFt != null ? `${fmt(plan.destination.elevationFt)} ft` : "—"}</td><td className="r data">{fmt(total - (cum[cum.length - 2] ?? 0))}</td><td className="r data">0</td><td className="r data">{hm(plan.airTimeS)}</td><td className="r data">{fuel(plan.fuelLandingKg, fuelUnit)}</td><td /></tr>
+              <tr className="nl-apt"><td colSpan={8}><span className="nl-apt-i"><b className="data">{plan.origin.icao}</b>{plan.origin.runway && <span className="nl-rwy">RWY {plan.origin.runway}</span>}<span className="nl-apt-n">{plan.origin.name}</span></span></td></tr>
+              {startAt > 0 && <tr className="nl-more"><td colSpan={8}><button className="link" onClick={() => setAll(true)}>Show {startAt} earlier waypoints</button></td></tr>}
+              {shown.map((r, k) => {
+                const prevProc = k === 0 ? (startAt > 0 ? rows[startAt - 1]!.f.proc ?? "en" : "start") : shown[k - 1]!.f.proc ?? "en";
+                const proc = r.f.proc ?? "en";
+                const head = proc !== prevProc && !isTopFix(r.f.ident)
+                  ? <tr key={`h-${r.i}`} className={`nl-sec ${proc}`}><td colSpan={8}><span>{proc === "sid" ? "Departure" : proc === "star" ? "Arrival" : "En route"}</span>{proc === "sid" && plan.sid ? <b>{plan.sid}</b> : proc === "star" && plan.star ? <b>{plan.star}</b> : null}</td></tr>
+                  : null;
+                if (isTopFix(r.f.ident)) {
+                  const toc = /C/i.test(r.f.ident.replace(/^T\/?/i, ""));
+                  return [head, <tr key={r.i} className={`nl-top ${toc ? "toc" : "tod"}${r.passed ? " passed" : ""}${r.next ? " next" : ""}`}><td colSpan={8}><span className="nl-top-l" /><span className="nl-top-t">{toc ? "Top of climb" : "Top of descent"}{r.f.altitudeFt != null ? ` · ${fl(r.f.altitudeFt)}` : ""}{r.next && r.toFix !== null ? ` · in ${fmt(Math.max(0, r.toFix))} nm` : ""}</span><span className="nl-top-l" /></td></tr>];
+                }
+                const prog = r.next && r.toFix !== null && r.leg > 0 ? Math.max(0, Math.min(1, 1 - r.toFix / r.leg)) : null;
+                const eta = live && r.toFix !== null && r.toFix > 0 && gs > 40 && frame ? clock(frame.t + (r.toFix / gs) * 3600_000) : null;
+                return [head, (
+                  <tr key={r.i} className={`nl-row ${proc}${r.next ? " next" : ""}${r.passed ? " passed" : ""}`}>
+                    <td className="nl-id">
+                      <span className="nl-mark" aria-hidden>{r.passed ? "✓" : ""}</span>
+                      <span className="nl-idt"><b className="data">{r.f.ident}</b>{r.next && <em className="nl-next">Next</em>}{r.f.name && r.f.name !== r.f.ident ? <small>{r.f.name}</small> : null}</span>
+                      {prog !== null && <span className="nl-prog" aria-hidden><i style={{ width: `${prog * 100}%` }} /></span>}
+                    </td>
+                    <td className="data nl-via">{r.f.via ?? (proc === "sid" ? plan.sid : proc === "star" ? plan.star : null) ?? "DCT"}</td>
+                    <td className="r data nl-alt">{fl(r.f.altitudeFt)}</td>
+                    <td className="r data nl-leg">{fmt(r.leg)}</td>
+                    <td className="r data">{r.next && r.toFix !== null ? <b className="nl-live">{fmt(Math.max(0, r.toFix))}</b> : fmt(r.toGoAfter)}</td>
+                    <td className="r data">{eta ?? hm(r.f.timeS)}</td>
+                    <td className="r data nl-fuel">{r.f.fuelKg != null ? fuel(r.f.fuelKg, fuelUnit) : "—"}</td>
+                    <td className="r data nl-wind">{r.f.windDirDeg != null && r.f.windKt != null ? `${String(Math.round(r.f.windDirDeg)).padStart(3, "0")}/${Math.round(r.f.windKt)}` : "—"}</td>
+                  </tr>
+                )];
+              })}
+              {!all && startAt + LIMIT < rows.length && <tr className="nl-more"><td colSpan={8}><button className="link" onClick={() => setAll(true)}>Show {rows.length - startAt - LIMIT} more waypoints</button></td></tr>}
+              <tr className={`nl-apt end${completed ? " passed" : ""}`}><td colSpan={8}><span className="nl-apt-i"><b className="data">{plan.destination.icao}</b>{plan.destination.runway && <span className="nl-rwy">RWY {plan.destination.runway}</span>}<span className="nl-apt-n">{plan.destination.name}</span><span className="nl-apt-r data">{fuel(plan.fuelLandingKg, fuelUnit)} at landing · {hm(plan.airTimeS)}</span></span></td></tr>
             </tbody>
           </table>
+          {all && rows.length > LIMIT && <button className="btn small ghost" onClick={() => setAll(false)} style={{ marginTop: 8 }}>Show fewer</button>}
         </div>
       ) : <p className="muted">This plan has no waypoints.</p>}
 
