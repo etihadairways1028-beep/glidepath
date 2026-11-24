@@ -72,7 +72,7 @@
       <svg class="lh-map" id="lh-map" aria-hidden="true" preserveAspectRatio="xMidYMid slice"></svg>
       <div class="lh-cards" id="lh-cards" aria-hidden="true"></div>
       <div class="lh-copy">
-        <a class="lh-badge" href="#new"><span>1.3</span>Approach paths, ATIS and auto-reconnect on iPad <i aria-hidden="true">›</i></a>
+        <a class="lh-badge" href="#film"><span>1.3</span>Approach paths, ATIS and auto-reconnect on iPad <i aria-hidden="true">›</i></a>
         <h1 id="hero-title">Every flight,<br><span class="lh-grad">beautifully clear.</span></h1>
         <p class="lh-lede">Microsoft Flight Simulator on your iPad, phone or second screen. Your route, your approach, your aircraft, live, and an honest review after every landing.</p>
         <div class="lh-cta">
@@ -90,11 +90,12 @@
         <span><em>Ground speed</em><b id="lh-gs">0 kt</b></span>
         <span><em>V/S</em><b id="lh-vs">0</b></span>
         <span><em>To go</em><b id="lh-togo">148 nm</b></span>
+        <span class="lh-prof"><svg viewBox="0 0 140 34"><path d="M2,30 Q22,8 44,6 L104,6 Q120,8 138,30" class="lp-line"/><path d="M2,30 Q22,8 44,6 L104,6 Q120,8 138,30" class="lp-done" id="lh-pdone" pathLength="1"/><circle id="lh-pdot" r="3.6" cx="2" cy="30"/></svg></span>
       </div>
       <a class="lh-scroll" href="#film" aria-label="See Glidepath"><i></i></a>
     </section>
 
-    <div class="works-with reveal" aria-label="Works with">
+    <div class="works-with marquee" aria-label="Works with">
       <span class="ww-k">Works with</span>
       <span>Microsoft Flight Simulator 2020</span><span>MSFS 2024</span><span>SimBrief</span><span>VATSIM</span><span>IVAO</span><span>Navigraph</span><span>GSX Pro</span><span>Fenix</span><span>FSLabs</span><span>FlyByWire</span>
     </div>
@@ -170,38 +171,32 @@
       <video controls playsinline preload="none" poster="assets/shots/trailer-poster.webp?v=7"><source src="assets/video/glidepath-trailer.mp4?v=7" type="video/mp4"></video>
     </dialog>
 
-    <section id="what" class="what" aria-labelledby="what-title">
-      <div class="section-head reveal"><p class="kicker">What is Glidepath?</p><h2 id="what-title">One app for the whole flight.</h2>
-        <p class="sub">Glidepath reads your flight straight from Microsoft Flight Simulator and puts it on every screen you own: no add-ons in the Community folder, no juggling tabs.</p></div>
-      <div class="pillars">
-        <article class="pillar glass reveal">
-          <div class="pl-shot"><img src="assets/shots/pillar-live.webp" alt="The live flight card on approach to Manchester: the flight profile with top of climb and descent, 14 minutes to the gate, runway 23R" width="1180" height="820" loading="lazy"></div>
-          <span class="pl-k">Gate to gate, live</span>
-          <h3>Every phase, the way airlines keep it.</h3>
-          <p>Off block, take-off, top of climb, top of descent, touchdown, on block. Times against your SimBrief plan, the runway in use, and a message before every big moment.</p>
-        </article>
-        <article class="pillar glass reveal">
-          <div class="pl-shot"><img src="assets/shots/pillar-review.webp" alt="The flight review: an overall score, take-off, handling, approach and landing, what went well and what to work on" width="1180" height="820" loading="lazy"></div>
-          <span class="pl-k">An honest review</span>
-          <h3>Land, tap "Flight complete", learn.</h3>
-          <p>A score for the take-off, the handling, the approach and the landing, measured from your flight, not guessed. What went well, and the one thing to work on next time.</p>
-        </article>
-        <article class="pillar glass reveal">
-          <div class="pl-shot pl-diagram" aria-hidden="true">
+    <section id="what" class="bento-sec" aria-labelledby="what-title">
+      <div class="big-head reveal"><p class="kicker">What is Glidepath?</p><h2 id="what-title">Everything your flight needs.<br><span class="lh-grad">On every screen you own.</span></h2>
+        <p>Glidepath reads your flight straight from Microsoft Flight Simulator. No add-ons in the Community folder, no tabs to juggle.</p></div>
+      <div class="bento">
+        <article class="bx bx-hero reveal"><div class="bx-txt"><span class="bx-k">Gate to gate, live</span><h3>Every phase, the way airlines keep it.</h3><p>Off block to on block against your SimBrief times, with a heads-up before every big moment.</p></div><img src="assets/shots/film-home.webp" alt="The Home screen during a flight: logging card, live route card and key readouts" loading="lazy"></article>
+        <article class="bx bx-review reveal"><div class="bx-txt"><span class="bx-k">An honest review</span><h3>Land, then learn.</h3><p>Take-off, handling, approach and landing, scored from your real flight.</p></div><img src="assets/shots/pillar-review.webp" alt="A flight review with scores" loading="lazy"></article>
+        <article class="bx reveal"><div class="bx-txt"><span class="bx-k">Weather</span><h3>Radar and METARs.</h3></div><img src="assets/shots/bento-weather.webp" alt="Weather screen with radar and METAR" loading="lazy"></article>
+        <article class="bx reveal"><div class="bx-txt"><span class="bx-k">Charts</span><h3>Airport sheets for every field.</h3></div><img src="assets/shots/bento-charts.webp" alt="Charts screen with an airport sheet" loading="lazy"></article>
+        <article class="bx reveal"><div class="bx-txt"><span class="bx-k">Copilot</span><h3>Ask, out loud.</h3></div><img src="assets/shots/bento-copilot.webp" alt="Copilot screen" loading="lazy"></article>
+        <article class="bx bx-note reveal"><div class="bx-txt"><span class="bx-k">Lock screen</span><h3>Step away. It taps you on the shoulder.</h3></div>
+          <div class="bx-notes" aria-hidden="true">
+            <div><img src="assets/mark.svg" alt="" width="22" height="22"><p><b>Top of descent</b>Time to start down for EGCC.</p><small>now</small></div>
+            <div><img src="assets/mark.svg" alt="" width="22" height="22"><p><b>Landed at EGCC</b>140 fpm · grade A · runway 23R</p><small>12m</small></div>
+            <div><img src="assets/mark.svg" alt="" width="22" height="22"><p><b>Your flight review is ready</b>See your scores and one thing to work on.</p><small>9m</small></div>
+          </div></article>
+        <article class="bx reveal"><div class="bx-txt"><span class="bx-k">Checklists</span><h3>Tick through every phase.</h3></div><img src="assets/shots/bento-checklists.webp" alt="Checklists screen" loading="lazy"></article>
+        <article class="bx reveal"><div class="bx-txt"><span class="bx-k">Career</span><h3>Ranks, type ratings, badges.</h3></div><img src="assets/shots/bento-career.webp" alt="Career screen" loading="lazy"></article>
+        <article class="bx bx-wide reveal"><div class="bx-txt"><span class="bx-k">Every screen, any network</span><h3>Pair once. It just connects.</h3><p>iPad, phone or a second PC, on any Wi-Fi or mobile data. Add it to your Home Screen and it opens already connected.</p></div><div class="pl-shot pl-diagram bx-diagram" aria-hidden="true">
             <span class="pd-node"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg><small>Your PC</small></span>
             <span class="pd-line"><i></i></span>
             <span class="pd-node pd-acct"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.8 3.9 6 3.9 9.5s-1.3 6.7-3.9 9.5c-2.6-2.8-3.9-6-3.9-9.5s1.3-6.7 3.9-9.5z"/></svg><small>Your account</small></span>
             <span class="pd-line"><i></i></span>
             <span class="pd-node"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="3"/><path d="M11 18h2"/></svg><small>iPad or phone</small></span>
-          </div>
-          <span class="pl-k">Every screen, any network</span>
-          <h3>Sign in once. It just connects.</h3>
-          <p>Sign in on the PC and on your iPad or phone. They find each other on any Wi-Fi, even mobile data. On the same Wi-Fi it goes direct, and your EFB and GSX screens open too.</p>
-        </article>
+          </div></article>
       </div>
     </section>
-
-    <p class="sources reveal">Built on open data: <span>OurAirports</span><span>SimBrief</span><span>VATSIM</span><span>IVAO</span><span>aviationweather.gov</span><span>OpenStreetMap</span><span>Esri World Imagery</span><span>RainViewer</span></p>
 
     <section id="ai" class="ai-sec" aria-labelledby="ai-title">
       <div class="ai-grid">
@@ -241,53 +236,7 @@
     </div>
 
 
-    <!-- NEW IN 1.0 -->
-    <section id="new" class="new10" aria-labelledby="new-title">
-      <div class="section-head reveal"><p class="kicker">Glidepath 1.0</p><h2 id="new-title">The details that make a flight.</h2>
-        <p class="sub">Everything below is in the app today, free, on whatever screen you fly with.</p></div>
-      <div class="n10-grid">
-        <article class="n10 n10-wide glass reveal">
-          <div class="n10-vis n10-lock" aria-hidden="true">
-            <div class="n10-note"><img src="assets/mark.svg" alt="" width="22" height="22"><div><b>Top of descent</b><span>Time to start down for EGCC. Brief the arrival.</span></div><small>now</small></div>
-            <div class="n10-note"><img src="assets/mark.svg" alt="" width="22" height="22"><div><b>Landed at EGCC</b><span>140 fpm · grade A+ · runway 23R</span></div><small>12m</small></div>
-            <div class="n10-note"><img src="assets/mark.svg" alt="" width="22" height="22"><div><b>Your flight review is ready</b><span>EGLL → EGCC: see your scores and one thing to work on.</span></div><small>9m</small></div>
-          </div>
-          <div class="n10-txt"><span class="pl-k">Lock screen notifications</span><h3>Step away. Glidepath taps you on the shoulder.</h3>
-            <p>Top of descent, touchdown and your review arrive on your phone's lock screen, your iPad or your PC, even with the app closed. Turn them on in Settings; on iPhone and iPad, add Glidepath to your Home Screen first.</p></div>
-        </article>
-        <article class="n10 glass reveal">
-          <div class="n10-vis" aria-hidden="true"><svg viewBox="0 0 300 110"><defs><linearGradient id="n10a" x1="0" x2="1"><stop offset="0" stop-color="#34C759"/><stop offset=".45" stop-color="#0A84FF"/><stop offset="1" stop-color="#BF5AF2"/></linearGradient></defs><path d="M10 96 C60 92 70 30 120 24 S220 26 250 60 S285 92 292 96" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="2" stroke-dasharray="3 5"/><path d="M10 96 C60 92 70 30 120 24 S190 24 205 34" fill="none" stroke="url(#n10a)" stroke-width="4" stroke-linecap="round"/><circle cx="205" cy="34" r="6" fill="#fff"/><text x="120" y="14" fill="#93A0BA" font-size="11" text-anchor="middle">T/C 09:41</text><text x="250" y="48" fill="#93A0BA" font-size="11" text-anchor="middle">T/D 10:12</text></svg></div>
-          <span class="pl-k">Flight profile and trail</span><h3>See the whole climb, cruise and descent.</h3>
-          <p>The live card draws your flight with top of climb and descent and their times. On the map, your trail changes colour with altitude.</p>
-        </article>
-        <article class="n10 glass reveal">
-          <div class="n10-vis" aria-hidden="true"><svg viewBox="0 0 300 110"><circle cx="150" cy="58" r="8" fill="none" stroke="#EAF0FB" stroke-width="2"/><path d="M150 58 L60 20" stroke="#34C759" stroke-width="3" stroke-dasharray="1 0"/><path d="M60 20 L18 40" stroke="#34C759" stroke-width="3"/><path d="M150 58 L250 30 L285 70" stroke="#FF9F0A" stroke-width="3" fill="none"/><text x="22" y="66" fill="#34C759" font-size="12">BPK7G</text><text x="222" y="88" fill="#FF9F0A" font-size="12">ROSU1C</text></svg></div>
-          <span class="pl-k">Your SimBrief plan, drawn</span><h3>SID and STAR on the map, picked for you.</h3>
-          <p>Import your SimBrief plan and its departure and arrival are chosen from the sim's own data and drawn on the live map.</p>
-        </article>
-        <article class="n10 glass reveal">
-          <div class="n10-vis n10-types" aria-hidden="true"><span>A320</span><span>A321</span><span>737</span><span>A330</span><span>A350</span><span>777</span><span>787</span><span>CRJ</span><span>ATR</span><span>C172</span></div>
-          <span class="pl-k">More aircraft</span><h3>References that fit what you fly.</h3>
-          <p>Take-off and landing grading uses proper numbers for airliners, wide-bodies, regional jets, turboprops and light aircraft, so a 777 isn't judged like a Cessna.</p>
-        </article>
-        <article class="n10 glass reveal">
-          <div class="n10-vis n10-radar" aria-hidden="true"><svg viewBox="0 0 300 110"><defs><radialGradient id="rdA"><stop offset="0" stop-color="#FF453A" stop-opacity=".9"/><stop offset=".35" stop-color="#FFD60A" stop-opacity=".75"/><stop offset=".7" stop-color="#30D158" stop-opacity=".45"/><stop offset="1" stop-color="#30D158" stop-opacity="0"/></radialGradient></defs><ellipse class="rd-cell" cx="110" cy="52" rx="70" ry="38" fill="url(#rdA)"/><ellipse class="rd-cell rd-2" cx="220" cy="66" rx="46" ry="26" fill="url(#rdA)" opacity=".7"/><g stroke="#EAF0FB" stroke-width="3" stroke-linecap="round"><path d="M40 92 L120 30"/><path d="M60 40 L150 88"/></g><circle cx="262" cy="24" r="5" fill="#30D158"/><text x="248" y="28" fill="#93A0BA" font-size="11" text-anchor="end">VFR</text></svg></div>
-          <span class="pl-k">Radar and airports</span><h3>Weather and the field, before you get there.</h3>
-          <p>An animated rain radar with METAR dots, and an airport sheet for every field: runways, frequencies and the sim's procedures.</p>
-        </article>
-        <article class="n10 glass reveal">
-          <div class="n10-vis n10-clock" aria-hidden="true"><div><small>UTC</small><b class="data">14:27:09</b></div><div><small>Local · UTC+1</small><b class="data">15:27</b></div></div>
-          <span class="pl-k">Made for the iPad</span><h3>Zulu time, local time, everything in reach.</h3>
-          <p>Both clocks on every screen, layouts that fit iPad in either orientation, and buttons that answer every press.</p>
-        </article>
-        <article class="n10 glass reveal">
-          <div class="n10-vis n10-sync" aria-hidden="true"><span>iPad</span><i></i><span>Account</span><i></i><span>Phone</span></div>
-          <span class="pl-k">Settings that follow you</span><h3>Change it once, it's changed everywhere.</h3>
-          <p>Signed in, your settings and picked procedures sync between your iPad, phone and PC within seconds.</p>
-        </article>
-      </div>
-    </section>
-
+    <span id="new"></span>
     <!-- SET UP -->
     <section class="how" aria-labelledby="how-title">
       <div class="section-head reveal">

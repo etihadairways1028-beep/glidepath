@@ -78,6 +78,13 @@
     };
 
     const hud = { phase: document.getElementById("lh-phase"), alt: document.getElementById("lh-alt"), gs: document.getElementById("lh-gs"), vs: document.getElementById("lh-vs"), togo: document.getElementById("lh-togo") };
+    const pdone = document.getElementById("lh-pdone"), pdot = document.getElementById("lh-pdot");
+    // The map leans a little toward the pointer.
+    if (!reduced && matchMedia("(hover: hover)").matches) addEventListener("pointermove", (e) => {
+      const x = e.clientX / innerWidth - .5, y = e.clientY / innerHeight - .5;
+      svg.style.transform = `perspective(1600px) rotateX(${(-y * 4).toFixed(2)}deg) rotateY(${(x * 5).toFixed(2)}deg) scale(1.04)`;
+      cardsBox.style.transform = `translate(${(x * -10).toFixed(1)}px, ${(y * -8).toFixed(1)}px)`;
+    }, { passive: true });
     const PH = { PREFLIGHT: "Gate", PUSHBACK: "Pushback", TAXI_OUT: "Taxi", TAKEOFF: "Takeoff", CLIMB: "Climb", CRUISE: "Cruise", DESCENT: "Descent", APPROACH: "Approach", LANDING: "Landing", TAXI_IN: "Taxi in", PARKED: "Parked", COMPLETED: "Parked" };
     const fmt = (n) => Math.round(n).toLocaleString("en-US");
 
@@ -134,12 +141,17 @@
           if (on || n.classList.contains("was")) { let [x, y] = where(c, pl); x = Math.max(6, Math.min(x, W - (n.offsetWidth || 220) - 30)); n.style.transform = `translate(${x.toFixed(0)}px, ${y.toFixed(0)}px)`; }
           n.classList.toggle("was", on);
         });
+        if (pdone) { pdone.style.strokeDashoffset = String(1 - frac); pdot.setAttribute("cx", (2 + 136 * frac).toFixed(1)); pdot.setAttribute("cy", (30 - 24 * clamp(f[2] / 24000)).toFixed(1)); }
         hud.phase.textContent = PH[f[6]] || f[6]; hud.alt.textContent = `${fmt(f[2])} ft`; hud.gs.textContent = `${fmt(f[3])} kt`;
         hud.vs.textContent = f[4] > 50 ? `+${fmt(f[4])}` : fmt(f[4]); hud.togo.textContent = `${Math.round(f[10] ?? 0)} nm`;
       };
       requestAnimationFrame(frame);
     }).catch(() => { layout(); });
   }
+
+  /* Works-with strip: a slow endless marquee */
+  const mq = document.querySelector(".works-with.marquee");
+  if (mq && !reduced) { const track = document.createElement("div"); track.className = "mq-track"; [...mq.children].forEach((c) => track.appendChild(c)); track.innerHTML += track.innerHTML; mq.appendChild(track); }
 
   /* ---------------------------- SCROLL FILM ---------------------------- */
   const film = document.querySelector(".film"), pad = document.getElementById("film-pad");
