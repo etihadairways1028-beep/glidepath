@@ -3,6 +3,7 @@
  * its airway, STAR and arrival runway, plus the numbers you brief. Also the
  * SimBrief import, so you never need Settings to load a plan.
  */
+import { FlightSetup, type RunwayLine } from "./FlightSetup";
 import { useMemo, useState } from "react";
 import type { FlightPlan, TelemetryFrame } from "@glidepath/protocol";
 import { distanceNm, routeProgress } from "@glidepath/flight-engine";
@@ -73,7 +74,9 @@ export function RouteChips({ plan, nextIdx = null, onPick }: { plan: FlightPlan;
 }
 
 /** The flight plan panel on the live map. */
-export function MapRoutePanel({ plan, nextFix, onPick, onClose, onFit }: { plan: FlightPlan; nextFix: number | null; onPick: (i: number) => void; onClose: () => void; onFit: () => void }) {
+export function MapRoutePanel({ plan, nextFix, onPick, onClose, onFit, onLines, onFocus, onFitBox }: { plan: FlightPlan; nextFix: number | null; onPick: (i: number) => void; onClose: () => void; onFit: () => void; onLines?: (l: RunwayLine[]) => void; onFocus?: (lat: number, lon: number, zoom: number) => void; onFitBox?: (box: [number, number, number, number]) => void }) {
+  const [tab, setTab] = useState<"setup" | "fixes">(() => { try { return (localStorage.getItem("glidepath.routeTab") as "setup" | "fixes") || "setup"; } catch { return "setup"; } });
+  const pick = (t: "setup" | "fixes") => { setTab(t); try { localStorage.setItem("glidepath.routeTab", t); } catch { /* private */ } };
   const ch = loadChoice(plan.origin.icao, plan.destination.icao);
   const depRwy = ch.depRunway ?? plan.origin.runway, arrRwy = ch.arrRunway ?? plan.destination.runway;
   const sid = ch.sid === "" ? null : ch.sid ?? plan.sid ?? null, star = ch.star === "" ? null : ch.star ?? plan.star ?? null;
@@ -88,14 +91,20 @@ export function MapRoutePanel({ plan, nextFix, onPick, onClose, onFit }: { plan:
         </div>
         <button className="btn small" aria-label="Close" onClick={onClose}><span style={{ width: 16, height: 16 }}>{Icon.close()}</span></button>
       </div>
-      <div className="mr-ends">
-        <span className="rt-tag rwy">RWY {depRwy ?? "—"}</span><span className="rt-tag sid">{sid ?? "No SID"}</span>
-        <span className="mr-arrow" aria-hidden>→</span>
-        <span className="rt-tag star">{star ?? "No STAR"}</span><span className="rt-tag rwy">RWY {arrRwy ?? "—"}</span>
+      <div className="seg mr-tabs" role="tablist" aria-label="Flight plan view">
+        <button role="tab" aria-selected={tab === "setup"} className={tab === "setup" ? "on" : ""} onClick={() => pick("setup")}>Runways and procedures</button>
+        <button role="tab" aria-selected={tab === "fixes"} className={tab === "fixes" ? "on" : ""} onClick={() => pick("fixes")}>Waypoints</button>
       </div>
-      <p className="mr-sub">{fmt(dist)} nm · {fl(plan.cruiseAltitudeFt)} · {n} waypoints · tap one to go there</p>
-      <div className="mr-list"><RouteChips plan={plan} nextIdx={nextFix} onPick={onPick} /></div>
-      <DirectNote />
+      {tab === "setup" ? <FlightSetup plan={plan} onLines={onLines} onFocus={onFocus} onFit={onFitBox} onWaypoints={() => pick("fixes")} /> : (<>
+      <div className="mr-ends">
+          <span className="rt-tag rwy">RWY {depRwy ?? "—"}</span><span className="rt-tag sid">{sid ?? "No SID"}</span>
+          <span className="mr-arrow" aria-hidden>→</span>
+          <span className="rt-tag star">{star ?? "No STAR"}</span><span className="rt-tag rwy">RWY {arrRwy ?? "—"}</span>
+        </div>
+        <p className="mr-sub">{fmt(dist)} nm · {fl(plan.cruiseAltitudeFt)} · {n} waypoints · tap one to go there</p>
+        <div className="mr-list"><RouteChips plan={plan} nextIdx={nextFix} onPick={onPick} /></div>
+        <DirectNote />
+      </>)}
       <div className="row wrap" style={{ gap: 8 }}>
         <button className="btn small primary" onClick={onFit}>Show whole route</button>
         <a className="btn small" href="#/flight">Navlog</a>

@@ -100,6 +100,18 @@ function LogbookWelcome({ demo }: { demo: boolean }) {
   );
 }
 
+const SIM_BADGE: Partial<Record<string, string>> = { msfs2020: "MSFS 2020", msfs2024: "MSFS 2024", xplane11: "X-Plane 11", xplane12: "X-Plane 12" };
+const hhmm = (ms: number) => { const m = Math.max(0, Math.round(ms / 60000)); return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
+/** "You've flown 82 flights and travelled 74.7k nm. That's 3.5 trips around the world." */
+function totalsLine(done: FlightSummary[]): string {
+  const nm = done.reduce((a, f) => a + (f.distanceNm ?? 0), 0);
+  const hrs = done.reduce((a, f) => a + Math.max(0, (f.onBlockAt ?? f.endedAt ?? f.startedAt) - (f.offBlockAt ?? f.startedAt)), 0) / 3600000;
+  const nmTxt = nm >= 10000 ? `${(nm / 1000).toFixed(1)}k` : Math.round(nm).toLocaleString();
+  const trips = nm / 21639;
+  const world = trips >= 0.1 ? ` That's ${trips >= 10 ? Math.round(trips) : trips.toFixed(1)} ${trips >= 0.95 && trips < 1.05 ? "trip" : "trips"} around the world.` : "";
+  return `You've flown ${done.length} ${done.length === 1 ? "flight" : "flights"} and travelled ${nmTxt} nautical miles in ${hrs >= 10 ? Math.round(hrs) : hrs.toFixed(1)} hours.${world}`;
+}
+
 export function Logbook() {
   const { flights, error, fromCloud } = useFlights();
   const mode = useApp((s) => s.mode);
@@ -133,6 +145,10 @@ export function Logbook() {
       {(mode !== "none" || fromCloud) && flights && done.length === 0 && <><LogbookWelcome demo={mode === "demo"} /><Badges flights={flights} /></>}
       {(mode !== "none" || fromCloud) && flights && done.length > 0 && <><Career flights={flights} /><LandingHistory flights={flights} /><Badges flights={flights} /></>}
       <section className="glass pad">
+        <div className="lbc-head">
+          <h2 className="h2">Your flights</h2>
+          {done.length > 0 && <p>{totalsLine(done)}</p>}
+        </div>
         <div className="row wrap" style={{ marginBottom: 10 }}>
           <input className="input" style={{ flex: "1 1 220px", maxWidth: 360 }} placeholder="Search airport, aircraft or callsign" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search flights" />
           <div className="seg" role="group" aria-label="Status">{(["all", "completed", "incomplete"] as const).map((s) => <button key={s} className={status === s ? "on" : ""} onClick={() => setStatus(s)}>{s[0]!.toUpperCase() + s.slice(1)}</button>)}</div>
@@ -141,20 +157,28 @@ export function Logbook() {
         {flights === null && mode === "bridge" ? <div className="skeleton" style={{ height: 120 }} /> : list.length === 0 ? (
           <div className="empty"><div className="h2">{q ? "No flights match" : "No flights yet"}</div><p className="muted">{q ? "Try another airport code or aircraft." : "Fly gate to gate and the flight is logged by itself."}</p></div>
         ) : (
-          <div className="list">
+          <div className="lbc-list">
             {list.slice(0, shown).map((f) => {
               const l = f.landings.at(-1);
+              const blockMs = (f.onBlockAt ?? f.endedAt ?? f.startedAt) - (f.offBlockAt ?? f.startedAt);
+              const when = new Date(f.offBlockAt ?? f.startedAt);
+              const sim = SIM_BADGE[f.simulator.id] ?? null;
               return (
-                <a className="li" key={f.id} href={`#/logbook/${f.id}`}>
-                  <span>
-                    <span className="data" style={{ fontWeight: 700, fontSize: 16 }}>{f.departureIcao ?? "····"} → {f.arrivalIcao ?? "····"}</span>
-                    <span className="muted" style={{ display: "block", fontSize: 13 }}>
-                      {[new Date(f.startedAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }), f.aircraft?.icaoType ?? f.aircraft?.title ?? "Aircraft", `${fmt(f.distanceNm)} nm`, dur((f.onBlockAt ?? f.endedAt ?? f.startedAt) - (f.offBlockAt ?? f.startedAt)), f.status === "incomplete" ? "incomplete" : null, f.simulator.source === "replay" ? "demo" : null].filter(Boolean).join(", ")}
-                    </span>
+                <a className="lbc" key={f.id} href={`#/logbook/${f.id}`}>
+                  <span className="lbc-top">
+                    <b className="lbc-cs">{f.callsign ?? `${f.departureIcao ?? "····"} → ${f.arrivalIcao ?? "····"}`}</b>
+                    <span className="lbc-when">{when.toLocaleDateString(undefined, { day: "numeric", month: "short", ...(when.getFullYear() === new Date().getFullYear() ? {} : { year: "numeric" }) })} · {when.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}</span>
                   </span>
-                  <span className="row" style={{ gap: 12 }}>
-                    {l && l.touchdownVsFpm !== null ? <span className="li-land"><b>{touchdownWords(l.touchdownVsFpm, l.profileId).word}</b><span className="data">{fmt(Math.abs(l.touchdownVsFpm))} fpm</span></span> : null}
-                    {l ? <Grade grade={l.grade} score={l.score} /> : <span className="faint" style={{ fontSize: 12 }}>no landing</span>}
+                  <span className="lbc-mid">
+                    <span className="lbc-route data">{f.callsign ? <>{f.departureIcao ?? "····"} <span aria-hidden>→</span> {f.arrivalIcao ?? "····"}</> : `${fmt(f.distanceNm)} nm`}</span>
+                    <span className="lbc-dur data">{hhmm(blockMs)}</span>
+                    {f.status === "incomplete" ? <span className="lbc-st warn"><i />Incomplete</span> : l ? <span className={`lbc-st g-${l.grade.toLowerCase()}`}><i /><span className="lbc-sw">{touchdownWords(l.touchdownVsFpm ?? 0, l.profileId).word}</span></span> : <span className="lbc-st"><i />No landing</span>}
+                    {l && l.touchdownVsFpm !== null && <span className="lbc-fpm data">{l.touchdownVsFpm > 0 ? "+" : "−"}{fmt(Math.abs(l.touchdownVsFpm))} fpm</span>}
+                  </span>
+                  <span className="lbc-bot">
+                    <span className="lbc-ac">{[f.aircraft?.icaoType ?? f.aircraft?.title ?? "Aircraft", f.aircraft?.registration].filter(Boolean).join(" · ")}{f.callsign ? ` · ${fmt(f.distanceNm)} nm` : ""}</span>
+                    {f.simulator.source === "replay" ? <span className="lbc-sim">Demo</span> : sim ? <span className="lbc-sim">{sim}</span> : null}
+                    {l && <Grade grade={l.grade} score={l.score} />}
                   </span>
                 </a>
               );

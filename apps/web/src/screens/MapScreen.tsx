@@ -1,5 +1,6 @@
 import { MiniApproach } from "./Approach";
 import { MapRoutePanel, SimbriefImport } from "../components/RouteOverview";
+import type { RunwayLine } from "../components/FlightSetup";
 import { isThin, usePlanNote } from "../data/plan";
 import { startDemo } from "../data/demo";
 import { useMemo, useState } from "react";
@@ -33,7 +34,9 @@ export function MapScreen() {
   const [fitRoute, setFitRoute] = useState(0);
   const thin = isThin(L.plan);
   const pnote = usePlanNote();
-  const [routeOpen, setRouteOpen] = useState(false);
+  const [routeOpen, setRouteOpen] = useState(() => { try { const o = localStorage.getItem("glidepath.openRoute") === "1"; localStorage.removeItem("glidepath.openRoute"); return o; } catch { return false; } });
+  const [rwLines, setRwLines] = useState<RunwayLine[]>([]);
+  const [fitBox, setFitBox] = useState<{ box: [number, number, number, number]; key: number } | null>(null);
   // A newly loaded plan: show all of it once.
   const planKey = L.plan ? `${L.plan.origin.icao}-${L.plan.destination.icao}-${L.plan.fetchedAt}` : "";
   const seenPlan = useRef(planKey);
@@ -139,7 +142,7 @@ export function MapScreen() {
 
   return (
     <div className="map-wrap">
-      <MapView trail={trail} plan={L.plan} aircraft={aircraft} airports={airports} traffic={traffic} atc={atc} centres={centres} metars={metars} radarTiles={s.showRadar ? radar.data ?? null : null} onSelectAtc={(c) => { setAtcSel(c); setSel(null); setWxSel(null); }} onSelectMetar={(w) => { setWxSel(w); setSel(null); setAtcSel(null); }} onView={(bbox, zoom) => setView({ bbox, zoom })} follow={follow} threeD={s.map3d} stands={stands} agl={f?.position.altAglFt ?? null} onGround={!!f?.position.onGround} onSelectTraffic={(p) => { setSel(p); if (p) { setAtcSel(null); setWxSel(null); } }} onUserMove={() => setFollow(false)} selTrack={selInfo?.track ?? null} flyTo={fly} fitRoute={fitRoute} holds={holds} nextFix={nextFix} onSelectFix={(i) => { setFixSel(i); setSel(null); setAtcSel(null); setWxSel(null); }} />
+      <MapView trail={trail} plan={L.plan} aircraft={aircraft} airports={airports} traffic={traffic} atc={atc} centres={centres} metars={metars} radarTiles={s.showRadar ? radar.data ?? null : null} onSelectAtc={(c) => { setAtcSel(c); setSel(null); setWxSel(null); }} onSelectMetar={(w) => { setWxSel(w); setSel(null); setAtcSel(null); }} onView={(bbox, zoom) => setView({ bbox, zoom })} follow={follow} threeD={s.map3d} stands={stands} agl={f?.position.altAglFt ?? null} onGround={!!f?.position.onGround} onSelectTraffic={(p) => { setSel(p); if (p) { setAtcSel(null); setWxSel(null); } }} onUserMove={() => setFollow(false)} selTrack={selInfo?.track ?? null} flyTo={fly} fitRoute={fitRoute} holds={holds} nextFix={nextFix} runwayLines={routeOpen ? rwLines : []} fitBox={fitBox} onSelectFix={(i) => { setFixSel(i); setSel(null); setAtcSel(null); setWxSel(null); }} />
       {!sel && !atcSel && !wxSel && fixSel === null && <div className="map-ap"><MiniApproach /></div>}
       {/* The flight panel steps aside while a traffic, ATC or weather card is open, so the two never overlap. */}
       <div className={`map-hud glass strong pad${selLive || atcSel || wxSel ? " behind" : ""}`} style={{ padding: "14px 16px" }}>
@@ -222,7 +225,7 @@ export function MapScreen() {
         </div>
       )}
       {routeOpen && L.plan && !sel && !atcSel && !wxSel && fixSel === null && (
-        <MapRoutePanel plan={L.plan} nextFix={nextFix} onClose={() => setRouteOpen(false)} onFit={showRoute}
+        <MapRoutePanel plan={L.plan} nextFix={nextFix} onClose={() => setRouteOpen(false)} onFit={showRoute} onLines={setRwLines} onFitBox={(box) => { setFollow(false); setFitBox({ box, key: Date.now() }); }} onFocus={(lat, lon, zoom) => { setFollow(false); setFly({ lon, lat, zoom, key: Date.now() }); }}
           onPick={(i) => { const fx = L.plan!.fixes[i]; if (!fx) return; setFixSel(i); setFollow(false); setFly({ lon: fx.lon, lat: fx.lat, zoom: 8.5, key: Date.now() }); }} />
       )}
       {(!L.plan || thin) && mode !== "demo" && !sel && !atcSel && !wxSel && !routeOpen && (

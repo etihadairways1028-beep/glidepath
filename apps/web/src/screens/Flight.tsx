@@ -1,3 +1,4 @@
+import { FlightSetup } from "../components/FlightSetup";
 import { Procedures } from "../components/Procedures";
 import { FlightPlanCard, LoadPlanCard } from "../components/FlightPlanCard";
 import { ShareLive } from "../components/ShareLive";
@@ -51,7 +52,12 @@ export function FlightScreen() {
           <p className="fh-meta data" style={{ fontSize: 15, color: "var(--ink)", marginTop: 10 }}>{(L.flight.departureIcao ?? L.plan?.origin.icao ?? "····") + "  →  " + (L.flight.arrivalIcao ?? L.plan?.destination.icao ?? "····")}</p>
       </AircraftHero>
       <ShareLive />
-      <Procedures />
+      {L.plan ? (
+        <section className="glass pad fs-page">
+          <div className="between wrap" style={{ marginBottom: 8 }}><h2 className="h2" style={{ margin: 0 }}>Runways and procedures</h2><a className="btn small" href="#/map" onClick={() => { try { localStorage.setItem("glidepath.routeTab", "setup"); localStorage.setItem("glidepath.openRoute", "1"); } catch { /* private */ } }}>See on the map</a></div>
+          <FlightSetup plan={L.plan} />
+        </section>
+      ) : <Procedures />}
 
       <div className="grid cols-4">
         <Tile k="Altitude" v={fmt(f.position.altMslFt)} unit="ft" />

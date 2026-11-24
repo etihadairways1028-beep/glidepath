@@ -9,6 +9,7 @@
  *  - Offline: bundled Natural Earth coastlines if neither can load.
  *  Own aircraft and airport labels are HTML markers, so they never depend on remote fonts.
  */
+import type { RunwayLine } from "./FlightSetup";
 import { useEffect, useRef, useState } from "react";
 import { holdShape, type Hold } from "../data/hold";
 import maplibregl, { type GeoJSONSource, type Map as MLMap, type StyleSpecification } from "maplibre-gl";
@@ -181,9 +182,13 @@ export interface MapViewProps {
   onSelectFix?: (index: number) => void;
   /** Index of the plan waypoint you're flying to, for the active leg. */
   nextFix?: number | null;
+  /** Runway final approach courses and take-off directions (flight setup). */
+  runwayLines?: RunwayLine[];
+  /** Fit these bounds into the part of the map not covered by the side panel (change `key` to fit again). */
+  fitBox?: { box: [number, number, number, number]; key: number } | null;
 }
 
-export function MapView({ trail, plan, aircraft, airports = [], traffic = [], atc = [], metars = [], radarTiles = null, centres = [], radarFrames = null, radarIndex = 0, radarOpacity = 0.7, onSelectAtc, onSelectMetar, onView, follow, center, zoom: startZoom, threeD = false, stands = [], agl = null, onGround = false, onSelectTraffic, onUserMove, interactive = true, history, selTrack, flyTo, holds = [], onSelectFix, nextFix = null, fitRoute = 0 }: MapViewProps) {
+export function MapView({ trail, plan, aircraft, airports = [], traffic = [], atc = [], metars = [], radarTiles = null, centres = [], radarFrames = null, radarIndex = 0, radarOpacity = 0.7, onSelectAtc, onSelectMetar, onView, follow, center, zoom: startZoom, threeD = false, stands = [], agl = null, onGround = false, onSelectTraffic, onUserMove, interactive = true, history, selTrack, flyTo, holds = [], onSelectFix, nextFix = null, fitRoute = 0, runwayLines = [], fitBox = null }: MapViewProps) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<MLMap | null>(null);
   const [ready, setReady] = useState(false);
@@ -270,6 +275,10 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     m.addLayer({ id: "route", type: "line", source: "route", layout: { "line-cap": "round" }, paint: { "line-color": "#E05CFF", "line-width": 2.6, "line-opacity": 0.95 } });
     // The plan's SID (green) and STAR (orange), from SimBrief's waypoints, with their names along the line.
     m.addSource("procs", { type: "geojson", data: (data.current.procs ?? empty()) as ReturnType<typeof empty> });
+    m.addSource("rwlines", { type: "geojson", data: empty() });
+    m.addLayer({ id: "rwlines-casing", type: "line", source: "rwlines", layout: { "line-cap": "round" }, paint: { "line-color": light ? "rgba(255,255,255,.95)" : "rgba(0,0,0,.55)", "line-width": ["match", ["get", "state"], "hot", 8, "set", 7, 5] } });
+    m.addLayer({ id: "rwlines", type: "line", source: "rwlines", layout: { "line-cap": "round" }, paint: { "line-color": ["match", ["get", "kind"], "dep", "#34C759", light ? "#E0A800" : "#FFD60A"], "line-width": ["match", ["get", "state"], "hot", 5, "set", 4, 2.6], "line-opacity": ["match", ["get", "state"], "preview", 0.6, 1] } });
+    m.addLayer({ id: "rwlines-label", type: "symbol", source: "rwlines", minzoom: 7.5, layout: { "symbol-placement": "line-center", "text-field": ["get", "label"], "text-font": ["Noto Sans Bold"], "text-size": ["match", ["get", "state"], "hot", 13, 11.5], "text-allow-overlap": false }, paint: { "text-color": ["match", ["get", "kind"], "dep", "#7CF29A", light ? "#8A6500" : "#FFE27A"], "text-halo-color": light ? "rgba(255,255,255,.95)" : "rgba(5,8,14,.9)", "text-halo-width": 1.8 } });
     m.addLayer({ id: "procs-casing", type: "line", source: "procs", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": light ? "rgba(255,255,255,.95)" : "rgba(0,0,0,.5)", "line-width": 6.5 } });
     m.addLayer({ id: "procs", type: "line", source: "procs", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": ["match", ["get", "kind"], "sid", "#34C759", "#FF9F0A"], "line-width": 3.6, "line-opacity": 0.95 } });
     m.addLayer({ id: "procs-label", type: "symbol", source: "procs", minzoom: 6, layout: { "symbol-placement": "line", "text-field": ["get", "name"], "text-font": ["Noto Sans Bold"], "text-size": 12, "text-letter-spacing": 0.06, "symbol-spacing": 320 }, paint: { "text-color": ["match", ["get", "kind"], "sid", "#7CF29A", "#FFC266"], "text-halo-color": light ? "rgba(255,255,255,.95)" : "rgba(5,8,14,.9)", "text-halo-width": 1.8 } });
@@ -430,6 +439,24 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     const narrow = m.getContainer().clientWidth < 700;
     m.fitBounds(b, { padding: narrow ? { top: 90, bottom: 230, left: 30, right: 30 } : { top: 90, bottom: 120, left: 70, right: 420 }, duration: 900, maxZoom: 10, pitch: 0, bearing: 0 });
   }, [fitRoute, ready]);
+
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !ready || !fitBox) return;
+    const el = m.getContainer(), wide = el.clientWidth > 900;
+    const pad = wide ? { top: 90, bottom: 90, left: 60, right: Math.min(540, el.clientWidth * 0.5) } : { top: 70, bottom: Math.round(el.clientHeight * 0.6), left: 30, right: 70 };
+    const [w, s2, e, n] = fitBox.box;
+    try { m.fitBounds([[w, s2], [e, n]], { padding: pad, maxZoom: 11.5, duration: 700 }); } catch { /* too small to fit */ }
+  }, [fitBox, ready]);
+
+  // Runway lines from the flight setup.
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !ready) return;
+    const order = { preview: 0, set: 1, hot: 2 } as const;
+    const feats = [...runwayLines].sort((a, b) => order[a.state] - order[b.state]).map((l) => ({ type: "Feature" as const, properties: { kind: l.kind, state: l.state, label: l.label }, geometry: { type: "LineString" as const, coordinates: l.coords } }));
+    (m.getSource("rwlines") as GeoJSONSource | undefined)?.setData({ type: "FeatureCollection", features: feats } as never);
+  }, [ready, runwayLines]);
 
   // Route (plan): only when the plan changes.
   useEffect(() => {

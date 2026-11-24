@@ -6,12 +6,14 @@
 import { useEffect, useState } from "react";
 import { Icon } from "./ui";
 
-export const APP_VERSION = "1.3.0";
+export const APP_VERSION = "1.3.1";
 const KEY = "glidepath.seenVersion";
 
 export type WnIcon = "map" | "flight" | "remote" | "book" | "gear" | "spark" | "download" | "search" | "tower" | "cloud" | "layers" | "target" | "headset";
 export interface WnItem { v: string; ic: WnIcon; t: string; d: string }
 export const WHATS_NEW: WnItem[] = [
+  { v: "1.3.1", ic: "target", t: "Pick your SID, STAR and approach like a chart app", d: "Open the flight plan on the map: a route bar, Origin and Destination cards with runway wind, and lists of departures, arrivals and approaches by runway with transitions. Point at a runway to see its final approach course on the map; Glidepath warns you when a procedure doesn't fit the runway." },
+  { v: "1.3.1", ic: "book", t: "Logbook cards", d: "Your totals at the top, and each flight as a card: callsign, route, block time, landing rate, aircraft, registration and simulator." },
   { v: "1.3.0", ic: "spark", t: "A new look for every page", d: "Every button, switch, field, card and list was rebuilt as one design: calmer glass, a single blue accent, clearer text and the same controls everywhere, in dark and light." },
   { v: "1.3.0", ic: "map", t: "A real navlog", d: "The flight plan is grouped into Departure, En route and Arrival with your SID and STAR, top of climb and descent between the waypoints, the next waypoint highlighted with a progress bar, ticks on passed ones and live ETAs." },
   { v: "1.2.0", ic: "book", t: "Every flight reaches your logbook", d: "Home shows what's being logged, with block and flight time as you go. After landing, press Finish flight to save it. If you close the sim after landing, or leave it at the gate, it's still saved as a finished flight with its times." },
