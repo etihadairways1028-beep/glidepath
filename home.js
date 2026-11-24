@@ -35,6 +35,8 @@
       oy = box[1] + ((box[3] - box[1]) - (y1 - y0) * sc) / 2 + y1 * sc;
       build();
     };
+    let LAND = null;
+    fetch("assets/uk-land.json").then((r) => r.json()).then((l) => { LAND = l; if (W) build(); }).catch(() => undefined);
     let routePath, flownPath, appPath, plane, routeLen = 0, appLen = 0, segs = [];
     const build = () => {
       svg.textContent = "";
@@ -43,6 +45,8 @@
       el("stop", { offset: 0, "stop-color": "#3CE0FF" }, g1); el("stop", { offset: 1, "stop-color": "#7C8CFF" }, g1);
       const glow = el("filter", { id: "lhGlow", x: "-50%", y: "-50%", width: "200%", height: "200%" }, defs);
       el("feGaussianBlur", { stdDeviation: 6, result: "b" }, glow); const m = el("feMerge", {}, glow); el("feMergeNode", { in: "b" }, m); el("feMergeNode", { in: "SourceGraphic" }, m);
+      // Coastlines (Natural Earth, public domain)
+      if (LAND) { const land = el("g", { class: "lh-land" }, svg); for (const ring of LAND) el("path", { d: "M" + ring.map(([lo, la]) => P(la, lo).map((v) => v.toFixed(1)).join(",")).join("L") + "Z" }, land); }
       // Lat/lon grid
       const grid = el("g", { class: "lh-grid" }, svg);
       for (let lat = 49; lat <= 57; lat += 0.5) { const [, y] = P(lat, 0); el("line", { x1: 0, x2: W, y1: y, y2: y }, grid); }
@@ -141,7 +145,7 @@
   const film = document.querySelector(".film"), pad = document.getElementById("film-pad");
   if (film && pad) {
     const shots = [...pad.querySelectorAll("img")], arts = [...document.querySelectorAll("#film-copy article")], dots = [...document.querySelectorAll(".film-dots i")];
-    const N = shots.length;
+    const N = shots.length, groups = [...document.querySelectorAll(".fc-group")];
     let ticking = false;
     const run = () => {
       ticking = false;
@@ -152,6 +156,8 @@
       pad.style.transform = reduced ? "none" : `perspective(2200px) translate3d(${side * (6 - 4 * k)}vw, ${(1 - k) * 14}vh, 0) rotateX(${26 * (1 - k)}deg) rotateY(${-sway - 6 * side * k}deg) rotateZ(${-8 * (1 - k)}deg) scale(${.74 + .26 * k})`;
       shots.forEach((im, i) => { const o = i === 0 && local < .5 ? 1 : i === N - 1 && local > N - .5 ? 1 : clamp(1.6 - Math.abs(local - (i + .5)) * 2.2); im.style.opacity = String(o); im.style.transform = `scale(${1.04 - .04 * o})`; });
       arts.forEach((a, i) => { const d = local - (i + .5), o = i === 0 && local < .5 ? 1 : i === N - 1 && local > N - .5 ? 1 : clamp(1.4 - Math.abs(d) * 2.4); a.style.opacity = String(o); a.style.transform = `translateY(${(-d * 60).toFixed(1)}px)`; a.style.pointerEvents = o > .5 ? "auto" : "none"; });
+      groups.forEach((g, i) => { const d = local - (i + .5), o = i === 0 && local < .5 ? 1 : i === N - 1 && local > N - .5 ? 1 : clamp(1.5 - Math.abs(d) * 2.6);
+        g.style.opacity = String(o); [...g.children].forEach((c, j) => { c.style.transform = `translate3d(${(1 - o) * (j ? -40 : 40)}px, ${(-d * (j ? 90 : 140)).toFixed(1)}px, 0) scale(${.86 + .14 * o})`; }); });
       const cur = Math.min(N - 1, Math.floor(local)); dots.forEach((d, i) => d.classList.toggle("on", i === cur));
       film.style.setProperty("--film-p", p.toFixed(3));
     };
