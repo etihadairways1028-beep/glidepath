@@ -104,3 +104,67 @@ export function collectProcedures(icao: string, records: FacilityRecord[]): Airp
     approaches: [...apps.values()].sort((a, b) => a.runway.localeCompare(b.runway) || a.name.localeCompare(b.name)),
   };
 }
+
+/* ---------------- Approach paths (where to fly, fix by fix, to the runway) ---------------- */
+
+export const FT_LEG = { APPROACH_LEG: 7, FINAL_APPROACH_LEG: 8 } as const;
+
+/** A separate, optional request: if the sim refuses it, the procedure lists above still work. */
+export const APPROACH_PATH_DEFINITION = [
+  "OPEN AIRPORT",
+  "OPEN APPROACH", "TYPE", "SUFFIX", "RUNWAY_NUMBER", "RUNWAY_DESIGNATOR",
+  "OPEN APPROACH_TRANSITION", "IAF_ICAO",
+  "OPEN APPROACH_LEG", "TYPE", "FIX_ICAO", "FIX_LATITUDE", "FIX_LONGITUDE", "ALTITUDE1", "CLOSE APPROACH_LEG",
+  "CLOSE APPROACH_TRANSITION",
+  "OPEN FINAL_APPROACH_LEG", "TYPE", "FIX_ICAO", "FIX_LATITUDE", "FIX_LONGITUDE", "ALTITUDE1", "CLOSE FINAL_APPROACH_LEG",
+  "CLOSE APPROACH",
+  "CLOSE AIRPORT",
+];
+
+export interface PathFix { ident: string; lat: number; lon: number; /** Altitude restriction, feet (0/none = null). */ altFt: number | null }
+export interface ApproachPath { name: string; runway: string; final: PathFix[]; transitions: Array<{ name: string; legs: PathFix[] }> }
+export interface PathReader extends Reader { readFloat64(): number; readFloat32(): number }
+export interface PathRecord { type: number; id: number; parent: number; data: PathReader }
+
+/** Leg types with a fixed point to draw; heading/course legs (CA, VA, VM, FM…) have none. */
+function readLeg(r: PathReader): PathFix | null {
+  r.readInt32(); // leg type
+  const ident = clean(r.readString8());
+  const lat = r.readFloat64(), lon = r.readFloat64();
+  const altM = r.readFloat32();
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180 || (lat === 0 && lon === 0)) return null;
+  return { ident: ident || "·", lat, lon, altFt: Number.isFinite(altM) && altM > 1 ? Math.round((altM * 3.28084) / 10) * 10 : null };
+}
+
+export function collectApproachPaths(records: PathRecord[]): ApproachPath[] {
+  const apps = new Map<number, ApproachPath>();
+  const trans = new Map<number, { app: number; t: { name: string; legs: PathFix[] } }>();
+  for (const r of records) {
+    if (r.type === FT.APPROACH) {
+      const type = APPROACH_TYPE[r.data.readInt32()] ?? "APP";
+      const suffix = r.data.readInt32();
+      const rw = runwayName(r.data.readInt32(), r.data.readInt32());
+      const sfx = suffix >= 65 && suffix <= 90 ? ` ${String.fromCharCode(suffix)}` : "";
+      apps.set(r.id, { name: `${type === "GPS" ? "RNAV" : type}${sfx}${rw ? ` ${rw}` : ""}`, runway: rw, final: [], transitions: [] });
+    }
+  }
+  for (const r of records) {
+    if (r.type === FT.APPROACH_TRANSITION) {
+      const a = apps.get(r.parent);
+      if (!a) continue;
+      const t = { name: clean(r.data.readString8()), legs: [] as PathFix[] };
+      if (!okName(t.name)) continue;
+      a.transitions.push(t);
+      trans.set(r.id, { app: r.parent, t });
+    }
+  }
+  for (const r of records) {
+    if (r.type === FT_LEG.FINAL_APPROACH_LEG) { const a = apps.get(r.parent); const f = a ? readLeg(r.data) : null; if (a && f) a.final.push(f); }
+    else if (r.type === FT_LEG.APPROACH_LEG) { const t = trans.get(r.parent); const f = t ? readLeg(r.data) : null; if (t && f) t.t.legs.push(f); }
+  }
+  const out = [...apps.values()].filter((a) => a.final.length >= 2);
+  // Drop repeated points (a leg that ends where the next starts).
+  const dedupe = (l: PathFix[]) => l.filter((p, i) => i === 0 || p.ident !== l[i - 1]!.ident || Math.abs(p.lat - l[i - 1]!.lat) > 1e-5);
+  for (const a of out) { a.final = dedupe(a.final); for (const t of a.transitions) t.legs = dedupe(t.legs); }
+  return out;
+}

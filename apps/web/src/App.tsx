@@ -13,7 +13,24 @@ import { ToolsScreen } from "./screens/Tools";
 import { ChecklistsScreen } from "./screens/Checklists";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Icon, Mark } from "./components/ui";
-import { activeBridge, BridgeClient, adoptLocalToken, consumePairingLink, detectBridgeUrl, setActiveBridge } from "./data/bridge";
+import { activeBridge, BridgeClient, adoptLocalToken, consumePairingLink, detectBridgeUrl, isStandalone, setActiveBridge } from "./data/bridge";
+import { startPrefsSync } from "./data/prefsSync";
+
+/*
+ * Open where you left off: the Home Screen app (and a plain visit to the app's address)
+ * comes back to the page you were last on instead of Home.
+ */
+const LAST = "glidepath.lastRoute";
+(() => {
+  try {
+    const h = location.hash, last = localStorage.getItem(LAST);
+    const pairing = /(^#|[?&])(bridge|token|pc)=/.test(h);
+    const gpk = /[?&]gpk=([^&]*)/.exec(h)?.[1];
+    const fresh = h === "" || h === "#" || h === "#/" || /^#\/home(\?gpk=[^&]*)?$/.test(h);
+    if (last && /^#\/[a-z]/.test(last) && !pairing && (isStandalone() || fresh)) history.replaceState(null, "", location.pathname + location.search + last + (gpk ? `${last.includes("?") ? "&" : "?"}gpk=${gpk}` : ""));
+    window.addEventListener("hashchange", () => { if (/^#\/[a-z]/.test(location.hash)) localStorage.setItem(LAST, location.hash.replace(/[?&]gpk=[^&]*/, "")); });
+  } catch { /* storage off */ }
+})();
 import { findBridgeOnNetwork, initCloud, saveBridge, syncFlights, useCloud } from "./data/cloud";
 import type { FlightSummary } from "@glidepath/protocol";
 import { activeDemo, startDemo } from "./data/demo";
@@ -96,6 +113,8 @@ export const go = (path: string) => { location.hash = `#/${path}`; };
  * When the PC's relay link is up, move to the newest app on the website, already paired.
  */
 function handOffToNewestApp(): void {
+  // A Home Screen app must stay itself: moving to another address would open a browser page.
+  if (isStandalone()) return;
   const lan = location.protocol === "http:" && location.pathname.startsWith("/app") && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname);
   if (!lan) return;
   const go = async () => {
@@ -163,6 +182,7 @@ export function App() {
   useEffect(() => {
     consumePairingLink();
     connectFromSettings();
+    startPrefsSync();
     void adoptLocalToken().then((ok) => { if (ok) connectFromSettings(); });
     handOffToNewestApp();
     if (!settingsStore.get().token && new URLSearchParams(location.search).get("demo") === "1") startDemo();

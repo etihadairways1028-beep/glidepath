@@ -6,12 +6,16 @@
 import { useEffect, useState } from "react";
 import { Icon } from "./ui";
 
-export const APP_VERSION = "1.3.1";
+export const APP_VERSION = "1.3.2";
 const KEY = "glidepath.seenVersion";
 
 export type WnIcon = "map" | "flight" | "remote" | "book" | "gear" | "spark" | "download" | "search" | "tower" | "cloud" | "layers" | "target" | "headset";
 export interface WnItem { v: string; ic: WnIcon; t: string; d: string }
 export const WHATS_NEW: WnItem[] = [
+  { v: "1.3.2", ic: "remote", t: "Pair once, then just open the app", d: "Add Glidepath to your iPad's Home Screen after pairing and it opens already connected every time, on the page you left, with no code. Your PC also remembers your SimBrief name, so every device loads your flight by itself." },
+  { v: "1.3.2", ic: "map", t: "The whole approach, to the runway", d: "Pick an approach and the map draws it from the end of your STAR through every fix and altitude to the runway. While choosing, every approach shows with its name in a box, like a chart app. Paths come from the sim's own navdata." },
+  { v: "1.3.2", ic: "spark", t: "ATIS and weather on the airport cards", d: "See the information letter (Information Golf) from VATSIM or IVAO when ATIS is online, tap for the full text, plus wind, visibility, cloud, temperature and QNH at a glance." },
+  { v: "1.3.2", ic: "layers", t: "A smoother flight profile", d: "Climb, cruise and descent drawn as curves, coloured by phase, with clear TOC, TOD and cruise level labels." },
   { v: "1.3.1", ic: "target", t: "Pick your SID, STAR and approach like a chart app", d: "Open the flight plan on the map: a route bar, Origin and Destination cards with runway wind, and lists of departures, arrivals and approaches by runway with transitions. Point at a runway to see its final approach course on the map; Glidepath warns you when a procedure doesn't fit the runway." },
   { v: "1.3.1", ic: "book", t: "Logbook cards", d: "Your totals at the top, and each flight as a card: callsign, route, block time, landing rate, aircraft, registration and simulator." },
   { v: "1.3.0", ic: "spark", t: "A new look for every page", d: "Every button, switch, field, card and list was rebuilt as one design: calmer glass, a single blue accent, clearer text and the same controls everywhere, in dark and light." },

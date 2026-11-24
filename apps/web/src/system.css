@@ -260,8 +260,8 @@ html:root[data-theme="light"] main .badge-ic { color: var(--ds-ink-2) !important
 html:root .map-note { max-width: min(520px, calc(100% - 24px)) !important; width: auto !important; } html:root .map-note .notice { padding-left: 38px !important; }
 
 /* ---------- Flight setup (runways and procedures, chart-app style) ---------- */
-html:root { --fs-sid: #34C759; --fs-star: #FF9F0A; --fs-app: #FFD60A; --fs-rw: #64D2FF; }
-html:root[data-theme="light"] { --fs-sid: #1E9E43; --fs-star: #C96F00; --fs-app: #A67C00; --fs-rw: #0071C2; }
+html:root { --fs-sid: #34C759; --fs-star: #FF9F0A; --fs-app: #FF7A50; --fs-rw: #64D2FF; }
+html:root[data-theme="light"] { --fs-sid: #1E9E43; --fs-star: #C96F00; --fs-app: #D9481F; --fs-rw: #0071C2; }
 @media (min-width: 901px) { html:root .map-route { width: 410px !important; max-height: calc(100% - 110px) !important; } }
 @media (max-width: 900px) { html:root .map-route { max-height: 64vh !important; overflow: auto !important; } html:root .map-route .mr-list { max-height: 30vh; } }
 .mr-tabs { width: 100%; } .mr-tabs button { flex: 1; }
@@ -381,3 +381,57 @@ html:root main .map-sheet.map-route.glass { z-index: 80 !important; }
 .lbc-mid { flex-wrap: nowrap; } .lbc-route { white-space: nowrap; } .lbc-fpm { white-space: nowrap; }
 @media (max-width: 420px) { .lbc-sw { display: none; } .lbc-cs { font-size: 17px; } }
 @media (max-width: 420px) { .lbc-st { display: none !important; } }
+/* ATIS and weather on the airport cards */
+.fs-ap > div { flex-wrap: wrap; }
+.fs-atis { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; font: 700 11.5px/1 inherit; letter-spacing: .04em; padding: 5px 8px; border-radius: 8px; border: 1px solid color-mix(in srgb, var(--fs-rw) 45%, transparent); background: color-mix(in srgb, var(--fs-rw) 14%, transparent); color: var(--ds-ink-2); cursor: pointer; }
+.fs-atis b { font: 800 15px/1 var(--mono, ui-monospace, monospace); color: var(--fs-rw); min-width: 12px; text-align: center; }
+.fs-atis span { font-weight: 650; letter-spacing: 0; color: var(--ds-ink); }
+.fs-atis.none { cursor: default; border-color: var(--ds-line); background: transparent; } .fs-atis.none b { color: var(--ds-ink-3); }
+.fs-atis-text { width: 100%; margin-top: 6px; padding: 10px 12px; border-radius: 10px; background: var(--ds-ctl); border: 1px solid var(--ds-line); animation: gpRise .18s var(--ds-ease, ease) both; }
+.fs-atis-h { display: flex; align-items: baseline; gap: 8px; } .fs-atis-h b { font-size: 14px; color: var(--ds-ink); } .fs-atis-h span { font-size: 11.5px; color: var(--ds-ink-3); margin-left: auto; }
+.fs-atis-text p { margin: 6px 0 0; font: 12.5px/1.5 var(--mono, ui-monospace, monospace); color: var(--ds-ink-2); max-height: 160px; overflow: auto; }
+.fs-wx { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 5px; font-size: 12.5px; color: var(--ds-ink); }
+.fs-wx span { white-space: nowrap; font-variant-numeric: tabular-nums; } .fs-wx em { font-style: normal; color: var(--ds-ink-3); margin-right: 4px; font-size: 11.5px; }
+/* Route profile */
+html:root .rp { display: grid; gap: 10px; padding-bottom: 2px; }
+html:root .rp-line2 { fill: none; stroke-width: 3.2; stroke-linejoin: round; stroke-linecap: round; }
+html:root .rp-ground { stroke: var(--ds-line-2, rgba(255,255,255,.2)); stroke-width: 1.2; }
+html:root .rp-tick { stroke: var(--ds-ink-3); stroke-width: 1.2; } html:root .rp-tick.sid { stroke: #34C759; } html:root .rp-tick.star { stroke: #FF9F0A; }
+html:root .rp-drop { stroke: var(--ds-ink-3); stroke-width: 1; stroke-dasharray: 2 3; opacity: .7; }
+html:root .rp-c circle { fill: #3CE0FF; stroke: var(--ds-bg-1, #0b1020); stroke-width: 2.4; } html:root .rp-d circle { fill: #FFB340; stroke: var(--ds-bg-1, #0b1020); stroke-width: 2.4; }
+html:root .rp-pill rect { fill: var(--ds-card); stroke: var(--ds-line); stroke-width: 1; }
+html:root .rp-pill text { font: 750 11.5px var(--a-font, system-ui); letter-spacing: .05em; fill: var(--ds-ink); }
+html:root .rp-c .rp-pill rect { stroke: rgba(60,224,255,.55); } html:root .rp-c .rp-pill text { fill: #7DEBFF; }
+html:root .rp-d .rp-pill rect { stroke: rgba(255,179,64,.55); } html:root .rp-d .rp-pill text { fill: #FFC56B; }
+html:root .rp-pill.fl text { fill: var(--ds-ink-2); letter-spacing: .03em; }
+html:root .rp-ap { font: 800 12.5px var(--a-font, system-ui); fill: var(--ds-ink); letter-spacing: .04em; }
+html:root .rp-nm { font: 600 11.5px var(--a-font, system-ui); fill: var(--ds-ink-2); }
+html:root .rp-facts { font-size: 13px; color: var(--ds-ink-2); line-height: 1.5; }
+html:root[data-theme="light"] .rp-c .rp-pill text { fill: #0080A8; } html:root[data-theme="light"] .rp-d .rp-pill text { fill: #B36B00; }
+html:root .rp-sw.c { background: #3CE0FF !important; } html:root .rp-sw.d { background: #FFB340 !important; }
+html:root .rp-plane { fill: #fff; stroke: #0A84FF; stroke-width: 1.1; stroke-linejoin: round; filter: drop-shadow(0 1px 3px rgba(0,0,0,.6)); }
+html:root[data-theme="light"] .rp-plane { fill: #0A84FF; stroke: #fff; }
+html:root .rp-halo { fill: rgba(10,132,255,.22); }
+html:root .rp-alt rect { fill: #0A84FF; } html:root .rp-alt text { font: 750 11px var(--a-font, system-ui); fill: #fff; font-variant-numeric: tabular-nums; }
+html:root .rp-me { transition: transform 1s linear; }
+/* profile motion */
+@keyframes rpDraw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes rpFade { from { opacity: 0; } }
+@keyframes rpPop { 0% { opacity: 0; transform: translateY(6px) scale(.7); } 70% { transform: translateY(-1px) scale(1.06); } 100% { opacity: 1; transform: none; } }
+@keyframes rpBob { 0%, 100% { transform: translateY(-1.4px); } 50% { transform: translateY(1.4px); } }
+@keyframes rpFly { from { transform: translate(12px, 68px); opacity: 0; } }
+@keyframes rpRun { to { stroke-dashoffset: -1; } }
+@keyframes rpHalo { 0% { transform: scale(.6); opacity: .7; } 100% { transform: scale(2.1); opacity: 0; } }
+html:root .rp-line2 { stroke-dasharray: 1; stroke-dashoffset: 0; animation: rpDraw 1.3s cubic-bezier(.65,0,.35,1) both; }
+html:root .rp-area2 { animation: rpFade 1s .5s both; }
+html:root .rp-c, html:root .rp-d, html:root .rp-pill.fl { transform-box: fill-box; transform-origin: 50% 100%; }
+html:root .rp-c { animation: rpPop .55s .55s both; } html:root .rp-pill.fl { animation: rpPop .55s .75s both; } html:root .rp-d { animation: rpPop .55s .95s both; }
+html:root .rp-tick { animation: rpFade .6s 1s both; }
+html:root .rp-me { animation: rpFly 1.4s .3s cubic-bezier(.22,1,.36,1) backwards; }
+html:root .rp-bob { animation: rpBob 3.2s ease-in-out infinite; }
+html:root .rp-halo { transform-box: fill-box; transform-origin: center; animation: rpHalo 2.2s ease-out infinite; }
+html:root .rp-ahead { fill: none; stroke: rgba(255,255,255,.55); stroke-width: 1.6; stroke-dasharray: .006 .03; stroke-linecap: round; animation: rpRun 30s linear infinite; }
+html:root .rp-trail { stroke-width: 4; stroke-linecap: round; filter: blur(1.5px); opacity: .8; }
+html:root[data-theme="light"] .rp-ahead { stroke: rgba(10,60,140,.45); } 
+html:root .rp-flown { display: none; }
+@media (prefers-reduced-motion: reduce) { html:root :is(.rp-line2, .rp-area2, .rp-c, .rp-d, .rp-pill.fl, .rp-tick, .rp-me, .rp-bob, .rp-halo, .rp-ahead) { animation: none !important; } }

@@ -25,6 +25,7 @@ import {
   ClientMessage, PROTOCOL_VERSION,
   type BridgeStatus, type FlightPhase, type ServerMessage, type TelemetryFrame,
 } from "@glidepath/protocol";
+import { PrefsStore, type Prefs } from "./prefs.js";
 import { saveIdentity, type BridgeConfig, type BridgeIdentity } from "./config.js";
 import type { DiscordConfig, DiscordPresence } from "./discord.js";
 import type { Logger } from "./log.js";
@@ -61,6 +62,8 @@ export function liteFlight(f: FlightSummary): FlightSummary {
 }
 
 export class LanServer {
+  private prefs: PrefsStore | null = null;
+  private pathCache = new Map<string, { at: number; paths: import("./procedures.js").ApproachPath[] }>();
   private clients = new Set<Client>();
   private http = createServer((req, res) => this.route(req, res));
   private wss = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });
@@ -391,7 +394,7 @@ export class LanServer {
       if (!local) return json(res, 403, { error: "Only on the PC itself." });
       return json(res, 200, { code: this.newPairCode() });
     }
-    const POSTS = ["/api/plan", "/api/ai/config", "/api/ai/chat", "/api/pair", "/api/discord", "/api/cloud/login", "/api/cloud/logout", "/api/update/check", "/api/update/install", "/api/flight/complete"];
+    const POSTS = ["/api/prefs", "/api/plan", "/api/ai/config", "/api/ai/chat", "/api/pair", "/api/discord", "/api/cloud/login", "/api/cloud/logout", "/api/update/check", "/api/update/install", "/api/flight/complete"];
     const DELETABLE = /^\/api\/flights\/[0-9a-f-]{36}$/.test(p);
     if (req.method !== "GET" && !(req.method === "POST" && POSTS.includes(p)) && !(req.method === "DELETE" && DELETABLE)) return text(res, 405, "Method not allowed");
     if (p === "/") {
@@ -465,6 +468,15 @@ export class LanServer {
       return json(res, 200, { network: "sim", updatedAt: new Date(t?.at || Date.now()).toISOString(), controllers: [],
         pilots: fresh.map((a) => ({ callsign: a.callsign, lat: a.lat, lon: a.lon, altFt: a.altFt, gsKt: a.gsKt, hdg: a.hdg, type: a.type, dep: null, arr: null, network: "sim", title: a.title, onGround: a.onGround })) });
     }
+    const pp = /^\/api\/procedures\/([A-Za-z0-9]{3,4})\/paths$/.exec(p);
+    if (pp && req.method === "GET") {
+      const a = this.remoteAdapter;
+      if (!a?.approachPaths) return json(res, 503, { error: "Approach paths come from Microsoft Flight Simulator, so they're only here while the Bridge is connected to the sim." });
+      const key = pp[1]!.toUpperCase(), hit = this.pathCache.get(key);
+      if (hit && Date.now() - hit.at < 30 * 60_000) return json(res, 200, hit.paths);
+      try { const paths = await a.approachPaths(key); this.pathCache.set(key, { at: Date.now(), paths }); return json(res, 200, paths); }
+      catch (e) { return json(res, 502, { error: (e as Error).message }); }
+    }
     const pm = /^\/api\/procedures\/([A-Za-z0-9]{3,4})$/.exec(p);
     if (pm && req.method === "GET") {
       const a = this.remoteAdapter;
@@ -499,6 +511,14 @@ export class LanServer {
       return json(res, 200, flight);
     }
 
+    if (p === "/api/prefs") {
+      this.prefs ??= new PrefsStore(this.cfg.dataDir);
+      if (req.method === "GET") return json(res, 200, this.prefs.get());
+      if (req.method === "POST") {
+        const err = this.prefs.set((await readBody(req, 1_000)) as Partial<Prefs>);
+        return err ? json(res, 400, { error: err }) : json(res, 200, this.prefs.get());
+      }
+    }
     if (p === "/api/pclink") return json(res, 200, { online: !!this.pcLink?.status().online, bid: this.identity.bridgeId });
     if (p === "/api/plan" && req.method === "GET") return json(res, 200, { plan: this.session.currentPlan });
     if (p === "/api/plan" && req.method === "POST") {

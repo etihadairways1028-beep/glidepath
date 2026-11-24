@@ -188,6 +188,16 @@ export interface MapViewProps {
   fitBox?: { box: [number, number, number, number]; key: number } | null;
 }
 
+/** A rounded label box, stretched around text (approach names on the map, like a chart app). */
+function labelBox(light: boolean): ImageData {
+  const W = 64, H = 40, c = document.createElement("canvas"); c.width = W; c.height = H;
+  const g = c.getContext("2d")!;
+  g.beginPath(); g.roundRect(2, 2, W - 4, H - 4, 9);
+  g.fillStyle = light ? "rgba(255,240,234,.97)" : "rgba(30,12,6,.93)"; g.fill();
+  g.lineWidth = 3; g.strokeStyle = light ? "#E0482A" : "#FF6A3D"; g.stroke();
+  return g.getImageData(0, 0, W, H);
+}
+
 export function MapView({ trail, plan, aircraft, airports = [], traffic = [], atc = [], metars = [], radarTiles = null, centres = [], radarFrames = null, radarIndex = 0, radarOpacity = 0.7, onSelectAtc, onSelectMetar, onView, follow, center, zoom: startZoom, threeD = false, stands = [], agl = null, onGround = false, onSelectTraffic, onUserMove, interactive = true, history, selTrack, flyTo, holds = [], onSelectFix, nextFix = null, fitRoute = 0, runwayLines = [], fitBox = null }: MapViewProps) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<MLMap | null>(null);
@@ -276,9 +286,14 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     // The plan's SID (green) and STAR (orange), from SimBrief's waypoints, with their names along the line.
     m.addSource("procs", { type: "geojson", data: (data.current.procs ?? empty()) as ReturnType<typeof empty> });
     m.addSource("rwlines", { type: "geojson", data: empty() });
-    m.addLayer({ id: "rwlines-casing", type: "line", source: "rwlines", layout: { "line-cap": "round" }, paint: { "line-color": light ? "rgba(255,255,255,.95)" : "rgba(0,0,0,.55)", "line-width": ["match", ["get", "state"], "hot", 8, "set", 7, 5] } });
-    m.addLayer({ id: "rwlines", type: "line", source: "rwlines", layout: { "line-cap": "round" }, paint: { "line-color": ["match", ["get", "kind"], "dep", "#34C759", light ? "#E0A800" : "#FFD60A"], "line-width": ["match", ["get", "state"], "hot", 5, "set", 4, 2.6], "line-opacity": ["match", ["get", "state"], "preview", 0.6, 1] } });
-    m.addLayer({ id: "rwlines-label", type: "symbol", source: "rwlines", minzoom: 7.5, layout: { "symbol-placement": "line-center", "text-field": ["get", "label"], "text-font": ["Noto Sans Bold"], "text-size": ["match", ["get", "state"], "hot", 13, 11.5], "text-allow-overlap": false }, paint: { "text-color": ["match", ["get", "kind"], "dep", "#7CF29A", light ? "#8A6500" : "#FFE27A"], "text-halo-color": light ? "rgba(255,255,255,.95)" : "rgba(5,8,14,.9)", "text-halo-width": 1.8 } });
+    if (!m.hasImage("gp-box")) m.addImage("gp-box", labelBox(light), { pixelRatio: 2, stretchX: [[12, 52]], stretchY: [[12, 28]], content: [8, 6, 56, 34] });
+    const isLine = ["==", ["geometry-type"], "LineString"] as never;
+    m.addLayer({ id: "rwlines-casing", type: "line", source: "rwlines", filter: isLine, layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": light ? "rgba(255,255,255,.95)" : "rgba(0,0,0,.55)", "line-width": ["match", ["get", "state"], "hot", 9, "set", 7.5, 5.5] } });
+    m.addLayer({ id: "rwlines", type: "line", source: "rwlines", filter: isLine, layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": ["match", ["get", "kind"], "dep", "#34C759", light ? "#E0482A" : "#FF6A3D"], "line-width": ["match", ["get", "state"], "hot", 5.5, "set", 4.2, 3], "line-opacity": ["match", ["get", "state"], "preview", 0.55, 1] } });
+    m.addLayer({ id: "rwlines-label", type: "symbol", source: "rwlines", filter: ["all", isLine, ["!=", ["get", "lineLabel"], ""]] as never, minzoom: 7.5, layout: { "symbol-placement": "line-center", "text-field": ["get", "lineLabel"], "text-font": ["Noto Sans Bold"], "text-size": ["match", ["get", "state"], "hot", 13, 11.5], "text-allow-overlap": false }, paint: { "text-color": ["match", ["get", "kind"], "dep", "#7CF29A", light ? "#8A2A10" : "#FFB59C"], "text-halo-color": light ? "rgba(255,255,255,.95)" : "rgba(5,8,14,.9)", "text-halo-width": 1.8 } });
+    m.addLayer({ id: "rwfix", type: "circle", source: "rwlines", filter: ["==", ["get", "pt"], "fix"], paint: { "circle-radius": 4.2, "circle-color": light ? "#fff" : "#1E0C06", "circle-stroke-color": light ? "#E0482A" : "#FF6A3D", "circle-stroke-width": 2 } });
+    m.addLayer({ id: "rwfix-label", type: "symbol", source: "rwlines", filter: ["==", ["get", "pt"], "fix"], minzoom: 8, layout: { "text-field": ["format", ["get", "ident"], {}, ["get", "alt"], { "font-scale": 0.85 }], "text-font": ["Noto Sans Bold"], "text-size": 11, "text-offset": [0, 0.95], "text-anchor": "top", "text-allow-overlap": false }, paint: { "text-color": light ? "#7A2410" : "#FFD3C2", "text-halo-color": light ? "rgba(255,255,255,.95)" : "rgba(5,8,14,.9)", "text-halo-width": 1.6 } });
+    m.addLayer({ id: "rwbox", type: "symbol", source: "rwlines", filter: ["==", ["get", "pt"], "box"], minzoom: 7, layout: { "icon-image": "gp-box", "icon-text-fit": "both", "icon-text-fit-padding": [3, 7, 3, 7], "text-field": ["get", "label"], "text-font": ["Noto Sans Bold"], "text-size": ["match", ["get", "state"], "hot", 13, 11.5], "text-anchor": "bottom", "text-offset": [0, -0.6], "icon-anchor": "bottom", "symbol-sort-key": ["match", ["get", "state"], "hot", 0, "set", 1, 2], "text-allow-overlap": false, "icon-allow-overlap": false }, paint: { "text-color": light ? "#7A2410" : "#FFC9B5", "icon-opacity": ["match", ["get", "state"], "preview", 0.85, 1], "text-opacity": ["match", ["get", "state"], "preview", 0.85, 1] } });
     m.addLayer({ id: "procs-casing", type: "line", source: "procs", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": light ? "rgba(255,255,255,.95)" : "rgba(0,0,0,.5)", "line-width": 6.5 } });
     m.addLayer({ id: "procs", type: "line", source: "procs", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": ["match", ["get", "kind"], "sid", "#34C759", "#FF9F0A"], "line-width": 3.6, "line-opacity": 0.95 } });
     m.addLayer({ id: "procs-label", type: "symbol", source: "procs", minzoom: 6, layout: { "symbol-placement": "line", "text-field": ["get", "name"], "text-font": ["Noto Sans Bold"], "text-size": 12, "text-letter-spacing": 0.06, "symbol-spacing": 320 }, paint: { "text-color": ["match", ["get", "kind"], "sid", "#7CF29A", "#FFC266"], "text-halo-color": light ? "rgba(255,255,255,.95)" : "rgba(5,8,14,.9)", "text-halo-width": 1.8 } });
@@ -454,7 +469,12 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     const m = map.current;
     if (!m || !ready) return;
     const order = { preview: 0, set: 1, hot: 2 } as const;
-    const feats = [...runwayLines].sort((a, b) => order[a.state] - order[b.state]).map((l) => ({ type: "Feature" as const, properties: { kind: l.kind, state: l.state, label: l.label }, geometry: { type: "LineString" as const, coordinates: l.coords } }));
+    const feats: unknown[] = [];
+    for (const l of [...runwayLines].sort((a, b) => order[a.state] - order[b.state])) {
+      feats.push({ type: "Feature", properties: { kind: l.kind, state: l.state, label: l.label, lineLabel: l.box ? "" : l.label }, geometry: { type: "LineString", coordinates: l.coords } });
+      if (l.box && l.coords[0]) feats.push({ type: "Feature", properties: { pt: "box", state: l.state, label: l.label }, geometry: { type: "Point", coordinates: l.coords[0] } });
+      for (const f of l.fixes ?? []) feats.push({ type: "Feature", properties: { pt: "fix", ident: f.ident, alt: f.alt ? `\n${f.alt}` : "" }, geometry: { type: "Point", coordinates: [f.lon, f.lat] } });
+    }
     (m.getSource("rwlines") as GeoJSONSource | undefined)?.setData({ type: "FeatureCollection", features: feats } as never);
   }, [ready, runwayLines]);
 

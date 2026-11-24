@@ -9,17 +9,28 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { destinationPoint, runwayWind } from "@glidepath/flight-engine";
 import type { FlightPlan } from "@glidepath/protocol";
 import { airportDetail, type AirportDetail } from "../data/airports";
-import { getMetar, type Metar } from "../data/external";
+import { getMetar, usePoll, type Metar } from "../data/external";
+import { getLiveNetwork } from "../data/networks";
+import { useSettings } from "../data/store";
 import { useApp } from "../data/store";
+import { activeBridge } from "../data/bridge";
 import { loadChoice, saveChoice, useChoice, useProcs, type ProcChoice } from "./Procedures";
 
 type End = AirportDetail["runways"][number]["ends"][number];
 type Proc = { name: string; runways: string[]; transitions: string[] };
 type Appr = { name: string; type: string; runway: string; transitions: string[] };
+type PathFix = { ident: string; lat: number; lon: number; altFt: number | null };
+type APath = { name: string; runway: string; final: PathFix[]; transitions: Array<{ name: string; legs: PathFix[] }> };
 type View = "main" | "dep-rwy" | "sid" | "arr-rwy" | "star" | "app";
 
 /** A line drawn on the map for a runway: its final approach course, or its departure direction. */
-export interface RunwayLine { id: string; kind: "app" | "dep"; state: "preview" | "hot" | "set"; label: string; coords: Array<[number, number]> }
+export interface RunwayLine {
+  id: string; kind: "app" | "dep"; state: "preview" | "hot" | "set"; label: string; coords: Array<[number, number]>;
+  /** Draw the label as a box at the line's start (approach paths), not along it. */
+  box?: boolean;
+  /** Fixes to mark along the line, with their altitude restriction. */
+  fixes?: Array<{ ident: string; lat: number; lon: number; alt: string }>;
+}
 
 const FINAL_NM = 10;
 const ft2nm = (ft: number) => ft / 6076.12;
@@ -31,6 +42,31 @@ export function finalLine(e: End): Array<[number, number]> {
 export function departLine(e: End): Array<[number, number]> {
   const end = destinationPoint(e.threshold, e.headingTrueDeg, ft2nm(e.lengthFt || 8000) + 4);
   return [[e.threshold.lon, e.threshold.lat], [end.lon, end.lat]];
+}
+
+/** Each approach's fixes, from the sim through the Bridge (null when not available). */
+function usePaths(icao: string, enabled: boolean): APath[] | null {
+  const [v, setV] = useState<APath[] | null>(null);
+  useEffect(() => {
+    setV(null);
+    const b = activeBridge();
+    if (!enabled || !b || !/^[A-Z0-9]{3,4}$/.test(icao)) return;
+    let off = false;
+    b.get<APath[]>(`/api/procedures/${icao}/paths`).then((r) => { if (!off && Array.isArray(r) && r.length) setV(r); }).catch(() => undefined);
+    return () => { off = true; };
+  }, [icao, enabled]);
+  return v;
+}
+const altTxt = (ft: number | null) => (ft == null ? "" : ft >= 18000 ? `FL${Math.round(ft / 100)}` : `${ft.toLocaleString()} ft`);
+const ll = (f: PathFix): [number, number] => [f.lon, f.lat];
+/** One path from a transition's first fix through the final approach to the runway. */
+function pathCoords(p: APath, trans: string | null | undefined, lead?: [number, number] | null): { coords: Array<[number, number]>; fixes: PathFix[] } {
+  const t = trans ? p.transitions.find((x) => x.name === trans) : null;
+  const fx: PathFix[] = [...(t?.legs ?? [])];
+  for (const f of p.final) if (!fx.length || fx[fx.length - 1]!.ident !== f.ident) fx.push(f);
+  const coords = fx.map(ll);
+  if (lead && coords[0] && (Math.abs(lead[0] - coords[0][0]) > 1e-4 || Math.abs(lead[1] - coords[0][1]) > 1e-4)) coords.unshift(lead);
+  return { coords, fixes: fx };
 }
 
 function useAirportWx(icao: string | null) {
@@ -67,6 +103,61 @@ function Wind({ end, metar }: { end: End | null; metar: Metar | null }) {
   );
 }
 
+const PHONETIC: Record<string, string> = { A: "Alfa", B: "Bravo", C: "Charlie", D: "Delta", E: "Echo", F: "Foxtrot", G: "Golf", H: "Hotel", I: "India", J: "Juliett", K: "Kilo", L: "Lima", M: "Mike", N: "November", O: "Oscar", P: "Papa", Q: "Quebec", R: "Romeo", S: "Sierra", T: "Tango", U: "Uniform", V: "Victor", W: "Whiskey", X: "X-ray", Y: "Yankee", Z: "Zulu" };
+const WORD_TO_LETTER: Record<string, string> = Object.fromEntries(Object.entries(PHONETIC).map(([k, v]) => [v.toUpperCase().replace("-", ""), k]));
+WORD_TO_LETTER.ALPHA = "A"; WORD_TO_LETTER.JULIET = "J"; WORD_TO_LETTER.WHISKY = "W";
+/** The information letter from an ATIS text ("…INFORMATION GOLF…", "ATIS G", "INFO K"). */
+export function atisLetter(text: string): string | null {
+  const t = text.toUpperCase().replace(/\s+/g, " ");
+  const w = /\b(?:INFORMATION|INFO|ATIS)\s+(ALFA|ALPHA|BRAVO|CHARLIE|DELTA|ECHO|FOXTROT|GOLF|HOTEL|INDIA|JULIETT?|KILO|LIMA|MIKE|NOVEMBER|OSCAR|PAPA|QUEBEC|ROMEO|SIERRA|TANGO|UNIFORM|VICTOR|WHISKEY|WHISKY|X-?RAY|YANKEE|ZULU)\b/.exec(t);
+  if (w) return WORD_TO_LETTER[w[1]!.replace("-", "")] ?? null;
+  const l = /\b(?:INFORMATION|INFO|ATIS)\s+([A-Z])\b/.exec(t);
+  return l ? l[1]! : null;
+}
+interface Atis { letter: string | null; text: string; callsign: string; network: string }
+/** Online ATIS for these airports on VATSIM (and IVAO when you show it on the map). */
+function useAtis(codes: string[]): Record<string, Atis> {
+  const s = useSettings();
+  const v = usePoll(() => getLiveNetwork("vatsim"), 60_000, []);
+  const i = usePoll(s.showIvao ? () => getLiveNetwork("ivao") : null, 60_000, [s.showIvao]);
+  return useMemo(() => {
+    const out: Record<string, Atis> = {};
+    for (const net of [v.data, i.data]) for (const c of net?.controllers ?? []) {
+      const m = /^([A-Z0-9]{4})(?:_[A-Z])?_ATIS$/.exec(c.callsign.toUpperCase());
+      if (!m || !codes.includes(m[1]!) || out[m[1]!]) continue;
+      const text = c.atis.join(" ").trim();
+      if (!text) continue;
+      out[m[1]!] = { letter: atisLetter(text), text, callsign: c.callsign, network: c.network === "ivao" ? "IVAO" : "VATSIM" };
+    }
+    return out;
+  }, [v.data, i.data, codes.join()]);
+}
+
+function AtisChip({ a, icao, open, onToggle }: { a: Atis | undefined; icao: string; open: boolean; onToggle: () => void }) {
+  if (!a) return <span className="fs-atis none" title={`No ATIS online for ${icao} on VATSIM or IVAO right now`}>ATIS <b>—</b></span>;
+  return (
+    <button className="fs-atis" aria-expanded={open} onClick={(e) => { e.stopPropagation(); onToggle(); }} title={`${a.callsign} on ${a.network}: tap to read`}>
+      ATIS <b>{a.letter ?? "?"}</b>{a.letter && <span>{PHONETIC[a.letter]}</span>}
+    </button>
+  );
+}
+function AtisText({ a }: { a: Atis | undefined }) {
+  if (!a) return null;
+  return <div className="fs-atis-text"><div className="fs-atis-h"><b>{a.letter ? `Information ${PHONETIC[a.letter]}` : "ATIS"}</b><span>{a.callsign} · {a.network}</span></div><p>{a.text}</p></div>;
+}
+
+/** The weather in one line: wind, visibility, cloud, temperature, QNH. */
+function WxLine({ m }: { m: Metar | null }) {
+  if (!m) return null;
+  const wind = m.windKt === null ? null : m.windKt === 0 ? "Calm" : `${m.windDir === "VRB" || m.windDir === null ? "VRB" : String(m.windDir).padStart(3, "0")}/${m.windKt}${m.gustKt ? `G${m.gustKt}` : ""} kt`;
+  const sm = m.visibility === null ? null : parseFloat(m.visibility);
+  const vis = sm === null || !Number.isFinite(sm) ? null : sm >= 6 || m.visibility?.includes("+") ? "10 km+" : `${(sm * 1.609).toFixed(sm < 1 ? 1 : 0)} km`;
+  const low = m.clouds.filter((c) => /BKN|OVC|VV/.test(c.cover) && c.baseFt !== null).sort((a, b) => a.baseFt! - b.baseFt!)[0];
+  const cloud = low ? `${low.cover} ${low.baseFt!.toLocaleString()} ft` : m.clouds.length ? null : "No cloud";
+  const items = [wind && ["Wind", wind], vis && ["Vis", vis], cloud && ["Cloud", cloud], m.tempC !== null && ["Temp", `${m.tempC}°/${m.dewC ?? "–"}°`], m.qnhHpa !== null && ["QNH", String(m.qnhHpa)]].filter(Boolean) as Array<[string, string]>;
+  return <div className="fs-wx" title={m.raw}>{items.map(([k, v]) => <span key={k}><em>{k}</em>{v}</span>)}</div>;
+}
+
 function Cat({ m }: { m: Metar | null }) {
   if (!m?.category) return null;
   return <span className={`fs-cat c-${m.category.toLowerCase()}`}><i />{m.category}</span>;
@@ -96,6 +187,11 @@ export function FlightSetup({ plan, onLines, onFocus, onFit, onWaypoints }: {
   const ch = useChoice(dep, arr);
   const O = useAirportWx(dep), D = useAirportWx(arr);
   const P = useProcs(dep, live), Q = useProcs(arr, live);
+  const paths = usePaths(arr, live);
+  const atis = useAtis([dep, arr]);
+  const [atisOpen, setAtisOpen] = useState<string | null>(null);
+  const toggleAtis = (c: string) => setAtisOpen((x) => (x === c ? null : c));
+  const [hotApp, setHotApp] = useState<string | null>(null);
   const [view, setView] = useState<View>("main");
   const [hot, setHot] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
@@ -124,6 +220,16 @@ export function FlightSetup({ plan, onLines, onFocus, onFit, onWaypoints }: {
       for (const e of endsOf(O.airport)) out.push({ id: `d-${e.ident}`, kind: "dep", state: e.ident === hot ? "hot" : e.ident === depRwy ? "set" : "preview", label: `RWY ${e.ident}`, coords: departLine(e) });
       return out;
     }
+    if (view === "app" && paths) {
+      for (const p of paths) {
+        const st = (on: boolean) => (on ? "hot" : p.name === approach ? "set" : "preview") as RunwayLine["state"];
+        const on = hotApp ? hotApp === p.name : hot === p.runway;
+        for (const t of p.transitions) { const c = pathCoords(p, t.name); if (c.coords.length > 1) out.push({ id: `p-${p.name}-${t.name}`, kind: "app", state: st(on), label: `${p.name} (${t.name})`, coords: c.coords, box: true, fixes: on ? c.fixes.map((f) => ({ ...f, alt: altTxt(f.altFt) })) : undefined }); }
+        const c = pathCoords(p, null);
+        out.push({ id: `p-${p.name}-final`, kind: "app", state: st(on), label: `${p.name} (Final)`, coords: c.coords, box: true, fixes: on ? c.fixes.map((f) => ({ ...f, alt: altTxt(f.altFt) })) : undefined });
+      }
+      return out;
+    }
     if (view === "arr-rwy" || view === "app" || view === "star") {
       const withApp = new Set((Q.data?.approaches ?? []).map((a) => a.runway));
       for (const e of endsOf(D.airport)) {
@@ -134,9 +240,15 @@ export function FlightSetup({ plan, onLines, onFocus, onFit, onWaypoints }: {
     }
     const de = endOf(O.airport, depRwy), ae = endOf(D.airport, arrRwy);
     if (de) out.push({ id: `d-${de.ident}`, kind: "dep", state: "set", label: `RWY ${de.ident}`, coords: departLine(de) });
-    if (ae) out.push({ id: `a-${ae.ident}`, kind: "app", state: "set", label: approach ?? `RWY ${ae.ident}`, coords: finalLine(ae) });
+    const chosen = approach ? paths?.find((p) => p.name === approach) : null;
+    if (chosen) {
+      // Where to fly after the STAR: its last fix, the approach transition, the final approach, the runway.
+      const starLast = [...plan.fixes].reverse().find((f) => f.proc === "star");
+      const c = pathCoords(chosen, ch.appTrans, starLast ? [starLast.lon, starLast.lat] : null);
+      out.push({ id: `p-${chosen.name}`, kind: "app", state: "set", label: `${chosen.name}${ch.appTrans ? ` (${ch.appTrans})` : ""}`, coords: c.coords, box: true, fixes: c.fixes.map((f) => ({ ...f, alt: altTxt(f.altFt) })) });
+    } else if (ae) out.push({ id: `a-${ae.ident}`, kind: "app", state: "set", label: approach ?? `RWY ${ae.ident}`, coords: finalLine(ae) });
     return out;
-  }, [view, hot, O.airport, D.airport, Q.data, depRwy, arrRwy, approach]);
+  }, [view, hot, hotApp, paths, O.airport, D.airport, Q.data, depRwy, arrRwy, approach, ch.appTrans, plan]);
   const key = JSON.stringify(lines.map((l) => [l.id, l.state, l.label]));
   useEffect(() => { onLines?.(lines); }, [key]);
   useEffect(() => () => onLines?.([]), []);
@@ -267,7 +379,7 @@ export function FlightSetup({ plan, onLines, onFocus, onFit, onWaypoints }: {
         return (
           <div className="fs-rwgrp" key={rw} onMouseEnter={() => setHot(rw)} onMouseLeave={() => setHot(null)}>
             <div className="fs-gh">Runway {rw}{rw === arrRwy ? <em>planned</em> : null}<Wind end={e} metar={D.metar} /></div>
-            {byRw.get(rw)!.map((a) => <ProcRow key={a.name} p={{ name: a.name, runways: [a.runway], transitions: a.transitions }} badge={a.type} cur={a.name === approach} curTrans={ch.appTrans} plan={plan} tone="app" none="Vectors" onFocus={() => setHot(rw)} onAdd={(t) => pickApp(a, t)} />)}
+            {byRw.get(rw)!.map((a) => <ProcRow key={a.name} onHover={(on) => setHotApp(on ? a.name : null)} p={{ name: a.name, runways: [a.runway], transitions: a.transitions }} badge={a.type} cur={a.name === approach} curTrans={ch.appTrans} plan={plan} tone="app" none="Vectors" onFocus={() => setHot(rw)} onAdd={(t) => pickApp(a, t)} />)}
           </div>
         );
       });
@@ -279,7 +391,8 @@ export function FlightSetup({ plan, onLines, onFocus, onFit, onWaypoints }: {
           <b>{title}</b>
           <span className="fs-icao">{isDep ? dep : arr}</span>
         </div>
-        {(view === "app" || view === "arr-rwy") && <p className="fs-hint"><i className="fs-key app" />Yellow lines on the map are each runway's final approach course ({FINAL_NM} nm). Point at a runway to highlight it.</p>}
+        {view === "app" && paths ? <p className="fs-hint"><i className="fs-key app" />Each approach is drawn from its first fix to the runway. Point at one to see its fixes and altitudes.</p>
+          : (view === "app" || view === "arr-rwy") && <p className="fs-hint"><i className="fs-key app" />The lines on the map are each runway's final approach course ({FINAL_NM} nm). Point at a runway to highlight it.</p>}
         {(view === "dep-rwy" || view === "sid") && <p className="fs-hint"><i className="fs-key dep" />Green lines show each runway's take-off direction.</p>}
         <div className="fs-scroll">{body}</div>
         {confirm && <ConfirmBox c={confirm} close={() => setConfirm(null)} />}
@@ -296,8 +409,10 @@ export function FlightSetup({ plan, onLines, onFocus, onFit, onWaypoints }: {
       <section className="fs-card">
         <div className="fs-k">Origin</div>
         <div className="fs-ap">
-          <div><b>{dep}{O.airport?.iata ? ` / ${O.airport.iata}` : ""}</b><Cat m={O.metar} /></div>
+          <div><b>{dep}{O.airport?.iata ? ` / ${O.airport.iata}` : ""}</b><Cat m={O.metar} /><AtisChip a={atis[dep]} icao={dep} open={atisOpen === dep} onToggle={() => toggleAtis(dep)} /></div>
           <span>{O.airport ? `${O.airport.name}${O.airport.city ? `, ${O.airport.city}` : ""}` : plan.origin.name ?? ""}</span>
+          <WxLine m={O.metar} />
+          {atisOpen === dep && <AtisText a={atis[dep]} />}
         </div>
         <button className="fs-line t-rw" onClick={() => open("dep-rwy")}>
           <span className="fs-lk">Runway</span><b className="fs-big">{depRwy ?? "Choose"}</b>
@@ -313,8 +428,10 @@ export function FlightSetup({ plan, onLines, onFocus, onFit, onWaypoints }: {
       <section className="fs-card">
         <div className="fs-k">Destination</div>
         <div className="fs-ap">
-          <div><b>{arr}{D.airport?.iata ? ` / ${D.airport.iata}` : ""}</b><Cat m={D.metar} /></div>
+          <div><b>{arr}{D.airport?.iata ? ` / ${D.airport.iata}` : ""}</b><Cat m={D.metar} /><AtisChip a={atis[arr]} icao={arr} open={atisOpen === arr} onToggle={() => toggleAtis(arr)} /></div>
           <span>{D.airport ? `${D.airport.name}${D.airport.city ? `, ${D.airport.city}` : ""}` : plan.destination.name ?? ""}</span>
+          <WxLine m={D.metar} />
+          {atisOpen === arr && <AtisText a={atis[arr]} />}
         </div>
         <button className="fs-line t-rw" onClick={() => open("arr-rwy")}>
           <span className="fs-lk">Runway</span><b className="fs-big">{arrRwy ?? "Choose"}</b>
@@ -345,10 +462,10 @@ export function FlightSetup({ plan, onLines, onFocus, onFit, onWaypoints }: {
   );
 }
 
-function ProcRow({ p, cur, curTrans, plan, tone, onAdd, badge, none = "None", onFocus }: { p: Proc; cur: boolean; curTrans: string | undefined; plan: FlightPlan; tone: string; onAdd: (t: string | undefined) => void; badge?: string; none?: string; onFocus?: () => void }) {
+function ProcRow({ p, cur, curTrans, plan, tone, onAdd, badge, none = "None", onFocus, onHover }: { p: Proc; cur: boolean; curTrans: string | undefined; plan: FlightPlan; tone: string; onAdd: (t: string | undefined) => void; badge?: string; none?: string; onFocus?: () => void; onHover?: (on: boolean) => void }) {
   const [t, setT] = useState<string | undefined>(() => (cur ? curTrans : undefined) ?? planTrans(p, plan) ?? (p.transitions.length === 1 && none === "None" ? p.transitions[0] : undefined));
   return (
-    <div className={`fs-proc t-${tone}${cur ? " cur" : ""}`} onFocus={onFocus}>
+    <div className={`fs-proc t-${tone}${cur ? " cur" : ""}`} onFocus={() => { onFocus?.(); onHover?.(true); }} onMouseEnter={() => onHover?.(true)} onMouseLeave={() => onHover?.(false)}>
       <div className="fs-ph">
         <b>{p.name}</b>
         {badge && <span className="fs-badge">{badge === "GPS" ? "RNAV" : badge}</span>}

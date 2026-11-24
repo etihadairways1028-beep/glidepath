@@ -51,7 +51,8 @@ export function consumePairingLink(): boolean {
   // Handed over from the PC: the newest app, connected through the Glidepath relay.
   if (pc && token && location.protocol === "https:") {
     settingsStore.set({ token, pcRelay: pc, bridgeUrl: "" });
-    history.replaceState(null, "", location.pathname + "#/home");
+    history.replaceState(null, "", location.pathname + location.search + "#/home");
+    keepPairingForHomeScreen();
     return true;
   }
   if (!token && !bridge) return false;
@@ -60,29 +61,72 @@ export function consumePairingLink(): boolean {
   if (bridge) patch.bridgeUrl = /^https?:\/\//.test(bridge) ? bridge : `http://${bridge}`;
   else if (location.protocol === "http:" && location.pathname.startsWith("/app")) patch.bridgeUrl = location.origin;
   settingsStore.set(patch);
-  history.replaceState(null, "", location.pathname + "#/home");
+  history.replaceState(null, "", location.pathname + location.search + "#/home");
   keepPairingForHomeScreen();
   return true;
 }
 
 /**
- * A Home Screen web app on iPad/iPhone gets its own storage and starts from the
- * address it was added from. On the Bridge-served app we keep the pairing key in
- * the address (?pair=…) and drop the manifest's fixed start page, so an app added
- * to the Home Screen opens already paired with this PC.
+ * A Home Screen web app on iPad/iPhone gets its own storage and starts from the address
+ * it was added from. So once this device is paired, the pairing goes in the address too
+ * (?pair=… on the PC's own copy; ?pc=…&pair=… on the website when paired by code), and the
+ * manifest's fixed start page is dropped: the Home Screen app opens already connected,
+ * with no code to type. Unpairing remembers the old key so the address can't re-pair it.
  */
-function keepPairingForHomeScreen(): void {
-  if (!(location.protocol === "http:" && location.pathname.startsWith("/app"))) return;
-  const sp = new URLSearchParams(location.search);
-  const fromUrl = sp.get("pair");
-  if (fromUrl && settingsStore.get().token !== fromUrl) settingsStore.set({ token: fromUrl, bridgeUrl: location.origin });
-  const token = settingsStore.get().token;
-  if (token && fromUrl !== token) {
-    sp.set("pair", token);
-    history.replaceState(null, "", `${location.pathname}?${sp.toString()}${location.hash || "#/home"}`);
-  }
-  document.querySelector('link[rel="manifest"]')?.remove();
+const UNPAIRED = "glidepath.unpaired";
+/** iPad or iPhone (iPadOS reports itself as a Mac with a touch screen). */
+const isIos = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+const hashParams = () => new URLSearchParams(location.hash.includes("?") ? location.hash.slice(location.hash.indexOf("?") + 1) : "");
+function setHashParam(k: string, v: string | null): void {
+  const h = location.hash || "#/home";
+  const [path, q = ""] = h.split("?") as [string, string?];
+  const sp = new URLSearchParams(q);
+  if (v === null) { if (!sp.has(k)) return; sp.delete(k); } else { if (sp.get(k) === v) return; sp.set(k, v); }
+  const qs = sp.toString();
+  history.replaceState(history.state, "", `${location.pathname}${location.search}${path}${qs ? `?${qs}` : ""}`);
 }
+export function keepPairingForHomeScreen(): void {
+  const lan = location.protocol === "http:" && location.pathname.startsWith("/app");
+  const hosted = location.protocol === "https:";
+  if (!lan && !hosted) return;
+  let dropped = ""; try { dropped = localStorage.getItem(UNPAIRED) ?? ""; } catch { /* private */ }
+  if (lan) {
+    // The PC's own copy: the key stays on your network, in the address as ?pair=….
+    const sp = new URLSearchParams(location.search);
+    const fromUrl = sp.get("pair");
+    if (fromUrl && fromUrl !== dropped && !settingsStore.get().token) settingsStore.set({ token: fromUrl, bridgeUrl: location.origin });
+    const token = settingsStore.get().token;
+    if (token) sp.set("pair", token); else sp.delete("pair");
+    const qs = sp.toString();
+    if (qs !== new URLSearchParams(location.search).toString()) history.replaceState(null, "", `${location.pathname}${qs ? `?${qs}` : ""}${location.hash || "#/home"}`);
+    if (token) document.querySelector('link[rel="manifest"]')?.remove();
+    return;
+  }
+  // The website, paired by code: the key rides after the # (never sent to the web server),
+  // and only in Safari on iPad/iPhone, where "Add to Home Screen" saves the address.
+  const gpk = hashParams().get("gpk");
+  if (gpk && !settingsStore.get().token) {
+    const [bid, key] = gpk.split("~");
+    if (bid && key && key !== dropped) settingsStore.set({ token: key, pcRelay: bid, bridgeUrl: "" });
+  }
+  const { token, pcRelay } = settingsStore.get();
+  const keep = !!(token && pcRelay && isIos() && !isStandalone());
+  setHashParam("gpk", keep ? `${pcRelay}~${token}` : null);
+  if (keep) document.querySelector('link[rel="manifest"]')?.remove();
+}
+if (typeof window !== "undefined") window.addEventListener("hashchange", () => { if (location.protocol === "https:") keepPairingForHomeScreen(); });
+// Paired or unpaired while the app is open: keep the address in step.
+let pairedAs = settingsStore.get().token;
+settingsStore.subscribe(() => {
+  const t = settingsStore.get().token;
+  if (t === pairedAs) return;
+  try { if (!t && pairedAs) localStorage.setItem(UNPAIRED, pairedAs); else if (t) localStorage.removeItem(UNPAIRED); } catch { /* private */ }
+  pairedAs = t;
+  keepPairingForHomeScreen();
+});
+
+/** Running as a Home Screen app (no Safari address bar). */
+export const isStandalone = (): boolean => { try { return matchMedia("(display-mode: standalone)").matches || (navigator as { standalone?: boolean }).standalone === true; } catch { return false; } };
 
 /** Connect anywhere: reach the PC through the account's relay instead of the local network. */
 export interface RelayTarget { urls: string[]; token: string; /** Paired by code: the PC's link id and the pairing key it checks. */ pc?: { bid: string; key: string } }

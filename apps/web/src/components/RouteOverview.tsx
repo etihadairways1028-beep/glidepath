@@ -4,7 +4,7 @@
  * SimBrief import, so you never need Settings to load a plan.
  */
 import { FlightSetup, type RunwayLine } from "./FlightSetup";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import type { FlightPlan, TelemetryFrame } from "@glidepath/protocol";
 import { distanceNm, routeProgress } from "@glidepath/flight-engine";
 import { MapView } from "./MapView";
@@ -133,7 +133,7 @@ export function RouteProfile({ plan, frame, live }: { plan: FlightPlan; frame: T
   if (tod <= toc) { const mid = (toc + tod) / 2; toc = mid; tod = mid; }
   const prog = live && frame ? routeProgress(pts, frame.position) : null;
   const at = prog ? Math.max(0, Math.min(total, total - prog.distanceRemainingNm)) : null;
-  const W = 600, H = 86, padX = 10, top = 22, base = 64;
+  const W = 600, H = 92, padX = 12, top = 30, base = 68;
   const x = (nm: number) => padX + (nm / total) * (W - padX * 2);
   const yFor = (ft: number) => base - (Math.max(0, ft) / cruise) * (base - top);
   const altNow = frame?.position.altMslFt ?? null;
@@ -141,32 +141,66 @@ export function RouteProfile({ plan, frame, live }: { plan: FlightPlan; frame: T
   const minTo = (nm: number) => (frame?.speed.gsKt && frame.speed.gsKt > 60 ? Math.round((nm / frame.speed.gsKt) * 60) : null);
   const toTod = at !== null && at < tod ? tod - at : null;
   const toToc = at !== null && at < toc ? toc - at : null;
-  const path = `M${x(0)},${base} L${x(toc)},${yFor(cruise)} L${x(tod)},${yFor(cruise)} L${x(total)},${base}`;
+  const yc = yFor(cruise);
+  // Climb rate falls off with height and descent starts gently: curved, like a real profile.
+  const path = `M${x(0)},${base} Q${x(toc * 0.42)},${yc + (base - yc) * 0.08} ${x(toc)},${yc} L${x(tod)},${yc} Q${x(tod + (total - tod) * 0.35)},${yc + (base - yc) * 0.05} ${x(total)},${base}`;
+  const gid = useId().replace(/:/g, "");
+  const fc = (x(toc) / W) * 100, fd = (x(tod) / W) * 100;
+  const ticks = plan.fixes.map((f, i) => ({ nm: cum[i + 1]!, proc: f.proc ?? null, top: /^(TOC|TOD|T\/[CD])$/i.test(f.ident) })).filter((t) => !t.top);
+  const pill = (cx: number, cy: number, label: string, cls: string) => {
+    const w = label.length * 7.4 + 14;
+    return <g className={`rp-pill ${cls}`}><rect x={cx - w / 2} y={cy - 9} width={w} height={18} rx={9} /><text x={cx} y={cy + 4} textAnchor="middle">{label}</text></g>;
+  };
   return (
     <div className="rp">
-      <svg className="rp-svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Climb to ${fmtFl} by ${Math.round(toc)} nm, start down ${Math.round(total - tod)} nm before ${plan.destination.icao}`}>
-        <path d={`${path} L${x(total)},${base} L${x(0)},${base} Z`} className="rp-area" />
+      <svg className="rp-svg" viewBox={`0 -4 ${W} ${H + 4}`} role="img" aria-label={`Climb to ${fmtFl} by ${Math.round(toc)} nm, start down ${Math.round(total - tod)} nm before ${plan.destination.icao}`}>
+        <defs>
+          <linearGradient id={`${gid}s`} x1="0" x2="1" y1="0" y2="0">
+            <stop offset={`${fc * 0.6}%`} stopColor="#3CE0FF" /><stop offset={`${fc}%`} stopColor="#64A8FF" />
+            <stop offset={`${fd}%`} stopColor="#64A8FF" /><stop offset={`${fd + (100 - fd) * 0.4}%`} stopColor="#FFB340" />
+          </linearGradient>
+          <linearGradient id={`${gid}t`} x1="0" x2="1" y1="0" y2="0"><stop offset="0" stopColor="#fff" stopOpacity="0" /><stop offset="1" stopColor="#fff" stopOpacity=".8" /></linearGradient>
+          <linearGradient id={`${gid}f`} x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#64A8FF" stopOpacity=".32" /><stop offset="100%" stopColor="#64A8FF" stopOpacity="0" /></linearGradient>
+        </defs>
+        <path d={`${path} L${x(0)},${base} Z`} fill={`url(#${gid}f)`} className="rp-area2" />
         <line x1={x(0)} x2={x(total)} y1={base} y2={base} className="rp-ground" />
+        {ticks.map((t, i) => <line key={i} x1={x(t.nm)} x2={x(t.nm)} y1={base - 3} y2={base + 3} className={`rp-tick${t.proc ? ` ${t.proc}` : ""}`} />)}
         {at !== null && <path d={path} className="rp-flown" style={{ clipPath: `inset(0 ${100 - (x(at) / W) * 100}% 0 0)` }} />}
-        <path d={path} className="rp-line" />
+        <path d={path} className="rp-line2" stroke={`url(#${gid}s)`} pathLength={1} />
+        {at !== null && <path d={path} className="rp-ahead" pathLength={1} style={{ clipPath: `inset(0 0 0 ${(x(at) / W) * 100}%)` }} />}
         {[["TOC", toc, "rp-c"], ["TOD", tod, "rp-d"]].map(([k, nm, c]) => (
           <g key={k as string} className={c as string}>
-            <line x1={x(nm as number)} x2={x(nm as number)} y1={yFor(cruise)} y2={base} className="rp-drop" />
-            <circle cx={x(nm as number)} cy={yFor(cruise)} r={3.2} />
-            <text x={x(nm as number)} y={yFor(cruise) - 7} textAnchor="middle" className="rp-k">{k as string}</text>
+            <line x1={x(nm as number)} x2={x(nm as number)} y1={yc + 5} y2={base} className="rp-drop" />
+            <circle cx={x(nm as number)} cy={yc} r={4} />
+            {pill(x(nm as number), yc - 16, k as string, "k")}
           </g>
         ))}
-        <text x={(x(toc) + x(tod)) / 2} y={yFor(cruise) - 7} textAnchor="middle" className="rp-fl">{fmtFl}</text>
-        <text x={x(0)} y={base + 16} className="rp-ap">{plan.origin.icao}</text>
-        <text x={x(total)} y={base + 16} textAnchor="end" className="rp-ap">{plan.destination.icao}</text>
-        <text x={(x(0) + x(toc)) / 2} y={base + 16} textAnchor="middle" className="rp-nm">{Math.round(toc)} nm</text>
-        <text x={(x(toc) + x(tod)) / 2} y={base + 16} textAnchor="middle" className="rp-nm">{Math.round(tod - toc)} nm cruise</text>
-        <text x={(x(tod) + x(total)) / 2} y={base + 16} textAnchor="middle" className="rp-nm">{Math.round(total - tod)} nm</text>
-        {at !== null && (
-          <g className="rp-me" style={{ transform: `translate(${x(at)}px, ${altNow !== null ? yFor(altNow) : base}px)` }}>
-            <circle r={4.5} className="rp-dot" />
-          </g>
-        )}
+        {pill((x(toc) + x(tod)) / 2, yc - 16, fmtFl, "fl")}
+        <text x={x(0)} y={base + 17} className="rp-ap">{plan.origin.icao}</text>
+        <text x={x(total)} y={base + 17} textAnchor="end" className="rp-ap">{plan.destination.icao}</text>
+        {[[0, toc, "climb"], [toc, tod, "cruise"], [tod, total, "descent"]].map(([a, b, w]) => {
+          // Fit each segment's label between the airport codes; shorten it, or leave it out, when there's no room.
+          const lo = Math.max(x(a as number), x(0) + 44), hi = Math.min(x(b as number), x(total) - 44);
+          const full = `${Math.round((b as number) - (a as number))} nm ${w}`, short = `${Math.round((b as number) - (a as number))} nm`;
+          const t = hi - lo > full.length * 6.6 + 8 ? full : hi - lo > short.length * 6.6 + 6 ? short : null;
+          return t ? <text key={w as string} x={(lo + hi) / 2} y={base + 17} textAnchor="middle" className="rp-nm">{t}</text> : null;
+        })}
+        {at !== null && (() => {
+          // Your aircraft at its real height on the profile, nose tilted with the climb or descent.
+          const onGround = !!frame?.position.onGround;
+          const tilt = onGround ? 0 : Math.max(-24, Math.min(24, -(frame?.speed.vsFpm ?? 0) / 110));
+          const lbl = altNow === null ? null : onGround ? "On ground" : altNow >= 18000 ? fl(altNow) : `${(Math.round(altNow / 100) * 100).toLocaleString()} ft`;
+          const below = (altNow !== null ? yFor(altNow) : base) < yc + 14;
+          return (
+            <g className="rp-me" style={{ transform: `translate(${x(at)}px, ${altNow !== null ? Math.min(base - 4, yFor(altNow)) : base}px)` }}>
+              <circle r={11} className="rp-halo" />
+              <g className="rp-bob"><g transform={`rotate(${tilt})`}><line x1={-70} x2={-16} y1={0} y2={0} className="rp-trail" stroke={`url(#${gid}t)`} /></g><g transform={`rotate(${tilt}) scale(1.5)`}>
+                <path className="rp-plane" d="M-13,-1.6 L7,-1.6 Q12.5,-1.6 13.5,0 Q12.5,1.6 7,1.6 L-11,1.6 Z M-11.5,-1.6 L-14.5,-7.5 L-11,-7.5 L-6.5,-1.6 Z M-2.5,0.6 L-7.5,5.6 L-4.5,5.6 L3,0.6 Z" />
+              </g></g>
+              {lbl && <g className="rp-alt" transform={`translate(0, ${below ? 22 : -20})`}><rect x={-(lbl.length * 3.6 + 8)} y={-9} width={lbl.length * 7.2 + 16} height={18} rx={9} /><text textAnchor="middle" y={4}>{lbl}</text></g>}
+            </g>
+          );
+        })()}
       </svg>
       <div className="rp-facts">
         <span><i className="rp-sw c" />Top of climb <b>{Math.round(toc)} nm</b> after departure{toToc !== null ? <> · in <b>{Math.round(toToc)} nm</b>{minTo(toToc) !== null ? ` (${minTo(toToc)} min)` : ""}</> : ""}</span>

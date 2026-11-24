@@ -16,7 +16,7 @@
  *    value is sent as null. One bad variable never breaks the stream.
  */
 import { EventEmitter } from "node:events";
-import { collectProcedures, PROCEDURE_DEFINITION, type AirportProcedures, type FacilityRecord } from "../procedures.js";
+import { APPROACH_PATH_DEFINITION, collectApproachPaths, collectProcedures, PROCEDURE_DEFINITION, type AirportProcedures, type ApproachPath, type FacilityRecord, type PathRecord } from "../procedures.js";
 import {
   open,
   Protocol,
@@ -161,6 +161,8 @@ export class MsfsAdapter extends EventEmitter implements SimAdapter {
   private procDefined = false;
   private procReq = 9500;
   private procWaiting = new Map<number, { icao: string; records: FacilityRecord[]; done: (r: AirportProcedures | Error) => void }>();
+  private pathDefined = false;
+  private pathWaiting = new Map<number, { records: PathRecord[]; done: (r: ApproachPath[] | Error) => void }>();
   private stopped = false;
   private retryTimer: NodeJS.Timeout | null = null;
   private generation = 0;
@@ -207,6 +209,7 @@ export class MsfsAdapter extends EventEmitter implements SimAdapter {
 
   private async connectLoop(): Promise<void> {
     this.procDefined = false;
+    this.pathDefined = false;
     if (this.stopped || this.handle) return;
     this.emit("state", "searching", "Waiting for Microsoft Flight Simulator…");
     try {
@@ -252,11 +255,15 @@ export class MsfsAdapter extends EventEmitter implements SimAdapter {
     h.on("simObjectData", (d: RecvSimObjectData) => this.onData(d));
     h.on("simObjectDataByType", (d: RecvSimObjectData) => { if ((d.requestID as number) === REQ_AI) this.onAiData(d); });
     h.on("facilityData", (d) => {
+      const pw = this.pathWaiting.get(d.userRequestId as number);
+      if (pw) { pw.records.push({ type: d.type as number, id: d.uniqueRequestId as number, parent: d.parentUniqueRequestId as number, data: d.data as unknown as PathRecord["data"] }); return; }
       const w = this.procWaiting.get(d.userRequestId as number);
       if (w) w.records.push({ type: d.type as number, id: d.uniqueRequestId as number, parent: d.parentUniqueRequestId as number, data: d.data });
     });
     h.on("facilityDataEnd", (d) => {
       const id = d.userRequestId as number;
+      const pw = this.pathWaiting.get(id);
+      if (pw) { this.pathWaiting.delete(id); try { pw.done(collectApproachPaths(pw.records)); } catch (e) { pw.done(e as Error); } return; }
       const w = this.procWaiting.get(id);
       if (!w) return;
       this.procWaiting.delete(id);
@@ -282,6 +289,27 @@ export class MsfsAdapter extends EventEmitter implements SimAdapter {
       this.procWaiting.set(id, { icao: code, records: [], done: (r) => { clearTimeout(timer); if (r instanceof Error) reject(r); else if (!r.departures.length && !r.arrivals.length && !r.approaches.length) reject(new Error(`The simulator has no procedures for ${code}.`)); else resolve(r); } });
       try { h.requestFacilityData(DEF as never, id as never, code); }
       catch (e) { clearTimeout(timer); this.procWaiting.delete(id); reject(e as Error); }
+    });
+  }
+
+  /** Each approach's fixes with positions, from the simulator's navigation data (a separate request). */
+  approachPaths(icao: string): Promise<ApproachPath[]> {
+    if (!simExtras()) return Promise.reject(new Error("Procedure data from the simulator is switched off."));
+    const h = this.handle;
+    if (!h) return Promise.reject(new Error("Approach paths come from Microsoft Flight Simulator. Start the sim, then try again."));
+    const code = icao.trim().toUpperCase();
+    if (!/^[A-Z0-9]{3,4}$/.test(code)) return Promise.reject(new Error("That isn't an airport code."));
+    const DEF = 9401;
+    if (!this.pathDefined) {
+      for (const f of APPROACH_PATH_DEFINITION) h.addToFacilityDefinition(DEF as never, f);
+      this.pathDefined = true;
+    }
+    const id = ++this.procReq;
+    return new Promise<ApproachPath[]>((resolve, reject) => {
+      const timer = setTimeout(() => { this.pathWaiting.delete(id); reject(new Error(`The simulator didn't send approach paths for ${code}.`)); }, 12_000);
+      this.pathWaiting.set(id, { records: [], done: (r) => { clearTimeout(timer); if (r instanceof Error) reject(r); else resolve(r); } });
+      try { h.requestFacilityData(DEF as never, id as never, code); }
+      catch (e) { clearTimeout(timer); this.pathWaiting.delete(id); reject(e as Error); }
     });
   }
 
