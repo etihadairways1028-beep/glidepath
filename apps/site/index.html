@@ -67,74 +67,31 @@
   </header>
 
   <main id="main">
-    <!-- HERO -->
-    <section class="hero" aria-labelledby="hero-title">
-      <div class="hero-scene" aria-hidden="true"></div>
-      <div class="hero-copy reveal">
-        <a class="eyebrow glass new-badge" href="#new"><span class="new-tag">1.0</span><span>Lock screen alerts<span class="nb-long">, Glidepath AI and flight reviews</span></span><span aria-hidden="true">›</span></a>
-        <h1 id="hero-title"><span>Your flight.</span> <span>Every detail.</span> <span class="h1-grad">One screen.</span></h1>
-        <p class="lede">Microsoft Flight Simulator, live on your iPad, phone or second screen. After every landing, an honest review of how you flew.</p>
-        <div class="cta">
+    <!-- HERO: the demo flight flies across the page -->
+    <section class="lh" aria-labelledby="hero-title">
+      <svg class="lh-map" id="lh-map" aria-hidden="true" preserveAspectRatio="xMidYMid slice"></svg>
+      <div class="lh-cards" id="lh-cards" aria-hidden="true"></div>
+      <div class="lh-copy">
+        <a class="lh-badge" href="#new"><span>1.3</span>Approach paths, ATIS and auto-reconnect on iPad <i aria-hidden="true">›</i></a>
+        <h1 id="hero-title">Every flight,<br><span class="lh-grad">beautifully clear.</span></h1>
+        <p class="lh-lede">Microsoft Flight Simulator on your iPad, phone or second screen. Your route, your approach, your aircraft, live, and an honest review after every landing.</p>
+        <div class="lh-cta">
           <a class="btn primary" data-download href="#download"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Download for Windows</a>
           <a class="btn glass" href="app/?demo=1">Try the app now</a>
-          <button class="btn glass" type="button" data-trailer><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg>Watch the trailer</button>
+          <button class="btn glass" type="button" data-trailer><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg>Trailer</button>
         </div>
+        <ul class="lh-trust" aria-label="At a glance"><li>Free, no ads</li><li>MSFS 2020 and 2024</li><li>iPad, phone and PC</li></ul>
         <div class="device-tip glass" id="device-tip" hidden></div>
-        <ul class="trust" aria-label="At a glance">
-          <li>Free, no ads</li><li>MSFS 2020 and 2024</li><li>iPad, phone and PC</li><li>Any Wi-Fi</li>
-        </ul>
       </div>
-
-      <div class="devices reveal" aria-label="The Glidepath app on an iPad and a phone">
-        <!-- Two moments from the demo flight, floating beside the devices -->
-        <div class="float-chip fc-tod" aria-hidden="true"><span class="fcc-ic">↘</span><div><b>Top of descent in 4 min</b><span>Expect runway 23R at EGCC</span></div></div>
-        <div class="float-chip fc-land" aria-hidden="true"><span class="fcc-grade">A+</span><div><b>Landed 140 fpm</b><span>Runway 23R · 1.12 g · stable approach</span></div></div>
-        <div class="ipad">
-          <div class="screen">
-            <video class="hero-video" src="assets/video/glidepath-flight.mp4" poster="assets/shots/flight-poster.webp" autoplay muted loop playsinline preload="auto" width="1770" height="1230" aria-label="The Glidepath app during a demo flight from London Heathrow to Manchester, sped up"></video>
-          </div>
-        </div>
-
-        <div class="phone">
-          <div class="phone-screen">
-            <div class="lock-time" id="lock-time">9:41</div>
-            <div class="lock-date" id="lock-date">Thursday 5 November</div>
-            <aside class="card" aria-live="polite" aria-label="Live flight card">
-              <div class="card-top">
-                <span class="callsign"><img src="assets/mark.svg" alt="" width="18" height="18">GPD1 · A320</span>
-                <span class="phase" id="phase">At the gate</span>
-              </div>
-              <div class="card-route">
-                <div>
-                  <div class="icao data">EGLL</div>
-                  <div class="sub" id="dep-time">Heathrow</div>
-                </div>
-                <div class="bars" id="bars" aria-hidden="true"></div>
-                <div class="right">
-                  <div class="icao data">EGCC</div>
-                  <div class="sub" id="arr-time">Manchester</div>
-                </div>
-              </div>
-              <div class="card-mid">
-                <div class="big data" id="mid-big">—</div>
-                <div class="sub" id="mid-sub">Waiting for off-block</div>
-              </div>
-              <dl class="readouts">
-                <div><dt>Altitude</dt><dd class="data" id="r-alt">—</dd></div>
-                <div><dt>Speed</dt><dd class="data" id="r-gs">—</dd></div>
-                <div><dt>V/S fpm</dt><dd class="data" id="r-vs">—</dd></div>
-                <div><dt>Fuel</dt><dd class="data" id="r-fuel">—</dd></div>
-              </dl>
-              <p class="tod" id="tod" hidden></p>
-              <div class="grade" id="grade" hidden>
-                <span class="g data" id="g-letter">A+</span>
-                <span id="g-text"></span>
-              </div>
-            </aside>
-            <p class="phone-note">Demo replay</p>
-          </div>
-        </div>
+      <div class="lh-hud" aria-hidden="true">
+        <span class="lh-live"><i></i>Demo flight · EGLL → EGCC</span>
+        <span><em>Phase</em><b id="lh-phase">Gate</b></span>
+        <span><em>Altitude</em><b id="lh-alt">83 ft</b></span>
+        <span><em>Ground speed</em><b id="lh-gs">0 kt</b></span>
+        <span><em>V/S</em><b id="lh-vs">0</b></span>
+        <span><em>To go</em><b id="lh-togo">148 nm</b></span>
       </div>
+      <a class="lh-scroll" href="#film" aria-label="See Glidepath"><i></i></a>
     </section>
 
     <div class="works-with reveal" aria-label="Works with">
@@ -142,7 +99,57 @@
       <span>Microsoft Flight Simulator 2020</span><span>MSFS 2024</span><span>SimBrief</span><span>VATSIM</span><span>IVAO</span><span>Navigraph</span><span>GSX Pro</span><span>Fenix</span><span>FSLabs</span><span>FlyByWire</span>
     </div>
 
-    <a class="scroll-cue" href="#what" aria-label="See what's inside"><span>See what's inside</span><i></i></a>
+    <!-- SCROLL FILM: the iPad turns as you scroll and its screen changes -->
+    <section class="film" id="film" aria-label="Glidepath, screen by screen">
+      <div class="film-stage">
+        <div class="film-glow" aria-hidden="true"></div>
+        <div class="film-pad" id="film-pad">
+          <div class="film-screen">
+            <img src="assets/shots/film-map-route.webp" alt="Live map with the flight plan and runways and procedures panel" loading="lazy">
+            <img src="assets/shots/film-approach-ils.webp" alt="Landing helper in ILS view" loading="lazy">
+            <img src="assets/shots/film-perf-takeoff.webp" alt="Takeoff performance with V1, VR and V2" loading="lazy">
+            <img src="assets/shots/film-remote.webp" alt="Remote autopilot panel" loading="lazy">
+            <img src="assets/shots/film-flight.webp" alt="Flight page with the navlog" loading="lazy">
+          </div>
+        </div>
+        <div class="film-copy" id="film-copy">
+          <article><p class="film-k">01 · Route</p><h2>Every waypoint.<br>Every approach.</h2><p>Your SimBrief plan on a live map: SID, airways, STAR and the approach you pick, drawn fix by fix to the runway. ATIS letter and weather for both airports.</p></article>
+          <article><p class="film-k">02 · Landing helper</p><h2>A glideslope<br>for any runway.</h2><p>Too high, too low, left or right, readable from across the room. Callouts to the flare, on any device.</p></article>
+          <article><p class="film-k">03 · Performance</p><h2>V1. VR. V2.<br>In seconds.</h2><p>Takeoff and landing numbers for 40+ aircraft, from your plan's weights and the live METAR.</p></article>
+          <article><p class="film-k">04 · Remote</p><h2>Your autopilot.<br>In your hand.</h2><p>Speed, heading, altitude and the AP buttons from your sofa, with the sim's own values beside every knob.</p></article>
+          <article><p class="film-k">05 · Flight</p><h2>The whole flight,<br>one glance.</h2><p>A real navlog with live ETAs, top of climb and descent, and your aircraft riding the profile at its real altitude.</p></article>
+        </div>
+        <div class="film-dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      </div>
+    </section>
+
+    <!-- FLY IT: a tiny landing helper game -->
+    <section class="fly reveal" id="fly" aria-labelledby="fly-title">
+      <div class="fly-copy">
+        <p class="kicker">Try the Landing helper</p>
+        <h2 id="fly-title">Can you hold the glidepath?</h2>
+        <p>Low cloud, gusty wind, four miles to run. Keep the dot in the green ring with your mouse, finger or arrow keys. Glidepath grades the approach like it grades yours in the sim.</p>
+        <button class="btn primary" type="button" id="fly-go">Start the approach</button>
+        <p class="fly-best" id="fly-best" hidden></p>
+      </div>
+      <div class="fly-pad" id="fly-pad" tabindex="0" role="application" aria-label="Landing game: move the pointer or use the arrow keys to keep the dot centred">
+        <div class="fly-cmd" id="fly-cmd">Ready</div>
+        <svg viewBox="0 0 640 640" id="fly-svg">
+          <defs><radialGradient id="fly-bg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="rgba(60,255,143,.2)"/><stop offset=".55" stop-color="rgba(10,20,40,0)"/><stop offset="1" stop-color="rgba(255,90,90,.16)"/></radialGradient></defs>
+          <circle cx="320" cy="320" r="290" fill="url(#fly-bg)" stroke="rgba(255,255,255,.16)" stroke-width="2"/>
+          <circle cx="320" cy="320" r="220" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="2" stroke-dasharray="4 8"/>
+          <circle cx="320" cy="320" r="120" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="2"/>
+          <circle id="fly-core" cx="320" cy="320" r="50" fill="rgba(60,255,143,.16)" stroke="rgba(60,255,143,.75)" stroke-width="3"/>
+          <line x1="30" x2="610" y1="320" y2="320" stroke="rgba(255,255,255,.08)"/><line y1="30" y2="610" x1="320" x2="320" stroke="rgba(255,255,255,.08)"/>
+          <text x="320" y="22" text-anchor="middle" class="fly-t">HIGH</text><text x="320" y="634" text-anchor="middle" class="fly-t">LOW</text>
+          <text x="22" y="326" class="fly-t">L</text><text x="618" y="326" text-anchor="end" class="fly-t">R</text>
+          <line id="fly-link" x1="320" y1="320" x2="320" y2="320" stroke="#FFB340" stroke-width="3" stroke-dasharray="3 6"/>
+          <g id="fly-me"><circle id="fly-halo" r="34" fill="#FFB340" opacity=".25"/><circle id="fly-dot" r="18" fill="#FFB340" stroke="#fff" stroke-width="5"/></g>
+        </svg>
+        <div class="fly-hud"><span><em>To runway</em><b id="fly-nm">4.0 nm</b></span><span><em>Height</em><b id="fly-ht">1,300 ft</b></span><span><em>Wind</em><b id="fly-wind">230/18G28</b></span></div>
+        <div class="fly-result" id="fly-result" hidden></div>
+      </div>
+    </section>
 
     <!-- TRAILER -->
     <section class="trailer reveal" aria-label="Glidepath trailer">
@@ -411,6 +418,7 @@
     <p><a href="privacy.html">Privacy policy</a> · <a data-issues-link href="support.html">Support</a> · <a data-repo-link href="#">Source code on GitHub</a> · <a href="app/">Open the app</a></p>
   </footer>
 
+  <script src="home.js" defer></script>
   <script src="app.js" defer></script>
   <script src="account.js" defer></script>
 </body>
