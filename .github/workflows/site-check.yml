@@ -19,9 +19,10 @@ jobs:
           H=$(curl -fsS "$S/?nocache=$RANDOM" -D /tmp/h.txt); echo "$H" > /tmp/home.html
           grep -i -E "^(HTTP|cache-control|age|cf-cache-status)" /tmp/h.txt || true
           grep -q "$EXPECT" /tmp/home.html && echo "Home page: has \"$EXPECT\"." || { echo "::error::Home page doesn't have \"$EXPECT\"."; FAIL=1; }
-          echo "Hero badge: $(grep -o 'new-tag">New</span><span>[^<]*' /tmp/home.html | sed 's/.*<span>//')"
+          echo "Hero badge: $(grep -o 'class="lh-badge"[^>]*><span>[^<]*' /tmp/home.html | sed 's/.*<span>//')"
           curl -fsSL "$S/features.html" | grep -q "Every feature, in detail" && echo "Features page: live." || { echo "::error::Features page missing."; FAIL=1; }
-          grep -q 'class="hero-video"' /tmp/home.html && echo "Hero: plays the recorded flight." || { echo "::error::Hero video missing."; FAIL=1; }
+          grep -q 'id="lh-map"' /tmp/home.html && grep -q 'src="home.js"' /tmp/home.html && echo "Hero: the demo flight map is there." || { echo "::error::Hero flight map missing."; FAIL=1; }
+          curl -fsS -o /dev/null "$S/home.js" && echo "home.js: served." || { echo "::error::home.js missing."; FAIL=1; }
           curl -fsSL "$S/privacy.html" | grep -q "Workers AI" && echo "Privacy: mentions Glidepath AI." || { echo "::error::Privacy page is old."; FAIL=1; }
           curl -fsS -o /dev/null -w "Video: HTTP %{http_code}, %{size_download} bytes, %{content_type}\n" "$S/assets/video/glidepath-flight.mp4"
           curl -fsS -o /dev/null -w "404 page: HTTP %{http_code}\n" "$S/this-page-does-not-exist" || true
