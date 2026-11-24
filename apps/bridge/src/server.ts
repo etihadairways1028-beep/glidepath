@@ -15,6 +15,8 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { announce, secureHost, startAddonDoors, startSecure } from "./secure.js";
 import { ADDON_DOORS, ADDONS, addonStatus } from "./addons.js";
 import { networkInterfaces } from "node:os";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { randomInt, timingSafeEqual } from "node:crypto";
 import { WebSocketServer, type WebSocket } from "ws";
 import { RELAY_HEADER, type CloudLink } from "./cloudlink.js";
@@ -63,6 +65,9 @@ export function liteFlight(f: FlightSummary): FlightSummary {
 
 export class LanServer {
   private prefs: PrefsStore | null = null;
+  /** Procedures and approach paths read from the sim, kept on disk so they work with the sim closed. */
+  private navSave(name: string, data: unknown): void { try { const d = join(this.cfg.dataDir, "navcache"); mkdirSync(d, { recursive: true }); writeFileSync(join(d, `${name}.json`), JSON.stringify(data)); } catch { /* memory only */ } }
+  private navLoad(name: string): unknown { try { return JSON.parse(readFileSync(join(this.cfg.dataDir, "navcache", `${name}.json`), "utf8")); } catch { return null; } }
   private pathCache = new Map<string, { at: number; paths: import("./procedures.js").ApproachPath[] }>();
   private clients = new Set<Client>();
   private http = createServer((req, res) => this.route(req, res));
@@ -394,7 +399,7 @@ export class LanServer {
       if (!local) return json(res, 403, { error: "Only on the PC itself." });
       return json(res, 200, { code: this.newPairCode() });
     }
-    const POSTS = ["/api/prefs", "/api/plan", "/api/ai/config", "/api/ai/chat", "/api/pair", "/api/discord", "/api/cloud/login", "/api/cloud/logout", "/api/update/check", "/api/update/install", "/api/flight/complete"];
+    const POSTS = ["/api/prefs", "/api/plan", "/api/ai/config", "/api/ai/chat", "/api/pair", "/api/discord", "/api/cloud/login", "/api/cloud/logout", "/api/update/check", "/api/update/install", "/api/flight/complete", "/api/flight/unload"];
     const DELETABLE = /^\/api\/flights\/[0-9a-f-]{36}$/.test(p);
     if (req.method !== "GET" && !(req.method === "POST" && POSTS.includes(p)) && !(req.method === "DELETE" && DELETABLE)) return text(res, 405, "Method not allowed");
     if (p === "/") {
@@ -470,21 +475,34 @@ export class LanServer {
     }
     const pp = /^\/api\/procedures\/([A-Za-z0-9]{3,4})\/paths$/.exec(p);
     if (pp && req.method === "GET") {
-      const a = this.remoteAdapter;
-      if (!a?.approachPaths) return json(res, 503, { error: "Approach paths come from Microsoft Flight Simulator, so they're only here while the Bridge is connected to the sim." });
-      const key = pp[1]!.toUpperCase(), hit = this.pathCache.get(key);
+      const a = this.remoteAdapter, key = pp[1]!.toUpperCase(), hit = this.pathCache.get(key);
       if (hit && Date.now() - hit.at < 30 * 60_000) return json(res, 200, hit.paths);
-      try { const paths = await a.approachPaths(key); this.pathCache.set(key, { at: Date.now(), paths }); return json(res, 200, paths); }
-      catch (e) { return json(res, 502, { error: (e as Error).message }); }
+      try {
+        if (!a?.approachPaths) throw new Error("Approach paths come from Microsoft Flight Simulator. Start the sim with the Bridge running once and Glidepath keeps them.");
+        const paths = await a.approachPaths(key); this.pathCache.set(key, { at: Date.now(), paths }); this.navSave(`${key}.paths`, paths); return json(res, 200, paths);
+      } catch (e) {
+        const saved = this.navLoad(`${key}.paths`);
+        return saved ? json(res, 200, saved) : json(res, 502, { error: (e as Error).message });
+      }
     }
     const pm = /^\/api\/procedures\/([A-Za-z0-9]{3,4})$/.exec(p);
     if (pm && req.method === "GET") {
-      const a = this.remoteAdapter;
-      if (!a?.procedures) return json(res, 503, { error: "Procedure lists come from Microsoft Flight Simulator, so they're only here while the Bridge is connected to the sim." });
-      try { return json(res, 200, await a.procedures(pm[1]!)); }
-      catch (e) { return json(res, 502, { error: (e as Error).message }); }
+      const a = this.remoteAdapter, key = pm[1]!.toUpperCase();
+      try {
+        if (!a?.procedures) throw new Error("Procedure lists come from Microsoft Flight Simulator. Start the sim with the Bridge running once and Glidepath keeps them for next time.");
+        const procs = await a.procedures(key); this.navSave(key, procs); return json(res, 200, procs);
+      } catch (e) {
+        // Read before from the sim: still good when the sim is closed.
+        const saved = this.navLoad(key) as Record<string, unknown> | null;
+        return saved ? json(res, 200, { ...saved, cached: true }) : json(res, 502, { error: (e as Error).message });
+      }
     }
     if (p === "/api/flight") return json(res, 200, this.session.activeFlight);
+    if (p === "/api/flight/unload" && req.method === "POST") {
+      const b = (await readBody(req, 500).catch(() => ({}))) as { id?: unknown; at?: unknown };
+      const f = this.session.unloadNow(typeof b.id === "string" ? b.id : undefined, typeof b.at === "number" ? b.at : undefined);
+      return f ? json(res, 200, f) : json(res, 409, { error: "There's no flight loaded to unload." });
+    }
     if (p === "/api/flight/complete" && req.method === "POST") {
       const f = this.session.completeNow();
       return f ? json(res, 200, f) : json(res, 409, { error: "The flight can be completed once you've landed." });

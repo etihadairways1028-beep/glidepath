@@ -37,6 +37,9 @@ export class FlightSession extends EventEmitter {
   private flight: FlightSummary | null = null;
   /** After the pilot completes a flight by hand: don't start a new one while still taxiing in. */
   private holdUntilParked = false;
+  /** Unloaded while flying: don't start a new flight until parked, or a new flight is loaded somewhere else. */
+  private lastFrameBeforeUnload: TelemetryFrame | null = null;
+  private unloadedAt: { lat: number; lon: number; t: number } | null = null;
   private detector = new PhaseDetector();
   private analyzer = new LandingAnalyzer({ profile: landingProfileFor(null) });
   private reviewer = new FlightReviewer();
@@ -128,9 +131,13 @@ export class FlightSession extends EventEmitter {
 
     if (this.holdUntilParked) {
       const parked = frame.position.onGround && (frame.speed.gsKt ?? 0) < 2 && (frame.controls.parkingBrake === true || (frame.engines.length > 0 && frame.engines.every((e) => e.running === false)));
-      const moved = !frame.position.onGround; // taking off again: a new flight after all
+      const u = this.unloadedAt;
+      const jumped = u ? Math.hypot(frame.position.lat - u.lat, (frame.position.lon - u.lon) * Math.cos((u.lat * Math.PI) / 180)) * 60 > 30 || frame.t - u.t > 2 * 3600_000 : false;
+      if (u && !jumped) { u.lat = frame.position.lat; u.lon = frame.position.lon; u.t = frame.t; }
+      const moved = u ? jumped : !frame.position.onGround; // taking off again: a new flight after all
       if (!parked && !moved) { this.emit("frame", frame, "TAXI_IN"); return; }
       this.holdUntilParked = false;
+      this.unloadedAt = null;
     }
     if (!this.flight) this.startFlight(frame);
     else if (this.lastFrame === null) this.maybeResume(frame);
@@ -374,6 +381,26 @@ export class FlightSession extends EventEmitter {
     if (!f.onBlockAt) f.onBlockAt = this.lastFrame?.t ?? Date.now();
     this.finish("completed");
     this.holdUntilParked = true;
+    return f;
+  }
+
+  /**
+   * The pilot unloads the flight, landed or not: it goes to the logbook now with the times so far.
+   * `at` is when they pressed it (sent later if the PC was out of reach then). Returns null if there's no such flight.
+   */
+  unloadNow(id?: string, at?: number): FlightSummary | null {
+    const f = this.flight;
+    if (!f || (id && f.id !== id)) return null;
+    this.lastFrameBeforeUnload = this.lastFrame;
+    const last = this.lastFrame?.t ?? Date.now();
+    const t = at && Number.isFinite(at) && at <= Date.now() && at >= (f.startedAt ?? 0) ? Math.min(at, last) : last;
+    if (f.offBlockAt && !f.onBlockAt) f.onBlockAt = Math.max(f.offBlockAt, t);
+    this.finish(f.wheelsDownAt && !this.detector.isAirborne ? "completed" : "incomplete");
+    f.endedAt = Math.max(f.endedAt ?? 0, t);
+    this.recorder.saveFlight(f);
+    this.holdUntilParked = true;
+    const p = this.lastFrameBeforeUnload;
+    this.unloadedAt = p && !p.position.onGround ? { lat: p.position.lat, lon: p.position.lon, t: p.t } : null;
     return f;
   }
 

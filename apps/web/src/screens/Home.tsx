@@ -1,3 +1,4 @@
+import { pendingUnload, queueUnload, unloadOnBridge } from "../data/unload";
 import { useEffect, useState } from "react";
 import { ClockPill } from "../components/Clock";
 import type { FlightSummary } from "@glidepath/protocol";
@@ -77,6 +78,20 @@ function LogCard() {
   const block = f.offBlockAt && blockEnd ? blockEnd - f.offBlockAt : null;
   const air = f.wheelsUpAt && airEnd ? airEnd - f.wheelsUpAt : null;
   const landed = !!f.wheelsDownAt && !L.airborne && !done;
+  const [ask, setAsk] = useState(false);
+  const [queued, setQueued] = useState(() => pendingUnload());
+  useEffect(() => { const u = () => setQueued(pendingUnload()); window.addEventListener("glidepath-unload", u); return () => window.removeEventListener("glidepath-unload", u); }, []);
+  const conn = useApp((s) => s.conn);
+  const unload = async () => {
+    setAsk(false); setBusy(true); setErr(null);
+    const at = Date.now();
+    try {
+      if (mode === "demo") { const d = (await import("../data/demo")).activeDemo(); d?.seek(1); }
+      else if (mode === "bridge" && conn === "live") await unloadOnBridge(f!.id, at);
+      else queueUnload({ id: f!.id, at });
+    } catch { queueUnload({ id: f!.id, at }); }
+    setBusy(false);
+  };
   const finish = async () => {
     setBusy(true); setErr(null);
     try {
@@ -105,6 +120,15 @@ function LogCard() {
         {landed && <small className="faint">Or just park: it saves by itself when the engines are off.</small>}
         {done && <a className="btn primary" href={`#/logbook/${f.id}`}>Open in logbook</a>}
         {!done && !landed && f.offBlockAt && <small className="faint">Saves itself when you park. If you close the sim after landing, it's still saved.</small>}
+        {!done && queued?.id === f.id && <p className="logc-q">Unloaded. It goes to your logbook with the hours so far as soon as your PC is reachable. <button className="linkish" onClick={() => queueUnload(null)}>Undo</button></p>}
+        {!done && queued?.id !== f.id && !ask && <button className="btn small logc-unload" onClick={() => setAsk(true)} disabled={busy}>Unload flight</button>}
+        {ask && (
+          <div className="logc-ask" role="alertdialog" aria-label="Unload this flight?">
+            <b>Unload this flight?</b>
+            <p>{route} goes to your logbook now{block ? ` with ${hm(block)} block time` : ""}{air ? ` and ${hm(air)} flight time` : ""}.{!f.wheelsDownAt ? " You haven't landed, so it's saved as incomplete." : ""}{mode === "bridge" && conn !== "live" ? " Your PC isn't reachable right now: it's sent as soon as it is." : ""}</p>
+            <div className="row" style={{ gap: 8 }}><button className="btn small" autoFocus onClick={() => setAsk(false)}>Keep flying</button><button className="btn small danger" onClick={() => void unload()}>Unload and save</button></div>
+          </div>
+        )}
       </div>
     </section>
   );

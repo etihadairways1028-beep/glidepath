@@ -43,20 +43,30 @@ export function useChoice(dep: string | null | undefined, arr: string | null | u
 }
 export const useChosenArrivalRunway = (dep: string | null | undefined, arr: string | null | undefined) => useChoice(dep, arr).arrRunway ?? null;
 
+const NAV = (icao: string) => `glidepath.nav.${icao.toUpperCase()}`;
+/** Last procedures read for an airport, kept on this device so they work when the PC is out of reach. */
+export function navCached<T>(icao: string, kind = ""): T | null { try { const r = localStorage.getItem(NAV(icao) + kind); return r ? (JSON.parse(r) as T) : null; } catch { return null; } }
+export function navKeep(icao: string, data: unknown, kind = ""): void { try { localStorage.setItem(NAV(icao) + kind, JSON.stringify(data)); } catch { /* full or private */ } }
+
 export function useProcs(icao: string | null | undefined, enabled: boolean) {
   const [data, setData] = useState<AirportProcs | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [cached, setCached] = useState(false);
+  const [n, setN] = useState(0);
   useEffect(() => {
-    setData(null); setErr(null);
+    setData(null); setErr(null); setCached(false);
+    if (!icao) return;
     const b = activeBridge();
-    if (!icao || !enabled || !b) return;
+    const fallback = (msg: string | null) => { const c = navCached<AirportProcs>(icao); if (c) { setData(c); setCached(true); } else if (msg) setErr(msg); };
+    if (!enabled || !b) { fallback(null); return; }
     let stop = false;
     setLoading(true);
-    b.get<AirportProcs>(`/api/procedures/${icao}`).then((d) => { if (!stop) setData(d); }).catch((e: Error) => { if (!stop) setErr(e.message); }).finally(() => { if (!stop) setLoading(false); });
+    b.get<AirportProcs & { cached?: boolean }>(`/api/procedures/${icao}`).then((d) => { if (stop) return; setData(d); setCached(!!d.cached); navKeep(icao, d); })
+      .catch((e: Error) => { if (!stop) fallback(e.message); }).finally(() => { if (!stop) setLoading(false); });
     return () => { stop = true; };
-  }, [icao, enabled]);
-  return { data, err, loading };
+  }, [icao, enabled, n]);
+  return { data, err, loading, cached, retry: () => setN((x) => x + 1) };
 }
 
 function Pick({ label, tone, value, options, onChange, empty, plan }: { label: string; tone: string; value: string | undefined; options: string[]; onChange: (v: string) => void; empty: string; plan?: string | null }) {

@@ -14,13 +14,14 @@ import { getLiveNetwork } from "../data/networks";
 import { useSettings } from "../data/store";
 import { useApp } from "../data/store";
 import { activeBridge } from "../data/bridge";
-import { loadChoice, saveChoice, useChoice, useProcs, type ProcChoice } from "./Procedures";
+import { loadChoice, navCached, navKeep, saveChoice, useChoice, useProcs, type ProcChoice } from "./Procedures";
 
 type End = AirportDetail["runways"][number]["ends"][number];
 type Proc = { name: string; runways: string[]; transitions: string[] };
 type Appr = { name: string; type: string; runway: string; transitions: string[] };
 type PathFix = { ident: string; lat: number; lon: number; altFt: number | null };
-type APath = { name: string; runway: string; final: PathFix[]; transitions: Array<{ name: string; legs: PathFix[] }> };
+export type PubHold = { ident: string; lat: number; lon: number; courseDeg: number; trueCourse: boolean; right: boolean; legNm: number | null; legMin: number | null; altFt: number | null; alt2Ft: number | null; speedKt: number | null; from: "approach" | "missed" };
+type APath = { name: string; runway: string; final: PathFix[]; transitions: Array<{ name: string; legs: PathFix[] }>; missed?: PathFix[]; holds?: PubHold[] };
 type View = "main" | "dep-rwy" | "sid" | "arr-rwy" | "star" | "app";
 
 /** A line drawn on the map for a runway: its final approach course, or its departure direction. */
@@ -45,18 +46,32 @@ export function departLine(e: End): Array<[number, number]> {
 }
 
 /** Each approach's fixes, from the sim through the Bridge (null when not available). */
-function usePaths(icao: string, enabled: boolean): APath[] | null {
+export function usePaths(icao: string, enabled: boolean, retry = 0): APath[] | null {
   const [v, setV] = useState<APath[] | null>(null);
   useEffect(() => {
-    setV(null);
+    setV(navCached<APath[]>(icao, ".paths"));
     const b = activeBridge();
     if (!enabled || !b || !/^[A-Z0-9]{3,4}$/.test(icao)) return;
     let off = false;
-    b.get<APath[]>(`/api/procedures/${icao}/paths`).then((r) => { if (!off && Array.isArray(r) && r.length) setV(r); }).catch(() => undefined);
+    b.get<APath[]>(`/api/procedures/${icao}/paths`).then((r) => { if (!off && Array.isArray(r) && r.length) { setV(r); navKeep(icao, r, ".paths"); } }).catch(() => undefined);
     return () => { off = true; };
-  }, [icao, enabled]);
+  }, [icao, enabled, retry]);
   return v;
 }
+/** Published holds at your origin and destination (from the sim's navdata), and those on your chosen approach. */
+export function usePublishedHolds(plan: FlightPlan | null, live: boolean): { all: PubHold[]; onApproach: PubHold[] } {
+  const dep = plan?.origin.icao.toUpperCase() ?? "", arr = plan?.destination.icao.toUpperCase() ?? "";
+  const pa = usePaths(arr, live && !!arr), pd = usePaths(dep, live && !!dep);
+  const ch = useChoice(dep || null, arr || null);
+  return useMemo(() => {
+    const all: PubHold[] = [];
+    for (const p of [...(pa ?? []), ...(pd ?? [])]) for (const h of p.holds ?? []) if (!all.some((x) => x.ident === h.ident && Math.abs(x.lat - h.lat) < 1e-4)) all.push(h);
+    const chosen = ch.approach ? (pa ?? []).find((p) => p.name === ch.approach) : null;
+    const onApproach = chosen ? (chosen.holds ?? []).filter((h) => h.from === "missed" || !ch.appTrans || chosen.transitions.find((t) => t.name === ch.appTrans)?.legs.some((l) => l.ident === h.ident) || chosen.final.some((l) => l.ident === h.ident)) : [];
+    return { all, onApproach };
+  }, [pa, pd, ch.approach, ch.appTrans]);
+}
+
 const altTxt = (ft: number | null) => (ft == null ? "" : ft >= 18000 ? `FL${Math.round(ft / 100)}` : `${ft.toLocaleString()} ft`);
 const ll = (f: PathFix): [number, number] => [f.lon, f.lat];
 /** One path from a transition's first fix through the final approach to the runway. */
@@ -187,7 +202,8 @@ export function FlightSetup({ plan, onLines, onFocus, onFit, onWaypoints }: {
   const ch = useChoice(dep, arr);
   const O = useAirportWx(dep), D = useAirportWx(arr);
   const P = useProcs(dep, live), Q = useProcs(arr, live);
-  const paths = usePaths(arr, live);
+  const [pathTry, setPathTry] = useState(0);
+  const paths = usePaths(arr, live, pathTry);
   const atis = useAtis([dep, arr]);
   const [atisOpen, setAtisOpen] = useState<string | null>(null);
   const toggleAtis = (c: string) => setAtisOpen((x) => (x === c ? null : c));
@@ -316,7 +332,8 @@ export function FlightSetup({ plan, onLines, onFocus, onFit, onWaypoints }: {
     </nav>
   );
 
-  const why = (s: typeof P) => !live ? "Procedure lists come from Microsoft Flight Simulator. Connect your Bridge with the sim running to see them." : s.loading ? "Reading procedures from the simulator…" : s.err ?? null;
+  const why = (s: typeof P) => !live ? "SIDs, STARs and approaches come from Microsoft Flight Simulator through the Bridge on your PC. Connect your Bridge with the sim running once; after that Glidepath keeps them, even with the sim closed." : s.loading ? "Reading procedures from the simulator…" : s.err ? `${s.err} Procedures come from the sim through the Bridge: make sure the Bridge is running (and updated) and the sim is loaded, then try again.` : null;
+  const retryBtn = (s: typeof P) => (s.err || !s.data) && live && !s.loading ? <button className="btn small" onClick={() => { s.retry(); setPathTry((x) => x + 1); }}>Try again</button> : null;
   const count = (s: typeof P, n: number | undefined, word: string, v: View, tone: string) => (
     <div className={`fs-avail t-${tone}`}>
       {n ? <><b className="fs-n">{n}</b><span>{n === 1 ? ({ Departures: "Departure", Arrivals: "Arrival", Approaches: "Approach" } as Record<string, string>)[word] ?? word : word} available</span></> : <span className="faint">{s.loading ? "Reading from the sim…" : live && !s.err ? `No ${word.toLowerCase()} found` : `${word} come from the sim`}</span>}
@@ -354,7 +371,7 @@ export function FlightSetup({ plan, onLines, onFocus, onFit, onWaypoints }: {
       const rw = view === "sid" ? depRwy : arrRwy, curName = view === "sid" ? sid : star;
       const mine = list.filter((p) => serves(p, rw)), other = list.filter((p) => !serves(p, rw));
       const row = (p: Proc) => <ProcRow key={p.name} p={p} cur={p.name === curName} curTrans={view === "sid" ? ch.sidTrans : ch.starTrans} plan={plan} tone={view} onAdd={(t) => (view === "sid" ? pickSid(p, t) : pickStar(p, t))} />;
-      body = !list.length ? <p className="fs-note">{why(S) ?? "No procedures."}</p> : (
+      body = !list.length ? <><p className="fs-note">{why(S) ?? "No procedures."}</p>{retryBtn(S)}</> : (
         <>
           {curName && <button className="btn small fs-none" onClick={() => { set(view === "sid" ? { sid: "", sidTrans: undefined } : { star: "", starTrans: undefined }); open("main"); }}>Remove {curName}{view === "sid" ? " (fly vectors)" : ""}</button>}
           {mine.length > 0 && <div className="fs-gh">{rw ? `${view === "sid" ? "From" : "To"} runway ${rw}` : "All"}<span>{mine.length}</span></div>}
@@ -371,6 +388,7 @@ export function FlightSetup({ plan, onLines, onFocus, onFit, onWaypoints }: {
       body = !apps.length ? (
         <>
           <p className="fs-note">{why(Q) ?? "No approaches."}</p>
+          {retryBtn(Q)}
           {endsOf(D.airport).length > 0 && <p className="fs-note">You can still choose the landing runway; the map shows its final approach course.</p>}
           {endsOf(D.airport).length > 0 && <button className="btn small" onClick={() => setView("arr-rwy")}>Choose landing runway</button>}
         </>
@@ -394,6 +412,7 @@ export function FlightSetup({ plan, onLines, onFocus, onFit, onWaypoints }: {
         {view === "app" && paths ? <p className="fs-hint"><i className="fs-key app" />Each approach is drawn from its first fix to the runway. Point at one to see its fixes and altitudes.</p>
           : (view === "app" || view === "arr-rwy") && <p className="fs-hint"><i className="fs-key app" />The lines on the map are each runway's final approach course ({FINAL_NM} nm). Point at a runway to highlight it.</p>}
         {(view === "dep-rwy" || view === "sid") && <p className="fs-hint"><i className="fs-key dep" />Green lines show each runway's take-off direction.</p>}
+        {S.cached && <p className="fs-hint">Saved from an earlier session with the sim. Start the sim to refresh.</p>}
         <div className="fs-scroll">{body}</div>
         {confirm && <ConfirmBox c={confirm} close={() => setConfirm(null)} />}
       </div>

@@ -15,6 +15,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Icon, Mark } from "./components/ui";
 import { activeBridge, BridgeClient, adoptLocalToken, consumePairingLink, detectBridgeUrl, isStandalone, setActiveBridge } from "./data/bridge";
 import { startPrefsSync } from "./data/prefsSync";
+import { startUnloadFlush } from "./data/unload";
 
 /*
  * Open where you left off: the Home Screen app (and a plain visit to the app's address)
@@ -183,6 +184,7 @@ export function App() {
     consumePairingLink();
     connectFromSettings();
     startPrefsSync();
+    startUnloadFlush();
     void adoptLocalToken().then((ok) => { if (ok) connectFromSettings(); });
     handOffToNewestApp();
     if (!settingsStore.get().token && new URLSearchParams(location.search).get("demo") === "1") startDemo();

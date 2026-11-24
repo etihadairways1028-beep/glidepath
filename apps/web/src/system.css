@@ -435,3 +435,14 @@ html:root .rp-trail { stroke-width: 4; stroke-linecap: round; filter: blur(1.5px
 html:root[data-theme="light"] .rp-ahead { stroke: rgba(10,60,140,.45); } 
 html:root .rp-flown { display: none; }
 @media (prefers-reduced-motion: reduce) { html:root :is(.rp-line2, .rp-area2, .rp-c, .rp-d, .rp-pill.fl, .rp-tick, .rp-me, .rp-bob, .rp-halo, .rp-ahead) { animation: none !important; } }
+/* Unload flight */
+html:root .logc-unload { margin-top: 8px; color: var(--ds-bad, #FF453A) !important; }
+html:root .logc-ask { margin-top: 10px; padding: 14px; border-radius: 14px; background: var(--ds-card); border: 1px solid color-mix(in srgb, var(--ds-bad, #FF453A) 45%, transparent); display: grid; gap: 8px; max-width: 420px; animation: gpRise .2s var(--ds-ease, ease) both; }
+html:root .logc-ask b { font-size: 16px; color: var(--ds-ink); } html:root .logc-ask p { margin: 0; font-size: 13.5px; color: var(--ds-ink-2); line-height: 1.45; }
+html:root .logc-q { margin: 8px 0 0; font-size: 13px; color: var(--ds-ink-2); } html:root .linkish { background: none; border: 0; color: var(--ds-accent); font: inherit; cursor: pointer; text-decoration: underline; padding: 0; }
+/* Holds */
+html:root .hold-src { margin: 0 0 8px; font-size: 12.5px; color: var(--ds-ink-2); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+html:root .hs-pub { background: color-mix(in srgb, #30D158 20%, transparent); color: #30D158; font-weight: 700; } html:root .hs-you { background: var(--ds-ctl); color: var(--ds-ink-2); font-weight: 700; }
+html:root .hold-edit { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+html:root .hold-edit label { display: grid; gap: 4px; font-size: 11.5px; font-weight: 700; color: var(--ds-ink-2); }
+html:root .hold-edit .input { width: 84px; height: 36px; }

@@ -56,3 +56,32 @@ describe("every flight reaches the logbook", () => {
     rec.close?.();
   });
 });
+
+describe("unloading a flight", () => {
+  it("saves a flight unloaded in cruise as incomplete, with block time so far", () => {
+    const dir = mkdtempSync(join(tmpdir(), "gp-unl-"));
+    const rec = new Recorder(dir);
+    const s = new FlightSession(rec, log);
+    let last: RawFrame | null = null;
+    for (const f of frames) { s.ingest(f); last = f; if ((f.position.altMslFt ?? 0) > 20000) break; }
+    const id = (s as any).flight.id as string;
+    expect(s.unloadNow("someone-else")).toBeNull();
+    const f = s.unloadNow(id, last!.t);
+    expect(f?.status).toBe("incomplete");
+    const saved = rec.listFlights(5)[0]!;
+    expect(saved.id).toBe(id);
+    expect(saved.offBlockAt).toBeTruthy(); expect(saved.wheelsUpAt).toBeTruthy(); expect(saved.onBlockAt).toBeGreaterThan(saved.offBlockAt!);
+    expect((s as any).flight).toBeNull();
+    // Still flying after unloading: no new flight until parked or loaded somewhere else.
+    const i = frames.indexOf(last!);
+    for (const f of frames.slice(i + 1, i + 200)) s.ingest(f);
+    expect((s as any).flight).toBeNull();
+    rec.close?.();
+  });
+  it("saves a landed flight as completed when unloaded", () => {
+    const { rec, s, last } = landedNotParked();
+    const f = s.unloadNow(undefined, last.t);
+    expect(f?.status).toBe("completed");
+    rec.close?.();
+  });
+});

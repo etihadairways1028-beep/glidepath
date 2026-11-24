@@ -1,8 +1,20 @@
 /**
  * Holding patterns: a standard racetrack at a fix, sized from speed (rate-one turns, 3°/s)
  * and leg time, with the entry (direct, teardrop or parallel) from the aircraft's heading.
- * Published holds need a paid navigation database, so the pilot places these.
+ * Published holds come from the sim's own navdata through the Bridge (HA/HF/HM legs of the
+ * airport's procedures); anywhere else the pilot sets the hold from the chart or ATC.
  */
+import { model, type GeomagnetismModel } from "geomagnetism";
+
+let wmm: GeomagnetismModel | null = null;
+/** Magnetic variation (declination) here, degrees east positive, from the World Magnetic Model. */
+export function declination(lat: number, lon: number): number {
+  try { wmm ??= model(new Date(), { allowOutOfBoundsModel: true }); const d = wmm.point([lat, lon]).decl; return Number.isFinite(d) ? d : 0; } catch { return 0; }
+}
+export const magToTrue = (mag: number, lat: number, lon: number) => (((mag + declination(lat, lon)) % 360) + 360) % 360;
+export const trueToMag = (tru: number, lat: number, lon: number) => (((tru - declination(lat, lon)) % 360) + 360) % 360;
+export const deg3 = (d: number) => String(Math.round(d) % 360 || 360).padStart(3, "0");
+
 export interface Hold {
   ident: string;
   lat: number;
@@ -16,6 +28,14 @@ export interface Hold {
   kt: number;
   /** Planned altitude at the fix, feet, if known. */
   altFt?: number | null;
+  /** Leg length in nm (published DME/RNAV holds); when set it replaces the leg time. */
+  legNm?: number | null;
+  /** Where it came from: the sim's published hold, or set by you. */
+  source?: "published" | "you";
+  /** Published limits, when known. */
+  speedKt?: number | null;
+  maxAltFt?: number | null;
+  minAltFt?: number | null;
 }
 
 const rad = (d: number) => (d * Math.PI) / 180;
@@ -23,7 +43,7 @@ const rad = (d: number) => (d * Math.PI) / 180;
 /** Racetrack outline as [lon, lat] points (closed). */
 export function holdShape(h: Hold): number[][] {
   const r = h.kt / (60 * Math.PI); // turn radius, nm, at 3°/s
-  const L = (h.kt * h.legMin) / 60; // straight leg, nm
+  const L = h.legNm && h.legNm > 0 ? h.legNm : (h.kt * h.legMin) / 60; // straight leg, nm
   const c = rad(h.inboundDeg);
   const u = [Math.sin(c), Math.cos(c)]; // along the inbound course (east, north)
   const s = h.right ? 1 : -1;

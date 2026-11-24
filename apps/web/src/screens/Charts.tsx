@@ -84,9 +84,10 @@ export function ChartsFor({ icao, compact = false }: { icao: string; compact?: b
       <div className="ch-links">
         <a className="btn small" href={`https://chartfox.org/${code}`} target="_blank" rel="noreferrer">ChartFox · {code}</a>
         <a className="btn small" href="https://charts.navigraph.com/" target="_blank" rel="noreferrer">Navigraph Charts</a>
+        {/^LF/.test(code) && <a className="btn small" href="https://www.sia.aviation-civile.gouv.fr/vaip" target="_blank" rel="noreferrer">French AIP charts (SIA, free)</a>}
         {isUS(code) && <a className="btn small" href={`https://www.faa.gov/air_traffic/flight_info/aeronav/digital_products/dtpp/search/results/?cycle=&ident=${code}`} target="_blank" rel="noreferrer">FAA website</a>}
       </div>
-      {!isUS(code) && <p className="muted ch-note">Official charts outside the US aren't available to apps for free. ChartFox has them for most countries (free, sign in with VATSIM); Navigraph needs your Ultimate subscription.</p>}
+      {!isUS(code) && <p className="muted ch-note">{/^LF/.test(code) ? <>France publishes its official charts free in the SIA's AIP viewer: tap {code} on its map to open every chart (approach, arrival, departure, aerodrome). </> : null}Jeppesen charts like Navigraph's can't be shown inside other apps: open them in Navigraph Charts with your subscription. ChartFox has official charts for most countries (free, sign in with VATSIM).</p>}
       {isUS(code) && !bridge && <p className="muted ch-note">Connect your PC to see {code}'s FAA charts here. Your Bridge fetches the FAA's free chart list.</p>}
       {err && <Notice>{err}</Notice>}
       {isUS(code) && bridge && !data && !err && <div className="skeleton" style={{ height: 160 }} />}

@@ -8,7 +8,8 @@ import { MapView } from "../components/MapView";
 import { TrafficSheet } from "../components/TrafficSheet";
 import { TrafficPanel } from "../components/TrafficPanel";
 import { LoadPlanCard } from "../components/FlightPlanCard";
-import { courseDeg, holdEntry, type Hold } from "../data/hold";
+import { courseDeg, deg3, holdEntry, magToTrue, trueToMag, type Hold } from "../data/hold";
+import { usePublishedHolds, type PubHold } from "../components/FlightSetup";
 import { routeProgress } from "@glidepath/flight-engine";
 import { Icon } from "../components/ui";
 import { fmt, PHASE_LABEL, useLive } from "../data/derive";
@@ -49,6 +50,10 @@ export function MapScreen() {
     window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k);
   }, []);
   const [holds, setHolds] = useState<Hold[]>(() => { try { return JSON.parse(sessionStorage.getItem("glidepath.holds") ?? "[]") as Hold[]; } catch { return []; } });
+  const pubLive = useApp((st) => st.mode) === "bridge";
+  const pubHolds = usePublishedHolds(L.plan ?? null, pubLive);
+  // The chosen approach's published holds draw by themselves (unless you've set your own there).
+  const autoHolds: Hold[] = pubHolds.onApproach.filter((p) => !holds.some((h) => h.ident === p.ident)).map((p) => ({ ident: p.ident, lat: p.lat, lon: p.lon, inboundDeg: p.trueCourse ? p.courseDeg : magToTrue(p.courseDeg, p.lat, p.lon), right: p.right, legMin: p.legMin ?? 1, legNm: p.legNm, kt: Math.min(230, p.speedKt ?? 230), altFt: p.altFt, source: "published", speedKt: p.speedKt, minAltFt: p.altFt, maxAltFt: p.alt2Ft }));
   const saveHolds = (h: Hold[]) => { setHolds(h); try { sessionStorage.setItem("glidepath.holds", JSON.stringify(h)); } catch { /* storage off */ } };
   useEffect(() => {
     if (!layers) return;
@@ -142,7 +147,7 @@ export function MapScreen() {
 
   return (
     <div className="map-wrap">
-      <MapView trail={trail} plan={L.plan} aircraft={aircraft} airports={airports} traffic={traffic} atc={atc} centres={centres} metars={metars} radarTiles={s.showRadar ? radar.data ?? null : null} onSelectAtc={(c) => { setAtcSel(c); setSel(null); setWxSel(null); }} onSelectMetar={(w) => { setWxSel(w); setSel(null); setAtcSel(null); }} onView={(bbox, zoom) => setView({ bbox, zoom })} follow={follow} threeD={s.map3d} stands={stands} agl={f?.position.altAglFt ?? null} onGround={!!f?.position.onGround} onSelectTraffic={(p) => { setSel(p); if (p) { setAtcSel(null); setWxSel(null); } }} onUserMove={() => setFollow(false)} selTrack={selInfo?.track ?? null} flyTo={fly} fitRoute={fitRoute} holds={holds} nextFix={nextFix} runwayLines={routeOpen ? rwLines : []} fitBox={fitBox} onSelectFix={(i) => { setFixSel(i); setSel(null); setAtcSel(null); setWxSel(null); }} />
+      <MapView trail={trail} plan={L.plan} aircraft={aircraft} airports={airports} traffic={traffic} atc={atc} centres={centres} metars={metars} radarTiles={s.showRadar ? radar.data ?? null : null} onSelectAtc={(c) => { setAtcSel(c); setSel(null); setWxSel(null); }} onSelectMetar={(w) => { setWxSel(w); setSel(null); setAtcSel(null); }} onView={(bbox, zoom) => setView({ bbox, zoom })} follow={follow} threeD={s.map3d} stands={stands} agl={f?.position.altAglFt ?? null} onGround={!!f?.position.onGround} onSelectTraffic={(p) => { setSel(p); if (p) { setAtcSel(null); setWxSel(null); } }} onUserMove={() => setFollow(false)} selTrack={selInfo?.track ?? null} flyTo={fly} fitRoute={fitRoute} holds={[...holds, ...autoHolds]} nextFix={nextFix} runwayLines={routeOpen ? rwLines : []} fitBox={fitBox} onSelectFix={(i) => { setFixSel(i); setSel(null); setAtcSel(null); setWxSel(null); }} />
       {!sel && !atcSel && !wxSel && fixSel === null && <div className="map-ap"><MiniApproach /></div>}
       {/* The flight panel steps aside while a traffic, ATC or weather card is open, so the two never overlap. */}
       <div className={`map-hud glass strong pad${selLive || atcSel || wxSel ? " behind" : ""}`} style={{ padding: "14px 16px" }}>
@@ -249,34 +254,52 @@ export function MapScreen() {
       {fixSel !== null && L.plan && L.plan.fixes[fixSel] && (() => {
         const plan = L.plan!, fx = plan.fixes[fixSel]!;
         const prev = fixSel === 0 ? plan.origin : plan.fixes[fixSel - 1]!;
-        const inbound = Math.round(courseDeg(prev, fx));
-        const held = holds.find((h) => h.ident === fx.ident && Math.abs(h.lat - fx.lat) < 1e-6);
-        const kt = Math.max(180, Math.min(265, f?.speed.tasKt ?? f?.speed.gsKt ?? 230));
-        const make = (right: boolean, legMin: number): Hold => ({ ident: fx.ident, lat: fx.lat, lon: fx.lon, inboundDeg: held?.inboundDeg ?? inbound, right, legMin, kt: Math.round(kt), altFt: fx.altitudeFt ?? null });
+        const inboundTrue = courseDeg(prev, fx);
+        const held = holds.find((h) => h.ident === fx.ident && Math.abs(h.lat - fx.lat) < 1e-3);
+        const pub = pubHolds.all.find((h) => h.ident === fx.ident);
+        const kt = Math.round(Math.max(180, Math.min(265, f?.speed.tasKt ?? f?.speed.gsKt ?? 230)));
         const put = (h: Hold) => saveHolds([...holds.filter((x) => x !== held), h]);
+        const fromPub = (p: PubHold): Hold => ({ ident: fx.ident, lat: fx.lat, lon: fx.lon, inboundDeg: p.trueCourse ? p.courseDeg : magToTrue(p.courseDeg, fx.lat, fx.lon), right: p.right, legMin: p.legMin ?? 1, legNm: p.legNm, kt: Math.min(kt, p.speedKt ?? kt), altFt: p.altFt, source: "published", speedKt: p.speedKt, minAltFt: p.altFt, maxAltFt: p.alt2Ft });
+        const mine = (): Hold => ({ ident: fx.ident, lat: fx.lat, lon: fx.lon, inboundDeg: inboundTrue, right: true, legMin: (fx.altitudeFt ?? 0) > 14000 ? 1.5 : 1, kt, altFt: fx.altitudeFt ?? null, source: "you" });
         const hdg = f?.attitude.headingTrueDeg ?? null;
         const alt = fx.altitudeFt;
+        const altTxt = (v: number | null | undefined) => (v == null ? null : v >= 10000 ? `FL${String(Math.round(v / 100)).padStart(3, "0")}` : `${fmt(v)} ft`);
+        const legTxt = (h: Hold) => (h.legNm ? `${h.legNm} nm legs` : `${h.legMin} min legs`);
+        const limits = (h: { speedKt?: number | null; minAltFt?: number | null; maxAltFt?: number | null }) => [h.speedKt ? `max ${h.speedKt} kt` : null, h.minAltFt || h.maxAltFt ? [altTxt(h.minAltFt), altTxt(h.maxAltFt)].filter(Boolean).join(" to ") : null].filter(Boolean).join(" · ");
+        const magIn = held ? trueToMag(held.inboundDeg, held.lat, held.lon) : 0;
         return (
           <div className="map-sheet glass strong pad fix-sheet">
             <div className="between"><span><span className="data" style={{ fontWeight: 700, fontSize: 20 }}>{fx.ident}</span>{fx.name && fx.name !== fx.ident && <span className="muted" style={{ marginLeft: 8, fontSize: 13.5 }}>{fx.name}</span>}</span><button className="btn small" aria-label="Close" onClick={() => setFixSel(null)}><span style={{ width: 16, height: 16 }}>{Icon.close()}</span></button></div>
             <div className="grid cols-2" style={{ gap: 8, marginTop: 12 }}>
-              <Mini k="PLANNED" v={alt == null ? "—" : alt >= 10000 ? `FL${String(Math.round(alt / 100)).padStart(3, "0")}` : `${fmt(alt)} ft`} />
+              <Mini k="PLANNED" v={altTxt(alt) ?? "—"} />
               <Mini k="VIA" v={fx.via ?? (fx.proc === "sid" ? plan.sid ?? "SID" : fx.proc === "star" ? plan.star ?? "STAR" : "DCT")} />
-              <Mini k="INBOUND" v={`${String(inbound).padStart(3, "0")}°`} />
+              <Mini k="COURSE IN" v={`${deg3(trueToMag(inboundTrue, fx.lat, fx.lon))}°M`} />
               <Mini k="FROM YOU" v={f ? `${fmt(nm(f.position, fx))} nm` : "—"} />
             </div>
             <p className="lp-h" style={{ marginTop: 14 }}>Hold at {fx.ident}</p>
             {held ? (<>
-              <p style={{ margin: "0 0 10px", fontSize: 14 }}>Inbound <b className="data">{String(Math.round(held.inboundDeg)).padStart(3, "0")}°</b>, {held.right ? "right" : "left"} turns, {held.legMin} min legs at {held.kt} kt.{hdg !== null && <> Entry from your heading: <b>{holdEntry(held, hdg)}</b>.</>}</p>
-              <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-                <button className="btn small" onClick={() => put({ ...held, right: !held.right })}>{held.right ? "Left turns" : "Right turns"}</button>
-                <button className="btn small" onClick={() => put({ ...held, legMin: held.legMin === 1 ? 1.5 : 1 })}>{held.legMin === 1 ? "1.5 min legs" : "1 min legs"}</button>
-                <button className="btn small" onClick={() => put({ ...held, inboundDeg: (held.inboundDeg + 180) % 360 })}>Reverse inbound</button>
+              <p className="hold-src">{held.source === "published" ? <><span className="pill hs-pub">Published</span>From the sim's navdata. Check it against your chart.</> : <><span className="pill hs-you">Your hold</span>Set it to what your chart or ATC gives you.</>}</p>
+              <p style={{ margin: "0 0 10px", fontSize: 14.5 }}>Inbound <b className="data">{deg3(magIn)}°M</b>, {held.right ? "right" : "left"} turns, {legTxt(held)}{limits(held) ? <>, {limits(held)}</> : null}.{hdg !== null && <> Entry from your heading: <b>{holdEntry(held, hdg)}</b>.</>}</p>
+              <div className="hold-edit">
+                <label>Inbound °M<input className="input data" inputMode="numeric" defaultValue={deg3(magIn)} key={`in-${held.inboundDeg}`} onBlur={(e) => { const v = Number(e.target.value); if (v >= 0 && v <= 360) put({ ...held, inboundDeg: magToTrue(v, held.lat, held.lon), source: "you" }); }} /></label>
+                <label>Leg<input className="input data" inputMode="decimal" defaultValue={held.legNm ?? held.legMin} key={`leg-${held.legNm}-${held.legMin}`} onBlur={(e) => { const v = Number(e.target.value); if (v > 0 && v < 30) put(held.legNm ? { ...held, legNm: v, source: "you" } : { ...held, legMin: v, source: "you" }); }} /></label>
+                <div className="seg" role="group" aria-label="Leg unit"><button className={!held.legNm ? "on" : ""} onClick={() => put({ ...held, legNm: null, source: "you" })}>min</button><button className={held.legNm ? "on" : ""} onClick={() => put({ ...held, legNm: held.legNm ?? Math.round(((held.kt * held.legMin) / 60) * 10) / 10, source: "you" })}>nm</button></div>
+              </div>
+              <div className="row" style={{ gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+                <button className="btn small" onClick={() => put({ ...held, right: !held.right, source: "you" })}>{held.right ? "Left turns" : "Right turns"}</button>
+                <button className="btn small" onClick={() => put({ ...held, inboundDeg: (held.inboundDeg + 180) % 360, source: "you" })}>Reverse inbound</button>
+                {pub && held.source !== "published" && <button className="btn small" onClick={() => put(fromPub(pub))}>Use published hold</button>}
                 <button className="btn small danger" onClick={() => saveHolds(holds.filter((x) => x !== held))}>Remove hold</button>
               </div>
+            </>) : pub ? (<>
+              <p style={{ margin: "0 0 10px", fontSize: 14.5 }}><span className="pill hs-pub">Published</span> Inbound <b className="data">{deg3(pub.trueCourse ? trueToMag(pub.courseDeg, fx.lat, fx.lon) : pub.courseDeg)}°M</b>, {pub.right ? "right" : "left"} turns, {pub.legNm ? `${pub.legNm} nm` : `${pub.legMin ?? 1} min`} legs{limits({ speedKt: pub.speedKt, minAltFt: pub.altFt, maxAltFt: pub.alt2Ft }) ? `, ${limits({ speedKt: pub.speedKt, minAltFt: pub.altFt, maxAltFt: pub.alt2Ft })}` : ""}.</p>
+              <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+                <button className="btn primary small" onClick={() => put(fromPub(pub))}>Show published hold</button>
+                <button className="btn small" onClick={() => put(mine())}>Set my own</button>
+              </div>
             </>) : (<>
-              <p className="muted" style={{ margin: "0 0 10px", fontSize: 13.5 }}>Draw a standard holding pattern here, sized to your speed. Use the hold ATC or your chart gives you; Glidepath doesn't have published holds.</p>
-              <button className="btn primary small" onClick={() => put(make(true, (alt ?? 0) > 14000 ? 1.5 : 1))}>Add hold</button>
+              <p className="muted" style={{ margin: "0 0 10px", fontSize: 13.5 }}>{pubLive ? "No published hold at this fix in the sim's navdata." : "Published holds come from the sim's navdata through your Bridge."} Add one and set the inbound course, turns and leg length from your chart or ATC.</p>
+              <button className="btn primary small" onClick={() => put(mine())}>Add hold</button>
             </>)}
           </div>
         );
