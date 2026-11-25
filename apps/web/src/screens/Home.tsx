@@ -4,6 +4,7 @@ import { ClockPill } from "../components/Clock";
 import type { FlightSummary } from "@glidepath/protocol";
 import { FlightFeed, LiveCard } from "../components/LiveCard";
 import { Bento } from "../components/Bento";
+import { ThisWeek } from "../components/Missions";
 import { RouteOverview, RouteProfile, SimbriefImport } from "../components/RouteOverview";
 import { MapView } from "../components/MapView";
 import { YourPcs } from "./Account";
@@ -42,6 +43,7 @@ export function Home() {
       {mode !== "none" && flight && <HomeFlightCard />}
       {mode !== "none" && flight && flight.status !== "completed" ? <Bento /> : mode !== "none" && flight ? <FlightFeed /> : null}
       {mode !== "none" && flight && <QuickActions />}
+      {mode !== "none" && <ThisWeek />}
       {mode !== "none" && flight && <HomeAircraft />}
       {mode !== "none" && flight && flight.status !== "completed" && <SoFar />}
       {mode !== "none" && flight && <CopilotLine />}

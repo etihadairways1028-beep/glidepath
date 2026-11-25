@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { LandingReport } from "@glidepath/protocol";
 import { store, useApp } from "../data/store";
+import { LandedMissions } from "./Missions";
 
 const GOOD = new Set(["A+", "A"]);
 const COLORS = ["#64D2FF", "#0A84FF", "#5E5CE6", "#BF5AF2", "#30D158", "#FFD60A", "#FF9F0A"];
@@ -69,6 +70,7 @@ export function Celebrate() {
         <b className="cel-grade">{shown.grade}</b>
         <span className="cel-fpm data">{fpm != null ? `${Math.round(Math.abs(fpm))} fpm` : "—"}{shown.peakG != null ? ` · ${shown.peakG.toFixed(2)} g` : ""}</span>
         <span className="cel-v">{shown.verdict}</span>
+        <LandedMissions />
         <a className="btn small" href="#/flight" onClick={(e) => e.stopPropagation()}>See the debrief</a>
       </div>
     </div>

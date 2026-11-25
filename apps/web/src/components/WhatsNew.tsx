@@ -6,12 +6,14 @@
 import { useEffect, useState } from "react";
 import { Icon } from "./ui";
 
-export const APP_VERSION = "1.4.5";
+export const APP_VERSION = "1.5.0";
 const KEY = "glidepath.seenVersion";
 
 export type WnIcon = "map" | "flight" | "remote" | "book" | "gear" | "spark" | "download" | "search" | "tower" | "cloud" | "layers" | "target" | "headset";
 export interface WnItem { v: string; ic: WnIcon; t: string; d: string }
 export const WHATS_NEW: WnItem[] = [
+  { v: "1.5.0", ic: "spark", t: "Weekly missions", d: "Three new missions every Monday: one to fly more, one to fly better and one to go somewhere new. They're on Home, measured from your logbook, and tick off on the touchdown card the moment you complete one." },
+  { v: "1.5.0", ic: "flight", t: "Your flying streak", d: "Fly at least once a week to keep your streak going. Home shows your streak, the days left and how close your next rank is; Career shows your last 12 weeks, your best streak and every mission you've done." },
   { v: "1.4.5", ic: "flight", t: "Home, simplified", d: "Home showed your times three times, two profiles and two maps. Now one flight card has it all: where you are, the full profile, every milestone from out to in, block and flight time, and Unload. Less on screen, and about half the work for your iPad." },
   { v: "1.4.4", ic: "flight", t: "One flight card", d: "The Flight screen no longer shows two profiles. The live card now holds the full climb, cruise and descent profile with your aircraft on it, and the plan below keeps its runways, SID, STAR, figures, route and waypoints." },
   { v: "1.4.3", ic: "layers", t: "A chart library for every airport", d: "Charts now lists every chart for the airport in one place: the airport diagram, every STAR, approach and SID, grouped and searchable, with your flight's own procedures pinned at the top. Pinch or double-tap any chart to zoom, and step through them with the arrows." },

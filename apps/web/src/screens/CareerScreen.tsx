@@ -6,6 +6,7 @@ import { useApp, useSettings } from "../data/store";
 import { Notice } from "../components/ui";
 import { MapView } from "../components/MapView";
 import { useFlights } from "./Logbook";
+import { MissionsPanel } from "../components/Missions";
 
 const hrs = (h: number) => (h >= 100 ? Math.round(h).toLocaleString("en-US") : h.toFixed(1));
 const mins = (m: number) => `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`;
@@ -96,6 +97,7 @@ export function CareerScreen() {
         </div>
       </section>
 
+      <MissionsPanel />
       <div className="grid cols-2" style={{ alignItems: "start" }}>
         <section className="glass pad">
           <div className="eyebrow">Where you are</div>
