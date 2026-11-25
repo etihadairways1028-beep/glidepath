@@ -6,12 +6,14 @@
 import { useEffect, useState } from "react";
 import { Icon } from "./ui";
 
-export const APP_VERSION = "1.4.2";
+export const APP_VERSION = "1.4.3";
 const KEY = "glidepath.seenVersion";
 
 export type WnIcon = "map" | "flight" | "remote" | "book" | "gear" | "spark" | "download" | "search" | "tower" | "cloud" | "layers" | "target" | "headset";
 export interface WnItem { v: string; ic: WnIcon; t: string; d: string }
 export const WHATS_NEW: WnItem[] = [
+  { v: "1.4.3", ic: "layers", t: "A chart library for every airport", d: "Charts now lists every chart for the airport in one place: the airport diagram, every STAR, approach and SID, grouped and searchable, with your flight's own procedures pinned at the top. Pinch or double-tap any chart to zoom, and step through them with the arrows." },
+  { v: "1.4.3", ic: "spark", t: "Lighter liquid glass", d: "Glass panels now have a light rim that catches at the top, and they blur once instead of stacking blurs inside blurs. Cards below the fold aren't drawn until you scroll to them, so long screens scroll smoother." },
   { v: "1.4.2", ic: "layers", t: "Approach charts: minimums and the final descent", d: "Every approach chart now shows TCH and the missed approach altitude, and a table of your altitude at each mile to the threshold on the glidepath. Type your baro DA or MDA from your official chart once: it's drawn on the profile, with your height above the threshold, and kept for that approach." },
   { v: "1.4.2", ic: "map", t: "Airport diagrams, properly", d: "Taxi charts now show the airport's elevation, variation and ATIS, ground and tower frequencies, each runway's magnetic heading, length and width, threshold markings, a scale and north arrow. Taxiway names never overlap. Tap Full screen for the whole display." },
   { v: "1.4.1", ic: "search", t: "Charts for any airport, including the biggest hubs", d: "Search any airport by code, name or city. Big hubs no longer time out while the sim sends thousands of taxiways, and airports you've opened before load instantly. Zoom in and more taxiway names appear." },

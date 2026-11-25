@@ -175,6 +175,11 @@
     }).catch(() => { layout(); });
   }
 
+  /* Anything that animates on its own pauses while it's off screen. */
+  const pauseOff = new IntersectionObserver((es) => es.forEach((e) => e.target.classList.toggle("paused", !e.isIntersecting)), { rootMargin: "100px" });
+  document.querySelectorAll(".works-with, .pd-line, .lh-scroll, .lh-hud, .trailer, .bx").forEach((n) => pauseOff.observe(n));
+  document.querySelectorAll(".pd-line").forEach((n) => n.style.setProperty("--pd-w", `${Math.max(0, n.clientWidth - 8)}px`));
+
   /* Works-with strip: a slow endless marquee */
   const mq = document.querySelector(".works-with.marquee");
   if (mq && !reduced) { const track = document.createElement("div"); track.className = "mq-track"; [...mq.children].forEach((c) => track.appendChild(c)); track.innerHTML += track.innerHTML; mq.appendChild(track); }

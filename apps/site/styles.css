@@ -1372,3 +1372,12 @@ body::before, body::after { z-index: -1; }
 .bgmap .lh-fixes text, .bgmap .lh-others { transition: opacity .5s ease; }
 .bgmap.page .lh-fixes text, .bgmap.page .lh-others { opacity: 0; }
 @media (max-width: 700px) { .bgmap.page .lh-map { opacity: .7 !important; } }
+
+/* ===== Smooth scrolling =====
+   Below the hero nothing loops behind the glass: the aircraft's pulse stops, and anything
+   animated pauses while it's off screen. */
+.bgmap.page .lh-halo { animation: none; opacity: 0; }
+.paused, .paused * { animation-play-state: paused !important; }
+.pd-line i { left: 0 !important; animation-name: pdMoveT !important; }
+@keyframes pdMoveT { 0% { transform: translateX(0); opacity: 0; } 15%, 85% { opacity: 1; } 100% { transform: translateX(var(--pd-w, 120px)); opacity: 0; } }
+.bgmap .lh-map { contain: strict; }

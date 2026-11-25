@@ -584,3 +584,65 @@ html.tc-locked, html.tc-locked body { overflow: hidden; }
 html:root .pc-da-in input { width: 84px !important; height: 32px !important; border: 1.5px solid currentColor !important; border-radius: 4px !important; background: transparent !important; box-shadow: none !important; padding: 0 6px !important; color: inherit !important; }
 .pc-table-w { overflow-x: auto; } .pc-table-w .pc-table { min-width: 420px; }
 html:root .pc .pc-mins .pc-da-in input:not([type=checkbox]) { background: transparent !important; box-shadow: none !important; border: 1.5px solid currentColor !important; border-radius: 4px !important; color: inherit !important; -webkit-text-fill-color: currentColor; }
+
+/* ===== Chart library: list of every chart, viewer beside it ===== */
+.clib { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; align-items: start; }
+.clib-list { position: sticky; top: 12px; max-height: calc(100vh - 40px); overflow: auto; padding: 12px 10px 14px; border-radius: 20px; scrollbar-width: thin; }
+.clib-search input { width: 100%; height: 38px; box-sizing: border-box; border-radius: 11px; padding: 0 12px; font: inherit; font-size: 14.5px; color: inherit; background: rgba(127,127,127,.12); border: 1px solid rgba(127,127,127,.22); }
+.clib-count { margin: 8px 4px 2px; font-size: 12px; color: var(--ds-ink-3); }
+.clib-hint { margin: 8px 4px; font-size: 12.5px; color: var(--ds-ink-2); line-height: 1.45; }
+.clib-g { margin-top: 12px; }
+.clib-g h4 { margin: 0 6px 5px; font: 700 11px var(--a-font, system-ui); letter-spacing: .1em; text-transform: uppercase; color: var(--ds-ink-3); display: flex; justify-content: space-between; }
+.clib-g h4 small { font-weight: 600; letter-spacing: 0; }
+.clib-row { width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 8px; border: 0; border-radius: 11px; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.clib-row:hover { background: rgba(127,127,127,.1); }
+.clib-row.on { background: color-mix(in srgb, var(--ds-accent, #0A84FF) 18%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ds-accent, #0A84FF) 45%, transparent); }
+.clib-t { display: grid; min-width: 0; } .clib-t b { font-size: 14px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .clib-t small { font-size: 11.5px; color: var(--ds-ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.clib-tag { flex: none; min-width: 42px; text-align: center; padding: 3px 5px; border-radius: 6px; font: 800 10px var(--mono, ui-monospace, monospace); letter-spacing: .04em; color: #fff; }
+.clib-tag.t-taxi { background: #5E6AD2; } .clib-tag.t-info { background: #636B7A; } .clib-tag.t-star { background: #C77700; } .clib-tag.t-app { background: #D9480F; } .clib-tag.t-sid { background: #2B8A3E; }
+.clib-view { min-width: 0; display: grid; gap: 10px; }
+.clib-bar { display: flex; align-items: center; gap: 10px; min-height: 40px; }
+.clib-title { font: 750 18px var(--a-font, system-ui); letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.clib-nav { margin-left: auto; display: flex; gap: 6px; }
+html:root .clib-back { display: none !important; }
+.clib-trans { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.clib-trans > span { font: 700 11px var(--a-font, system-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--ds-ink-3); margin-right: 4px; }
+.clib-trans button { border: 1px solid var(--ds-line); background: transparent; color: inherit; font: 650 13px var(--mono, ui-monospace, monospace); padding: 5px 10px; border-radius: 8px; cursor: pointer; }
+.clib-trans button.on { background: var(--ds-accent, #0A84FF); border-color: transparent; color: #fff; }
+.zbox { position: relative; overflow: hidden; border-radius: 6px; touch-action: pan-y; }
+.zbox.zoomed { touch-action: none; cursor: grab; }
+.zbox-in { transform-origin: 0 0; will-change: transform; }
+.zbox-tools { position: absolute; right: 10px; bottom: 10px; display: flex; gap: 6px; z-index: 2; }
+@media (max-width: 860px) {
+  .clib { grid-template-columns: 1fr; }
+  .clib-list { position: static; max-height: none; }
+  .clib.chart-open .clib-list { display: none; }
+  .clib.list-open .clib-view { display: none; }
+  html:root .clib-back { display: inline-flex !important; }
+}
+@media print { .clib-list, .clib-bar, .clib-trans, .zbox-tools { display: none !important; } .clib { display: block; } }
+
+/* ===== Liquid glass, lighter to draw =====
+   One blur per surface: anything sitting on a glass card is already over a blurred backdrop,
+   so its own blur only cost time (the Flight screen had 14 blurs inside blurs). Surfaces get a
+   glass rim instead: a light edge that catches at the top and fades round the sides. */
+html:root :is(.glass, .card, .sidebar, .tabbar, .map-route, .nl) :is(*):not(.af-list):not(.tc.full) { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+html:root:not([data-look]) main :is(section.glass, .glass.pad, details.glass, a.glass, aside.glass) {
+  border: 1px solid transparent !important;
+  background:
+    linear-gradient(var(--ds-card), var(--ds-card)) padding-box,
+    linear-gradient(165deg, var(--lg-rim-1), var(--lg-rim-2) 38%, var(--lg-rim-3) 72%, var(--lg-rim-4)) border-box !important;
+  box-shadow: inset 0 1px 0 var(--lg-spec), var(--ds-shadow) !important;
+  backdrop-filter: blur(20px) saturate(1.8) !important; -webkit-backdrop-filter: blur(20px) saturate(1.8) !important;
+}
+html:root { --lg-rim-1: rgba(255,255,255,.30); --lg-rim-2: rgba(255,255,255,.07); --lg-rim-3: rgba(255,255,255,.04); --lg-rim-4: rgba(255,255,255,.14); --lg-spec: rgba(255,255,255,.10); }
+html:root[data-theme="light"] { --lg-rim-1: rgba(255,255,255,1); --lg-rim-2: rgba(255,255,255,.55); --lg-rim-3: rgba(15,30,60,.06); --lg-rim-4: rgba(255,255,255,.8); --lg-spec: rgba(255,255,255,.95); }
+@media (prefers-color-scheme: light) { html:root:not([data-theme="dark"]) { --lg-rim-1: rgba(255,255,255,1); --lg-rim-2: rgba(255,255,255,.55); --lg-rim-3: rgba(15,30,60,.06); --lg-rim-4: rgba(255,255,255,.8); --lg-spec: rgba(255,255,255,.95); } }
+html:root:not([data-look]) main section.glass.strong { background: linear-gradient(var(--ds-card-2), var(--ds-card-2)) padding-box, linear-gradient(165deg, var(--lg-rim-1), var(--lg-rim-2) 38%, var(--lg-rim-3) 72%, var(--lg-rim-4)) border-box !important; }
+/* Sticky table headers: solid, no blur (they repaint on every scroll). */
+html:root .nl th { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; background: var(--ds-bg-1, #0b1020) !important; }
+/* Long screens: cards below the fold aren't drawn (or blurred) until you scroll to them. */
+html:root main section.glass:not(:has(.maplibregl-map, canvas, video, iframe, .tc, .pc, .clib)) { content-visibility: auto; contain-intrinsic-size: auto 360px; }
+/* Light theme fixes: the live card stays dark, so its quiet text stays light; the route string sits on a light tint. */
+html:root .live-card .lc-id .faint { color: rgba(235, 240, 250, .55) !important; }
+html:root[data-theme="light"] .fp-route { background: rgba(15, 30, 60, .045) !important; border-color: rgba(15, 30, 60, .08) !important; }
