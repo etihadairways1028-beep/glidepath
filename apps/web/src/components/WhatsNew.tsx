@@ -6,12 +6,14 @@
 import { useEffect, useState } from "react";
 import { Icon } from "./ui";
 
-export const APP_VERSION = "1.4.1";
+export const APP_VERSION = "1.4.2";
 const KEY = "glidepath.seenVersion";
 
 export type WnIcon = "map" | "flight" | "remote" | "book" | "gear" | "spark" | "download" | "search" | "tower" | "cloud" | "layers" | "target" | "headset";
 export interface WnItem { v: string; ic: WnIcon; t: string; d: string }
 export const WHATS_NEW: WnItem[] = [
+  { v: "1.4.2", ic: "layers", t: "Approach charts: minimums and the final descent", d: "Every approach chart now shows TCH and the missed approach altitude, and a table of your altitude at each mile to the threshold on the glidepath. Type your baro DA or MDA from your official chart once: it's drawn on the profile, with your height above the threshold, and kept for that approach." },
+  { v: "1.4.2", ic: "map", t: "Airport diagrams, properly", d: "Taxi charts now show the airport's elevation, variation and ATIS, ground and tower frequencies, each runway's magnetic heading, length and width, threshold markings, a scale and north arrow. Taxiway names never overlap. Tap Full screen for the whole display." },
   { v: "1.4.1", ic: "search", t: "Charts for any airport, including the biggest hubs", d: "Search any airport by code, name or city. Big hubs no longer time out while the sim sends thousands of taxiways, and airports you've opened before load instantly. Zoom in and more taxiway names appear." },
   { v: "1.4.1", ic: "spark", t: "Smoother everywhere", d: "The background no longer moves behind the glass panels, which made iPads stutter. Charts redraw only your aircraft with each update, and panning a big airport stays fluid." },
   { v: "1.4.0", ic: "map", t: "Taxi charts for every airport in MSFS", d: "Charts › Taxi chart draws any airport from your simulator's own scenery: runways and their numbers, every taxiway with its name, hold-short bars, gates and stands, with your aircraft moving on it. Day and night, pinch to zoom." },

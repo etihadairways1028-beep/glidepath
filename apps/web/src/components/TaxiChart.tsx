@@ -4,8 +4,11 @@
  * live. North up, pinch/scroll to zoom, drag to pan. Generated, not an official chart.
  */
 import { useEffect, useMemo, useRef, useState, type PointerEvent as RPE } from "react";
+import { createPortal } from "react-dom";
 import { activeBridge } from "../data/bridge";
 import { store, useApp } from "../data/store";
+import { airportDetail, type AirportDetail } from "../data/airports";
+import { declination, deg3 } from "../data/hold";
 
 type Pt = [number, number];
 export interface AirportLayout {
@@ -77,25 +80,35 @@ function TaxiChartView({ l, stale }: { l: AirportLayout; stale: boolean }) {
   const theme = document.documentElement.dataset.theme ?? "dark";
   const [night, setNight] = useState(() => { try { const v = localStorage.getItem("glidepath.tcNight"); return v ? v === "1" : theme !== "light"; } catch { return true; } });
   const [follow, setFollow] = useState(false);
+  const [full, setFull] = useState(false);
+  const [apt, setApt] = useState<AirportDetail | null>(null);
+  useEffect(() => { let off = false; airportDetail(l.icao).then((a) => { if (!off) setApt(a); }).catch(() => undefined); return () => { off = true; }; }, [l.icao]);
+  const aspectOf = () => (full ? Math.max(0.42, (innerHeight - 150) / Math.max(1, innerWidth)) : aspectNow());
   const host = useRef<HTMLDivElement>(null);
   const [px, setPx] = useState(900);
 
   const g = useMemo(() => buildGeo(l, P), [l, P]);
 
   const fit = (): View => {
-    const { x0, x1, y0, y1 } = g.box; const pad = Math.max(x1 - x0, y1 - y0) * (aspectNow() > 1 ? 0.17 : 0.1) + 90; // room for the runway numbers outside the ends
-    const w0 = x1 - x0 + pad * 2, h0 = y1 - y0 + pad * 2, a = aspectNow();
+    const { x0, x1, y0, y1 } = g.box; const pad = Math.max(x1 - x0, y1 - y0) * (aspectOf() > 1 ? 0.17 : 0.1) + 90; // room for the runway numbers outside the ends
+    const w0 = x1 - x0 + pad * 2, h0 = y1 - y0 + pad * 2, a = aspectOf();
     const w = Math.max(w0, h0 / a), h = w * a; // the whole airport fits, whatever the screen's shape
     return { x: (x0 + x1) / 2 - w / 2, y: (y0 + y1) / 2 - h / 2, w, h };
   };
   const [view, setView] = useState<View>(fit);
-  useEffect(() => { setView(fit()); }, [l.icao]);
+  useEffect(() => { setView(fit()); }, [l.icao, full]);
+  useEffect(() => {
+    if (!full) return;
+    const k = (e: KeyboardEvent) => { if (e.key === "Escape") setFull(false); };
+    addEventListener("keydown", k); document.documentElement.classList.add("tc-locked");
+    return () => { removeEventListener("keydown", k); document.documentElement.classList.remove("tc-locked"); };
+  }, [full]);
   useEffect(() => { try { localStorage.setItem("glidepath.tcNight", night ? "1" : "0"); } catch { /* private */ } }, [night]);
   useEffect(() => {
     const el = host.current; if (!el) return;
     const ro = new ResizeObserver(() => setPx(el.clientWidth || 900)); ro.observe(el); setPx(el.clientWidth || 900);
     return () => ro.disconnect();
-  }, []);
+  }, [full]);
 
   // Your aircraft, when it's at this airport (only whether it's here re-renders the chart; its moves don't)
   const here = useApp((s) => { const f = s.frame; if (!f) return false; const [x, y] = P([f.position.lat, f.position.lon]); const { x0, x1, y0, y1 } = g.box; return x > x0 - 3000 && x < x1 + 3000 && y > y0 - 3000 && y < y1 + 3000; });
@@ -108,7 +121,7 @@ function TaxiChartView({ l, stale }: { l: AirportLayout; stale: boolean }) {
   }, [follow, P]);
 
   // Aspect: the SVG keeps the view's centre; the view's width drives the scale.
-  const aspect = aspectNow();
+  const aspect = aspectOf();
   const vb = { x: view.x, y: view.y + (view.h - view.w * aspect) / 2, w: view.w, h: view.w * aspect };
   const scale = px / vb.w; // screen px per metre
   const u = 1 / scale; // one screen pixel in metres
@@ -149,30 +162,48 @@ function TaxiChartView({ l, stale }: { l: AirportLayout; stale: boolean }) {
   // Everything drawn scales in steps (each about 20% of zoom), so panning and live updates
   // never redraw the thousands of taxiway lines at a big hub; only zooming a step does.
   const uq = Math.pow(1.2, Math.round(Math.log(u) / Math.log(1.2)));
-  const layers = useMemo(() => <StaticLayers g={g} u={uq} />, [g, uq]);
-  return (
-    <div className={`tc ${night ? "night" : "day"}`} ref={host}>
+  const dec = useMemo(() => declination(l.lat, l.lon), [l.lat, l.lon]);
+  const layers = useMemo(() => <StaticLayers g={g} u={uq} dec={dec} />, [g, uq, dec]);
+  // Scale bar: a round length about 110 px long on screen.
+  const bar = (() => { const want = 110 * u; const nice = [25, 50, 100, 200, 250, 500, 1000, 2000, 5000].find((n) => n >= want * 0.75) ?? 5000; return { m: nice, px: nice / u }; })();
+  const freq = (t: RegExp) => apt?.frequencies.find((f) => t.test(f.type))?.mhz.toFixed(3);
+  const info: Array<[string, string]> = [
+    ["ELEV", apt?.elevationFt != null ? `${apt.elevationFt.toLocaleString()} ft` : ""],
+    ["VAR", `${Math.abs(dec).toFixed(0)}°${dec >= 0 ? "E" : "W"}`],
+    ["ATIS", freq(/ATIS/i) ?? ""], ["GND", freq(/GND|GROUND/i) ?? ""], ["TWR", freq(/TWR|TOWER/i) ?? ""],
+    ["RWYS", l.runways.map((r) => rwPair(r.ends, "/")).join("  ")],
+  ].filter(([, v]) => v) as Array<[string, string]>;
+  const content = (
+    <div className={`tc ${night ? "night" : "day"}${full ? " full" : ""}`} ref={host}>
       <div className="tc-bar">
-        <b>{l.icao}</b><span className="tc-sub">Taxi chart · from your sim's scenery{stale ? " · updating…" : ""}</span>
+        <b>{l.icao}</b><span className="tc-sub">{apt?.name ? `${apt.name} · ` : ""}Airport diagram{stale ? " · updating…" : ""}</span>
         <div className="tc-tools">
           <button className="btn small" onClick={() => zoomAt(0.7)} aria-label="Zoom in">+</button>
           <button className="btn small" onClick={() => zoomAt(1.4)} aria-label="Zoom out">−</button>
           <button className="btn small" onClick={() => { setFollow(false); setView(fit()); }}>Whole airport</button>
           {here && <button className={`btn small${follow ? " primary" : ""}`} onClick={() => { setFollow(!follow); if (!follow) setView((v) => ({ ...v, w: Math.min(v.w, 1400), h: Math.min(v.w, 1400) })); }}>Follow me</button>}
           <button className="btn small" onClick={() => setNight(!night)}>{night ? "Day" : "Night"}</button>
+          <button className={`btn small${full ? " primary" : ""}`} onClick={() => setFull(!full)} aria-pressed={full}>{full ? "Close" : "Full screen"}</button>
         </div>
       </div>
-      <svg ref={svgRef} className="tc-svg" viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`} onPointerDown={down} onPointerMove={moveQ} onPointerUp={up} onPointerCancel={up} role="img" aria-label={`Taxi chart of ${l.icao}`}>
+      {info.length > 0 && <div className="tc-info">{info.map(([k, v]) => <span key={k}><em>{k}</em>{v}</span>)}</div>}
+      <div className="tc-stage">
+      <svg ref={svgRef} className="tc-svg" style={{ aspectRatio: `1 / ${aspect}` }} viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`} onPointerDown={down} onPointerMove={moveQ} onPointerUp={up} onPointerCancel={up} role="img" aria-label={`Taxi chart of ${l.icao}`}>
         <rect x={vb.x - vb.w} y={vb.y - vb.h} width={vb.w * 3} height={vb.h * 3} className="tc-bg" />
         {layers}
         {here && <TaxiMe P={P} u={u} />}
       </svg>
+      <div className="tc-north" aria-hidden="true"><svg viewBox="0 0 20 30" width="16" height="24"><path d="M10 1 L17 26 L10 20 L3 26 Z" /></svg><span>N</span></div>
+      <div className="tc-scale" aria-label={`Scale: ${bar.m} metres`}><i style={{ width: `${bar.px}px` }} /><span>{bar.m >= 1000 ? `${bar.m / 1000} km` : `${bar.m} m`} · {Math.round(bar.m * 3.28084 / 10) * 10} ft</span></div>
+      </div>
       <div className="tc-key">
         <span><i className="k-twy" />Taxiway</span><span><i className="k-rwy" />Runway</span><span><i className="k-hold" />Hold short</span><span><i className="k-lbl">A</i>Taxiway name</span>
         <span className="tc-note">Drawn from MSFS scenery, not an official chart. Follow ATC and your official charts.</span>
       </div>
     </div>
   );
+  // Full screen sits on the page itself, above everything (glass panels would otherwise trap it).
+  return full ? <>{createPortal(content, document.body)}<div className="tc-ph">Shown full screen.</div></> : content;
 }
 
 type Geo = ReturnType<typeof buildGeo>;
@@ -191,25 +222,52 @@ function TaxiMe({ P, u }: { P: (p: Pt) => [number, number]; u: number }) {
 }
 
 /** The chart itself, drawn for one zoom step. u = metres per screen pixel. */
-function StaticLayers({ g, u }: { g: Geo; u: number }) {
+function StaticLayers({ g, u, dec }: { g: Geo; u: number; dec: number }) {
   const fs = 12.5 * u; // label size in metres, so it reads the same at any zoom
   const scale = 1 / u;
   const showGates = scale > 0.45;
   // Taxiway names: spaced about 260 px apart on screen, so zooming in shows more of them.
   const labels: Array<{ x: number; y: number; t: string }> = [];
   const gap = 260 * u;
-  for (const [t, list] of g.byName) {
-    const placed: Array<[number, number]> = [];
-    for (const [x, y] of list) {
-      if (placed.every((q) => Math.hypot(q[0] - x, q[1] - y) > gap)) { placed.push([x, y]); labels.push({ x, y, t }); }
-      if (placed.length >= 40) break;
+  // No two names on top of each other, or on a runway number: a name that would overlap waits for a closer zoom.
+  const taken: Array<[number, number, number, number]> = [];
+  const hit = (x: number, y: number, w: number, h: number) => taken.some(([a, b, c, d]) => Math.abs(a - x) * 2 < w + c && Math.abs(b - y) * 2 < h + d);
+  for (const r of g.rw) for (const e of [0, 1] as const) { const p = rwLabelAt(r, e, u); taken.push([p.x, p.y, 4.6 * fs * 1.15, fs * 2.9]); }
+  const order = [...g.byName].sort((a, b) => b[1][0]![2] - a[1][0]![2]);
+  for (let pass = 0; pass < 40; pass++) {
+    let any = false;
+    for (const [t, list] of order) {
+      const mine = labels.filter((l) => l.t === t);
+      if (mine.length > pass) continue;
+      const w = (t.length * 0.66 + 0.9) * fs + 4 * u, h = fs * 1.45 + 4 * u;
+      for (const [x, y] of list) {
+        if (mine.some((q) => Math.hypot(q.x - x, q.y - y) < gap) || hit(x, y, w, h)) continue;
+        labels.push({ x, y, t }); taken.push([x, y, w, h]); any = true; break;
+      }
     }
+    if (!any) break;
   }
   const rwLabel = (r: Geo["rw"][number], end: 0 | 1) => {
-    const [x, y] = end ? r.e2 : r.e1; const dir = end ? 1 : -1;
-    const ox = Math.sin(r.a) * dir * 26 * u, oy = -Math.cos(r.a) * dir * 26 * u;
-    return { x: x + ox, y: y + oy, t: end ? r.ends[1] : r.ends[0] };
+    const { x, y } = rwLabelAt(r, end, u);
+    return { x, y, t: end ? r.ends[1] : r.ends[0], h: deg3(((r.hdg + (end ? 180 : 0) - dec) % 360 + 360) % 360) };
   };
+  // Threshold markings (piano keys) at both ends, and each runway's length and width along its side.
+  const keys: string[] = []; const rinfo: Array<{ x: number; y: number; ang: number; t: string }> = [];
+  for (const r of g.rw) {
+    const dx = Math.sin(r.a), dy = -Math.cos(r.a), nx = -dy, ny = dx; // along, across
+    const n = r.widthM >= 45 ? 12 : r.widthM >= 30 ? 8 : 6, sw = r.widthM / n;
+    for (const [ex, ey, dir] of [[r.e1[0], r.e1[1], 1], [r.e2[0], r.e2[1], -1]] as const) {
+      for (let k = 0; k < n; k++) {
+        const o = -r.widthM / 2 + (k + 0.5) * sw;
+        const ax = ex + nx * o + dx * dir * 6, ay = ey + ny * o + dy * dir * 6;
+        keys.push(`M${ax.toFixed(1)} ${ay.toFixed(1)}l${(dx * dir * 30).toFixed(1)} ${(dy * dir * 30).toFixed(1)}`);
+      }
+    }
+    let ang = (r.a * 180) / Math.PI - 90; if (ang > 90) ang -= 180; if (ang < -90) ang += 180;
+    const off = r.widthM / 2 + 16 * u;
+    rinfo.push({ x: r.cx + nx * off, y: r.cy + ny * off, ang, t: `${rwPair(r.ends)} · ${Math.round(r.lengthM * 3.28084).toLocaleString()} × ${Math.round(r.widthM * 3.28084)} ft` });
+  }
+  const keyW = Math.min(...g.rw.map((r) => r.widthM / (r.widthM >= 45 ? 12 : r.widthM >= 30 ? 8 : 6))) * 0.55;
   const ground = g.segs.filter((s) => s.kind !== "runway");
   return (<>
     {/* aprons and stands */}
@@ -232,6 +290,10 @@ function StaticLayers({ g, u }: { g: Geo; u: number }) {
         </g>
       ))}
     </g>
+    {/* threshold markings */}
+    {keys.length > 0 && <path className="tc-keys" d={keys.join("")} strokeWidth={Math.max(keyW, 0.8 * u)} />}
+    {/* runway length and width, along each runway */}
+    {scale > 0.3 && <g className="tc-rinfo" style={{ fontSize: fs * 0.9 }}>{rinfo.map((t, i) => <text key={i} transform={`translate(${t.x} ${t.y}) rotate(${t.ang})`} textAnchor="middle" dy={fs * 0.3}>{t.t}</text>)}</g>}
     {/* hold-short bars */}
     <g className="tc-hold">{g.holds.map((h, i) => <rect key={i} x={h.x - h.w * 0.6} y={h.y - 1.6 * u} width={h.w * 1.2} height={(h.ils ? 4.5 : 3.2) * u} transform={`rotate(${h.ang} ${h.x} ${h.y})`} className={h.ils ? "ils" : ""} />)}</g>
     {/* gate and stand names when zoomed in */}
@@ -242,7 +304,7 @@ function StaticLayers({ g, u }: { g: Geo; u: number }) {
     </g>
     {/* runway numbers */}
     <g className="tc-rwlbl" style={{ fontSize: fs * 1.15 }}>
-      {g.rw.flatMap((r, i) => ([0, 1] as const).map((e) => { const p = rwLabel(r, e); const w = (p.t.length * 0.68 + 1) * fs * 1.15, h = fs * 1.7; return <g key={`${i}-${e}`}><rect x={p.x - w / 2} y={p.y - h / 2} width={w} height={h} rx={fs * 0.3} /><text x={p.x} y={p.y + fs * 0.42} textAnchor="middle">{p.t}</text></g>; }))}
+      {g.rw.flatMap((r, i) => ([0, 1] as const).map((e) => { const p = rwLabel(r, e); const w = (Math.max(p.t.length, 3.6) * 0.68 + 1) * fs * 1.15, h = fs * 2.75; return <g key={`${i}-${e}`}><rect x={p.x - w / 2} y={p.y - h / 2} width={w} height={h} rx={fs * 0.3} /><text x={p.x} y={p.y - fs * 0.12} textAnchor="middle">{p.t}</text><text x={p.x} y={p.y + fs * 0.98} textAnchor="middle" className="hdg" style={{ fontSize: fs * 0.8 }}>{p.h}°</text></g>; }))}
     </g>
   </>);
 }
@@ -288,4 +350,13 @@ function buildGeo(l: AirportLayout, P: (p: Pt) => [number, number]) {
     });
     const gates = l.parking.map((p) => { const [x, y] = P(p.p); return { ...p, x, y }; });
     return { segs, rw, box, byName, holds, gates };
+}
+
+/** "05R / 23L": the lower runway number first, as charts list them. */
+const rwPair = (e: [string, string], sep = " / ") => [...e].sort((a, b) => parseInt(a, 10) - parseInt(b, 10)).join(sep);
+
+/** Where a runway number box sits: just beyond the runway end. */
+function rwLabelAt(r: { e1: [number, number]; e2: [number, number]; a: number }, end: 0 | 1, u: number) {
+  const [x, y] = end ? r.e2 : r.e1; const dir = end ? 1 : -1;
+  return { x: x + Math.sin(r.a) * dir * 36 * u, y: y - Math.cos(r.a) * dir * 36 * u };
 }

@@ -121,11 +121,11 @@ html:root:not([data-look]) .seg button.on {
 html:root[data-theme="light"]:not([data-look]) .seg button.on { background: #fff !important; box-shadow: 0 1px 3px rgba(15, 30, 60, .14), 0 0 0 .5px rgba(15, 30, 60, .06) !important; }
 
 /* ---------- Inputs ---------- */
-html:root main :is(.input, input[type="text"], input[type="search"], input[type="email"], input[type="password"], input[type="number"], input:not([type]), select, textarea):not(.switch):not([type="range"]) {
+html:root main :is(.input, input[type="text"], input[type="search"], input[type="email"], input[type="password"], input[type="number"], input:not([type]), select, textarea):not(.switch):not([type="range"]):not(.pc-plain) {
   min-height: 42px; border-radius: var(--ds-r-ctl) !important; font-size: 15px !important;
   transition: box-shadow .18s ease, background-color .18s ease, border-color .18s ease;
 }
-html:root:not([data-look]) main :is(.input, input[type="text"], input[type="search"], input[type="email"], input[type="password"], input[type="number"], input:not([type]), select, textarea):not(.switch):not([type="range"]) {
+html:root:not([data-look]) main :is(.input, input[type="text"], input[type="search"], input[type="email"], input[type="password"], input[type="number"], input:not([type]), select, textarea):not(.switch):not([type="range"]):not(.pc-plain) {
   background: var(--ds-field) !important; color: var(--ds-ink) !important;
   border: 1px solid var(--ds-line) !important; box-shadow: none !important;
 }
@@ -454,7 +454,7 @@ html:root .hold-edit .input { width: 84px; height: 36px; }
 .tc-sub { font-size: 12.5px; color: var(--ds-ink-2); } .tc-tools { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
 .tc-svg { width: 100%; aspect-ratio: 1 / 0.68; border-radius: 14px; touch-action: none; cursor: grab; display: block; border: 1px solid var(--ds-line); background: var(--tc-bg); user-select: none; }
 .tc-svg:active { cursor: grabbing; }
-@media (max-width: 700px) { .tc-svg { aspect-ratio: 1 / 1.05; } }
+
 .tc-bg { fill: var(--tc-bg); }
 .tc-apron circle { fill: var(--tc-apron); }
 .tc-edge :is(line,path) { stroke: var(--tc-edge); stroke-linecap: round; stroke-linejoin: round; fill: none; }
@@ -546,3 +546,41 @@ html:root .live-card::after { animation: none !important; background: linear-gra
   html:root .ch-mode { display: flex; flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width: none; }
   html:root .ch-mode button { flex: none; }
 }
+
+/* Taxi chart 1.4.2: info strip, threshold markings, runway data, scale, north, full screen */
+.tc { display: grid; gap: 10px; }
+.tc-info { display: flex; flex-wrap: wrap; border: 1px solid var(--ds-line); border-radius: 10px; overflow: hidden; font-size: 12.5px; }
+.tc-info span { padding: 6px 12px; border-right: 1px solid var(--ds-line); font: 700 12.5px var(--mono, ui-monospace, monospace); color: var(--ds-ink); white-space: nowrap; }
+.tc-info span:last-child { border-right: 0; }
+.tc-info em { font: 600 10.5px var(--a-font, system-ui); letter-spacing: .1em; color: var(--ds-ink-3); font-style: normal; margin-right: 7px; }
+.tc-stage { position: relative; }
+.tc-keys { stroke: var(--tc-rwy-e); fill: none; stroke-linecap: butt; }
+.tc-rinfo text { fill: var(--tc-gate); font-family: var(--mono, ui-monospace, monospace); font-weight: 650; letter-spacing: .02em; paint-order: stroke; stroke: var(--tc-bg); stroke-width: 3px; stroke-linejoin: round; }
+.tc-rwlbl text.hdg { font-weight: 700; fill: #3a3f48; }
+.tc-north, .tc-scale { position: absolute; pointer-events: none; color: var(--tc-gate); }
+.tc-north { top: 12px; right: 14px; display: grid; justify-items: center; font: 800 11px var(--a-font, system-ui); }
+.tc-north path { fill: currentColor; }
+.tc-scale { left: 14px; bottom: 12px; display: grid; gap: 3px; font: 650 11px var(--mono, ui-monospace, monospace); }
+.tc-scale i { display: block; height: 6px; border: 1.5px solid currentColor; border-top: 0; }
+.tc.full { position: fixed; inset: 0; z-index: 1000; padding: max(14px, env(safe-area-inset-top)) 16px max(14px, env(safe-area-inset-bottom)); background: var(--tc-bg); overflow: auto; align-content: start; }
+.tc.full .tc-svg { border-radius: 10px; }
+.tc.full .tc-key { display: none; }
+html.tc-locked, html.tc-locked body { overflow: hidden; }
+.tc.full .tc-bar > b, .tc.full .tc-sub { color: var(--tc-gate); }
+.tc-ph { padding: 30px; text-align: center; color: var(--ds-ink-3); }
+/* Plate: minimums and glidepath table */
+.pc-da { stroke: #c0392b; stroke-width: 1.4; stroke-dasharray: 8 5; }
+.pc-mins { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 10px 14px; border-top: 1px solid var(--pc-line, #222); }
+.pc-mins-h { font: 800 12px var(--a-font, system-ui); letter-spacing: .08em; }
+.pc-da-in { display: inline-flex; align-items: center; gap: 8px; font: 600 11px var(--a-font, system-ui); letter-spacing: .06em; }
+.pc-da-in input { width: 78px; height: 30px; border: 1.5px solid currentColor; border-radius: 4px; background: transparent; color: inherit; font: 800 15px var(--mono, ui-monospace, monospace); text-align: center; }
+.pc-hat { font: 700 13px var(--mono, ui-monospace, monospace); } .pc-hat em { font: 600 11px var(--a-font, system-ui); font-style: normal; letter-spacing: .06em; margin-right: 6px; opacity: .7; }
+.pc-mins-note { flex-basis: 100%; font-size: 11.5px; opacity: .7; }
+.pc-table { width: calc(100% - 28px); margin: 0 14px 10px; border-collapse: collapse; font: 700 12.5px var(--mono, ui-monospace, monospace); text-align: center; }
+.pc-table caption { caption-side: top; text-align: left; font: 600 10.5px var(--a-font, system-ui); letter-spacing: .06em; padding: 8px 0 5px; opacity: .75; }
+.pc-table th { font: 700 10.5px var(--a-font, system-ui); letter-spacing: .06em; text-align: left; white-space: nowrap; }
+.pc-table th, .pc-table td { border: 1px solid currentColor; padding: 4px 6px; }
+@media print { .pc-da-in input { border: 0; } }
+html:root .pc-da-in input { width: 84px !important; height: 32px !important; border: 1.5px solid currentColor !important; border-radius: 4px !important; background: transparent !important; box-shadow: none !important; padding: 0 6px !important; color: inherit !important; }
+.pc-table-w { overflow-x: auto; } .pc-table-w .pc-table { min-width: 420px; }
+html:root .pc .pc-mins .pc-da-in input:not([type=checkbox]) { background: transparent !important; box-shadow: none !important; border: 1.5px solid currentColor !important; border-radius: 4px !important; color: inherit !important; -webkit-text-fill-color: currentColor; }

@@ -100,6 +100,9 @@ export function ProcChart({ icao, kind, name, trans }: { icao: string; kind: "ap
     return { lines: lines.filter((l) => l.fixes.length), holds, title, runway, final, missed };
   }, [kind, name, trans, paths, ss.data]);
 
+  const minKey = `glidepath.mins.${icao}.${name}`;
+  const [da, setDa] = useState<string>(() => { try { return localStorage.getItem(minKey) ?? ""; } catch { return ""; } });
+  useEffect(() => { try { setDa(localStorage.getItem(minKey) ?? ""); } catch { /* private */ } }, [minKey]);
   if (!built) return <div className="pc-empty"><p>{kind !== "app" && ss.err ? ss.err : `Reading ${name} from the simulator…`}</p>{kind !== "app" && ss.err && <button className="btn small" onClick={ss.retry}>Try again</button>}</div>;
 
   // ---------- plan view geometry (nm, north up) ----------
@@ -149,6 +152,17 @@ export function ProcChart({ icao, kind, name, trans }: { icao: string; kind: "ap
   };
   const finCourse = built.final.length >= 2 ? (built.final.at(-1)!.courseDeg ?? Math.round(trueCourse(built.final.at(-2)!, built.final.at(-1)!) - varDeg)) : null;
   const fafAlt = prof?.faf?.altFt ?? null;
+  // Threshold and glidepath: threshold elevation is the airport's (OurAirports); TCH from the runway fix's altitude in the sim's data when it gives one.
+  const thrElev = apt?.elevationFt != null ? Math.round(apt.elevationFt) : null;
+  const rwAlt = prof?.thr.altFt ?? null;
+  const tch = thrElev != null && rwAlt != null && rwAlt - thrElev >= 20 && rwAlt - thrElev <= 120 ? rwAlt - thrElev : 50;
+  const tchStd = !(thrElev != null && rwAlt != null && rwAlt - thrElev >= 20 && rwAlt - thrElev <= 120);
+  // Altitude at each whole NM to the threshold on the glidepath (calculated, like a chart's CDFA table).
+  const fafD = prof && prof.faf ? prof.pts.find((p) => p.f === prof.faf)?.d ?? prof.maxD : 0;
+  const table = prof?.ang && thrElev != null ? Array.from({ length: Math.min(10, Math.floor(fafD + 0.001)) }, (_, i) => fafD >= i + 1 ? i + 1 : 0).filter(Boolean).reverse().map((d) => ({ d, a: Math.round((thrElev + tch + d * 6076.12 * Math.tan((prof.ang! * Math.PI) / 180)) / 10) * 10 })) : [];
+  // Your baro minimum: not in the sim's data, so you set it from your official chart; saved per approach.
+  const daFt = /^\d{2,5}$/.test(da) ? Number(da) : null;
+  const missedTop = built.missed.length ? Math.max(...built.missed.map((x) => x.altFt ?? 0)) : 0;
 
   return (
     <div className={`pc ${night ? "night" : "day"}`}>
@@ -169,6 +183,8 @@ export function ProcChart({ icao, kind, name, trans }: { icao: string; kind: "ap
           {kind === "app" && fafAlt && <span><em>FAF</em>{prof?.faf?.ident} {ft(fafAlt)}</span>}
           {prof?.ang && <span><em>GP</em>{prof.ang.toFixed(2)}°</span>}
           {apt?.elevationFt != null && <span><em>ELEV</em>{Math.round(apt.elevationFt)}</span>}
+          {kind === "app" && prof && <span><em>TCH</em>{tch}{tchStd ? " (std)" : ""}</span>}
+          {kind === "app" && missedTop > 0 && <span><em>MISSED ALT</em>{ft(missedTop)}</span>}
           {trans && <span><em>TRANS</em>{trans}</span>}
         </div>
         {/* plan view */}
@@ -247,11 +263,31 @@ export function ProcChart({ icao, kind, name, trans }: { icao: string; kind: "ap
                   {p.f.role === "FAF" && <path transform={`translate(${X(p.d)} ${Y(p.f.altFt ?? 0)})`} d="M-6,-6 L6,6 M-6,6 L6,-6" className="pc-sym" />}
                 </g>
               ))}
-              {prof.ang && <text x={(X(prof.pts[0]!.d) + X(0)) / 2} y={t + 6} textAnchor="middle" className="pc-small">GP {prof.ang.toFixed(2)}° · TCH 50</text>}
+              {prof.ang && <text x={(X(prof.pts[0]!.d) + X(0)) / 2} y={t + 6} textAnchor="middle" className="pc-small">GP {prof.ang.toFixed(2)}° · TCH {tch}{tchStd ? " (std)" : ""}</text>}
+              {daFt && daFt < prof.maxA && <g><line x1={l} x2={PW - r} y1={Y(daFt)} y2={Y(daFt)} className="pc-da" /><text x={l + 4} y={Y(daFt) - 5} className="pc-alt">BARO MIN {daFt}</text></g>}
               <text x={PW - r} y={18} textAnchor="end" className="pc-small">PROFILE · ALTITUDES IN FT AMSL</text>
             </svg>
           );
         })()}
+        {kind === "app" && prof && (
+          <div className="pc-mins">
+            <div className="pc-mins-h">MINIMUMS</div>
+            <label className="pc-da-in"><span>BARO DA / MDA</span>
+              <input className="pc-plain" inputMode="numeric" style={{ width: 84, height: 32, border: "1.5px solid currentColor", borderRadius: 4, background: "transparent", boxShadow: "none", padding: "0 6px", color: "inherit", font: "800 15px var(--mono, ui-monospace, monospace)", textAlign: "center" }} value={da} placeholder="ft" maxLength={5} onChange={(e) => { const v = e.target.value.replace(/\D/g, ""); setDa(v); try { if (v) localStorage.setItem(minKey, v); else localStorage.removeItem(minKey); } catch { /* private */ } }} aria-label="Your baro minimum in feet" />
+            </label>
+            {daFt && thrElev != null && <span className="pc-hat"><em>HAT</em>{daFt - thrElev} ft</span>}
+            <span className="pc-mins-note">{daFt ? "Your value, from your official chart." : "Not in the simulator's data. Enter the DA or MDA from your official chart; Glidepath keeps it for this approach."}</span>
+          </div>
+        )}
+        {table.length > 1 && (
+          <div className="pc-table-w"><table className="pc-table">
+            <caption>ALTITUDE ON THE GLIDEPATH · CALCULATED FROM GP {prof!.ang!.toFixed(2)}°, THR {thrElev} + TCH {tch}</caption>
+            <tbody>
+              <tr><th>NM TO THR</th>{table.map((r) => <td key={r.d}>{r.d}</td>)}</tr>
+              <tr><th>ALT (FT)</th>{table.map((r) => <td key={r.d}>{r.a.toLocaleString("en-US")}</td>)}</tr>
+            </tbody>
+          </table></div>
+        )}
         {kind === "app" && built.missed.length > 0 && (
           <p className="pc-missed"><b>MISSED APPROACH:</b> {(() => { const m = built.missed; const top = Math.max(...m.map((x) => x.altFt ?? 0)); const last = m.at(-1)!; const held = built.holds.some((h) => h.ident === last.ident); return `Climb${top ? ` to ${ft(top)}` : ""}, proceed ${m.filter((x) => !/^RW/.test(x.ident)).map((x) => x.ident).join(" – ")}${held ? ` and hold at ${last.ident}` : ""}.`; })()}</p>
         )}
