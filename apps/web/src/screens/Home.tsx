@@ -4,7 +4,7 @@ import { ClockPill } from "../components/Clock";
 import type { FlightSummary } from "@glidepath/protocol";
 import { FlightFeed, LiveCard } from "../components/LiveCard";
 import { Bento } from "../components/Bento";
-import { RouteOverview, SimbriefImport } from "../components/RouteOverview";
+import { RouteOverview, RouteProfile, SimbriefImport } from "../components/RouteOverview";
 import { MapView } from "../components/MapView";
 import { YourPcs } from "./Account";
 import { InstallCard } from "../components/InstallCard";
@@ -38,17 +38,15 @@ export function Home() {
       <CockpitReady />
       {mode === "bridge" && conn !== "live" && msg && <Notice>{msg} <a href="#/settings">Connection settings</a></Notice>}
       {mode !== "none" && flight?.status === "completed" && <DebriefTeaser />}
-      {mode !== "none" && flight && <LogCard />}
-      {mode !== "none" && flight && <LiveCard />}
+      {/* One card for the flight: live status, the full profile, every time and the logbook in one place. */}
+      {mode !== "none" && flight && <HomeFlightCard />}
       {mode !== "none" && flight && flight.status !== "completed" ? <Bento /> : mode !== "none" && flight ? <FlightFeed /> : null}
       {mode !== "none" && flight && <QuickActions />}
       {mode !== "none" && flight && <HomeAircraft />}
       {mode !== "none" && flight && flight.status !== "completed" && <SoFar />}
-      {mode !== "none" && flight && <HomeTimings />}
       {mode !== "none" && flight && <CopilotLine />}
       {mode !== "none" && !flight && <PreFlight />}
       {mode === "none" && <PlanSection />}
-      {mode !== "none" && flight && flight.status !== "completed" && <PlanSection live />}
       <Totals />
       <InstallCard />
     </div>
@@ -62,7 +60,17 @@ const z = (t: number | null | undefined) => (t ? `${new Date(t).toISOString().sl
  * The logbook, on Home: what's being logged during the flight, a button to finish it once you've
  * landed (block and air time worked out and saved), and a confirmation once it's in the logbook.
  */
-function LogCard() {
+function HomeFlightCard() {
+  const L = useLive();
+  return (
+    <LiveCard
+      profile={L.plan && !L.completed ? <RouteProfile plan={L.plan} frame={L.frame} live /> : undefined}
+      below={<>{L.timings && <TimingsStrip t={L.timings} />}<LogCard inline /></>}
+    />
+  );
+}
+
+function LogCard({ inline = false }: { inline?: boolean }) {
   const L = useLive();
   const mode = useApp((s) => s.mode);
   const [busy, setBusy] = useState(false);
@@ -102,14 +110,14 @@ function LogCard() {
   };
   const route = `${f.departureIcao ?? "····"} → ${f.arrivalIcao ?? "····"}`;
   return (
-    <section className={`glass logc${landed ? " landed" : done ? " done" : ""}`} aria-live="polite">
+    <section className={`${inline ? "" : "glass "}logc${inline ? " inline" : ""}${landed ? " landed" : done ? " done" : ""}`} aria-live="polite">
       <div className="logc-l">
         <span className="logc-k">{done ? (f.status === "completed" ? "Saved to your logbook" : "Saved as incomplete") : landed ? "You've landed" : f.offBlockAt ? "Logging this flight" : "Logging starts at pushback"}</span>
-        <b className="logc-t">{route}{f.aircraft?.icaoType ? <small> · {f.aircraft.icaoType}</small> : null}</b>
+        {!inline && <b className="logc-t">{route}{f.aircraft?.icaoType ? <small> · {f.aircraft.icaoType}</small> : null}</b>}
         <div className="logc-times">
-          <span><em>Off block</em>{z(f.offBlockAt)}</span>
-          <span><em>Takeoff</em>{z(f.wheelsUpAt)}</span>
-          <span><em>Landing</em>{z(f.wheelsDownAt)}</span>
+          {!inline && <span><em>Off block</em>{z(f.offBlockAt)}</span>}
+          {!inline && <span><em>Takeoff</em>{z(f.wheelsUpAt)}</span>}
+          {!inline && <span><em>Landing</em>{z(f.wheelsDownAt)}</span>}
           <span><em>Block time</em><b>{hm(block)}</b></span>
           <span><em>Flight time</em><b>{hm(air)}</b></span>
         </div>

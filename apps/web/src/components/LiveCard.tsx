@@ -9,7 +9,7 @@ import { altText, countdown, dur, fmt, PHASE_LABEL, useLive, zulu } from "../dat
 import { useChoice, useChosenArrivalRunway } from "./Procedures";
 
 
-export function LiveCard({ big, profile }: { big?: boolean; profile?: ReactNode }) {
+export function LiveCard({ big, profile, below }: { big?: boolean; profile?: ReactNode; below?: ReactNode }) {
   const L = useLive();
   const { frame, flight, plan, phase } = L;
   const est = phaseProgress(L.phase, L.progress, !!L.plan || L.toGoNm !== null, L.completed);
@@ -125,6 +125,7 @@ export function LiveCard({ big, profile }: { big?: boolean; profile?: ReactNode 
           {flight.arrivalStand ? <span className="chip accent" title="Arrival stand (OpenStreetMap)">Stand {flight.arrivalStand}</span> : null}
         </span>
       </div>
+      {below && <div className="lc-below">{below}</div>}
     </article>
   );
 }
