@@ -16,7 +16,8 @@
  *    value is sent as null. One bad variable never breaks the stream.
  */
 import { EventEmitter } from "node:events";
-import { APPROACH_PATH_DEFINITION, collectApproachPaths, collectProcedures, PROCEDURE_DEFINITION, type AirportProcedures, type ApproachPath, type FacilityRecord, type PathRecord } from "../procedures.js";
+import { collectLayout, LAYOUT_DEFINITION, type AirportLayout, type LayoutRecord } from "../layout.js";
+import { APPROACH_PATH_DEFINITION, collectApproachPaths, collectSidStarPaths, SIDSTAR_PATH_DEFINITION, type ProcPath, collectProcedures, PROCEDURE_DEFINITION, type AirportProcedures, type ApproachPath, type FacilityRecord, type PathRecord } from "../procedures.js";
 import {
   open,
   Protocol,
@@ -162,6 +163,10 @@ export class MsfsAdapter extends EventEmitter implements SimAdapter {
   private procReq = 9500;
   private procWaiting = new Map<number, { icao: string; records: FacilityRecord[]; done: (r: AirportProcedures | Error) => void }>();
   private pathDefined = false;
+  private layoutDefined = false;
+  private ssDefined = false;
+  private ssWaiting = new Map<number, { records: PathRecord[]; done: (r: ProcPath[] | Error) => void }>();
+  private layoutWaiting = new Map<number, { icao: string; records: LayoutRecord[]; done: (r: AirportLayout | null | Error) => void }>();
   private pathWaiting = new Map<number, { records: PathRecord[]; done: (r: ApproachPath[] | Error) => void }>();
   private stopped = false;
   private retryTimer: NodeJS.Timeout | null = null;
@@ -210,6 +215,8 @@ export class MsfsAdapter extends EventEmitter implements SimAdapter {
   private async connectLoop(): Promise<void> {
     this.procDefined = false;
     this.pathDefined = false;
+    this.layoutDefined = false;
+    this.ssDefined = false;
     if (this.stopped || this.handle) return;
     this.emit("state", "searching", "Waiting for Microsoft Flight Simulator…");
     try {
@@ -255,6 +262,10 @@ export class MsfsAdapter extends EventEmitter implements SimAdapter {
     h.on("simObjectData", (d: RecvSimObjectData) => this.onData(d));
     h.on("simObjectDataByType", (d: RecvSimObjectData) => { if ((d.requestID as number) === REQ_AI) this.onAiData(d); });
     h.on("facilityData", (d) => {
+      const sw = this.ssWaiting.get(d.userRequestId as number);
+      if (sw) { sw.records.push({ type: d.type as number, id: d.uniqueRequestId as number, parent: d.parentUniqueRequestId as number, data: d.data as unknown as PathRecord["data"] }); return; }
+      const lw = this.layoutWaiting.get(d.userRequestId as number);
+      if (lw) { lw.records.push({ type: d.type as number, data: d.data as unknown as LayoutRecord["data"] }); return; }
       const pw = this.pathWaiting.get(d.userRequestId as number);
       if (pw) { pw.records.push({ type: d.type as number, id: d.uniqueRequestId as number, parent: d.parentUniqueRequestId as number, data: d.data as unknown as PathRecord["data"] }); return; }
       const w = this.procWaiting.get(d.userRequestId as number);
@@ -262,6 +273,10 @@ export class MsfsAdapter extends EventEmitter implements SimAdapter {
     });
     h.on("facilityDataEnd", (d) => {
       const id = d.userRequestId as number;
+      const sw = this.ssWaiting.get(id);
+      if (sw) { this.ssWaiting.delete(id); try { sw.done(collectSidStarPaths(sw.records)); } catch (e) { sw.done(e as Error); } return; }
+      const lw = this.layoutWaiting.get(id);
+      if (lw) { this.layoutWaiting.delete(id); try { lw.done(collectLayout(lw.icao, lw.records)); } catch (e) { lw.done(e as Error); } return; }
       const pw = this.pathWaiting.get(id);
       if (pw) { this.pathWaiting.delete(id); try { pw.done(collectApproachPaths(pw.records)); } catch (e) { pw.done(e as Error); } return; }
       const w = this.procWaiting.get(id);
@@ -289,6 +304,42 @@ export class MsfsAdapter extends EventEmitter implements SimAdapter {
       this.procWaiting.set(id, { icao: code, records: [], done: (r) => { clearTimeout(timer); if (r instanceof Error) reject(r); else if (!r.departures.length && !r.arrivals.length && !r.approaches.length) reject(new Error(`The simulator has no procedures for ${code}.`)); else resolve(r); } });
       try { h.requestFacilityData(DEF as never, id as never, code); }
       catch (e) { clearTimeout(timer); this.procWaiting.delete(id); reject(e as Error); }
+    });
+  }
+
+  /** Every SID and STAR with its legs, fix positions and restrictions (a separate request). */
+  sidStarPaths(icao: string): Promise<ProcPath[]> {
+    if (!simExtras()) return Promise.reject(new Error("Procedure data from the simulator is switched off."));
+    const h = this.handle;
+    if (!h) return Promise.reject(new Error("Procedure charts come from Microsoft Flight Simulator. Start the sim, then try again."));
+    const code = icao.trim().toUpperCase();
+    if (!/^[A-Z0-9]{3,4}$/.test(code)) return Promise.reject(new Error("That isn't an airport code."));
+    const DEF = 9404;
+    if (!this.ssDefined) { for (const f of SIDSTAR_PATH_DEFINITION) h.addToFacilityDefinition(DEF as never, f); this.ssDefined = true; }
+    const id = ++this.procReq;
+    return new Promise<ProcPath[]>((resolve, reject) => {
+      const timer = setTimeout(() => { this.ssWaiting.delete(id); reject(new Error(`The simulator didn't send the SIDs and STARs of ${code}.`)); }, 20_000);
+      this.ssWaiting.set(id, { records: [], done: (r) => { clearTimeout(timer); if (r instanceof Error) reject(r); else resolve(r); } });
+      try { h.requestFacilityData(DEF as never, id as never, code); }
+      catch (e) { clearTimeout(timer); this.ssWaiting.delete(id); reject(e as Error); }
+    });
+  }
+
+  /** The airport's runways, taxiways, hold-shorts and gates from the sim's scenery (a separate request). */
+  airportLayout(icao: string): Promise<AirportLayout | null> {
+    if (!simExtras()) return Promise.reject(new Error("Airport data from the simulator is switched off."));
+    const h = this.handle;
+    if (!h) return Promise.reject(new Error("Taxi charts come from Microsoft Flight Simulator. Start the sim, then try again."));
+    const code = icao.trim().toUpperCase();
+    if (!/^[A-Z0-9]{3,4}$/.test(code)) return Promise.reject(new Error("That isn't an airport code."));
+    const DEF = 9403;
+    if (!this.layoutDefined) { for (const f of LAYOUT_DEFINITION) h.addToFacilityDefinition(DEF as never, f); this.layoutDefined = true; }
+    const id = ++this.procReq;
+    return new Promise<AirportLayout | null>((resolve, reject) => {
+      const timer = setTimeout(() => { this.layoutWaiting.delete(id); reject(new Error(`The simulator didn't send the layout of ${code}.`)); }, 20_000);
+      this.layoutWaiting.set(id, { icao: code, records: [], done: (r) => { clearTimeout(timer); if (r instanceof Error) reject(r); else resolve(r); } });
+      try { h.requestFacilityData(DEF as never, id as never, code); }
+      catch (e) { clearTimeout(timer); this.layoutWaiting.delete(id); reject(e as Error); }
     });
   }
 

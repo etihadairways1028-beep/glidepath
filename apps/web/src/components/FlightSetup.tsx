@@ -481,6 +481,11 @@ export function FlightSetup({ plan, onLines, onFocus, onFit, onWaypoints }: {
   );
 }
 
+function openChart(icao: string, kind: "app" | "sid" | "star", name: string) {
+  try { localStorage.setItem("glidepath.chartPick", JSON.stringify({ icao, kind, name })); } catch { /* private */ }
+  location.hash = "#/charts";
+}
+
 function ProcRow({ p, cur, curTrans, plan, tone, onAdd, badge, none = "None", onFocus, onHover }: { p: Proc; cur: boolean; curTrans: string | undefined; plan: FlightPlan; tone: string; onAdd: (t: string | undefined) => void; badge?: string; none?: string; onFocus?: () => void; onHover?: (on: boolean) => void }) {
   const [t, setT] = useState<string | undefined>(() => (cur ? curTrans : undefined) ?? planTrans(p, plan) ?? (p.transitions.length === 1 && none === "None" ? p.transitions[0] : undefined));
   return (
@@ -490,6 +495,7 @@ function ProcRow({ p, cur, curTrans, plan, tone, onAdd, badge, none = "None", on
         {badge && <span className="fs-badge">{badge === "GPS" ? "RNAV" : badge}</span>}
         {tone !== "app" && p.runways.length > 0 && <span className="fs-sub">RWY {p.runways.join(", ")}</span>}
         {cur ? <span className="fs-in">In your route</span> : null}
+        <button className="btn small" onClick={() => openChart(tone === "sid" ? plan.origin.icao.toUpperCase() : plan.destination.icao.toUpperCase(), tone as "app" | "sid" | "star", p.name)}>Chart</button>
         <button className={`btn small ${cur ? "" : "primary"}`} onClick={() => onAdd(t)}>{cur ? "Update" : "Add to route"}</button>
       </div>
       {p.transitions.length > 0 && (

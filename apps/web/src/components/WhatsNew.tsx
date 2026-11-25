@@ -6,12 +6,14 @@
 import { useEffect, useState } from "react";
 import { Icon } from "./ui";
 
-export const APP_VERSION = "1.3.3";
+export const APP_VERSION = "1.4.0";
 const KEY = "glidepath.seenVersion";
 
 export type WnIcon = "map" | "flight" | "remote" | "book" | "gear" | "spark" | "download" | "search" | "tower" | "cloud" | "layers" | "target" | "headset";
 export interface WnItem { v: string; ic: WnIcon; t: string; d: string }
 export const WHATS_NEW: WnItem[] = [
+  { v: "1.4.0", ic: "map", t: "Taxi charts for every airport in MSFS", d: "Charts › Taxi chart draws any airport from your simulator's own scenery: runways and their numbers, every taxiway with its name, hold-short bars, gates and stands, with your aircraft moving on it. Day and night, pinch to zoom." },
+  { v: "1.4.0", ic: "layers", t: "Procedure charts", d: "Charts › Procedure charts draws any approach, STAR or SID from the sim's navigation data in printed-chart style: title block, fix symbols, altitude and speed restrictions, course and distance on every leg, holds, the missed approach and the approach profile. Tap Chart next to any procedure in your flight setup." },
   { v: "1.3.3", ic: "target", t: "Real holding patterns", d: "Holds now come from the sim's own navdata: the published inbound course (magnetic, like your chart), turn direction, leg length in nm or minutes, and speed and altitude limits. Your chosen approach's holds draw by themselves. Anywhere else, type the hold from your chart or ATC." },
   { v: "1.3.3", ic: "book", t: "Unload a flight any time", d: "On Home, Unload flight saves it to your logbook with the hours so far, landed or not, after asking you first. If your PC isn't reachable, it's sent the moment it is." },
   { v: "1.3.3", ic: "map", t: "Procedures stay after the sim closes", d: "Once your PC has read an airport's SIDs, STARs and approaches from the sim, the Bridge and this device keep them, so you can plan and pick your approach with the sim closed. If they can't load, you'll see why and a Try again button." },

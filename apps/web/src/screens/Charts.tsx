@@ -14,6 +14,8 @@ import { useLive } from "../data/derive";
 import { Kv, Notice } from "../components/ui";
 import { MapView } from "../components/MapView";
 import { RunwayDiagram } from "../components/Imagery";
+import { TaxiChart } from "../components/TaxiChart";
+import { ProcChart, useSidStar } from "../components/ProcChart";
 import { loadChoice, useProcs } from "../components/Procedures";
 import { airportDetail, type AirportDetail } from "../data/airports";
 
@@ -172,19 +174,46 @@ function AirportSheet({ code, dep }: { code: string; dep: string | null }) {
   );
 }
 
+/** Procedure charts: pick an approach, STAR or SID and see it drawn as a chart. */
+function ProcCharts({ code }: { code: string }) {
+  const live = useApp((s) => s.mode) === "bridge";
+  const procs = useProcs(code, live);
+  const ss = useSidStar(code);
+  const [sel, setSel] = useState<{ kind: "app" | "sid" | "star"; name: string } | null>(() => { try { const v = JSON.parse(localStorage.getItem("glidepath.chartPick") ?? "null"); if (v?.icao === code) { localStorage.removeItem("glidepath.chartPick"); return { kind: v.kind, name: v.name }; } } catch { /* none */ } return null; });
+  const [trans, setTrans] = useState<string | null>(null);
+  useEffect(() => { setTrans(null); }, [sel?.name]);
+  const apps = procs.data?.approaches ?? [];
+  const stars = (ss.data?.filter((p) => p.kind === "star").map((p) => p.name) ?? procs.data?.arrivals.map((p) => p.name) ?? []);
+  const sids = (ss.data?.filter((p) => p.kind === "sid").map((p) => p.name) ?? procs.data?.departures.map((p) => p.name) ?? []);
+  const transFor = sel?.kind === "app" ? apps.find((a) => a.name === sel.name)?.transitions ?? [] : (ss.data?.find((p) => p.name === sel?.name)?.runways.map((r) => r.runway) ?? []);
+  if (!apps.length && !stars.length && !sids.length) return <div className="pc-empty"><p>{procs.loading ? "Reading procedures from the simulator…" : ss.err ?? procs.err ?? "No procedures yet."}</p>{!procs.loading && <button className="btn small" onClick={() => { procs.retry(); ss.retry(); }}>Try again</button>}</div>;
+  const group = (label: string, kind: "app" | "sid" | "star", names: string[]) => names.length > 0 && (
+    <div className="pcl-g"><span className="pcl-k">{label}</span><div className="pcl-list">{names.map((n) => <button key={n} className={sel?.kind === kind && sel.name === n ? "on" : ""} onClick={() => setSel({ kind, name: n })}>{n}</button>)}</div></div>
+  );
+  return (
+    <div className="pcl">
+      {group("Approaches", "app", apps.map((a) => a.name))}
+      {group("Arrivals (STAR)", "star", stars)}
+      {group("Departures (SID)", "sid", sids)}
+      {sel && transFor.length > 1 && <div className="pcl-g"><span className="pcl-k">{sel.kind === "app" ? "Transition" : "Runway"}</span><div className="pcl-list"><button className={!trans ? "on" : ""} onClick={() => setTrans(null)}>All</button>{transFor.map((t) => <button key={t} className={trans === t ? "on" : ""} onClick={() => setTrans(t)}>{t}</button>)}</div></div>}
+      {sel ? <ProcChart icao={code} kind={sel.kind} name={sel.name} trans={trans} /> : <p className="muted" style={{ margin: "6px 0 0" }}>Pick a procedure to see its chart.</p>}
+    </div>
+  );
+}
+
 export function ChartsScreen() {
   const L = useLive();
   const flights = useApp((s) => s.lastFlight);
   const f = L.flight ?? flights;
   const dep = f?.departureIcao ?? L.plan?.origin.icao ?? null;
   const arr = f?.arrivalIcao ?? L.plan?.destination.icao ?? null;
-  const [pick, setPick] = useState<string | null>(null);
+  const [pick, setPick] = useState<string | null>(() => { try { return (JSON.parse(localStorage.getItem("glidepath.chartPick") ?? "null") as { icao?: string } | null)?.icao ?? null; } catch { return null; } });
   const [q, setQ] = useState("");
   const code = pick ?? arr ?? dep ?? null;
   // Official charts first where they're free to show (US, with the Bridge); the airport sheet everywhere else.
   const mode = useApp((s) => s.mode);
-  const [view, setView] = useState<"sheet" | "official">("sheet");
-  useEffect(() => { setView(code && isUS(code) && mode === "bridge" ? "official" : "sheet"); }, [code, mode]);
+  const [view, setView] = useState<"taxi" | "procs" | "sheet" | "official">(() => { try { return localStorage.getItem("glidepath.chartPick") ? "procs" : "taxi"; } catch { return "taxi"; } });
+  useEffect(() => { setView((v) => (v === "official" && !(code && isUS(code)) ? "taxi" : v)); }, [code, mode]);
 
   return (
     <>
@@ -204,11 +233,13 @@ export function ChartsScreen() {
       )}
       {code && (
         <div className="seg ch-mode" role="tablist" aria-label="What to show">
+          <button className={view === "taxi" ? "on" : ""} onClick={() => setView("taxi")}>Taxi chart</button>
+          <button className={view === "procs" ? "on" : ""} onClick={() => setView("procs")}>Procedure charts</button>
           <button className={view === "sheet" ? "on" : ""} onClick={() => setView("sheet")}>Airport sheet</button>
           <button className={view === "official" ? "on" : ""} onClick={() => setView("official")}>Official charts</button>
         </div>
       )}
-      {code ? (view === "sheet" ? <AirportSheet code={code} dep={dep} /> : <section className="glass pad"><ChartsFor icao={code} /></section>) : <p className="muted">No airport yet.</p>}
+      {code ? (view === "taxi" ? <section className="glass pad tc-wrap"><TaxiChart icao={code} /></section> : view === "procs" ? <section className="glass pad"><ProcCharts code={code} /></section> : view === "sheet" ? <AirportSheet code={code} dep={dep} /> : <section className="glass pad"><ChartsFor icao={code} /></section>) : <p className="muted">No airport yet.</p>}
     </>
   );
 }

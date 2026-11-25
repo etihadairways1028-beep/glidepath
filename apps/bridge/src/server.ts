@@ -473,6 +473,30 @@ export class LanServer {
       return json(res, 200, { network: "sim", updatedAt: new Date(t?.at || Date.now()).toISOString(), controllers: [],
         pilots: fresh.map((a) => ({ callsign: a.callsign, lat: a.lat, lon: a.lon, altFt: a.altFt, gsKt: a.gsKt, hdg: a.hdg, type: a.type, dep: null, arr: null, network: "sim", title: a.title, onGround: a.onGround })) });
     }
+    const sm = /^\/api\/procedures\/([A-Za-z0-9]{3,4})\/sidstar$/.exec(p);
+    if (sm && req.method === "GET") {
+      const a = this.remoteAdapter, key = sm[1]!.toUpperCase();
+      try {
+        if (!a?.sidStarPaths) throw new Error("Procedure charts come from Microsoft Flight Simulator. Start the sim with the Bridge running once and Glidepath keeps them.");
+        const ss = await a.sidStarPaths(key); this.navSave(`${key}.sidstar`, ss); return json(res, 200, ss);
+      } catch (e) {
+        const saved = this.navLoad(`${key}.sidstar`);
+        return saved ? json(res, 200, saved) : json(res, 502, { error: (e as Error).message });
+      }
+    }
+    const lm = /^\/api\/airport\/([A-Za-z0-9]{3,4})\/layout$/.exec(p);
+    if (lm && req.method === "GET") {
+      const a = this.remoteAdapter, key = lm[1]!.toUpperCase();
+      try {
+        if (!a?.airportLayout) throw new Error("Taxi charts come from Microsoft Flight Simulator. Start the sim with the Bridge running once and Glidepath keeps the airport.");
+        const lay = await a.airportLayout(key);
+        if (!lay || (!lay.paths.length && !lay.runways.length)) throw new Error(`The sim has no taxiway data for ${key}.`);
+        this.navSave(`${key}.layout`, lay); return json(res, 200, lay);
+      } catch (e) {
+        const saved = this.navLoad(`${key}.layout`);
+        return saved ? json(res, 200, saved) : json(res, 502, { error: (e as Error).message });
+      }
+    }
     const pp = /^\/api\/procedures\/([A-Za-z0-9]{3,4})\/paths$/.exec(p);
     if (pp && req.method === "GET") {
       const a = this.remoteAdapter, key = pp[1]!.toUpperCase(), hit = this.pathCache.get(key);

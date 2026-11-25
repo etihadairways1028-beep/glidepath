@@ -24,6 +24,8 @@ export interface SimAdapter extends EventEmitter {
   /** SIDs, STARs and approaches from the sim's navigation data. Absent = not available (replay). */
   procedures?(icao: string): Promise<import("../procedures.js").AirportProcedures>;
   approachPaths?(icao: string): Promise<import("../procedures.js").ApproachPath[]>;
+  sidStarPaths?(icao: string): Promise<import("../procedures.js").ProcPath[]>;
+  airportLayout?(icao: string): Promise<import("../layout.js").AirportLayout | null>;
   /** AI aircraft around the user, from the sim (absent = not available, e.g. replay). */
   readonly aiTraffic?: { at: number; list: import("./msfs.js").SimTraffic[] };
   on<E extends keyof AdapterEvents>(event: E, listener: AdapterEvents[E]): this;

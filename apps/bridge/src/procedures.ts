@@ -109,20 +109,33 @@ export function collectProcedures(icao: string, records: FacilityRecord[]): Airp
 
 export const FT_LEG = { APPROACH_LEG: 7, FINAL_APPROACH_LEG: 8, MISSED_APPROACH_LEG: 9 } as const;
 
+/** Every leg is read with these fields, in this order (see readLeg). */
+export const LEG_FIELDS = ["TYPE", "FIX_ICAO", "FIX_LATITUDE", "FIX_LONGITUDE", "ALTITUDE1", "ALTITUDE2", "COURSE", "TURN_DIRECTION", "ROUTE_DISTANCE", "DISTANCE_MINUTE", "TRUE_DEGREE", "SPEED_LIMIT", "APPROACH_ALT_DESC", "FLY_OVER", "VERTICAL_ANGLE", "IS_IAF", "IS_IF", "IS_FAF", "IS_MAP"];
+
 /** A separate, optional request: if the sim refuses it, the procedure lists above still work. */
 export const APPROACH_PATH_DEFINITION = [
   "OPEN AIRPORT",
   "OPEN APPROACH", "TYPE", "SUFFIX", "RUNWAY_NUMBER", "RUNWAY_DESIGNATOR",
   "OPEN APPROACH_TRANSITION", "IAF_ICAO",
-  "OPEN APPROACH_LEG", "TYPE", "FIX_ICAO", "FIX_LATITUDE", "FIX_LONGITUDE", "ALTITUDE1", "ALTITUDE2", "COURSE", "TURN_DIRECTION", "ROUTE_DISTANCE", "DISTANCE_MINUTE", "TRUE_DEGREE", "SPEED_LIMIT", "CLOSE APPROACH_LEG",
+  "OPEN APPROACH_LEG", ...LEG_FIELDS, "CLOSE APPROACH_LEG",
   "CLOSE APPROACH_TRANSITION",
-  "OPEN FINAL_APPROACH_LEG", "TYPE", "FIX_ICAO", "FIX_LATITUDE", "FIX_LONGITUDE", "ALTITUDE1", "ALTITUDE2", "COURSE", "TURN_DIRECTION", "ROUTE_DISTANCE", "DISTANCE_MINUTE", "TRUE_DEGREE", "SPEED_LIMIT", "CLOSE FINAL_APPROACH_LEG",
-  "OPEN MISSED_APPROACH_LEG", "TYPE", "FIX_ICAO", "FIX_LATITUDE", "FIX_LONGITUDE", "ALTITUDE1", "ALTITUDE2", "COURSE", "TURN_DIRECTION", "ROUTE_DISTANCE", "DISTANCE_MINUTE", "TRUE_DEGREE", "SPEED_LIMIT", "CLOSE MISSED_APPROACH_LEG",
+  "OPEN FINAL_APPROACH_LEG", ...LEG_FIELDS, "CLOSE FINAL_APPROACH_LEG",
+  "OPEN MISSED_APPROACH_LEG", ...LEG_FIELDS, "CLOSE MISSED_APPROACH_LEG",
   "CLOSE APPROACH",
   "CLOSE AIRPORT",
 ];
 
-export interface PathFix { ident: string; lat: number; lon: number; /** Altitude restriction, feet (0/none = null). */ altFt: number | null }
+export interface PathFix {
+  ident: string; lat: number; lon: number;
+  /** Altitude restriction, feet (none = null); alt2Ft is the second value of a window. */
+  altFt: number | null; alt2Ft?: number | null;
+  /** How to read the restriction: at, at or above, at or below, between. */
+  altDesc?: "at" | "above" | "below" | "between" | null;
+  speedKt?: number | null;
+  /** Course into this fix and the leg's length, as published (course is magnetic unless trueCourse). */
+  courseDeg?: number | null; trueCourse?: boolean; distNm?: number | null;
+  flyOver?: boolean; role?: "IAF" | "IF" | "FAF" | "MAP" | null; vAngle?: number | null;
+}
 /** A published holding pattern (ARINC 424 HA/HF/HM leg) at a fix. */
 export interface PubHold { ident: string; lat: number; lon: number; /** Inbound course, degrees; magnetic unless `trueCourse`. */ courseDeg: number; trueCourse: boolean; right: boolean;
   /** Leg length: nautical miles, or minutes when `legMin` is set. */ legNm: number | null; legMin: number | null; altFt: number | null; alt2Ft: number | null; speedKt: number | null; from: "approach" | "missed" }
@@ -140,8 +153,18 @@ function readLeg(r: PathReader): Leg {
   const lat = r.readFloat64(), lon = r.readFloat64();
   const alt1 = r.readFloat32(), alt2 = r.readFloat32(), course = r.readFloat32();
   const turn = r.readInt32(), dist = r.readFloat32(), minutes = r.readInt32(), trueDeg = r.readInt32(), speed = r.readFloat32();
+  const desc = r.readInt32(), flyOver = r.readInt32(), vAngle = r.readFloat32(), iaf = r.readInt32(), iff = r.readInt32(), faf = r.readInt32(), map = r.readInt32();
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180 || (lat === 0 && lon === 0)) return { fix: null, hold: null };
-  const fix: PathFix = { ident: ident || "·", lat, lon, altFt: ft(alt1) };
+  const legNmVal = !minutes && dist > 0 ? (dist > 100 ? dist / 1852 : dist) : null;
+  const fix: PathFix = {
+    ident: ident || "·", lat, lon, altFt: ft(alt1), alt2Ft: desc === 4 ? ft(alt2) : null,
+    altDesc: ft(alt1) === null ? null : ({ 1: "at", 2: "above", 3: "below", 4: "between" } as Record<number, PathFix["altDesc"]>)[desc] ?? "at",
+    speedKt: Number.isFinite(speed) && speed > 60 && speed < 400 ? Math.round(speed) : null,
+    courseDeg: Number.isFinite(course) && course > 0 && course <= 360 ? Math.round(course) : null, trueCourse: !!trueDeg,
+    distNm: legNmVal !== null && legNmVal < 300 ? Math.round(legNmVal * 10) / 10 : null,
+    flyOver: !!flyOver, role: map ? "MAP" : faf ? "FAF" : iff ? "IF" : iaf ? "IAF" : null,
+    vAngle: Number.isFinite(vAngle) && Math.abs(vAngle) > 1 && Math.abs(vAngle) < 8 ? Math.round(Math.abs(vAngle) * 100) / 100 : null,
+  };
   let hold: Leg["hold"] = null;
   // Only a sane racetrack: a real course, a turn side, and a leg length that makes sense.
   if (HOLD_TYPES.has(type) && Number.isFinite(course) && course >= 0 && course <= 360 && (turn === 1 || turn === 2)) {
@@ -189,4 +212,51 @@ export function collectApproachPaths(records: PathRecord[]): ApproachPath[] {
   const dedupe = (l: PathFix[]) => l.filter((p, i) => i === 0 || p.ident !== l[i - 1]!.ident || Math.abs(p.lat - l[i - 1]!.lat) > 1e-5);
   for (const a of out) { a.final = dedupe(a.final); a.missed = dedupe(a.missed); for (const t of a.transitions) t.legs = dedupe(t.legs); }
   return out;
+}
+
+
+/* ---------------- SID and STAR paths ---------------- */
+
+export const FT_SS = { DEPARTURE: 10, ARRIVAL: 11, RUNWAY_TRANSITION: 12, ENROUTE_TRANSITION: 13, APPROACH_LEG: 7 } as const;
+export const SIDSTAR_PATH_DEFINITION = [
+  "OPEN AIRPORT",
+  "OPEN DEPARTURE", "NAME",
+  "OPEN RUNWAY_TRANSITION", "RUNWAY_NUMBER", "RUNWAY_DESIGNATOR", "OPEN APPROACH_LEG", ...LEG_FIELDS, "CLOSE APPROACH_LEG", "CLOSE RUNWAY_TRANSITION",
+  "OPEN ENROUTE_TRANSITION", "NAME", "OPEN APPROACH_LEG", ...LEG_FIELDS, "CLOSE APPROACH_LEG", "CLOSE ENROUTE_TRANSITION",
+  "OPEN APPROACH_LEG", ...LEG_FIELDS, "CLOSE APPROACH_LEG",
+  "CLOSE DEPARTURE",
+  "OPEN ARRIVAL", "NAME",
+  "OPEN RUNWAY_TRANSITION", "RUNWAY_NUMBER", "RUNWAY_DESIGNATOR", "OPEN APPROACH_LEG", ...LEG_FIELDS, "CLOSE APPROACH_LEG", "CLOSE RUNWAY_TRANSITION",
+  "OPEN ENROUTE_TRANSITION", "NAME", "OPEN APPROACH_LEG", ...LEG_FIELDS, "CLOSE APPROACH_LEG", "CLOSE ENROUTE_TRANSITION",
+  "OPEN APPROACH_LEG", ...LEG_FIELDS, "CLOSE APPROACH_LEG",
+  "CLOSE ARRIVAL",
+  "CLOSE AIRPORT",
+];
+export interface ProcPath { name: string; kind: "sid" | "star"; runways: Array<{ runway: string; legs: PathFix[] }>; common: PathFix[]; enroute: Array<{ name: string; legs: PathFix[] }>; holds: PubHold[] }
+
+export function collectSidStarPaths(records: PathRecord[]): ProcPath[] {
+  const procs = new Map<number, ProcPath>();
+  const subs = new Map<number, { proc: number; legs: PathFix[] }>();
+  for (const r of records) {
+    if (r.type === FT_SS.DEPARTURE || r.type === FT_SS.ARRIVAL) {
+      const name = clean(r.data.readString8());
+      if (okName(name)) procs.set(r.id, { name, kind: r.type === FT_SS.DEPARTURE ? "sid" : "star", runways: [], common: [], enroute: [], holds: [] });
+    }
+  }
+  for (const r of records) {
+    const p = procs.get(r.parent);
+    if (!p) continue;
+    if (r.type === FT_SS.RUNWAY_TRANSITION) { const rw = runwayName(r.data.readInt32(), r.data.readInt32()); const t = { runway: rw, legs: [] as PathFix[] }; p.runways.push(t); subs.set(r.id, { proc: r.parent, legs: t.legs }); }
+    else if (r.type === FT_SS.ENROUTE_TRANSITION) { const n = clean(r.data.readString8()); const t = { name: n, legs: [] as PathFix[] }; if (okName(n)) { p.enroute.push(t); subs.set(r.id, { proc: r.parent, legs: t.legs }); } }
+  }
+  for (const r of records) {
+    if (r.type !== FT_SS.APPROACH_LEG) continue;
+    const direct = procs.get(r.parent), sub = subs.get(r.parent);
+    if (!direct && !sub) continue;
+    const l = readLeg(r.data);
+    const owner = direct ?? procs.get(sub!.proc)!;
+    if (l.fix) (direct ? direct.common : sub!.legs).push(l.fix);
+    if (l.hold && !owner.holds.some((h) => h.ident === l.hold!.ident)) owner.holds.push({ ...l.hold, from: "approach" });
+  }
+  return [...procs.values()].filter((p) => p.common.length + p.runways.reduce((a, t) => a + t.legs.length, 0) + p.enroute.reduce((a, t) => a + t.legs.length, 0) > 0);
 }
