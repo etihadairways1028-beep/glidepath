@@ -6,12 +6,13 @@
 import { useEffect, useState } from "react";
 import { Icon } from "./ui";
 
-export const APP_VERSION = "1.4.3";
+export const APP_VERSION = "1.4.4";
 const KEY = "glidepath.seenVersion";
 
 export type WnIcon = "map" | "flight" | "remote" | "book" | "gear" | "spark" | "download" | "search" | "tower" | "cloud" | "layers" | "target" | "headset";
 export interface WnItem { v: string; ic: WnIcon; t: string; d: string }
 export const WHATS_NEW: WnItem[] = [
+  { v: "1.4.4", ic: "flight", t: "One flight card", d: "The Flight screen no longer shows two profiles. The live card now holds the full climb, cruise and descent profile with your aircraft on it, and the plan below keeps its runways, SID, STAR, figures, route and waypoints." },
   { v: "1.4.3", ic: "layers", t: "A chart library for every airport", d: "Charts now lists every chart for the airport in one place: the airport diagram, every STAR, approach and SID, grouped and searchable, with your flight's own procedures pinned at the top. Pinch or double-tap any chart to zoom, and step through them with the arrows." },
   { v: "1.4.3", ic: "spark", t: "Lighter liquid glass", d: "Glass panels now have a light rim that catches at the top, and they blur once instead of stacking blurs inside blurs. Cards below the fold aren't drawn until you scroll to them, so long screens scroll smoother." },
   { v: "1.4.2", ic: "layers", t: "Approach charts: minimums and the final descent", d: "Every approach chart now shows TCH and the missed approach altitude, and a table of your altitude at each mile to the threshold on the glidepath. Type your baro DA or MDA from your official chart once: it's drawn on the profile, with your height above the threshold, and kept for that approach." },

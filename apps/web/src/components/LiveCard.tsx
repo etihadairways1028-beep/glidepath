@@ -3,13 +3,13 @@
  * route, where you are along it (an altitude profile that lights up as you
  * fly), times against plan, and the one number that matters right now.
  */
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import { useApp } from "../data/store";
 import { altText, countdown, dur, fmt, PHASE_LABEL, useLive, zulu } from "../data/derive";
 import { useChoice, useChosenArrivalRunway } from "./Procedures";
 
 
-export function LiveCard({ big }: { big?: boolean }) {
+export function LiveCard({ big, profile }: { big?: boolean; profile?: ReactNode }) {
   const L = useLive();
   const { frame, flight, plan, phase } = L;
   const est = phaseProgress(L.phase, L.progress, !!L.plan || L.toGoNm !== null, L.completed);
@@ -29,7 +29,7 @@ export function LiveCard({ big }: { big?: boolean }) {
   const nowT = L.frame?.t ?? Date.now();
   const tocLabel = tocEv ? zulu(tocEv.t) : T0?.toTopOfClimbMs != null ? zulu(nowT + T0.toTopOfClimbMs) : null;
   const todLabel = todEv ? zulu(todEv.t) : T0?.toTopOfDescentMs != null ? zulu(nowT + T0.toTopOfDescentMs) : null;
-  const profile = useProfile(L.plan, tocFrac, todFrac);
+  const altProfile = useProfile(L.plan, tocFrac, todFrac);
 
   if (!flight) return null;
   const callsign = plan?.callsign ?? flight.callsign ?? flight.aircraft?.registration ?? null;
@@ -89,7 +89,7 @@ export function LiveCard({ big }: { big?: boolean }) {
   }
 
   return (
-    <article className={`glass strong live-card${big ? " big" : ""}`} aria-label="Live flight">
+    <article className={`glass strong live-card${big ? " big" : ""}${profile ? " merged" : ""}`} aria-label="Live flight">
       <div className="lc-top">
         <div className="lc-id">{callsign ? <span>{callsign}</span> : null}<span className={callsign ? "faint" : ""}>{type}</span></div>
         <span className={`lc-phase ph-${phase.toLowerCase()}`}>{PHASE_LABEL[phase]}</span>
@@ -101,8 +101,8 @@ export function LiveCard({ big }: { big?: boolean }) {
           <div className="s">{depNote}</div>
         </div>
         <div>
-          <FlightProfile alts={profile} progress={est} completed={L.completed} airborne={L.airborne} tocFrac={tocFrac} todFrac={todFrac}
-            tocLabel={tocLabel} todLabel={todLabel} />
+          {!profile && <FlightProfile alts={altProfile} progress={est} completed={L.completed} airborne={L.airborne} tocFrac={tocFrac} todFrac={todFrac}
+            tocLabel={tocLabel} todLabel={todLabel} />}
           <div className="lc-mid">
             <div className="over">{over}</div>
             <div className="main-v">{main}</div>
@@ -115,6 +115,7 @@ export function LiveCard({ big }: { big?: boolean }) {
           <div className="s">{arr === "····" && !plan ? <a href="#/flight">Add your plan</a> : arrNote}</div>
         </div>
       </div>
+      {profile && <div className="lc-rp">{profile}</div>}
       <div className="lc-foot">
         <span className="data">{frame ? `${altText(frame.position.altMslFt)} · ${fmt(frame.speed.gsKt)} kts` : "—"}</span>
         <span className="row" style={{ gap: 6 }}>

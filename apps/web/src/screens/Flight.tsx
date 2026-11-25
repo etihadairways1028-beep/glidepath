@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import type { LandingReport } from "@glidepath/protocol";
 import { computeTopOfDescent } from "@glidepath/flight-engine";
 import { LiveCard } from "../components/LiveCard";
+import { RouteProfile } from "../components/RouteOverview";
 import { DebriefPanel, HandlingCard, TakeoffCard } from "../components/Debrief";
 import { touchdownWords } from "@glidepath/flight-engine";
 import { AircraftHero } from "../components/Imagery";
@@ -44,8 +45,9 @@ export function FlightScreen() {
     <div className="stack">
       <div className="between wrap"><h1 className="title">Flight</h1>{mode === "demo" && <span className="pill demo"><span className="dot" />Demo flight: synthetic data</span>}</div>
       {L.completed && <DebriefPanel flight={L.flight} />}
-      <LiveCard />
-      {L.plan ? <FlightPlanCard plan={L.plan} frame={f} completed={L.completed} /> : <LoadPlanCard />}
+      {/* One card: the live flight with the plan's full profile inside it, then the plan's details below. */}
+      <LiveCard profile={L.plan ? <RouteProfile plan={L.plan} frame={f} live={!L.completed} /> : undefined} />
+      {L.plan ? <FlightPlanCard plan={L.plan} frame={f} completed={L.completed} merged /> : <LoadPlanCard />}
       <AircraftHero icaoType={L.flight.aircraft?.icaoType ?? L.plan?.aircraftIcao} title={L.flight.aircraft?.title} tilt={Math.max(-5, Math.min(6, -(f.speed.vsFpm ?? 0) / 450))}>
           <p className="fh-type">{L.flight.aircraft?.icaoType ?? L.plan?.aircraftIcao ?? "Your aircraft"}</p>
           <p className="fh-meta">{[L.plan?.callsign ?? L.flight.callsign, L.flight.aircraft?.registration ?? L.plan?.registration, L.flight.aircraft?.title].filter(Boolean).join(", ") || "Waiting on aircraft details from the sim"}</p>

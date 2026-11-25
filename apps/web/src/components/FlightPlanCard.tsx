@@ -32,7 +32,7 @@ export function DirectNote() {
   );
 }
 
-export function FlightPlanCard({ plan, frame, completed }: { plan: FlightPlan; frame: TelemetryFrame | null; completed: boolean }) {
+export function FlightPlanCard({ plan, frame, completed, merged = false }: { plan: FlightPlan; frame: TelemetryFrame | null; completed: boolean; merged?: boolean }) {
   const { fuelUnit } = useSettings();
   const [copied, setCopied] = useState(false);
   const [all, setAll] = useState(false);
@@ -72,6 +72,9 @@ export function FlightPlanCard({ plan, frame, completed }: { plan: FlightPlan; f
       {plan.ofpUrl && <a className="btn small" href={plan.ofpUrl} target="_blank" rel="noreferrer">Full OFP</a>}
       <button className="btn small" onClick={() => void copy()}>{copied ? "Copied" : "Copy route"}</button>
     </span>}>
+      {merged ? (
+        <p className="fp-procs">{[plan.origin.runway && `Departure runway ${plan.origin.runway}`, plan.sid && `SID ${plan.sid}`, plan.star && `STAR ${plan.star}`, plan.destination.runway && `Arrival runway ${plan.destination.runway}`].filter(Boolean).map((t) => <span key={t as string} className="chip">{t}</span>)}</p>
+      ) : (<>
       <div className="fp-head">
         <div className="fp-od"><b className="data">{head[0]}</b>{head[1] && <span className="fp-proc">{head[1]}</span>}</div>
         <div className="fp-line" aria-hidden="true"><i style={{ width: `${total > 0 && flown !== null ? Math.max(0, Math.min(100, (flown / total) * 100)) : 0}%` }} /></div>
@@ -79,6 +82,7 @@ export function FlightPlanCard({ plan, frame, completed }: { plan: FlightPlan; f
       </div>
       <p className="fp-names faint">{[plan.origin.name, plan.destination.name].filter(Boolean).join(" to ")}</p>
       <RouteProfile plan={plan} frame={frame} live={!completed} />
+      </>)}
 
       <div className="fp-stats">
         <div><span>Distance</span><b className="data">{fmt(plan.distanceNm ?? total)} nm</b></div>
