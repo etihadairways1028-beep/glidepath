@@ -1350,3 +1350,25 @@ section.bento-sec { padding-top: 140px; }
 .bx-wide { grid-column: 1 / -1 !important; }
 .bx-diagram { position: absolute !important; right: 6%; top: 50%; translate: 0 -50%; width: 46%; transform: scale(1.35); transform-origin: 100% 50%; }
 @media (max-width: 640px) { .bx-diagram { right: 50%; translate: 50% 0; top: auto; bottom: 40px; width: 80%; transform: none; } }
+
+/* =====================================================================
+   1.4: the hero's map is the background of the whole page
+   ===================================================================== */
+.bgmap { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+  background: radial-gradient(70% 60% at 72% 45%, rgba(40,90,220,.22), transparent 70%), radial-gradient(60% 50% at 10% 90%, rgba(120,60,255,.16), transparent 70%); }
+.bgmap .lh-map { position: absolute; inset: 0; width: 100%; height: 100%; transform-origin: 50% 50%; will-change: transform, opacity; transition: none; }
+/* Over the content the map dims, so text stays easy to read; it stays fully bright in the hero. */
+.bgmap-veil { position: absolute; inset: 0; opacity: var(--veil, 0); background: radial-gradient(120% 90% at 50% 50%, rgba(4,8,22,.38), rgba(4,8,22,.74)); }
+.bgmap-tag { position: absolute; right: 18px; bottom: 16px; padding: 7px 12px; border-radius: 999px; background: rgba(6,10,26,.72); border: 1px solid rgba(255,255,255,.08); font: 700 11px var(--text); letter-spacing: .14em; text-transform: uppercase; color: rgba(190,210,255,.55); opacity: var(--veil, 0); font-variant-numeric: tabular-nums; }
+.bgmap-tag b { color: #CFE3FF; font-weight: 800; }
+@media (max-width: 700px) { .bgmap-tag { display: none; } }
+.top { z-index: 50; }
+main#main, .foot { position: relative; z-index: 1; }
+.lh { background: none !important; }
+.lh::after { display: none !important; }
+body::before, body::after { z-index: -1; }
+@media (prefers-reduced-motion: reduce) { .bgmap .lh-map { transform: none !important; } }
+/* Below the hero the map keeps its route, aircraft and coastline; names step back so they never sit on top of text. */
+.bgmap .lh-fixes text, .bgmap .lh-others { transition: opacity .5s ease; }
+.bgmap.page .lh-fixes text, .bgmap.page .lh-others { opacity: 0; }
+@media (max-width: 700px) { .bgmap.page .lh-map { opacity: .7 !important; } }

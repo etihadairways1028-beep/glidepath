@@ -28,6 +28,8 @@
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Glidepath","applicationCategory":"GameApplication","operatingSystem":"Windows 10, Windows 11, iPadOS, iOS, Android, macOS","description":"A free companion for Microsoft Flight Simulator 2020 and 2024: your flight live on your iPad, phone or second screen, with a review after every landing.","url":"https://glidepath-ad9.pages.dev/","image":"https://glidepath-ad9.pages.dev/assets/og.jpg","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
 </head>
 <body>
+  <!-- The hero's map stays behind the whole page: the demo flight flies on as you scroll and lands at the download. -->
+  <div class="bgmap" aria-hidden="true"><svg class="lh-map" id="lh-map" preserveAspectRatio="xMidYMid slice"></svg><div class="bgmap-veil"></div><div class="bgmap-tag" id="bg-tag"></div></div>
   <a class="skip" href="#main">Skip to content</a>
 
   <div class="sky" aria-hidden="true"><i class="l1"></i><i class="l2"></i><i class="l3"></i><span class="stars"></span><span class="grain"></span></div>
@@ -69,10 +71,9 @@
   <main id="main">
     <!-- HERO: the demo flight flies across the page -->
     <section class="lh" aria-labelledby="hero-title">
-      <svg class="lh-map" id="lh-map" aria-hidden="true" preserveAspectRatio="xMidYMid slice"></svg>
       <div class="lh-cards" id="lh-cards" aria-hidden="true"></div>
       <div class="lh-copy">
-        <a class="lh-badge" href="#film"><span>1.3</span>Approach paths, ATIS and auto-reconnect on iPad <i aria-hidden="true">›</i></a>
+        <a class="lh-badge" href="#what"><span>1.4</span>Taxi and procedure charts for every airport <i aria-hidden="true">›</i></a>
         <h1 id="hero-title">Every flight,<br><span class="lh-grad">beautifully clear.</span></h1>
         <p class="lh-lede">Microsoft Flight Simulator on your iPad, phone or second screen. Your route, your approach, your aircraft, live, and an honest review after every landing.</p>
         <div class="lh-cta">
@@ -178,7 +179,7 @@
         <article class="bx bx-hero reveal"><div class="bx-txt"><span class="bx-k">Gate to gate, live</span><h3>Every phase, the way airlines keep it.</h3><p>Off block to on block against your SimBrief times, with a heads-up before every big moment.</p></div><img src="assets/shots/film-home.webp" alt="The Home screen during a flight: logging card, live route card and key readouts" loading="lazy"></article>
         <article class="bx bx-review reveal"><div class="bx-txt"><span class="bx-k">An honest review</span><h3>Land, then learn.</h3><p>Take-off, handling, approach and landing, scored from your real flight.</p></div><img src="assets/shots/pillar-review.webp" alt="A flight review with scores" loading="lazy"></article>
         <article class="bx reveal"><div class="bx-txt"><span class="bx-k">Weather</span><h3>Radar and METARs.</h3></div><img src="assets/shots/bento-weather.webp" alt="Weather screen with radar and METAR" loading="lazy"></article>
-        <article class="bx reveal"><div class="bx-txt"><span class="bx-k">Charts</span><h3>Airport sheets for every field.</h3></div><img src="assets/shots/bento-charts.webp" alt="Charts screen with an airport sheet" loading="lazy"></article>
+        <article class="bx reveal"><div class="bx-txt"><span class="bx-k">Charts</span><h3>Taxi and procedure charts, any airport.</h3></div><img src="assets/shots/bento-charts.webp" alt="Charts screen with an airport sheet" loading="lazy"></article>
         <article class="bx reveal"><div class="bx-txt"><span class="bx-k">Copilot</span><h3>Ask, out loud.</h3></div><img src="assets/shots/bento-copilot.webp" alt="Copilot screen" loading="lazy"></article>
         <article class="bx bx-note reveal"><div class="bx-txt"><span class="bx-k">Lock screen</span><h3>Step away. It taps you on the shoulder.</h3></div>
           <div class="bx-notes" aria-hidden="true">

@@ -20,15 +20,18 @@
     const APPROACH = [["DAYNE", 53.392, -2.02], ["CI23R", 53.452, -2.118], ["FF23R", 53.41, -2.19], ["RW23R", 53.3624, -2.2571]];
     const OTHERS = [["EGBB", 52.454, -1.748], ["EGNX", 52.831, -1.328], ["EGGW", 51.875, -0.368], ["EGSS", 51.885, 0.235], ["EGKK", 51.148, -0.19], ["EGGD", 51.383, -2.719], ["EGNM", 53.866, -1.661], ["EGGP", 53.334, -2.85], ["EGFF", 51.397, -3.343], ["EGNS", 54.083, -4.623], ["EGCN", 53.475, -1.004], ["EGSH", 52.676, 1.283], ["EGTE", 50.734, -3.414], ["EGHI", 50.95, -1.357]];
     const K = Math.cos(52.4 * Math.PI / 180);
-    let W = 0, H = 0, sc = 1, ox = 0, oy = 0;
+    let W = 0, H = 0, sc = 1, ox = 0, oy = 0, heroH = 0, shiftPage = 0;
     const P = (lat, lon) => [ox + lon * K * sc, oy - lat * sc];
     const layout = () => {
-      W = innerWidth; H = Math.max(560, svg.getBoundingClientRect().height || innerHeight);
+      W = innerWidth; H = Math.max(560, innerHeight);
       svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
       const lons = ROUTE.map((r) => r[2] * K), lats = ROUTE.map((r) => r[1]);
       const [x0, x1, y0, y1] = [Math.min(...lons), Math.max(...lons), Math.min(...lats), Math.max(...lats)];
       const wide = W > 900;
-      const box = wide ? [W * 0.5, H * 0.13, W * 0.95, H * 0.8] : [W * 0.12, H - 360, W * 0.8, H - 120];
+      // Phones: the route sits under the hero's buttons (the hero is taller than the screen), then comes to the middle as you read on.
+      heroH = Math.max(H, document.querySelector(".lh")?.offsetHeight || H);
+      const box = wide ? [W * 0.5, H * 0.13, W * 0.95, H * 0.8] : [W * 0.12, heroH - 360, W * 0.8, heroH - 120];
+      shiftPage = wide ? 0 : H / 2 - (heroH - 240);
       sc = Math.min((box[2] - box[0]) / (x1 - x0), (box[3] - box[1]) / (y1 - y0));
       // Heathrow bottom-right, Manchester top-left: mirror nothing, just place the box.
       ox = box[0] + ((box[2] - box[0]) - (x1 - x0) * sc) / 2 - x0 * sc;
@@ -80,11 +83,12 @@
     const hud = { phase: document.getElementById("lh-phase"), alt: document.getElementById("lh-alt"), gs: document.getElementById("lh-gs"), vs: document.getElementById("lh-vs"), togo: document.getElementById("lh-togo") };
     const pdone = document.getElementById("lh-pdone"), pdot = document.getElementById("lh-pdot");
     // The map leans a little toward the pointer.
+    let tilt = { x: 0, y: 0 };
     if (!reduced && matchMedia("(hover: hover)").matches) addEventListener("pointermove", (e) => {
-      const x = e.clientX / innerWidth - .5, y = e.clientY / innerHeight - .5;
-      svg.style.transform = `perspective(1600px) rotateX(${(-y * 4).toFixed(2)}deg) rotateY(${(x * 5).toFixed(2)}deg) scale(1.04)`;
-      cardsBox.style.transform = `translate(${(x * -10).toFixed(1)}px, ${(y * -8).toFixed(1)}px)`;
+      tilt = { x: e.clientX / innerWidth - .5, y: e.clientY / innerHeight - .5 };
+      cardsBox.style.transform = `translate(${(tilt.x * -10).toFixed(1)}px, ${(tilt.y * -8).toFixed(1)}px)`;
     }, { passive: true });
+    const bg = document.querySelector(".bgmap"), bgTag = document.getElementById("bg-tag");
     const PH = { PREFLIGHT: "Gate", PUSHBACK: "Pushback", TAXI_OUT: "Taxi", TAKEOFF: "Takeoff", CLIMB: "Climb", CRUISE: "Cruise", DESCENT: "Descent", APPROACH: "Approach", LANDING: "Landing", TAXI_IN: "Taxi in", PARKED: "Parked", COMPLETED: "Parked" };
     const fmt = (n) => Math.round(n).toLocaleString("en-US");
 
@@ -116,25 +120,47 @@
       layout(); addEventListener("resize", () => { layout(); }, { passive: true });
 
       const FLY = 34, HOLD = 5, LOOP = FLY + HOLD; // seconds on screen for the whole flight, then a pause on the landing
-      let t0 = performance.now(), visible = true;
-      new IntersectionObserver((es) => { visible = es[0].isIntersecting; }).observe(svg);
+      // In the hero the flight loops on its own. Below it, the same flight flies on as you scroll,
+      // and lands at Manchester when you reach the download.
+      let t0 = performance.now(), sShown = 0, lastT = performance.now(), lastKey = "";
       const frame = (now) => {
         requestAnimationFrame(frame);
-        if (!visible) return;
+        if (document.hidden) return;
+        const dt = Math.min(.1, (now - lastT) / 1000); lastT = now;
+        const y = scrollY, docH = document.documentElement.scrollHeight - innerHeight;
+        const k = reduced ? (y > innerHeight * .5 ? 1 : 0) : clamp((y - innerHeight * .15) / (innerHeight * .55)); // 0 hero … 1 page
         let tau = ((now - t0) / 1000) % LOOP;
         if (reduced) tau = FLY * 0.62;
-        const s = Math.min(S, (tau / FLY) * S);
+        const sHero = Math.min(S, (tau / FLY) * S);
+        const sPage = S * clamp((y - innerHeight * .6) / Math.max(1, docH - innerHeight * .6));
+        if (k <= 0) sShown = sHero;
+        else sShown += (sPage - sShown) * (reduced ? 1 : Math.min(1, dt * 3.2)); // glide to where the page is
+        // Nothing to redraw while the page is still and the plane has arrived (keeps scrolling smooth and saves battery).
+        const key = k >= 1 ? `${Math.round(sShown)}|${Math.round(y)}` : "";
+        if (key && key === lastKey) return; lastKey = key;
+        const s = sShown;
+        // Map: tilts toward the pointer in the hero, then settles, dims and zooms in a little as you read on.
+        const zoom = 1 + .12 * k;
+        // Wide screens: the map drifts a little so the aircraft stays toward the middle of the page.
+        const cur = at(clamp(find(s)[1] / total));
+        const tx = W > 900 ? (W * .62 - cur.x) * .3 * k : 0;
+        const ty = W > 900 ? (H * .5 - cur.y) * .35 * k : -Math.min(y, heroH) * (1 - k) + shiftPage * k;
+        svg.style.transform = reduced ? `translateY(${ty.toFixed(1)}px)` : `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px) perspective(1600px) rotateX(${(-tilt.y * 4 * (1 - k)).toFixed(2)}deg) rotateY(${(tilt.x * 5 * (1 - k)).toFixed(2)}deg) scale(${(1.04 * (1 - k) + zoom * k).toFixed(4)})`;
+        bg.style.setProperty("--veil", k.toFixed(3)); bg.classList.toggle("page", k > .5);
+        cardsBox.style.visibility = k >= 1 ? "hidden" : "visible";
         const f = find(s);
         const frac = clamp(f[1] / total);
         flownPath.style.strokeDashoffset = String(routeLen * (1 - frac));
         const pl = at(frac);
+        if (k > 0) svg.style.transformOrigin = `${pl.x.toFixed(0)}px ${pl.y.toFixed(0)}px`; // zoom around the aircraft so it stays in view
         plane.setAttribute("transform", `translate(${pl.x.toFixed(1)} ${pl.y.toFixed(1)}) rotate(${pl.deg.toFixed(1)}) scale(${W > 900 ? 1.25 : 1})`);
         const appU = clamp((s - sAPP) / 240);
         appPath.style.strokeDashoffset = String(appLen * (1 - ease(appU)));
         appPath.style.opacity = s < sAPP ? "0" : "1";
         // fade the whole scene out and back in around the loop point
-        const fade = tau > LOOP - .7 ? (LOOP - tau) / .7 : tau < .5 ? tau / .5 : 1;
-        svg.style.opacity = String(.35 + .65 * fade); cardsBox.style.opacity = String(fade);
+        const fade = k > 0 ? 1 : tau > LOOP - .7 ? (LOOP - tau) / .7 : tau < .5 ? tau / .5 : 1;
+        svg.style.opacity = String(.35 + .65 * fade); cardsBox.style.opacity = String(fade * (1 - k));
+        if (bgTag && k > 0) bgTag.innerHTML = `Demo flight · <b>${PH[f[6]] || f[6]}</b> · ${fmt(f[2])} ft · ${Math.round(f[10] ?? 0)} nm to EGCC`;
         CARDS.forEach((c, i) => {
           const on = s >= c.s0 && s <= c.s1, n = nodes[i];
           n.classList.toggle("on", on);
