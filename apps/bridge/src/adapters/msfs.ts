@@ -167,6 +167,16 @@ export class MsfsAdapter extends EventEmitter implements SimAdapter {
   private ssDefined = false;
   private ssWaiting = new Map<number, { records: PathRecord[]; done: (r: ProcPath[] | Error) => void }>();
   private layoutWaiting = new Map<number, { icao: string; records: LayoutRecord[]; done: (r: AirportLayout | null | Error) => void }>();
+  /** When each facility request last received a record: big hubs stream thousands, so time out on silence, not on total time. */
+  private facSeen = new Map<number, number>();
+  private facTimer(id: number, idleMs: number, capMs: number, fail: () => void): { clear: () => void } {
+    const t0 = Date.now(); this.facSeen.set(id, t0);
+    const iv = setInterval(() => {
+      const now = Date.now(), last = this.facSeen.get(id) ?? t0;
+      if (now - last > idleMs || now - t0 > capMs) { clearInterval(iv); this.facSeen.delete(id); fail(); }
+    }, 1000);
+    return { clear: () => { clearInterval(iv); this.facSeen.delete(id); } };
+  }
   private pathWaiting = new Map<number, { records: PathRecord[]; done: (r: ApproachPath[] | Error) => void }>();
   private stopped = false;
   private retryTimer: NodeJS.Timeout | null = null;
@@ -262,6 +272,7 @@ export class MsfsAdapter extends EventEmitter implements SimAdapter {
     h.on("simObjectData", (d: RecvSimObjectData) => this.onData(d));
     h.on("simObjectDataByType", (d: RecvSimObjectData) => { if ((d.requestID as number) === REQ_AI) this.onAiData(d); });
     h.on("facilityData", (d) => {
+      this.facSeen.set(d.userRequestId as number, Date.now());
       const sw = this.ssWaiting.get(d.userRequestId as number);
       if (sw) { sw.records.push({ type: d.type as number, id: d.uniqueRequestId as number, parent: d.parentUniqueRequestId as number, data: d.data as unknown as PathRecord["data"] }); return; }
       const lw = this.layoutWaiting.get(d.userRequestId as number);
@@ -300,10 +311,10 @@ export class MsfsAdapter extends EventEmitter implements SimAdapter {
     }
     const id = ++this.procReq;
     return new Promise<AirportProcedures>((resolve, reject) => {
-      const timer = setTimeout(() => { this.procWaiting.delete(id); reject(new Error(`The simulator didn't send procedures for ${code}.`)); }, 12_000);
-      this.procWaiting.set(id, { icao: code, records: [], done: (r) => { clearTimeout(timer); if (r instanceof Error) reject(r); else if (!r.departures.length && !r.arrivals.length && !r.approaches.length) reject(new Error(`The simulator has no procedures for ${code}.`)); else resolve(r); } });
+      const timer = this.facTimer(id, 12_000, 60_000, () => { this.procWaiting.delete(id); reject(new Error(`The simulator didn't send procedures for ${code}.`)); });
+      this.procWaiting.set(id, { icao: code, records: [], done: (r) => { timer.clear(); if (r instanceof Error) reject(r); else if (!r.departures.length && !r.arrivals.length && !r.approaches.length) reject(new Error(`The simulator has no procedures for ${code}.`)); else resolve(r); } });
       try { h.requestFacilityData(DEF as never, id as never, code); }
-      catch (e) { clearTimeout(timer); this.procWaiting.delete(id); reject(e as Error); }
+      catch (e) { timer.clear(); this.procWaiting.delete(id); reject(e as Error); }
     });
   }
 
@@ -318,10 +329,10 @@ export class MsfsAdapter extends EventEmitter implements SimAdapter {
     if (!this.ssDefined) { for (const f of SIDSTAR_PATH_DEFINITION) h.addToFacilityDefinition(DEF as never, f); this.ssDefined = true; }
     const id = ++this.procReq;
     return new Promise<ProcPath[]>((resolve, reject) => {
-      const timer = setTimeout(() => { this.ssWaiting.delete(id); reject(new Error(`The simulator didn't send the SIDs and STARs of ${code}.`)); }, 20_000);
-      this.ssWaiting.set(id, { records: [], done: (r) => { clearTimeout(timer); if (r instanceof Error) reject(r); else resolve(r); } });
+      const timer = this.facTimer(id, 20_000, 120_000, () => { this.ssWaiting.delete(id); reject(new Error(`The simulator didn't send the SIDs and STARs of ${code}.`)); });
+      this.ssWaiting.set(id, { records: [], done: (r) => { timer.clear(); if (r instanceof Error) reject(r); else resolve(r); } });
       try { h.requestFacilityData(DEF as never, id as never, code); }
-      catch (e) { clearTimeout(timer); this.ssWaiting.delete(id); reject(e as Error); }
+      catch (e) { timer.clear(); this.ssWaiting.delete(id); reject(e as Error); }
     });
   }
 
@@ -336,10 +347,10 @@ export class MsfsAdapter extends EventEmitter implements SimAdapter {
     if (!this.layoutDefined) { for (const f of LAYOUT_DEFINITION) h.addToFacilityDefinition(DEF as never, f); this.layoutDefined = true; }
     const id = ++this.procReq;
     return new Promise<AirportLayout | null>((resolve, reject) => {
-      const timer = setTimeout(() => { this.layoutWaiting.delete(id); reject(new Error(`The simulator didn't send the layout of ${code}.`)); }, 20_000);
-      this.layoutWaiting.set(id, { icao: code, records: [], done: (r) => { clearTimeout(timer); if (r instanceof Error) reject(r); else resolve(r); } });
+      const timer = this.facTimer(id, 20_000, 180_000, () => { this.layoutWaiting.delete(id); reject(new Error(`The simulator didn't send the layout of ${code}.`)); });
+      this.layoutWaiting.set(id, { icao: code, records: [], done: (r) => { timer.clear(); if (r instanceof Error) reject(r); else resolve(r); } });
       try { h.requestFacilityData(DEF as never, id as never, code); }
-      catch (e) { clearTimeout(timer); this.layoutWaiting.delete(id); reject(e as Error); }
+      catch (e) { timer.clear(); this.layoutWaiting.delete(id); reject(e as Error); }
     });
   }
 
@@ -357,10 +368,10 @@ export class MsfsAdapter extends EventEmitter implements SimAdapter {
     }
     const id = ++this.procReq;
     return new Promise<ApproachPath[]>((resolve, reject) => {
-      const timer = setTimeout(() => { this.pathWaiting.delete(id); reject(new Error(`The simulator didn't send approach paths for ${code}.`)); }, 12_000);
-      this.pathWaiting.set(id, { records: [], done: (r) => { clearTimeout(timer); if (r instanceof Error) reject(r); else resolve(r); } });
+      const timer = this.facTimer(id, 12_000, 90_000, () => { this.pathWaiting.delete(id); reject(new Error(`The simulator didn't send approach paths for ${code}.`)); });
+      this.pathWaiting.set(id, { records: [], done: (r) => { timer.clear(); if (r instanceof Error) reject(r); else resolve(r); } });
       try { h.requestFacilityData(DEF as never, id as never, code); }
-      catch (e) { clearTimeout(timer); this.pathWaiting.delete(id); reject(e as Error); }
+      catch (e) { timer.clear(); this.pathWaiting.delete(id); reject(e as Error); }
     });
   }
 

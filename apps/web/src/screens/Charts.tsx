@@ -17,7 +17,7 @@ import { RunwayDiagram } from "../components/Imagery";
 import { TaxiChart } from "../components/TaxiChart";
 import { ProcChart, useSidStar } from "../components/ProcChart";
 import { loadChoice, useProcs } from "../components/Procedures";
-import { airportDetail, type AirportDetail } from "../data/airports";
+import { airportDetail, searchAirports, type AirportDetail } from "../data/airports";
 
 type Kind = "airport" | "departure" | "arrival" | "approach" | "minimums" | "other";
 interface Chart { name: string; kind: Kind; code: string; url: string }
@@ -208,10 +208,10 @@ export function ChartsScreen() {
   const dep = f?.departureIcao ?? L.plan?.origin.icao ?? null;
   const arr = f?.arrivalIcao ?? L.plan?.destination.icao ?? null;
   const [pick, setPick] = useState<string | null>(() => { try { return (JSON.parse(localStorage.getItem("glidepath.chartPick") ?? "null") as { icao?: string } | null)?.icao ?? null; } catch { return null; } });
-  const [q, setQ] = useState("");
   const code = pick ?? arr ?? dep ?? null;
   // Official charts first where they're free to show (US, with the Bridge); the airport sheet everywhere else.
   const mode = useApp((s) => s.mode);
+  const recent = useMemo<string[]>(() => { try { return JSON.parse(localStorage.getItem("glidepath.layouts") ?? "[]"); } catch { return []; } }, [code]);
   const [view, setView] = useState<"taxi" | "procs" | "sheet" | "official">(() => { try { return localStorage.getItem("glidepath.chartPick") ? "procs" : "taxi"; } catch { return "taxi"; } });
   useEffect(() => { setView((v) => (v === "official" && !(code && isUS(code)) ? "taxi" : v)); }, [code, mode]);
 
@@ -219,16 +219,14 @@ export function ChartsScreen() {
     <>
       <div className="page-head">
         <div><h1 className="title">Charts</h1><p className="muted" style={{ margin: "4px 0 0" }}>{dep || arr ? "Your flight's airports, ready when you are." : "Search an airport, or start a flight and its charts appear here."}</p></div>
-        <form className="wx-add" onSubmit={(e) => { e.preventDefault(); const c = q.trim().toUpperCase(); if (/^[A-Z0-9]{3,4}$/.test(c)) setPick(c); setQ(""); }}>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="ICAO, e.g. KJFK" maxLength={4} aria-label="Airport ICAO code" />
-          <button className="btn small primary" disabled={!q.trim()}>Show</button>
-        </form>
+        <AirportFind onPick={setPick} />
       </div>
-      {(dep || arr) && (
+      {(dep || arr || recent.length > 0) && (
         <div className="seg" style={{ marginBottom: 14, alignSelf: "flex-start" }}>
           {dep && <button className={code === dep ? "on" : ""} onClick={() => setPick(dep)}>Departure · {dep}</button>}
           {arr && <button className={code === arr ? "on" : ""} onClick={() => setPick(arr)}>Arrival · {arr}</button>}
           {pick && pick !== dep && pick !== arr && <button className="on">{pick}</button>}
+          {recent.filter((c) => c !== dep && c !== arr && c !== pick).slice(0, 3).map((c) => <button key={c} onClick={() => setPick(c)}>{c}</button>)}
         </div>
       )}
       {code && (
@@ -241,5 +239,30 @@ export function ChartsScreen() {
       )}
       {code ? (view === "taxi" ? <section className="glass pad tc-wrap"><TaxiChart icao={code} /></section> : view === "procs" ? <section className="glass pad"><ProcCharts code={code} /></section> : view === "sheet" ? <AirportSheet code={code} dep={dep} /> : <section className="glass pad"><ChartsFor icao={code} /></section>) : <p className="muted">No airport yet.</p>}
     </>
+  );
+}
+
+/** Find any airport by code, name or city. With the Bridge connected this searches every airport in MSFS's world list. */
+function AirportFind({ onPick }: { onPick: (icao: string) => void }) {
+  const [q, setQ] = useState("");
+  const [hits, setHits] = useState<Array<{ code: string; name: string; city?: string | null; country?: string | null }>>([]);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const t = q.trim(); if (t.length < 2) { setHits([]); return; }
+    let off = false;
+    const id = window.setTimeout(() => { searchAirports(t).then((r) => { if (!off) setHits(r.slice(0, 8)); }).catch(() => { if (!off) setHits([]); }); }, 160);
+    return () => { off = true; clearTimeout(id); };
+  }, [q]);
+  const go = (c: string) => { onPick(c.toUpperCase()); setQ(""); setHits([]); setOpen(false); };
+  return (
+    <form className="af" onSubmit={(e) => { e.preventDefault(); const c = q.trim().toUpperCase(); if (hits[0]) go(hits[0].code); else if (/^[A-Z0-9]{3,4}$/.test(c)) go(c); }}>
+      <input value={q} onChange={(e) => { setQ(e.target.value); setOpen(true); }} onFocus={() => setOpen(true)} onBlur={() => window.setTimeout(() => setOpen(false), 150)} placeholder="Any airport: code, name or city" aria-label="Find an airport" autoComplete="off" spellCheck={false} />
+      <button className="btn small primary" disabled={!q.trim()}>Show</button>
+      {open && hits.length > 0 && (
+        <ul className="af-list" role="listbox">
+          {hits.map((h) => <li key={h.code}><button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => go(h.code)}><b>{h.code}</b><span>{h.name}</span><small>{[h.city, h.country].filter(Boolean).join(", ")}</small></button></li>)}
+        </ul>
+      )}
+    </form>
   );
 }

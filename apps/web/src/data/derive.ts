@@ -40,7 +40,14 @@ export function useLive(): Live {
   const mode = useApp((s) => s.mode);
   const events = useApp((s) => s.events);
   const saved = useSavedPlan();
-  return useMemo(() => derive(frame, flight, phase, mode === "demo", events, mode === "demo" ? null : saved), [frame, flight, phase, mode, events, saved]);
+  return useMemo(() => shared(frame, flight, phase, mode === "demo", events, mode === "demo" ? null : saved), [frame, flight, phase, mode, events, saved]);
+}
+
+/** One derive per telemetry frame for the whole app, however many cards use it (it was once per card per frame). */
+let last: { a: unknown[]; v: Live } | null = null;
+function shared(...a: Parameters<typeof derive>): Live {
+  if (last && last.a.length === a.length && last.a.every((x, i) => x === a[i])) return last.v;
+  const v = derive(...a); last = { a, v }; return v;
 }
 
 /** Times of the first event of a type (top of climb / descent are not on the flight summary). */

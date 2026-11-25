@@ -165,7 +165,7 @@ export class BridgeClient {
     return new Promise<Response>((resolve, reject) => {
       if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.relayOnline) { reject(new Error("Your PC isn't connected right now.")); return; }
       const id = `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
-      const timer = window.setTimeout(() => { this.reqs.delete(id); reject(new Error("Your PC didn't answer in time.")); }, 30_000);
+      const timer = window.setTimeout(() => { this.reqs.delete(id); reject(new Error("Your PC didn't answer in time.")); }, /\/(layout|sidstar|paths)$/.test(path) ? 200_000 : 30_000); // big airports take a while to read
       this.reqs.set(id, { resolve, reject, timer });
       init.signal?.addEventListener("abort", () => { const q = this.reqs.get(id); if (q) { window.clearTimeout(q.timer); this.reqs.delete(id); q.ctrl?.close(); reject(new DOMException("Aborted", "AbortError")); } });
       this.ws.send(JSON.stringify({ $: "req", id, method: init.method ?? "GET", path, body: init.body !== undefined ? JSON.parse(init.body) : undefined }));

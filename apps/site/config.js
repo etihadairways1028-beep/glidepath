@@ -2,6 +2,6 @@
 window.GLIDEPATH = {
   repo: "etihadairways1028-beep/glidepath",
   downloadUrl: "https://github.com/etihadairways1028-beep/glidepath/releases/latest/download/GlidepathBridge-Setup.exe",
-  version: "1.4.0",
-  sha256: "d2cf95d461d19f137e7f398f504f958492878f8ba906efb5f4b9ba93544d327d",
+  version: "1.4.1",
+  sha256: "074b0c4473963ace8a4dbc3039ab9cad9738cb02a31560fa837a74ca01550a25",
 };

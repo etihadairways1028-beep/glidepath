@@ -7,7 +7,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { activeBridge } from "../data/bridge";
 import { useApp } from "../data/store";
-import { useLive } from "../data/derive";
 import { airportDetail, type AirportDetail } from "../data/airports";
 import { declination, holdShape, magToTrue, type Hold } from "../data/hold";
 import { navCached, navKeep } from "./Procedures";
@@ -65,7 +64,6 @@ export function ProcChart({ icao, kind, name, trans }: { icao: string; kind: "ap
   useEffect(() => { let off = false; void airportDetail(icao).then((a) => { if (!off) setApt(a); }).catch(() => undefined); return () => { off = true; }; }, [icao]);
   const [night, setNight] = useState(() => { try { return localStorage.getItem("glidepath.plateNight") === "1"; } catch { return false; } });
   useEffect(() => { try { localStorage.setItem("glidepath.plateNight", night ? "1" : "0"); } catch { /* private */ } }, [night]);
-  const L = useLive();
 
   // The lines to draw, in flying order.
   const built = useMemo(() => {
@@ -132,10 +130,6 @@ export function ProcChart({ icao, kind, name, trans }: { icao: string; kind: "ap
   const rwEnds = ends.filter((e) => built.runway.split(", ").includes(e.ident));
   const rwRect = (apt?.runways ?? []).filter((r) => r.ends.some((e) => rwEnds.some((x) => x.ident === e.ident) || built.runway === "")).map((r) => r.ends.map((e) => T(e.threshold.lat, e.threshold.lon)));
 
-  // Your aircraft
-  const f = L.frame;
-  const me = f ? T(f.position.lat, f.position.lon) : null;
-  const showMe = me && me[0] > -50 && me[0] < W + 50 && me[1] > -50 && me[1] < H + 50;
 
   // ---------- profile (approaches) ----------
   const prof = (() => {
@@ -231,7 +225,7 @@ export function ProcChart({ icao, kind, name, trans }: { icao: string; kind: "ap
           {/* north arrow and scale */}
           <g transform={`translate(${W - 50} 60)`} className="pc-north"><path d="M0,-26 L9,10 L0,4 L-9,10 Z" className="pc-ink-f" /><text y={26} textAnchor="middle" className="pc-small">N</text></g>
           <g transform={`translate(${pad} ${H - 30})`}><line x1={0} x2={scaleNm * sc} y1={0} y2={0} className="pc-scale" /><line x1={0} x2={0} y1={-5} y2={5} className="pc-scale" /><line x1={scaleNm * sc} x2={scaleNm * sc} y1={-5} y2={5} className="pc-scale" /><text x={scaleNm * sc + 8} y={4} className="pc-small">{scaleNm} NM</text></g>
-          {showMe && f && <g transform={`translate(${me![0]} ${me![1]}) rotate(${(f.attitude.headingTrueDeg ?? 0) - 90})`} className="pc-me"><path d="M16 0C16-1.4 14.3-2.4 12.3-2.4H3.2L-5.9-15h-3.2l4.3 12.6H-11.8L-15.5-7.5h-2.1l1.7 5.1v4.8l-1.7 5.1h2.1l3.7-5.1h7l-4.3 12.6h3.2L3.2 2.4h9.1C14.3 2.4 16 1.4 16 0z" /></g>}
+          <PlateMe T={T} W={W} H={H} />
         </svg>
         {/* profile */}
         {prof && (() => {
@@ -265,4 +259,13 @@ export function ProcChart({ icao, kind, name, trans }: { icao: string; kind: "ap
       </div>
     </div>
   );
+}
+
+/** Your aircraft on the plate: only this redraws with each sim update, not the whole chart. */
+function PlateMe({ T, W, H }: { T: (lat: number, lon: number) => [number, number]; W: number; H: number }) {
+  const f = useApp((s) => s.frame);
+  if (!f) return null;
+  const me = T(f.position.lat, f.position.lon);
+  if (!(me[0] > -50 && me[0] < W + 50 && me[1] > -50 && me[1] < H + 50)) return null;
+  return <g transform={`translate(${me[0]} ${me[1]}) rotate(${(f.attitude.headingTrueDeg ?? 0) - 90})`} className="pc-me"><path d="M16 0C16-1.4 14.3-2.4 12.3-2.4H3.2L-5.9-15h-3.2l4.3 12.6H-11.8L-15.5-7.5h-2.1l1.7 5.1v4.8l-1.7 5.1h2.1l3.7-5.1h7l-4.3 12.6h3.2L3.2 2.4h9.1C14.3 2.4 16 1.4 16 0z" /></g>;
 }

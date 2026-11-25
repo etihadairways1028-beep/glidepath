@@ -15,7 +15,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { announce, secureHost, startAddonDoors, startSecure } from "./secure.js";
 import { ADDON_DOORS, ADDONS, addonStatus } from "./addons.js";
 import { networkInterfaces } from "node:os";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { randomInt, timingSafeEqual } from "node:crypto";
 import { WebSocketServer, type WebSocket } from "ws";
@@ -66,6 +66,10 @@ export function liteFlight(f: FlightSummary): FlightSummary {
 export class LanServer {
   private prefs: PrefsStore | null = null;
   /** Procedures and approach paths read from the sim, kept on disk so they work with the sim closed. */
+  /** A saved copy younger than maxAgeMs, so big airports open instantly; the sim refreshes it in the background. */
+  private navFresh(name: string, maxAgeMs: number): unknown | null {
+    try { const f = join(this.cfg.dataDir, "navcache", `${name}.json`); return Date.now() - statSync(f).mtimeMs < maxAgeMs ? this.navLoad(name) : null; } catch { return null; }
+  }
   private navSave(name: string, data: unknown): void { try { const d = join(this.cfg.dataDir, "navcache"); mkdirSync(d, { recursive: true }); writeFileSync(join(d, `${name}.json`), JSON.stringify(data)); } catch { /* memory only */ } }
   private navLoad(name: string): unknown { try { return JSON.parse(readFileSync(join(this.cfg.dataDir, "navcache", `${name}.json`), "utf8")); } catch { return null; } }
   private pathCache = new Map<string, { at: number; paths: import("./procedures.js").ApproachPath[] }>();
@@ -478,6 +482,8 @@ export class LanServer {
       const a = this.remoteAdapter, key = sm[1]!.toUpperCase();
       try {
         if (!a?.sidStarPaths) throw new Error("Procedure charts come from Microsoft Flight Simulator. Start the sim with the Bridge running once and Glidepath keeps them.");
+        const hit = this.navFresh(`${key}.sidstar`, 7 * 864e5);
+        if (hit) { a.sidStarPaths(key).then((ss) => this.navSave(`${key}.sidstar`, ss)).catch(() => { /* keep the saved copy */ }); return json(res, 200, hit); }
         const ss = await a.sidStarPaths(key); this.navSave(`${key}.sidstar`, ss); return json(res, 200, ss);
       } catch (e) {
         const saved = this.navLoad(`${key}.sidstar`);
@@ -489,6 +495,8 @@ export class LanServer {
       const a = this.remoteAdapter, key = lm[1]!.toUpperCase();
       try {
         if (!a?.airportLayout) throw new Error("Taxi charts come from Microsoft Flight Simulator. Start the sim with the Bridge running once and Glidepath keeps the airport.");
+        const hit = this.navFresh(`${key}.layout`, 7 * 864e5);
+        if (hit) { a.airportLayout(key).then((l) => { if (l && (l.paths.length || l.runways.length)) this.navSave(`${key}.layout`, l); }).catch(() => { /* keep the saved copy */ }); return json(res, 200, hit); }
         const lay = await a.airportLayout(key);
         if (!lay || (!lay.paths.length && !lay.runways.length)) throw new Error(`The sim has no taxiway data for ${key}.`);
         this.navSave(`${key}.layout`, lay); return json(res, 200, lay);
