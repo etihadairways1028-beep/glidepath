@@ -34,7 +34,7 @@
   </header>
   <main class="legal">
     <h1>Privacy</h1>
-    <p class="updated">Last updated 17 November 2026</p>
+    <p class="updated">Last updated 26 November 2026</p>
 
     <div class="box"><b>In short:</b> without an account, nothing about you leaves your own PC and devices. With a free account, we keep your email, your logbook and your settings so they follow you, and nothing else. We don't sell data, show adverts or use tracking cookies. Delete your account in the app and it's all gone.</div>
 
@@ -65,7 +65,7 @@
     <p>When you ask Copilot a question while signed in, your question, the conversation so far and your current flight's numbers (position, altitude, speeds, phase, plan, weather) are sent to <b>Cloudflare Workers AI</b> to write the answer. Your email and account details aren't sent. Glidepath doesn't store the conversation; Cloudflare handles the request under <a href="https://www.cloudflare.com/privacypolicy/">its own privacy policy</a>. If you've connected your own AI model to the Bridge, questions go to that model instead.</p>
 
     <h2>Where it's kept</h2>
-    <p>Accounts and the relay run on <b>Cloudflare</b>. The website and the app are served by Cloudflare and GitHub; the Bridge download comes from GitHub. These services see the usual connection details (like your IP address) to deliver pages, as any website does.</p>
+    <p>Accounts and the relay run on <b>Cloudflare</b>. The website and the app are served by Cloudflare and GitHub; the Bridge download comes from GitHub. Every few hours the Bridge also fetches the newest copy of the app from the Glidepath website, so devices that open it from your PC get the current version; that request carries nothing about you or your flights. These services see the usual connection details (like your IP address) to deliver pages, as any website does.</p>
 
     <h2>Things your device fetches directly</h2>
     <p>To show maps, weather and traffic, the app asks these services itself: map tiles (OpenStreetMap, Esri World Imagery), weather (aviationweather.gov, RainViewer), online traffic and ATC (VATSIM, IVAO, SayIntentions), airport data (OurAirports), and SimBrief, if you add your SimBrief name. The live camera uses free public STUN servers (Cloudflare and Google) to help your devices find each other; the picture itself goes straight between your devices, encrypted. </p>
