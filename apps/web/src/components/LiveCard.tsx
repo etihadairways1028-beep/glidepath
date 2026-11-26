@@ -116,6 +116,12 @@ export function LiveCard({ big, profile, below }: { big?: boolean; profile?: Rea
         </div>
       </div>
       {profile && <div className="lc-rp">{profile}</div>}
+      <div className="lc-stats" aria-label="Now">
+        <div><span>Altitude</span><b>{frame ? ((frame.position.altMslFt ?? 0) >= 10000 && L.airborne ? `FL${Math.round((frame.position.altMslFt ?? 0) / 100).toString().padStart(3, "0")}` : altText(frame.position.altMslFt)) : "—"}</b></div>
+        <div><span>Speed</span><b>{frame ? `${fmt(frame.speed.gsKt)} kt` : "—"}</b></div>
+        <div><span>To go</span><b>{L.toGoNm !== null ? `${fmt(L.toGoNm)} nm` : "—"}</b></div>
+        <div><span>Fuel</span><b>{frame?.fuel?.totalKg != null ? `${(frame.fuel.totalKg / 1000).toFixed(1)} t` : "—"}</b></div>
+      </div>
       <div className="lc-foot">
         <span className="data">{frame ? `${altText(frame.position.altMslFt)} · ${fmt(frame.speed.gsKt)} kts` : "—"}</span>
         <span className="row" style={{ gap: 6 }}>

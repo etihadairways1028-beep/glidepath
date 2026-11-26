@@ -179,3 +179,41 @@ html:root .tabbar .tab.on { color: var(--ds-ink) !important; }
 html:root .tabbar .tab svg { width: 21px !important; height: 21px !important; flex: none; }
 @media (max-width: 899px) { html:root .tabbar .tab { font-size: 10.5px !important; letter-spacing: -.01em; } html:root .tabbar { height: 62px; } }
 html:root .page.full { padding-bottom: 0 !important; }
+
+/* ===================== The boarding pass (live flight card), as in the approved design ===================== */
+html:root .live-card .lc-route .code { font: 900 clamp(44px, 5vw, 68px)/1 var(--v2-display) !important; letter-spacing: -.045em !important; }
+html:root .live-card .lc-mid .main-v { font-family: var(--v2-display) !important; font-weight: 900 !important; letter-spacing: -.03em; }
+html:root .live-card .lc-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 16px; padding-top: 18px; border-top: 2px dashed rgba(255, 255, 255, .22); }
+html:root .live-card .lc-stats span { display: block; font: 800 11.5px/1 var(--v2-display); letter-spacing: .1em; text-transform: uppercase; color: var(--ds-ink-3); }
+html:root .live-card .lc-stats b { display: block; margin-top: 6px; font: 900 clamp(20px, 2.2vw, 28px)/1 var(--v2-display); letter-spacing: -.03em; color: var(--ds-ink); }
+html:root .live-card .lc-foot > .data { display: none; }
+@media (max-width: 600px) { html:root .live-card .lc-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Day mode: the pass is light glass, like the picture */
+html:root[data-theme="light"] .live-card {
+  --ds-ink: #0B1220; --ds-ink-2: rgba(11, 18, 32, .7); --ds-ink-3: rgba(11, 18, 32, .5); --ds-line: rgba(11, 18, 32, .1); --ds-line-2: rgba(11, 18, 32, .16);
+  --ds-ctl: rgba(255, 255, 255, .7); --ds-ctl-hover: rgba(255, 255, 255, .9); --ds-hi: #fff; --v2-primary: #0B1220; --v2-primary-ink: #fff;
+}
+html:root[data-theme="light"]:not([data-look]) main section.glass.live-card, html:root[data-theme="light"]:not([data-look]) main .live-card.glass {
+  background: linear-gradient(160deg, rgba(255, 255, 255, .78), rgba(255, 255, 255, .5)) !important;
+  box-shadow: inset 0 2px 0 #fff, inset 0 0 0 1.5px rgba(255, 255, 255, .8), 0 30px 70px -28px rgba(20, 60, 130, .45) !important;
+  color: #0B1220 !important;
+}
+html:root[data-theme="light"] .live-card :is(.code, .lc-id span, .main-v, .t, b, strong) { color: #0B1220 !important; }
+html:root[data-theme="light"] .live-card :is(.s, .under, .faint, .lc-id .faint) { color: rgba(11, 18, 32, .58) !important; }
+html:root[data-theme="light"] .live-card .lc-stats { border-top-color: rgba(11, 18, 32, .16); }
+html:root[data-theme="light"] .live-card .rp { background: rgba(255, 255, 255, .45) !important; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .8) !important; }
+html:root[data-theme="light"] .live-card .rp :is(text, .rp-lab) { fill: #0B1220; color: #0B1220; }
+html:root[data-theme="light"] .live-card .rp-facts, html:root[data-theme="light"] .live-card .rp-facts * { color: rgba(11, 18, 32, .7) !important; }
+html:root[data-theme="light"] .live-card .rp-ahead { stroke: rgba(11, 18, 32, .35) !important; }
+html:root[data-theme="light"] .live-card .rp-plane { fill: #0A6CFF !important; stroke: #fff !important; }
+html:root[data-theme="light"] .live-card .tm-strip { background: rgba(255, 255, 255, .5) !important; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .8) !important; }
+html:root[data-theme="light"] .live-card .tm-strip > *, html:root[data-theme="light"] .live-card .tm-strip :is(.v, b) { color: #0B1220 !important; }
+html:root[data-theme="light"] .live-card .tm-strip > [class*="on"], html:root[data-theme="light"] .live-card .tm-strip > [class*="next"], html:root[data-theme="light"] .live-card .tm-strip > [class*="cur"] { background: #fff !important; box-shadow: 0 6px 16px -8px rgba(20, 60, 130, .45) !important; }
+html:root[data-theme="light"]:not([data-look]) main .live-card .btn:not(.primary):not(.on) { background: rgba(255, 255, 255, .8) !important; color: #0B1220 !important; box-shadow: inset 0 0 0 1px rgba(11, 18, 32, .1) !important; }
+html:root[data-theme="light"]:not([data-look]) main section.glass.live-card, html:root[data-theme="light"]:not([data-look]) main .live-card.glass { background: linear-gradient(160deg, rgba(255, 255, 255, .9), rgba(255, 255, 255, .74)) !important; }
+html:root[data-theme="light"] .live-card :is(.rp-ap, .rp-nm) { fill: #0B1220 !important; color: #0B1220 !important; }
+html:root[data-theme="light"] .live-card .rp-ap text, html:root[data-theme="light"] .live-card .rp-nm text { fill: #0B1220 !important; }
+html:root[data-theme="light"] .live-card .rp-c .rp-pill text { fill: #0784A8 !important; }
+html:root[data-theme="light"] .live-card .rp-d .rp-pill text { fill: #B85E00 !important; }
+html:root[data-theme="light"] .live-card .rp-ground { stroke: rgba(11, 18, 32, .25) !important; }
