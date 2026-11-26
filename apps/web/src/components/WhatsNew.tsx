@@ -6,12 +6,17 @@
 import { useEffect, useState } from "react";
 import { Icon } from "./ui";
 
-export const APP_VERSION = "1.6.1";
+export const APP_VERSION = "1.7.0";
+/** What people call this release. The number above is the build that updates follow. */
+export const LAUNCH_NAME = "1.0";
+export const versionLabel = (v: string) => (v === APP_VERSION ? `${LAUNCH_NAME} · launch` : v);
 const KEY = "glidepath.seenVersion";
 
 export type WnIcon = "map" | "flight" | "remote" | "book" | "gear" | "spark" | "download" | "search" | "tower" | "cloud" | "layers" | "target" | "headset";
 export interface WnItem { v: string; ic: WnIcon; t: string; d: string }
 export const WHATS_NEW: WnItem[] = [
+  { v: "1.7.0", ic: "spark", t: "Glidepath 1.0 is here", d: "The launch: a new look in day and night, your flight up front on Home, the EFB with SimBrief loading new flights by itself, airports in full detail with your sim's own stands and taxiways, 3D buildings, and every screen one tap away from More." },
+  { v: "1.7.0", ic: "flight", t: "Updates you can watch", d: "Updating the Bridge now shows each real step as it happens: the download with its progress, the check that it's exactly the published file, the install, and the restart, with a plane riding the progress bar from the old version to the new." },
   { v: "1.6.1", ic: "map", t: "Your sim's airport on the live map", d: "At the airport you're at, the map now draws the sim's own layout over it, the same data as the Taxi chart: every parking stand with its number, outline and yellow lead-in line, every taxi path with its name on a yellow sign, and the hold-short points (orange where it's an ILS hold). It needs the Bridge and the sim running once at that airport; after that it's kept on your device." },
   { v: "1.6.1", ic: "layers", t: "Airports in full detail, at true size", d: "Runways and taxiways are drawn at their real width, so they line up with the buildings and aircraft. Runways have white edge lines, touchdown marks and a dashed centreline; taxiways have their yellow centreline and edge lines; gate numbers show where the map has them. Tall buildings show their height (for example 45 m) when you're close, and a low sun shades their walls so you can tell how big they are." },
   { v: "1.6.1", ic: "map", t: "Buildings stand up when you zoom in", d: "Zoom right in on the map (about 50 m on the scale or closer) and it tilts by itself so the real buildings rise in 3D, coloured like the real thing: low houses in warm stone, taller blocks in cool glass. Zoom out and it lies flat again." },

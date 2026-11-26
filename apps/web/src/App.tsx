@@ -38,7 +38,7 @@ import { activeDemo, startDemo } from "./data/demo";
 import { initAutoConnect, tryRelay } from "./data/connect";
 import { UpdateCenter } from "./components/UpdateCenter";
 import { FlightCompletePrompt } from "./components/FlightReview";
-import { APP_VERSION, WhatsNew } from "./components/WhatsNew";
+import { APP_VERSION, LAUNCH_NAME, WhatsNew } from "./components/WhatsNew";
 import { SideClock } from "./components/Clock";
 import { initSync } from "./data/sync";
 import { settingsStore, store, useApp, useSettings } from "./data/store";
@@ -323,7 +323,7 @@ export function App() {
                 <a className={`nav-a${screen === n.id || (!screen && n.id === "home") ? " on" : ""}`} href={`#/${n.id}`} title={n.label}><span className={`nav-ic ic-${n.id}`}>{n.icon()}</span><span className="nav-l">{n.label}</span></a>
               </Fragment>
             ))}
-            <div className="side-foot faint">{mode === "demo" ? "Demo flight: synthetic data" : `Glidepath ${APP_VERSION}${status?.bridgeVersion && status.bridgeVersion !== "demo" ? ` · Bridge ${status.bridgeVersion}` : ""}`}</div>
+            <div className="side-foot faint">{mode === "demo" ? "Demo flight: synthetic data" : `Glidepath ${LAUNCH_NAME} · ${APP_VERSION}${status?.bridgeVersion && status.bridgeVersion !== "demo" ? ` · Bridge ${status.bridgeVersion}` : ""}`}</div>
           </nav>
         )}
         {screen !== "glance" && (

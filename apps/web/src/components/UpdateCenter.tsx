@@ -15,54 +15,55 @@ interface BridgeUpdate { current: string; latest: string | null; state: string; 
 const onBridge = () => location.protocol === "http:" && location.pathname.startsWith("/app");
 
 const PLANE = "M15 0C15-1.3 13.4-2.2 11.5-2.2H3L-5.5-14h-3l4 11.8H-11L-14.5-7h-2l1.6 4.8V2.2L-16.5 7h2L-11 2.2h6.5l-4 11.8h3L3 2.2h8.5C13.4 2.2 15 1.3 15 0z";
-const ROUTE = "M70 160C210 20 430 20 570 160";
 
 interface Flight { title: string; from: string; to: string; target: number; step: number; label: string; pct: string; msg: string; done: boolean; failed: boolean }
 
 /** The update flight. `target` is 0..1 along the route; the plane eases toward it. */
 export function UpdateFlight({ f, onClose }: { f: Flight; onClose?: () => void }) {
-  const route = useRef<SVGPathElement>(null), flown = useRef<SVGPathElement>(null), plane = useRef<SVGGElement>(null);
+  // Like the flight-progress bar on a seatback screen: the plane rides the bar from the old version to the new one.
+  const bar = useRef<HTMLDivElement>(null), plane = useRef<HTMLSpanElement>(null), fill = useRef<HTMLDivElement>(null);
   const target = useRef(f.target);
   target.current = f.target;
+  const [secs, setSecs] = useState(0);
+  useEffect(() => { const t0 = Date.now(); const t = window.setInterval(() => setSecs(Math.round((Date.now() - t0) / 1000)), 1000); return () => window.clearInterval(t); }, []);
   useEffect(() => {
-    let shown = 0, bob = 0, raf = 0;
+    let shown = 0, raf = 0;
     const tick = () => {
-      const r = route.current, p = plane.current, fl = flown.current;
-      if (r && p && fl) {
-        bob += 0.03;
-        const t = target.current, goal = t + (t > 0.75 && t < 0.99 ? Math.sin(bob) * 0.012 : 0);
-        shown += (goal - shown) * 0.06;
-        const L = r.getTotalLength(), s = Math.max(0, Math.min(1, shown));
-        const a = r.getPointAtLength(s * L), b = r.getPointAtLength(Math.min(L, s * L + 2)), c = r.getPointAtLength(Math.max(0, s * L - 2));
-        p.setAttribute("transform", `translate(${a.x},${a.y}) rotate(${(Math.atan2(b.y - c.y, b.x - c.x) * 180) / Math.PI})`);
-        fl.setAttribute("stroke-dasharray", `${s} 1`);
-      }
+      shown += (target.current - shown) * 0.07;
+      const s = Math.max(0, Math.min(1, shown));
+      if (fill.current) fill.current.style.width = `${s * 100}%`;
+      if (plane.current) plane.current.style.left = `${s * 100}%`;
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, []);
-  const steps = ["Download", "Check", "Install", "Restart"];
+  const steps: Array<[string, string]> = [["Download", "Getting the new version"], ["Check", "Same file as published (SHA-256)"], ["Install", "Windows may ask once on the PC"], ["Restart", "Glidepath reconnects by itself"]];
+  const mm = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
+  const isApp = f.title === "Updating Glidepath";
   return (
-    <div className={`upd-ov${f.done ? " ok" : ""}`} role="dialog" aria-modal="true" aria-label={f.title}>
+    <div className={`upd-ov v2${f.done ? " ok" : ""}${f.failed ? " bad" : ""}`} role="dialog" aria-modal="true" aria-label={f.title}>
       <div className="upd-card glass strong">
-        <div className="upd-cap">{f.title}</div>
-        <svg className="upd-map" viewBox="0 0 640 210" aria-hidden="true">
-          <defs>
-            <linearGradient id="updg" x1="0" x2="1"><stop offset="0" stopColor="#5E5CE6" /><stop offset="1" stopColor="#64D2FF" /></linearGradient>
-            <pattern id="updd" width="22" height="22" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="rgba(255,255,255,.08)" /></pattern>
-          </defs>
-          <rect width="640" height="210" fill="url(#updd)" />
-          <path ref={route} d={ROUTE} fill="none" stroke="rgba(255,255,255,.24)" strokeWidth="2" strokeLinecap="round" strokeDasharray="1 9" />
-          <path ref={flown} d={ROUTE} fill="none" stroke="url(#updg)" strokeWidth="3.5" strokeLinecap="round" pathLength={1} strokeDasharray="0 1" />
-          <circle cx="70" cy="160" r="7" fill="#fff" />
-          <circle cx="570" cy="160" r="7" className="upd-dest" />
-          <text x="70" y="192" textAnchor="middle" className="upd-v">{f.from}</text>
-          <text x="570" y="192" textAnchor="middle" className="upd-v">{f.to}</text>
-          <g ref={plane}><path d={PLANE} fill="#fff" transform="scale(1.25)" /></g>
-        </svg>
+        <div className="u2-head">
+          <img src="./icons/mark.svg" alt="" width={56} height={56} />
+          <div>
+            <div className="u2-title">{f.done ? "Up to date" : f.failed ? "Update stopped" : f.title}</div>
+            <div className="u2-ver"><span>{f.from}</span><span aria-hidden="true">→</span><b>{f.to}</b></div>
+          </div>
+          <div className="u2-time" aria-label="Time so far">{f.done ? "✓" : mm}</div>
+        </div>
+        <div className="u2-track" ref={bar}>
+          <div className="u2-fill" ref={fill} />
+          <span className="u2-plane" ref={plane} aria-hidden="true"><svg viewBox="-17 -15 34 30" width="30" height="26"><path d={PLANE} fill="currentColor" /></svg></span>
+        </div>
+        <div className="u2-ends"><span>{isApp ? "This version" : `Bridge ${f.from}`}</span><span>{isApp ? "Newest" : `Bridge ${f.to}`}</span></div>
         <div className="upd-row"><span>{f.label}</span><span className="upd-pct">{f.pct}</span></div>
-        <div className="upd-steps">{steps.map((s, i) => <span key={s} className={i < f.step || f.done ? "done" : i === f.step ? "on" : ""}>{s}</span>)}</div>
+        <ol className="u2-steps">
+          {(isApp ? steps.filter((x) => x[0] !== "Install" && x[0] !== "Check") : steps).map(([t, d], i) => {
+            const st = f.done || i < f.step ? "done" : i === f.step && !f.failed ? "now" : "";
+            return <li key={t} className={st}><span className="u2-dot" aria-hidden="true">{st === "done" ? "✓" : st === "now" ? <span className="uv-spin" /> : i + 1}</span><b>{t}</b><small>{d}</small></li>;
+          })}
+        </ol>
         <p className="upd-msg">{f.msg}</p>
         {(f.failed || f.done) && onClose && <div className="upd-foot"><button className="btn" onClick={onClose}>Close</button></div>}
       </div>

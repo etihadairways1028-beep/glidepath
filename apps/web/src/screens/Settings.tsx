@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { disablePush, enablePush, getPushPrefs, pushState, setPushPrefs, testPush, type PushPrefs, type PushState } from "../data/push";
-import { APP_VERSION, showWhatsNew } from "../components/WhatsNew";
+import { APP_VERSION, LAUNCH_NAME, showWhatsNew } from "../components/WhatsNew";
 import { BaseMapPicker, TrafficSources } from "../components/MapLayers";
 import { connectFromSettings } from "../App";
 import { ConnPill, Icon, Kv, Notice, Section } from "../components/ui";
@@ -189,7 +189,7 @@ export function SettingsScreen() {
             <p className="faint" style={{ fontSize: 12.5, margin: "10px 0 0" }}>For an iPad on a stand, use <a href="#/glance">Glance mode</a>. Lock Screen and widget cards need the native iPad app, which is planned.</p>
           </Section>
           <Section title="About">
-            <Kv k="Version" v={`Glidepath ${APP_VERSION}`} />
+            <Kv k="Version" v={`Glidepath ${LAUNCH_NAME} (build ${APP_VERSION})`} />
             <div className="row" style={{ gap: 8, flexWrap: "wrap", margin: "6px 0 10px" }}>
               <button className="btn" onClick={showWhatsNew}>What's new</button>
               <a className="btn" href="#/updates">Updates</a>

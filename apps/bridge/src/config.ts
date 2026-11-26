@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir, hostname, platform } from "node:os";
 import { join } from "node:path";
 
-export const BRIDGE_VERSION = process.env.GLIDEPATH_TEST_VERSION ?? "1.6.1";
+export const BRIDGE_VERSION = process.env.GLIDEPATH_TEST_VERSION ?? "1.7.0";
 
 export type AdapterChoice = "auto" | "msfs" | "replay";
 

@@ -320,3 +320,31 @@ html:root .welcome-title { font-family: var(--v2-display) !important; font-weigh
 @keyframes ln-in { from { opacity: 0; transform: translate(-50%, 16px) scale(.97); } }
 @media (prefers-reduced-motion: reduce) { .launch, .launch-wrap { animation: none; } }
 .ic-settings { --c1: #9AA3B5; --c2: #5B6478; }
+
+
+/* ===================== Update overlay: a real flight-progress bar ===================== */
+.upd-ov.v2 .upd-card { width: min(620px, 100%); padding: 24px 26px 20px !important; border-radius: 32px !important; }
+.u2-head { display: flex; align-items: center; gap: 14px; }
+.u2-head img { width: 56px; height: 56px; filter: drop-shadow(0 8px 18px rgba(10,108,255,.5)); }
+.u2-title { font: 850 22px/1.1 var(--v2-display); letter-spacing: -.02em; color: #fff; }
+.u2-ver { display: flex; gap: 8px; align-items: center; margin-top: 5px; font: 700 14px var(--v2-display); color: rgba(235,241,255,.65); }
+.u2-ver b { color: #64D2FF; }
+.u2-time { margin-left: auto; font: 800 16px ui-monospace, "SF Mono", Menlo, monospace; color: rgba(235,241,255,.7); font-variant-numeric: tabular-nums; }
+.upd-ov.ok .u2-time { color: #30D158; font-size: 22px; }
+.u2-track { position: relative; height: 12px; margin: 26px 14px 0; border-radius: 99px; background: rgba(255,255,255,.12); box-shadow: inset 0 1px 2px rgba(0,0,0,.4); }
+.u2-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: inherit; background: linear-gradient(90deg, #0A6CFF, #64D2FF); box-shadow: 0 0 18px rgba(100,210,255,.55); }
+.upd-ov.ok .u2-fill { background: linear-gradient(90deg, #1FAA4C, #30D158); box-shadow: 0 0 18px rgba(48,209,88,.5); }
+.upd-ov.bad .u2-fill { background: #FF453A; box-shadow: none; }
+.u2-plane { position: absolute; top: 50%; transform: translate(-50%, -50%); color: #fff; filter: drop-shadow(0 3px 6px rgba(0,0,0,.5)); }
+.u2-ends { display: flex; justify-content: space-between; margin: 10px 2px 0; font: 700 12px var(--v2-display); letter-spacing: .04em; text-transform: uppercase; color: rgba(235,241,255,.5); }
+.upd-ov.v2 .upd-row { font: 850 20px var(--v2-display); color: #fff; margin-top: 16px; }
+.upd-ov.v2 .upd-pct { font-variant-numeric: tabular-nums; color: #64D2FF; }
+.u2-steps { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 10px; }
+.u2-steps li { display: flex; flex-direction: column; gap: 4px; opacity: .45; transition: opacity .3s; color: #fff; }
+.u2-steps li.done, .u2-steps li.now { opacity: 1; }
+.u2-dot { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font: 800 12px var(--v2-display); background: rgba(255,255,255,.12); }
+.u2-steps li.done .u2-dot { background: #30D158; } .u2-steps li.now .u2-dot { background: #0A6CFF; }
+.u2-steps li.now .uv-spin { width: 14px; height: 14px; border-color: rgba(255,255,255,.35); border-top-color: #fff; }
+.u2-steps b { font: 800 14px var(--v2-display); } .u2-steps small { font-size: 12px; line-height: 1.35; color: rgba(235,241,255,.6); }
+@media (max-width: 560px) { .u2-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.upd-going { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; }

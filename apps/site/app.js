@@ -29,8 +29,9 @@
     document.addEventListener("keydown", (e) => { if (e.key === "Escape") setOpen(false); });
   }
   if (cfg.version) {
-    if ($("dl-ver")) $("dl-ver").textContent = cfg.version;
-    $("download-title").textContent = "Glidepath Bridge " + cfg.version + " for Windows";
+    var name = cfg.launch ? "Glidepath " + cfg.launch : "Glidepath Bridge " + cfg.version;
+    if ($("dl-ver")) $("dl-ver").textContent = cfg.launch ? cfg.launch + " (Bridge " + cfg.version + ")" : cfg.version;
+    $("download-title").textContent = name + " for Windows";
   }
 
   /* ---------- reveal on scroll ---------- */

@@ -3,7 +3,7 @@
  * and every release so far. Installing plays the same short flight as the update banner.
  */
 import { useEffect, useState } from "react";
-import { APP_VERSION, WHATS_NEW } from "../components/WhatsNew";
+import { APP_VERSION, LAUNCH_NAME, WHATS_NEW, versionLabel } from "../components/WhatsNew";
 import { Icon } from "../components/ui";
 import { activeBridge } from "../data/bridge";
 import { useApp } from "../data/store";
@@ -44,6 +44,15 @@ export function UpdatesScreen() {
   useEffect(() => { if (mode === "bridge" && conn === "live") void activeBridge()?.get<BridgeUpdate>("/api/update").then(setBu).catch(() => undefined); }, [mode, conn, bridgeVersion]);
   useEffect(() => { const h = (e: Event) => { const d = (e as CustomEvent).detail as BridgeUpdate | null; if (d) setBu(d); }; window.addEventListener("gp-bridge-update", h); return () => window.removeEventListener("gp-bridge-update", h); }, []);
 
+  // While the Bridge is downloading, checking or installing, follow it closely.
+  const busyStates = ["downloading", "verifying", "installing"];
+  const bridgeBusy = !!bu && busyStates.includes(bu.state);
+  useEffect(() => {
+    if (!bridgeBusy) return;
+    const t = window.setInterval(() => { void activeBridge()?.get<BridgeUpdate>("/api/update").then(setBu).catch(() => undefined); }, 700);
+    return () => window.clearInterval(t);
+  }, [bridgeBusy]);
+  const [appGoing, setAppGoing] = useState(false);
   const bridgeNew = !!bu && bu.state === "available" && !!bu.latest;
   const allCurrent = app === "current" && (mode !== "bridge" || (bu && !bridgeNew));
   const versions = [...new Set(WHATS_NEW.map((x) => x.v))];
@@ -62,7 +71,7 @@ export function UpdatesScreen() {
           <g className="uh-plane"><path d={PLANE} fill="#fff" transform="scale(1.3)" /></g>
         </svg>
         <div className="uh-text">
-          <div className="uh-state">{allCurrent ? <><span className="uh-tick">✓</span> Everything is up to date</> : app === "checking" || bState === "checking" ? "Checking for updates…" : app === "new" || bridgeNew ? "An update is ready" : "Updates"}</div>
+          <div className="uh-state">{allCurrent ? <><span className="uh-tick">✓</span> Everything is up to date</> : bridgeBusy ? `Updating the Bridge · ${bu!.state === "downloading" ? `${Math.round((bu!.progress || 0) * 100)}%` : bu!.state === "verifying" ? "checking the file" : "installing"}` : appGoing ? "Switching to the new version…" : app === "checking" || bState === "checking" ? "Checking for updates…" : app === "new" || bridgeNew ? "An update is ready" : "Updates"}</div>
           <h1>Updates</h1>
           <p>Glidepath keeps itself current: the app switches to new versions by itself, and the Bridge installs its updates while the sim is closed.</p>
         </div>
@@ -70,11 +79,11 @@ export function UpdatesScreen() {
 
       <div className="grid cols-2 upd-cards">
         <section className="glass updc">
-          <div className="uv-top"><span className="uv-ic">{Icon.home()}</span><div><b>Glidepath app</b><span className="data">Version {APP_VERSION}</span></div></div>
+          <div className="uv-top"><span className="uv-ic">{Icon.home()}</span><div><b>Glidepath app</b><span className="data">Glidepath {LAUNCH_NAME} · build {APP_VERSION}</span></div></div>
           <p className="muted">{app === "new" ? "A newer version is on the website." : app === "offline" ? "Couldn't check right now. Glidepath checks again by itself." : onBridge() ? "This copy comes from your Bridge and updates with it." : "On this device, the app updates by itself."}</p>
           <div className="uv-row">
             {app === "new"
-              ? <button className="btn primary" onClick={() => window.dispatchEvent(new Event("gp-update-app"))}>Update now</button>
+              ? appGoing ? <span className="upd-going"><span className="uv-spin" aria-hidden="true" /> Restarting with the new version…</span> : <button className="btn primary" onClick={() => { setAppGoing(true); window.setTimeout(() => window.dispatchEvent(new Event("gp-update-app")), 350); }}>Update now</button>
               : <button className="btn" disabled={app === "checking"} onClick={() => void checkApp()}>{app === "checking" ? <span className="uv-spin" aria-label="Checking" /> : app === "current" ? "Up to date ✓" : "Check now"}</button>}
           </div>
         </section>
@@ -82,7 +91,7 @@ export function UpdatesScreen() {
           <div className="uv-top"><span className="uv-ic b">{Icon.gear()}</span><div><b>Glidepath Bridge</b><span className="data">{mode === "demo" ? "Demo flight running" : bridgeVersion ? `Version ${bridgeVersion}` : "Not connected"}</span></div></div>
           <p className="muted">{mode !== "bridge" ? "Connect your PC to see its Bridge version." : bridgeNew ? `Version ${bu!.latest} is ready.${bu!.canInstall ? " Windows asks once on the PC." : ""}` : bu?.state === "error" ? bu.message ?? "The last check didn't work." : "Installs updates by itself while the sim is closed, never during a flight."}</p>
           <div className="uv-row">
-            {mode !== "bridge" ? <a className="btn" href="#/settings">Connect</a>
+            {bridgeBusy ? <span className="upd-going"><span className="uv-spin" aria-hidden="true" /> Updating…</span> : mode !== "bridge" ? <a className="btn" href="#/settings">Connect</a>
               : bridgeNew && bu!.canInstall ? <button className="btn primary" onClick={() => window.dispatchEvent(new Event("gp-update-bridge"))}>Update now</button>
               : bridgeNew ? <a className="btn primary" href="https://glidepath-ad9.pages.dev/#download" target="_blank" rel="noreferrer">Download</a>
               : <button className="btn" disabled={bState === "checking"} onClick={() => void checkBridge()}>{bState === "checking" ? <span className="uv-spin" aria-label="Checking" /> : bu && !bridgeNew ? "Up to date ✓" : "Check now"}</button>}
@@ -96,7 +105,7 @@ export function UpdatesScreen() {
           {versions.map((v, k) => (
             <li key={v} style={{ animationDelay: `${k * 70}ms` }}>
               <div className="ul-dot" aria-hidden="true" />
-              <div className="ul-v"><b className="data">{v}</b>{v === APP_VERSION && <span className="ul-now">You have this</span>}</div>
+              <div className="ul-v"><b className="data">{versionLabel(v)}</b>{v === APP_VERSION && <span className="ul-now">You have this</span>}</div>
               <ul>{WHATS_NEW.filter((x) => x.v === v).map((x) => <li key={x.t}><b>{x.t}</b><span>{x.d}</span></li>)}</ul>
             </li>
           ))}
@@ -105,3 +114,4 @@ export function UpdatesScreen() {
     </div>
   );
 }
+
