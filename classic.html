@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Glidepath: your sim flight, live on the screen beside you</title>
+  <meta name="description" content="Glidepath is a free flight simulator companion. A small Windows app reads your flight from Microsoft Flight Simulator and shows it live on your iPad or phone: timings, map, copilot, and a debrief of every takeoff and landing.">
+  <meta name="theme-color" content="#050B1C">
+  <link rel="icon" href="assets/mark.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="app/icons/apple-touch-icon.png">
+  <meta property="og:title" content="Glidepath">
+  <meta property="og:description" content="Your sim flight, live on the screen beside you: live map, remote control and a real debrief of every landing. Free for Microsoft Flight Simulator 2020 and 2024.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://glidepath-ad9.pages.dev/">
+  <meta property="og:image" content="https://glidepath-ad9.pages.dev/assets/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Glidepath showing a live flight from London Heathrow to Manchester on an iPad">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Glidepath: your sim flight, live beside you">
+  <meta name="twitter:description" content="Live map, remote control and a real debrief of every landing. Free for MSFS 2020 and 2024.">
+  <meta name="twitter:image" content="https://glidepath-ad9.pages.dev/assets/og.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=Inter:wght@400..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="v2.css">
+  <script src="config.js"></script>
+  <script defer src="theme.js"></script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Glidepath","applicationCategory":"GameApplication","operatingSystem":"Windows 10, Windows 11, iPadOS, iOS, Android, macOS","description":"A free companion for Microsoft Flight Simulator 2020 and 2024: your flight live on your iPad, phone or second screen, with a review after every landing.","url":"https://glidepath-ad9.pages.dev/","image":"https://glidepath-ad9.pages.dev/assets/og.jpg","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
+  <script>(function(){try{var t=localStorage.getItem("gp-theme");if(t!=="light"&&t!=="dark")t=matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme="dark";}})();</script>
+</head>
+<body>
+  <!-- The hero's map stays behind the whole page: the demo flight flies on as you scroll and lands at the download. -->
+  <div class="bgmap" aria-hidden="true"><svg class="lh-map" id="lh-map" preserveAspectRatio="xMidYMid slice"></svg><div class="bgmap-veil"></div><div class="bgmap-tag" id="bg-tag"></div></div>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <div class="sky" aria-hidden="true"><i class="l1"></i><i class="l2"></i><i class="l3"></i><span class="stars"></span><span class="grain"></span></div>
+
+  <header class="top">
+    <nav class="nav glass" aria-label="Main">
+      <a class="brand" href="#" aria-label="Glidepath home"><img src="assets/mark.svg" alt="" width="28" height="28"><span>Glidepath</span></a>
+      <div class="links">
+        <a href="#what">What is Glidepath?</a>
+        <a href="features.html">Features</a>
+        <a href="#faq">FAQ</a>
+        <a href="#roadmap">Roadmap</a>
+        <a href="support.html">Support</a>
+        <a href="app/">Open the app</a>
+      </div>
+      <button class="btn glass small" id="acct-btn" type="button" hidden>Sign in</button>
+      <button class="theme-btn" type="button" data-theme-toggle aria-label="Switch between day and night"><svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg><svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
+      <a class="btn primary small" data-download href="#download">Download</a>
+      <button class="menu-btn" id="menu-btn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu-sheet"><span></span><span></span></button>
+    </nav>
+    <div class="menu-sheet glass strong" id="menu-sheet" hidden>
+      <button type="button" class="menu-signin" id="menu-signin" hidden>Sign in or create an account</button>
+      <a href="#what">What is Glidepath?</a>
+      <a href="features.html">Features</a>
+      <a href="features.html#remote">Remote control and camera</a>
+      <a href="features.html#gate">Gate to gate</a>
+      <a href="features.html#debrief">Landing debrief</a>
+      <a href="features.html#demo">Watch the demo</a>
+      <a href="features.html#brief">Monthly brief</a>
+      <a href="features.html#aircraft">Aircraft compatibility</a>
+      <a href="support.html">Support</a>
+      <a href="features.html#today">What works today</a>
+      <a href="#faq">Questions</a>
+      <a href="#roadmap">Roadmap</a>
+      <a href="app/">Open the app</a>
+      <a href="#download">Download for Windows</a>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- HERO: the demo flight flies across the page -->
+    <section class="lh" aria-labelledby="hero-title">
+      <div class="lh-cards" id="lh-cards" aria-hidden="true"></div>
+      <div class="lh-copy">
+        <a class="lh-badge" href="#roadmap"><span>1.6</span>A new look, day and night, and a 3D map <i aria-hidden="true">›</i></a>
+        <h1 id="hero-title">Every flight,<br><span class="lh-grad">beautifully clear.</span></h1>
+        <p class="lh-lede">Microsoft Flight Simulator on your iPad, phone or second screen. Your route, your approach, your aircraft, live, and an honest review after every landing.</p>
+        <div class="lh-cta">
+          <a class="btn primary" data-download href="#download"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Download for Windows</a>
+          <a class="btn glass" href="app/?demo=1">Try the app now</a>
+          <button class="btn glass" type="button" data-trailer><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg>Trailer</button>
+        </div>
+        <ul class="lh-trust" aria-label="At a glance"><li>Free, no ads</li><li>MSFS 2020 and 2024</li><li>iPad, phone and PC</li></ul>
+        <div class="device-tip glass" id="device-tip" hidden></div>
+      </div>
+      <div class="lh-hud" aria-hidden="true">
+        <span class="lh-live"><i></i>Demo flight · EGLL → EGCC</span>
+        <span><em>Phase</em><b id="lh-phase">Gate</b></span>
+        <span><em>Altitude</em><b id="lh-alt">83 ft</b></span>
+        <span><em>Ground speed</em><b id="lh-gs">0 kt</b></span>
+        <span><em>V/S</em><b id="lh-vs">0</b></span>
+        <span><em>To go</em><b id="lh-togo">148 nm</b></span>
+        <span class="lh-prof"><svg viewBox="0 0 140 34"><path d="M2,30 Q22,8 44,6 L104,6 Q120,8 138,30" class="lp-line"/><path d="M2,30 Q22,8 44,6 L104,6 Q120,8 138,30" class="lp-done" id="lh-pdone" pathLength="1"/><circle id="lh-pdot" r="3.6" cx="2" cy="30"/></svg></span>
+      </div>
+      <a class="lh-scroll" href="#film" aria-label="See Glidepath"><i></i></a>
+    </section>
+
+    <div class="works-with marquee" aria-label="Works with">
+      <span class="ww-k">Works with</span>
+      <span>Microsoft Flight Simulator 2020</span><span>MSFS 2024</span><span>SimBrief</span><span>VATSIM</span><span>IVAO</span><span>Navigraph</span><span>GSX Pro</span><span>Fenix</span><span>FSLabs</span><span>FlyByWire</span>
+    </div>
+
+    <!-- SCROLL FILM: the iPad turns as you scroll and its screen changes -->
+    <section class="film" id="film" aria-label="Glidepath, screen by screen">
+      <div class="film-stage">
+        <div class="film-glow" aria-hidden="true"></div>
+        <div class="film-pad" id="film-pad">
+          <div class="film-screen">
+            <img src="assets/shots/film-map-route.webp" alt="Live map with the flight plan and runways and procedures panel" loading="lazy">
+            <img src="assets/shots/film-approach-ils.webp" alt="Landing helper in ILS view" loading="lazy">
+            <img src="assets/shots/film-perf-takeoff.webp" alt="Takeoff performance with V1, VR and V2" loading="lazy">
+            <img src="assets/shots/film-remote.webp" alt="Remote autopilot panel" loading="lazy">
+            <img src="assets/shots/film-flight.webp" alt="Flight page with the navlog" loading="lazy">
+          </div>
+        </div>
+        <div class="film-copy" id="film-copy">
+          <article><p class="film-k">01 · Route</p><h2>Every waypoint.<br>Every approach.</h2><p>Your SimBrief plan on a live map: SID, airways, STAR and the approach you pick, drawn fix by fix to the runway. ATIS letter and weather for both airports.</p></article>
+          <article><p class="film-k">02 · Landing helper</p><h2>A glideslope<br>for any runway.</h2><p>Too high, too low, left or right, readable from across the room. Callouts to the flare, on any device.</p></article>
+          <article><p class="film-k">03 · Performance</p><h2>V1. VR. V2.<br>In seconds.</h2><p>Takeoff and landing numbers for 40+ aircraft, from your plan's weights and the live METAR.</p></article>
+          <article><p class="film-k">04 · Remote</p><h2>Your autopilot.<br>In your hand.</h2><p>Speed, heading, altitude and the AP buttons from your sofa, with the sim's own values beside every knob.</p></article>
+          <article><p class="film-k">05 · Flight</p><h2>The whole flight,<br>one glance.</h2><p>A real navlog with live ETAs, top of climb and descent, and your aircraft riding the profile at its real altitude.</p></article>
+        </div>
+        <div class="film-chips" aria-hidden="true">
+          <div class="fc-group"><div class="fc fc-a t-app"><b class='lt'>K</b> ATIS Kilo</div><div class="fc fc-b t-app">RNAV 23R via MIRSI</div></div>
+          <div class="fc-group"><div class="fc fc-a t-good">Ease right</div><div class="fc fc-b t-good">On the glidepath ✓</div></div>
+          <div class="fc-group"><div class="fc fc-a t-sky">V1 125 · VR 133 · V2 137</div><div class="fc fc-b t-sky">FLEX 66°C</div></div>
+          <div class="fc-group"><div class="fc fc-a t-good">AP1 engaged</div><div class="fc fc-b t-good">HDG 336° · ALT 24,000</div></div>
+          <div class="fc-group"><div class="fc fc-a t-good">Top of descent in 4 min</div><div class="fc fc-b t-good"><b class='gr'>A</b> Landed 140 fpm</div></div>
+        </div>
+        <div class="film-dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      </div>
+    </section>
+
+    <!-- FLY IT: a tiny landing helper game -->
+    <section class="fly reveal" id="fly" aria-labelledby="fly-title">
+      <div class="fly-copy">
+        <p class="kicker">Try the Landing helper</p>
+        <h2 id="fly-title">Can you hold the glidepath?</h2>
+        <p>Low cloud, gusty wind, four miles to run. Keep the dot in the green ring with your mouse, finger or arrow keys. Glidepath grades the approach like it grades yours in the sim.</p>
+        <button class="btn primary" type="button" id="fly-go">Start the approach</button>
+        <p class="fly-best" id="fly-best" hidden></p>
+      </div>
+      <div class="fly-pad" id="fly-pad" tabindex="0" role="application" aria-label="Landing game: move the pointer or use the arrow keys to keep the dot centred">
+        <div class="fly-cmd" id="fly-cmd">Ready</div>
+        <svg viewBox="0 0 640 640" id="fly-svg">
+          <defs><radialGradient id="fly-bg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="rgba(60,255,143,.2)"/><stop offset=".55" stop-color="rgba(10,20,40,0)"/><stop offset="1" stop-color="rgba(255,90,90,.16)"/></radialGradient></defs>
+          <circle cx="320" cy="320" r="290" fill="url(#fly-bg)" stroke="rgba(255,255,255,.16)" stroke-width="2"/>
+          <circle cx="320" cy="320" r="220" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="2" stroke-dasharray="4 8"/>
+          <circle cx="320" cy="320" r="120" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="2"/>
+          <circle id="fly-core" cx="320" cy="320" r="50" fill="rgba(60,255,143,.16)" stroke="rgba(60,255,143,.75)" stroke-width="3"/>
+          <line x1="30" x2="610" y1="320" y2="320" stroke="rgba(255,255,255,.08)"/><line y1="30" y2="610" x1="320" x2="320" stroke="rgba(255,255,255,.08)"/>
+          <text x="320" y="22" text-anchor="middle" class="fly-t">HIGH</text><text x="320" y="634" text-anchor="middle" class="fly-t">LOW</text>
+          <text x="22" y="326" class="fly-t">L</text><text x="618" y="326" text-anchor="end" class="fly-t">R</text>
+          <line id="fly-link" x1="320" y1="320" x2="320" y2="320" stroke="#FFB340" stroke-width="3" stroke-dasharray="3 6"/>
+          <g id="fly-me"><circle id="fly-halo" r="34" fill="#FFB340" opacity=".25"/><circle id="fly-dot" r="18" fill="#FFB340" stroke="#fff" stroke-width="5"/></g>
+        </svg>
+        <div class="fly-hud"><span><em>To runway</em><b id="fly-nm">4.0 nm</b></span><span><em>Height</em><b id="fly-ht">1,300 ft</b></span><span><em>Wind</em><b id="fly-wind">230/18G28</b></span></div>
+        <div class="fly-result" id="fly-result" hidden></div>
+      </div>
+    </section>
+
+    <!-- TRAILER -->
+    <section class="trailer reveal" aria-label="Glidepath trailer">
+      <div class="trailer-frame">
+        <video class="trailer-loop" src="assets/video/glidepath-trailer-720.mp4?v=8" poster="assets/shots/trailer-poster.webp?v=8" muted loop playsinline preload="none" aria-hidden="true"></video>
+        <button class="trailer-play" type="button" data-trailer aria-label="Watch the Glidepath trailer with sound"><span class="tp-ic"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg></span><span>Watch with sound<small>30 seconds</small></span></button>
+      </div>
+    </section>
+    <dialog class="trailer-modal" id="trailer-modal" aria-label="Glidepath trailer">
+      <button class="tm-close" type="button" aria-label="Close the trailer">×</button>
+      <video controls playsinline preload="none" poster="assets/shots/trailer-poster.webp?v=8"><source src="assets/video/glidepath-trailer.mp4?v=8" type="video/mp4"></video>
+    </dialog>
+
+    <section id="what" class="bento-sec" aria-labelledby="what-title">
+      <div class="big-head reveal"><p class="kicker">What is Glidepath?</p><h2 id="what-title">Everything your flight needs.<br><span class="lh-grad">On every screen you own.</span></h2>
+        <p>Glidepath reads your flight straight from Microsoft Flight Simulator. No add-ons in the Community folder, no tabs to juggle.</p></div>
+      <div class="bento">
+        <article class="bx bx-hero reveal"><div class="bx-txt"><span class="bx-k">Gate to gate, live</span><h3>Every phase, the way airlines keep it.</h3><p>Off block to on block against your SimBrief times, with a heads-up before every big moment.</p></div><img src="assets/shots/film-home.webp" alt="The Home screen during a flight: logging card, live route card and key readouts" loading="lazy"></article>
+        <article class="bx bx-review reveal"><div class="bx-txt"><span class="bx-k">An honest review</span><h3>Land, then learn.</h3><p>Take-off, handling, approach and landing, scored from your real flight.</p></div><img src="assets/shots/pillar-review.webp" alt="A flight review with scores" loading="lazy"></article>
+        <article class="bx reveal"><div class="bx-txt"><span class="bx-k">Weather</span><h3>Radar and METARs.</h3></div><img src="assets/shots/bento-weather.webp" alt="Weather screen with radar and METAR" loading="lazy"></article>
+        <article class="bx reveal"><div class="bx-txt"><span class="bx-k">Charts</span><h3>Taxi and procedure charts, any airport.</h3></div><img src="assets/shots/bento-charts.webp" alt="Charts screen with an airport sheet" loading="lazy"></article>
+        <article class="bx reveal"><div class="bx-txt"><span class="bx-k">Copilot</span><h3>Ask, out loud.</h3></div><img src="assets/shots/bento-copilot.webp" alt="Copilot screen" loading="lazy"></article>
+        <article class="bx bx-note reveal"><div class="bx-txt"><span class="bx-k">Lock screen</span><h3>Step away. It taps you on the shoulder.</h3></div>
+          <div class="bx-notes" aria-hidden="true">
+            <div><img src="assets/mark.svg" alt="" width="22" height="22"><p><b>Top of descent</b>Time to start down for EGCC.</p><small>now</small></div>
+            <div><img src="assets/mark.svg" alt="" width="22" height="22"><p><b>Landed at EGCC</b>140 fpm · grade A · runway 23R</p><small>12m</small></div>
+            <div><img src="assets/mark.svg" alt="" width="22" height="22"><p><b>Your flight review is ready</b>See your scores and one thing to work on.</p><small>9m</small></div>
+          </div></article>
+        <article class="bx reveal"><div class="bx-txt"><span class="bx-k">Checklists</span><h3>Tick through every phase.</h3></div><img src="assets/shots/bento-checklists.webp" alt="Checklists screen" loading="lazy"></article>
+        <article class="bx reveal"><div class="bx-txt"><span class="bx-k">Career</span><h3>Weekly missions, streaks and ranks.</h3></div><img src="assets/shots/bento-career.webp" alt="Career screen" loading="lazy"></article>
+        <article class="bx bx-wide reveal"><div class="bx-txt"><span class="bx-k">Every screen, any network</span><h3>Pair once. It just connects.</h3><p>iPad, phone or a second PC, on any Wi-Fi or mobile data. Add it to your Home Screen and it opens already connected.</p></div><div class="pl-shot pl-diagram bx-diagram" aria-hidden="true">
+            <span class="pd-node"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg><small>Your PC</small></span>
+            <span class="pd-line"><i></i></span>
+            <span class="pd-node pd-acct"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.8 3.9 6 3.9 9.5s-1.3 6.7-3.9 9.5c-2.6-2.8-3.9-6-3.9-9.5s1.3-6.7 3.9-9.5z"/></svg><small>Your account</small></span>
+            <span class="pd-line"><i></i></span>
+            <span class="pd-node"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="3"/><path d="M11 18h2"/></svg><small>iPad or phone</small></span>
+          </div></article>
+      </div>
+    </section>
+
+    <section id="ai" class="ai-sec" aria-labelledby="ai-title">
+      <div class="ai-grid">
+        <div class="ai-copy reveal">
+          <p class="kicker">Glidepath AI</p>
+          <h2 id="ai-title">A first officer that helps you fly.</h2>
+          <p class="sub">Copilot reads your live flight and answers in plain words: when to start down, which runway, how to fly this approach. After you park, it coaches you through your review. Stuck on setup? Ask it that too.</p>
+          <ul class="ai-points">
+            <li>Free with your Glidepath account, 40 questions a day.</li>
+            <li>Grounded in your real flight data, and told never to guess numbers.</li>
+            <li>Built-in answers work with no AI at all. Prefer your own model? Plug it into the Bridge.</li>
+          </ul>
+        </div>
+        <div class="ai-card glass reveal" aria-label="Things you can ask Copilot">
+          <div class="ai-head"><span class="ai-dot"></span>Copilot<span class="ai-pill">Glidepath AI</span></div>
+          <p class="ai-lead">Tap one to try it in the app:</p>
+          <div class="ai-chips">
+            <a href="app/#/copilot">✦ Brief my arrival</a>
+            <a href="app/#/copilot">✦ What should I do next?</a>
+            <a href="app/#/copilot">✦ How do I fly a smooth landing here?</a>
+            <a href="app/#/copilot">✦ How do I connect my iPad?</a>
+            <a href="app/#/copilot">✦ How is my landing graded?</a>
+            <a href="app/#/logbook">✦ How do I improve on this flight?</a>
+          </div>
+          <p class="ai-foot">Runs on Cloudflare Workers AI. It sees your question and this flight's numbers, not your account. Glidepath doesn't store them.</p>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- LIVE NETWORK -->
+    <div class="netlive glass reveal" id="netlive" aria-live="polite">
+      <span class="nl-dot"></span><span class="nl-k">Online right now</span>
+      <span class="nl-item"><b class="data" id="nl-vp">…</b> pilots and <b class="data" id="nl-vc">…</b> controllers on VATSIM</span>
+      <span class="nl-item"><b class="data" id="nl-ip">…</b> pilots and <b class="data" id="nl-ic">…</b> controllers on IVAO</span>
+      <span class="nl-src">Live from the networks' public data. Glidepath shows them all on your map.</span>
+    </div>
+
+
+    <span id="new"></span>
+    <!-- SET UP -->
+    <section class="how" aria-labelledby="how-title">
+      <div class="section-head reveal">
+        <p class="kicker">Set up in two minutes</p>
+        <h2 id="how-title">Set up in three steps.</h2>
+      </div>
+      <ol class="steps">
+        <li class="glass reveal"><span class="n data">1</span><h3>Install the Bridge</h3><p>Run the installer on your sim PC and leave <i>Start Glidepath Bridge now</i> ticked at the end. It finds Microsoft Flight Simulator on its own.</p></li>
+        <li class="glass reveal"><span class="n data">2</span><h3>Sign in on both</h3><p>Sign in to your free account on the Bridge page and in the app on your iPad. They connect on any network. No account? On the same Wi-Fi, type the 6-digit code instead.</p></li>
+        <li class="glass reveal"><span class="n data">3</span><h3>Fly</h3><p>Recording starts when you push back. When you park, your debrief is waiting.</p></li>
+      </ol>
+    </section>
+
+    <!-- LANDINGS -->
+    <section id="free" class="free" aria-labelledby="free-title">
+      <div class="section-head reveal">
+        <p class="kicker">No plans, no tiers</p>
+        <h2 id="free-title">Free. All of it.</h2>
+        <p class="lede">Elsewhere, remote control, the live camera, connecting over mobile data and premium charts come with a monthly subscription, and some apps only run on an iPhone. Glidepath has no paid version, and it runs on everything.</p>
+      </div>
+      <div class="free-grid reveal">
+        <div class="glass">Live map with network traffic and ATC</div>
+        <div class="glass">Remote control: autopilot, lights, engines</div>
+        <div class="glass">Live camera to your iPad</div>
+        <div class="glass">Lock screen notifications</div>
+        <div class="glass">Glidepath AI copilot and coaching</div>
+        <div class="glass">Connect over mobile data</div>
+        <div class="glass">ATC online alerts</div>
+        <div class="glass">Unlimited logbook, replays and debriefs</div>
+        <div class="glass">Bridge on as many PCs as you own</div>
+        <div class="glass">Animated rain radar and METAR</div>
+        <div class="glass">Live airport boards</div>
+        <div class="glass">Charts for every flight</div>
+        <div class="glass">SimBrief SID and STAR drawn</div>
+        <div class="glass">Flight reviews for every aircraft</div>
+        <div class="glass">Chart map with online ATC sectors</div>
+
+        <div class="glass">iPad, iPhone, Android, Mac and PC</div>
+      </div>
+      <p class="more-link reveal"><a class="btn glass" href="features.html">See every feature in detail <span aria-hidden="true">→</span></a></p>
+    </section>
+
+    <!-- USE CASES -->
+    <section id="roadmap" class="roadmap" aria-labelledby="roadmap-title">
+      <div class="section-head reveal"><p class="kicker">Roadmap</p><h2 id="roadmap-title">Where Glidepath is going.</h2><p class="sub">What is available today, and what comes next.</p></div>
+      <ol class="road reveal">
+        <li class="done"><span class="rd-dot"></span><div><b>1.0 · Launch</b><p>Live flight on every screen and any network, the logbook and full flight reviews, Glidepath AI, lock screen notifications, remote control and the live camera.</p></div></li>
+        <li class="done"><span class="rd-dot"></span><div><b>1.3 · Procedures</b><p>Pick your SID, STAR and approach on the map, drawn fix by fix to the runway, with published holds, ATIS letters and an iPad that reconnects by itself.</p></div></li>
+        <li class="done"><span class="rd-dot"></span><div><b>1.4 · Charts</b><p>An airport diagram and a chart for every SID, STAR and approach at any airport in your sim, with altitudes, speeds, holds, the glidepath table and your baro minimum.</p></div></li>
+        <li class="done"><span class="rd-dot"></span><div><b>1.5 · Missions</b><p>Three new missions every week, a flying streak to keep alive, and your rank on Home, all measured from the flights you really fly.</p></div></li>
+        <li class="done now"><span class="rd-dot"></span><div><b>1.6 · A new look · now</b><p>Bolder liquid glass in day and night, a new icon, and a 3D map: real buildings, airports with their runways, taxiways and names, and your own aircraft in 3D.</p></div></li>
+        <li><span class="rd-dot"></span><div><b>Next · What you ask for</b><p>Glidepath is built around the people flying it. <a href="support.html#idea" data-issues-link>Tell us what you'd like next</a>, or report anything that isn't right.</p></div></li>
+      </ol>
+    </section>
+
+    <section id="faq" class="faq" aria-labelledby="faq-title">
+      <div class="section-head reveal"><p class="kicker">Questions</p><h2 id="faq-title">Frequently asked questions</h2></div>
+      <div class="faq-list reveal">
+        <details class="glass"><summary>Is Glidepath free?</summary><p>Yes. There is no subscription, no advertising and no paid version, and no feature is locked. Glidepath runs on free services.</p></details>
+        <details class="glass"><summary>Which simulators work?</summary><p>Microsoft Flight Simulator 2020 and 2024, on Windows 10 and 11. X-Plane isn't supported yet.</p></details>
+        <details class="glass"><summary>Do I need a tablet?</summary><p>No. Glidepath works on an iPad, an iPhone or Android phone, a second monitor, or a laptop. A tablet next to your screen is the nicest way to use it.</p></details>
+        <details class="glass"><summary>Do I need an App Store app?</summary><p>No. Open the app in Safari and add it to your Home Screen; it then opens like any other app. It also works in any browser on Android, Mac and PC.</p></details>
+        <details class="glass"><summary>Does my iPad need to be on the same Wi-Fi?</summary><p>No. Sign in to your free Glidepath account on the PC (on the Bridge page) and on the iPad, and they connect on any network, even mobile data. On the same Wi-Fi it connects directly, which is a little faster and also opens add-on screens like the Fenix EFB and the GSX remote.</p></details>
+        <details class="glass"><summary>Windows says "Windows protected your PC". Is that safe?</summary><p>Windows shows that for new apps that aren't code-signed yet (signing costs money every year). Choose <i>More info</i>, then <i>Run anyway</i>. If you want to be sure, check the file's SHA-256 against the one on this page; the code is open on GitHub.</p></details>
+        <details class="glass"><summary>Do I need to put anything in my Community folder?</summary><p>No. The Bridge talks to the sim through SimConnect, which is built into Microsoft Flight Simulator. Nothing is added to the sim.</p></details>
+        <details class="glass"><summary>Will it slow down my sim?</summary><p>No noticeable effect. The Bridge reads a handful of values a few times a second, the same way flight-tracking apps do.</p></details>
+        <details class="glass"><summary>Which aircraft work?</summary><p>Any aircraft for the live data, the logbook and the review. Remote control uses the sim's standard controls: default aircraft respond to all of it; study-level add-ons like PMDG, Fenix and FSLabs run their own systems and may ignore some buttons. Every button tells you whether the sim really changed.</p></details>
+        <details class="glass"><summary>How do I update?</summary><p>Glidepath tells you when there's a new version, for the app and for the Bridge. Press Update; Windows asks once on the PC to allow it, and the Bridge restarts by itself.</p></details>
+        <details class="glass"><summary>Does Glidepath have AI?</summary><p>Yes. Glidepath AI, in the Copilot screen, answers questions during a flight (briefings, what to do next, technique) and about Glidepath itself, and coaches you after each review. With a free account it allows 40 questions a day and runs on Cloudflare Workers AI. Without an account, Copilot gives built-in answers from the sim's data. You can also connect your own AI model to the Bridge.</p></details>
+        <details class="glass"><summary>Can Glidepath send notifications to my lock screen?</summary><p>Yes, free. Sign in, then turn on <i>Lock screen notifications</i> in Settings on each device. You'll get top of descent, your landing and your flight review, even with the app closed. On iPhone and iPad (iOS 16.4 or later), add Glidepath to your Home Screen first; Android, Mac and PC work in the browser.</p></details>
+        <details class="glass"><summary>Is my data private?</summary><p>Without an account, everything stays on your own PC and devices. With an account, your flight summaries are stored so your logbook follows you, and Connect anywhere passes your live data through your account's relay without keeping it, and Glidepath AI gets your question and the flight's numbers only to answer it. Delete your account in the app and it's all gone. The <a href="privacy.html">privacy policy</a> has the details.</p></details>
+      </div>
+    </section>
+    <section id="download" class="download" aria-labelledby="download-title">
+      <div class="dl glass strong reveal">
+        <div class="dl-main">
+          <img class="dl-icon" src="assets/mark.svg" alt="" width="84" height="84">
+          <h2 id="download-title">Glidepath Bridge for Windows</h2>
+          <p class="sub" id="dl-sub">For 64-bit Windows 10 or 11 with Microsoft Flight Simulator 2020 or 2024. Free.</p>
+          <div class="cta">
+            <a class="btn primary" data-download href="#">Download the installer</a>
+            <a class="btn glass" href="app/?demo=1">Try the app first, no install</a>
+          </div>
+          <dl class="dl-facts">
+            <div><dt>Version</dt><dd id="dl-ver">—</dd></div>
+            <div><dt>Size</dt><dd>About 30 MB</dd></div>
+            <div><dt>Installs to</dt><dd>Program Files, with Start menu and desktop shortcuts. Uninstall from Settings › Apps.</dd></div>
+            <div><dt>SHA-256 (installer)</dt><dd class="data hash" id="sha">—</dd></div>
+          </dl>
+          <p class="fine">Prefer no installer? <a href="https://github.com/etihadairways1028-beep/glidepath/releases/latest/download/GlidepathBridge-windows-x64.zip">Download the zip</a> (<a href="https://github.com/etihadairways1028-beep/glidepath/releases/latest/download/GlidepathBridge-windows-x64.zip.sha256">its SHA-256</a>). Open source: <a href="https://github.com/etihadairways1028-beep/glidepath">read the code on GitHub</a>.</p>
+        </div>
+        <div class="dl-notes">
+          <h3>Installing, step by step</h3>
+          <ol>
+            <li><b>Run the installer.</b> Windows asks for permission once: the installer lets your iPad reach the Bridge through Windows Firewall.</li>
+            <li><b>If Windows shows “Windows protected your PC”:</b> that's SmartScreen. It appears for new apps that aren't code-signed. You can check the file first: its SHA-256 should match the one on this page. Then choose <i>More info</i> and <i>Run anyway</i>.</li>
+            <li><b>Sign in on the Bridge page</b> that opens on your PC, with your free Glidepath account (or make one there).</li>
+            <li><b>On your iPad,</b> open the Glidepath app and sign in with the same account. It connects by itself, on any network. No account? On the same Wi-Fi, type the 6-digit code from the Bridge page.</li>
+          </ol>
+          <details class="trouble">
+            <summary>Something not working?</summary>
+            <ul>
+              <li><b>The iPad can't connect:</b> check you're signed in to the same account on the Bridge page and in the app. Using a code instead? The iPad must be on the same Wi-Fi as the PC; if the code isn't found, tap <i>Type my PC's address instead</i> and enter the numbers from the Bridge window, or open <i>glidepath.local:4810</i> in Safari.</li>
+              <li><b>The sim isn't found:</b> start MSFS and load into a flight, then run <i>Test MSFS connection</i> from the Start menu and <a data-issues-link href="support.html">write to Support</a> with the result.</li>
+              <li><b>Anything else:</b> <a data-issues-link href="support.html">write to Support</a> and attach the newest file from Start menu › Glidepath › Bridge logs. Every report is read.</li>
+            </ul>
+          </details>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <dialog class="sheet glass strong" id="signin" aria-labelledby="si-title">
+    <form method="dialog" class="sheet-x"><button class="x" aria-label="Close">×</button></form>
+    <img src="assets/mark.svg" alt="" width="48" height="48" class="sheet-mark">
+    <h2 id="si-title">Sign in to download</h2>
+    <p class="sub" id="si-sub">One account for the download, your logbook on every device, and the monthly email.</p>
+    <div class="seg" role="tablist">
+      <button type="button" role="tab" class="on" data-mode="in" aria-selected="true">Sign in</button>
+      <button type="button" role="tab" data-mode="up" aria-selected="false">Create account</button>
+    </div>
+    <form id="si-form" class="si-form">
+      <label class="fld" id="si-name-row" hidden><span>Your name</span><input id="si-name" autocomplete="name"></label>
+      <label class="fld"><span>Email</span><input id="si-email" type="email" required autocomplete="email"></label>
+      <label class="fld"><span>Password</span><input id="si-pw" type="password" required autocomplete="current-password"></label>
+      <p class="si-msg" id="si-msg" role="status"></p>
+      <button class="btn primary" id="si-go" type="submit">Sign in</button>
+    </form>
+    <div id="si-done" hidden>
+      <p class="sub" id="si-who"></p>
+      <div class="cta" style="margin-top:16px"><button class="btn primary" id="si-dl" type="button">Download for Windows</button><button class="btn glass" id="si-out" type="button">Sign out</button></div>
+    </div>
+  </dialog>
+
+  <div class="wordmark" aria-hidden="true">Glidepath</div>
+  <footer class="foot">
+    <div class="foot-brand"><img src="assets/mark.svg" alt="" width="24" height="24"><b>Glidepath</b></div>
+    <p>An independent project, not affiliated with Microsoft, Laminar Research, VATSIM, IVAO, Navigraph, SimBrief, or any airline or aircraft maker. Not for real-world navigation.</p>
+    <p><a href="privacy.html">Privacy policy</a> · <a data-issues-link href="support.html">Support</a> · <a data-repo-link href="#">Source code on GitHub</a> · <a href="app/">Open the app</a></p>
+  </footer>
+
+  <script src="home.js" defer></script>
+  <script src="app.js" defer></script>
+  <script src="account.js" defer></script>
+</body>
+</html>
