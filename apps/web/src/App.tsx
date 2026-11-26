@@ -154,7 +154,7 @@ const NAV: Array<{ id: string; label: string; icon: () => ReactNode; mobile: boo
   { id: "remote", label: "Remote", icon: Icon.remote, mobile: true },
   { id: "logbook", label: "Logbook", icon: Icon.book, mobile: true },
   { id: "copilot", label: "Copilot", icon: Icon.headset, mobile: false },
-  { id: "charts", label: "Charts", icon: Icon.chart, mobile: false },
+  { id: "charts", label: "Charts", icon: Icon.chart, mobile: true },
   { id: "performance", label: "Performance", icon: Icon.perf, mobile: false },
   { id: "approach", label: "Landing helper", icon: Icon.approach, mobile: false },
   { id: "checklists", label: "Checklists", icon: Icon.checklist, mobile: false },
@@ -319,6 +319,15 @@ export function App() {
             <div className="side-foot faint">{mode === "demo" ? "Demo flight: synthetic data" : `Glidepath ${APP_VERSION}${status?.bridgeVersion && status.bridgeVersion !== "demo" ? ` · Bridge ${status.bridgeVersion}` : ""}`}</div>
           </nav>
         )}
+        {screen !== "glance" && (
+          <header className="v2-top" aria-label="Glidepath">
+            <a className="v2-pill v2-brand" href="#/home" aria-label="Glidepath home"><Mark /><span>Glidepath</span></a>
+            <a className="v2-pill v2-search" href="#/airports"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg><span>Any airport, any chart</span></a>
+            <span className="v2-gap" />
+            <SideClock />
+            <a className="v2-pill v2-acct" href="#/account" aria-label="Account"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21c1-4 4-6 8-6s7 2 8 6" /></svg></a>
+          </header>
+        )}
         <main className="main" id="main">
           <BridgeIconTip />
           <UpdateCenter />
@@ -333,7 +342,7 @@ export function App() {
           {NAV.filter((n) => n.mobile).map((n) => (
             <a key={n.id} className={`tab${screen === n.id ? " on" : ""}`} href={`#/${n.id}`}>{n.icon()}{n.label === "Live map" ? "Map" : n.label}</a>
           ))}
-          <a className={`tab${["airports", "settings", "glance", "account", "support", "updates", "forgot", "reset", "career", "challenge", "cockpit", "weather", "checklists", "performance", "approach", "tools", "copilot", "charts"].includes(screen ?? "") ? " on" : ""}`} href="#/settings">{Icon.more()}More</a>
+          <a className={`tab${["airports", "settings", "glance", "account", "support", "updates", "forgot", "reset", "career", "challenge", "cockpit", "weather", "checklists", "performance", "approach", "tools", "copilot"].includes(screen ?? "") ? " on" : ""}`} href="#/settings">{Icon.more()}More</a>
         </nav>
       )}
     </>
