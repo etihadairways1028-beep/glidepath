@@ -203,10 +203,19 @@ function FlightHeading() {
   const to = f?.arrivalName ?? L.plan?.destination.name ?? f?.arrivalIcao ?? null;
   const short = (n: string | null) => (n ? n.replace(/ (International )?Airport$/i, "") : null);
   const title = !f ? (mode === "none" ? "Welcome aboard" : L.plan ? `Ready for ${L.plan.destination.icao}` : "Plan your next flight") : from && to ? `${short(from)} to ${short(to)}` : from ? `From ${short(from)}` : "Flight in progress";
+  // The big number, as in the cockpit: flight level up high, feet down low, "Ready" at the gate.
+  const alt = L.frame?.position.altMslFt ?? null;
+  const gs = L.frame?.speed.gsKt ?? null;
+  const big = !f || alt === null ? null : L.airborne ? (alt >= 10000 ? `FL${Math.round(alt / 100).toString().padStart(3, "0")}` : `${Math.round(alt / 10) * 10} ft`) : L.completed ? "Landed" : "Ready";
+  const phaseWord: Record<string, string> = { CLIMB: "Climbing", CRUISE: "Cruising", DESCENT: "Descending", APPROACH: "On approach", TAKEOFF: "Taking off", LANDING: "Landing", TAXI_OUT: "Taxiing out", TAXI_IN: "Taxiing in", PUSHBACK: "Pushback" };
+  const bits = [phaseWord[L.phase] ?? null, gs !== null && gs > 3 ? `${Math.round(gs)} kt` : null].filter(Boolean) as string[];
+  const tod = L.tod && L.airborne && L.tod.distanceToTodNm > 0 ? `T/D in ${Math.round(L.tod.distanceToTodNm)} nm` : null;
   return (
-    <header className="home-head">
+    <header className={`home-head${big ? " v2-hero" : ""}`}>
       <div>
         <h1 className="title">{title}</h1>
+        {big && <div className="v2-big" aria-label={`Altitude ${big}`}>{big}</div>}
+        {big && (bits.length > 0 || tod) && <div className="v2-sub">{bits.join(" · ")}{tod && <>{bits.length ? " · " : ""}<b>{tod}</b></>}</div>}
       </div>
       <div className="row home-head-r" style={{ gap: 8 }}><ClockPill className="home-clock" /><ConnPill /></div>
     </header>

@@ -84,3 +84,18 @@ html[data-theme="light"] .lh-scroll { border-color: rgba(11,18,32,.35) !importan
 
 html[data-theme="light"] .lh-land path { fill: rgba(120,180,110,.28) !important; stroke: rgba(40,110,60,.35) !important; }
 html[data-theme="light"] .bgmap .lh-map { background: none !important; }
+
+/* ===================== Calm and fast: fewer moving parts, easier reading ===================== */
+.sky i, .grain, body::after { display: none !important; }
+body::before { display: none !important; }
+.sky i, .bgmap .lh-map { animation: none !important; }
+.lh-cards { display: none !important; }
+.marquee, .works-with { animation: none !important; }
+.works-with * { animation: none !important; }
+.glass { -webkit-backdrop-filter: blur(18px) saturate(1.5) !important; backdrop-filter: blur(18px) saturate(1.5) !important; }
+@media (max-width: 900px), (pointer: coarse) { .glass { -webkit-backdrop-filter: blur(12px) !important; backdrop-filter: blur(12px) !important; } }
+.bgmap-veil { opacity: 1 !important; background: radial-gradient(120% 90% at 50% 50%, rgba(4,8,22,.55), rgba(4,8,22,.82)) !important; }
+html[data-theme="light"] .bgmap-veil { background: radial-gradient(120% 90% at 50% 50%, rgba(225,240,255,.6), rgba(225,240,255,.85)) !important; }
+main p, main li { line-height: 1.6; }
+.section-head .sub, .film-copy p { font-size: 18px; }
+h2 { font-size: clamp(32px, 4vw, 54px) !important; line-height: 1.04 !important; }
