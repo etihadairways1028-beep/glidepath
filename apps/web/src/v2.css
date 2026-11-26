@@ -293,3 +293,15 @@ html:root:not([data-look]) .sky { filter: none !important; }
 .efb-ofp { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 18px; background: rgba(127,150,190,.12); }
 .efb-ofp b { font: 900 26px/1 var(--v2-display); letter-spacing: -.03em; }
 .efb-sub { margin: 10px 0 0 !important; }
+
+/* ===================== Calm background on working screens; the big view stays on Home ===================== */
+html:root:not([data-look]):is([data-wall="flight"], :not([data-wall])) .sky::after { background: rgba(2, 6, 18, .58) !important; transition: background .4s ease; }
+html:root[data-theme="light"]:not([data-look]):is([data-wall="flight"], :not([data-wall])) .sky::after { background: rgba(228, 241, 255, .66) !important; }
+html:root:not([data-look]):is([data-wall="flight"], :not([data-wall])) body:has(.v2-hero) .sky::after { background: rgba(2, 6, 18, .3) !important; }
+html:root[data-theme="light"]:not([data-look]):is([data-wall="flight"], :not([data-wall])) body:has(.v2-hero) .sky::after { background: rgba(228, 241, 255, .22) !important; }
+
+/* Welcome: solid, readable cards */
+html:root .welcome :is(.glass, .welcome-grid > * > .glass, li) { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+html:root[data-theme="light"] .welcome :is(.glass, li) { background: rgba(255, 255, 255, .92) !important; }
+html:root:not([data-theme="light"]) .welcome :is(.glass, li) { background: rgba(14, 22, 40, .9) !important; }
+html:root .welcome-title { font-family: var(--v2-display) !important; font-weight: 900 !important; letter-spacing: -.045em !important; }
