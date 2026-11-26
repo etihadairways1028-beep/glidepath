@@ -13,6 +13,8 @@ import type { RunwayLine } from "./FlightSetup";
 import { useEffect, useRef, useState } from "react";
 import { holdShape, type Hold } from "../data/hold";
 import { planeExtrusion, planeScale } from "./plane3d";
+import { simLayoutGeo } from "./simLayout";
+import type { AirportLayout } from "./TaxiChart";
 import maplibregl, { type GeoJSONSource, type Map as MLMap, type StyleSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { FlightPlan } from "@glidepath/protocol";
@@ -169,6 +171,8 @@ export interface MapViewProps {
   lite?: boolean;
   /** Gates and stands near the aircraft (from OpenStreetMap, via the Bridge). */
   stands?: Array<{ ref: string; kind: "gate" | "stand"; lat: number; lon: number }>;
+  /** The sim's own layout of the airport you're at (taxi paths, stands, holds), drawn over the map. */
+  simLayout?: AirportLayout | null;
   /** Height above ground and on-ground state, for the chase camera. */
   agl?: number | null;
   onGround?: boolean;
@@ -201,7 +205,7 @@ function labelBox(light: boolean): ImageData {
   return g.getImageData(0, 0, W, H);
 }
 
-export function MapView({ trail, plan, aircraft, airports = [], traffic = [], atc = [], metars = [], radarTiles = null, centres = [], radarFrames = null, radarIndex = 0, radarOpacity = 0.7, onSelectAtc, onSelectMetar, onView, follow, center, zoom: startZoom, threeD = false, lite = false, stands = [], agl = null, onGround = false, onSelectTraffic, onUserMove, interactive = true, history, selTrack, flyTo, holds = [], onSelectFix, nextFix = null, fitRoute = 0, runwayLines = [], fitBox = null }: MapViewProps) {
+export function MapView({ trail, plan, aircraft, airports = [], traffic = [], atc = [], metars = [], radarTiles = null, centres = [], radarFrames = null, radarIndex = 0, radarOpacity = 0.7, onSelectAtc, onSelectMetar, onView, follow, center, zoom: startZoom, threeD = false, lite = false, stands = [], simLayout = null, agl = null, onGround = false, onSelectTraffic, onUserMove, interactive = true, history, selTrack, flyTo, holds = [], onSelectFix, nextFix = null, fitRoute = 0, runwayLines = [], fitBox = null }: MapViewProps) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<MLMap | null>(null);
   const [ready, setReady] = useState(false);
@@ -218,6 +222,8 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
   const kindRef = useRef<Kind>("satellite");
   const data = useRef<{ route: number[][]; trail: number[][]; traffic: unknown; stands: unknown; atc: unknown; metars: unknown; radar: string | null; fixes: unknown; firs?: unknown; history: number[][][]; trailGradient: unknown; procs?: unknown }>({ trailGradient: altGradient([]), history: [], route: [], trail: [], traffic: empty(), stands: empty(), atc: empty(), metars: empty(), radar: null, fixes: empty() });
   const autoTilted = useRef(false);
+  const simLayoutRef = useRef(simLayout);
+  simLayoutRef.current = simLayout;
   const interactiveRef = useRef(interactive);
   interactiveRef.current = interactive;
   const trafficRef = useRef(traffic);
@@ -338,6 +344,16 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
       g.fillStyle = "#111"; rr(2, 2, 44, 44, 8); g.fillStyle = "#FFD21F"; rr(5, 5, 38, 38, 6);
       m.addImage("gp-sign", { width: 48, height: 48, data: new Uint8Array(g.getImageData(0, 0, 48, 48).data.buffer) }, { pixelRatio: 2, stretchX: [[12, 36]], stretchY: [[12, 36]], content: [10, 8, 38, 40] });
     }
+    // The sim's own airport: stands with numbers and lead-in lines, taxi paths with names, hold-short points.
+    m.addSource("simlayout", { type: "geojson", data: simLayoutGeo(simLayoutRef.current) as never });
+    const T = (t: string) => ["==", ["get", "t"], t] as never;
+    m.addLayer({ id: "sl-stand", type: "fill", source: "simlayout", minzoom: 14.5, filter: T("stand"), paint: { "fill-color": light ? "rgba(10,108,255,.10)" : "rgba(100,181,255,.12)", "fill-outline-color": light ? "rgba(10,80,200,.45)" : "rgba(140,200,255,.45)" } });
+    m.addLayer({ id: "sl-lane", type: "line", source: "simlayout", minzoom: 14.5, filter: T("lane"), paint: { "line-color": "#F5C518", "line-opacity": 0.7, "line-width": ["interpolate", ["linear"], ["zoom"], 14.5, 0.6, 18, 1.6], "line-dasharray": [3, 2] } });
+    m.addLayer({ id: "sl-lead", type: "line", source: "simlayout", minzoom: 15.5, filter: T("lead"), layout: { "line-cap": "round" }, paint: { "line-color": "#F5C518", "line-width": ["interpolate", ["linear"], ["zoom"], 15.5, 0.8, 18, 2.2] } });
+    m.addLayer({ id: "sl-taxi", type: "line", source: "simlayout", minzoom: 13, filter: T("taxi"), layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#F5C518", "line-width": ["interpolate", ["linear"], ["zoom"], 13, 0.8, 16, 1.8, 18, 3.2] } });
+    m.addLayer({ id: "sl-hold", type: "circle", source: "simlayout", minzoom: 14.5, filter: T("hold"), paint: { "circle-color": ["case", ["get", "ils"], "#FF9F0A", "#FF453A"], "circle-radius": ["interpolate", ["linear"], ["zoom"], 14.5, 2.5, 18, 6], "circle-stroke-color": "#fff", "circle-stroke-width": 1.2 } });
+    m.addLayer({ id: "sl-taxi-name", type: "symbol", source: "simlayout", minzoom: 14.6, filter: ["all", T("taxi"), ["!=", ["get", "name"], ""]] as never, layout: { "symbol-placement": "line-center", "text-field": ["get", "name"], "text-font": ["Noto Sans Bold"], "text-size": 12.5, "text-rotation-alignment": "viewport", "icon-image": "gp-sign", "icon-text-fit": "both", "icon-text-fit-padding": [3, 6, 3, 6], "icon-rotation-alignment": "viewport", "text-padding": 14 }, paint: { "text-color": "#111" } });
+    m.addLayer({ id: "sl-stand-name", type: "symbol", source: "simlayout", minzoom: 15.8, filter: T("standname"), layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Bold"], "text-size": 11.5, "text-padding": 2 }, paint: { "text-color": light ? "#0A3D91" : "#CFE4FF", "text-halo-color": light ? "#fff" : "#0B1220", "text-halo-width": 1.6 } });
     // Other aircraft on the ground (sim AI traffic and online pilots) in 3D, at their real spots and headings.
     m.addSource("traffic3d", { type: "geojson", data: empty() as never });
     m.addLayer({ id: "traffic3d", type: "fill-extrusion", source: "traffic3d", minzoom: 12, paint: { "fill-extrusion-color": ["get", "color"], "fill-extrusion-base": ["get", "base"], "fill-extrusion-height": ["get", "top"], "fill-extrusion-vertical-gradient": true } });
@@ -610,6 +626,13 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     else if (!trailTimer.current) trailTimer.current = window.setTimeout(draw, 900 - since);
   }, [ready, trail, aircraft?.lat, aircraft?.lon]);
   useEffect(() => () => window.clearTimeout(trailTimer.current), []);
+
+  // The sim's airport layout
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !ready) return;
+    (m.getSource("simlayout") as GeoJSONSource | undefined)?.setData(simLayoutGeo(simLayout) as never);
+  }, [ready, simLayout]);
 
   // Traffic
   useEffect(() => {

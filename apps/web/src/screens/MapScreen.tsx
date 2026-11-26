@@ -2,6 +2,7 @@ import { MiniApproach } from "./Approach";
 import { MapRoutePanel, SimbriefImport } from "../components/RouteOverview";
 import type { RunwayLine } from "../components/FlightSetup";
 import { isThin, usePlanNote } from "../data/plan";
+import { useLayout } from "../components/TaxiChart";
 import { startDemo } from "../data/demo";
 import { useMemo, useState } from "react";
 import { MapView } from "../components/MapView";
@@ -43,6 +44,16 @@ export function MapScreen() {
   const seenPlan = useRef(planKey);
   useEffect(() => { if (planKey && seenPlan.current !== planKey) { seenPlan.current = planKey; setFollow(false); setFitRoute(Date.now()); } }, [planKey]);
   const showRoute = () => { setFollow(false); setFitRoute(Date.now()); };
+  // The airport you're at (within about 8 km): its full layout from the sim goes on the map.
+  const fr = L.frame;
+  const nearIcao = (() => {
+    if (!fr) return null;
+    const c = [L.plan?.origin, L.plan?.destination].filter((a): a is NonNullable<typeof a> => !!a);
+    let best: string | null = null, bd = 8000;
+    for (const a of c) { const d = Math.hypot((a.lat - fr.position.lat) * 111_320, (a.lon - fr.position.lon) * 111_320 * Math.cos((a.lat * Math.PI) / 180)); if (d < bd) { bd = d; best = a.icao; } }
+    return best ?? (fr.position.onGround ? (L.flight?.departureIcao ?? null) : null);
+  })();
+  const { data: simLayout } = useLayout(nearIcao);
   const [fixSel, setFixSel] = useState<number | null>(null);
   const [planAsk, setPlanAsk] = useState(false);
   useEffect(() => {
@@ -147,7 +158,7 @@ export function MapScreen() {
 
   return (
     <div className="map-wrap">
-      <MapView trail={trail} plan={L.plan} aircraft={aircraft} airports={airports} traffic={traffic} atc={atc} centres={centres} metars={metars} radarTiles={s.showRadar ? radar.data ?? null : null} onSelectAtc={(c) => { setAtcSel(c); setSel(null); setWxSel(null); }} onSelectMetar={(w) => { setWxSel(w); setSel(null); setAtcSel(null); }} onView={(bbox, zoom) => setView({ bbox, zoom })} follow={follow} threeD={s.map3d} stands={stands} agl={f?.position.altAglFt ?? null} onGround={!!f?.position.onGround} onSelectTraffic={(p) => { setSel(p); if (p) { setAtcSel(null); setWxSel(null); } }} onUserMove={() => setFollow(false)} selTrack={selInfo?.track ?? null} flyTo={fly} fitRoute={fitRoute} holds={[...holds, ...autoHolds]} nextFix={nextFix} runwayLines={routeOpen ? rwLines : []} fitBox={fitBox} onSelectFix={(i) => { setFixSel(i); setSel(null); setAtcSel(null); setWxSel(null); }} />
+      <MapView simLayout={simLayout} trail={trail} plan={L.plan} aircraft={aircraft} airports={airports} traffic={traffic} atc={atc} centres={centres} metars={metars} radarTiles={s.showRadar ? radar.data ?? null : null} onSelectAtc={(c) => { setAtcSel(c); setSel(null); setWxSel(null); }} onSelectMetar={(w) => { setWxSel(w); setSel(null); setAtcSel(null); }} onView={(bbox, zoom) => setView({ bbox, zoom })} follow={follow} threeD={s.map3d} stands={stands} agl={f?.position.altAglFt ?? null} onGround={!!f?.position.onGround} onSelectTraffic={(p) => { setSel(p); if (p) { setAtcSel(null); setWxSel(null); } }} onUserMove={() => setFollow(false)} selTrack={selInfo?.track ?? null} flyTo={fly} fitRoute={fitRoute} holds={[...holds, ...autoHolds]} nextFix={nextFix} runwayLines={routeOpen ? rwLines : []} fitBox={fitBox} onSelectFix={(i) => { setFixSel(i); setSel(null); setAtcSel(null); setWxSel(null); }} />
       {!sel && !atcSel && !wxSel && fixSel === null && <div className="map-ap"><MiniApproach /></div>}
       {/* The flight panel steps aside while a traffic, ATC or weather card is open, so the two never overlap. */}
       <div className={`map-hud glass strong pad${selLive || atcSel || wxSel ? " behind" : ""}`} style={{ padding: "14px 16px" }}>
