@@ -24,7 +24,13 @@ const DEV_DIRS = [
   join(dirname(process.execPath), "app"),
 ].filter((d): d is string => !!d);
 
+/** The newest app from the website, kept by AppMirror; used before the built-in copy. */
+let mirror: { file(path: string): Buffer | null } | null = null;
+export function useAppMirror(m: { file(path: string): Buffer | null }): void { mirror = m; }
+
 export function appAsset(path: string): Buffer | null {
+  const fresh = mirror?.file(path);
+  if (fresh) return fresh;
   if (sea) {
     try {
       return Buffer.from(sea.getAsset(`app/${path}`));

@@ -44,6 +44,7 @@ import { initSync } from "./data/sync";
 import { settingsStore, store, useApp, useSettings } from "./data/store";
 import { onNewSimbriefPlan, startPlanSync } from "./data/plan";
 import { postFlightMessage } from "./components/Glideslope";
+import { Launcher } from "./components/Launcher";
 import { cloudBases } from "./data/cloud";
 import { CockpitScreen } from "./screens/Cockpit";
 import { WeatherScreen } from "./screens/Weather";
@@ -188,7 +189,9 @@ export function App() {
     startPrefsSync();
     startUnloadFlush();
     void adoptLocalToken().then((ok) => { if (ok) connectFromSettings(); });
-    handOffToNewestApp();
+    // No more jumping to another address: the Bridge now keeps its copy of the app as new as the website's (1.6.1),
+    // so the device stays on the page it opened, already paired. (handOffToNewestApp is kept for reference.)
+    void handOffToNewestApp;
     if (!settingsStore.get().token && new URLSearchParams(location.search).get("demo") === "1") startDemo();
     void initCloud().then(() => { initAutoConnect(); initSync(); });
   }, []);
@@ -269,6 +272,8 @@ export function App() {
   const [welcomed, setWelcomed] = useState(hasBeenWelcomed);
   const [screen, ...rest] = route;
   // Which tab the liquid highlight sits under (the last one is "More").
+  const [launch, setLaunch] = useState(false);
+  useEffect(() => setLaunch(false), [screen]);
   const mobileTabs = NAV.filter((n) => n.mobile);
   const onTab = mobileTabs.findIndex((n) => n.id === (screen || "home"));
   const tabIndex = onTab >= 0 ? onTab : mobileTabs.length;
@@ -344,9 +349,10 @@ export function App() {
           {NAV.filter((n) => n.mobile).map((n) => (
             <a key={n.id} className={`tab${screen === n.id ? " on" : ""}`} href={`#/${n.id}`}>{n.icon()}{n.label === "Live map" ? "Map" : n.label}</a>
           ))}
-          <a className={`tab${["airports", "settings", "glance", "account", "support", "updates", "forgot", "reset", "career", "challenge", "cockpit", "weather", "checklists", "performance", "approach", "tools", "copilot"].includes(screen ?? "") ? " on" : ""}`} href="#/settings">{Icon.more()}More</a>
+          <a className={`tab${["airports", "settings", "glance", "account", "support", "updates", "forgot", "reset", "career", "challenge", "cockpit", "weather", "checklists", "performance", "approach", "tools", "copilot"].includes(screen ?? "") ? " on" : ""}`} href="#/settings" onClick={(e) => { e.preventDefault(); setLaunch((v) => !v); }} aria-expanded={launch}>{Icon.more()}More</a>
         </nav>
       )}
+      {launch && <Launcher onClose={() => setLaunch(false)} />}
     </>
   );
 }

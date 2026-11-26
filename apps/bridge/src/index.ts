@@ -16,6 +16,8 @@ import { join } from "node:path";
 import { lanAddresses } from "./server.js";
 import { ChartService } from "./charts.js";
 import { createLogger } from "./log.js";
+import { AppMirror } from "./appmirror.js";
+import { useAppMirror } from "./assets.js";
 import { Recorder } from "./recorder.js";
 import { FlightSession } from "./session.js";
 import { SimPlanWatcher } from "./simplan.js";
@@ -153,6 +155,8 @@ async function main(): Promise<void> {
     ...(process.env.GLIDEPATH_UPDATE_FAKE_RUN === "1" ? { run: (f: string) => { log.info(`(test) would run ${f}`); setTimeout(() => process.exit(0), 1500); } } : {}),
   });
   server.updater = updater;
+  // Keep this PC's copy of the app the same as the website's, so devices never open an old version here.
+  if (process.env.GLIDEPATH_APP_MIRROR !== "0" && !process.env.GLIDEPATH_APP_DIR) { const mirror = new AppMirror(cfg.dataDir, log.child("app")); useAppMirror(mirror); mirror.start(); }
   discord.start();
   // Lock screen notifications on the pilot's devices (through the account, when this PC is signed in).
   const apt = (f: FlightSummary | null, side: "arr" | "dep") => (side === "arr" ? f?.arrivalIcao ?? f?.plan?.destination.icao : f?.departureIcao ?? f?.plan?.origin.icao) ?? null;

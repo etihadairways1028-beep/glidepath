@@ -6,12 +6,14 @@
 import { useEffect, useState } from "react";
 import { Icon } from "./ui";
 
-export const APP_VERSION = "1.6.0";
+export const APP_VERSION = "1.6.1";
 const KEY = "glidepath.seenVersion";
 
 export type WnIcon = "map" | "flight" | "remote" | "book" | "gear" | "spark" | "download" | "search" | "tower" | "cloud" | "layers" | "target" | "headset";
 export interface WnItem { v: string; ic: WnIcon; t: string; d: string }
 export const WHATS_NEW: WnItem[] = [
+  { v: "1.6.1", ic: "layers", t: "Every screen one tap away", d: "Tap More: every other screen opens as app icons right over the page you're on. Tap one and you're there; tap outside to close." },
+  { v: "1.6.1", ic: "spark", t: "Connect once, stay on the newest app", d: "The Bridge now keeps its own copy of the app exactly the same as the website's: it checks every few hours, downloads only what changed and checks every file. So opening Glidepath from your PC's address always gives the newest version, and your device stays on that page, already paired, instead of jumping to another one." },
   { v: "1.6.0", ic: "spark", t: "A new look, day and night", d: "Glidepath has been redesigned: bolder type, clearer liquid glass with a light rim, pill buttons and a floating menu. Light mode is now a real daytime sky and dark mode a night sky. Every screen and button is where it was. And there's a new icon." },
   { v: "1.6.0", ic: "spark", t: "EFB: your tools as apps", d: "Cockpit tools is now the EFB: SimBrief, Navigraph, Charts, Performance, Checklists, Weather and your add-ons' EFBs as app icons. Press Generate on SimBrief and the flight appears in Glidepath by itself within a minute (on the ground)." },
   { v: "1.6.0", ic: "flight", t: "Your flight up front", d: "Home opens with your altitude in big numbers, a live 3D view of your aircraft and the flight card as a boarding pass. A floating bar at the bottom takes you everywhere, and More has every other screen." },

@@ -305,3 +305,18 @@ html:root .welcome :is(.glass, .welcome-grid > * > .glass, li) { backdrop-filter
 html:root[data-theme="light"] .welcome :is(.glass, li) { background: rgba(255, 255, 255, .92) !important; }
 html:root:not([data-theme="light"]) .welcome :is(.glass, li) { background: rgba(14, 22, 40, .9) !important; }
 html:root .welcome-title { font-family: var(--v2-display) !important; font-weight: 900 !important; letter-spacing: -.045em !important; }
+
+/* ===================== More: a quick sheet of every screen ===================== */
+.launch-wrap { position: fixed; inset: 0; z-index: 60; background: rgba(2, 6, 18, .28); animation: lw-in .18s ease; }
+.launch { position: fixed !important; top: auto !important; right: auto !important; left: 50% !important; bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important; transform: translateX(-50%); max-height: calc(100vh - 180px); overflow: auto; margin: 0 !important; height: auto !important; width: min(760px, calc(100% - 24px)); padding: 18px; border-radius: 30px;
+  background: var(--ds-card-2) !important; box-shadow: var(--ds-shadow) !important; animation: ln-in .22s cubic-bezier(.2,.8,.2,1); }
+.launch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 14px 8px; }
+.launch-app { display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 8px 2px; border-radius: 18px; text-decoration: none; color: var(--ds-ink) !important; font: 700 12.5px/1.2 var(--v2-display); text-align: center; transition: transform .2s cubic-bezier(.34,1.56,.64,1), background .2s; }
+.launch-app:hover { background: rgba(127, 150, 190, .14); transform: translateY(-2px); }
+.launch-app:active { transform: scale(.94); }
+.launch-app .more-ic { width: 52px !important; height: 52px !important; border-radius: 15px !important; }
+.launch-app .more-ic svg { width: 26px !important; height: 26px !important; }
+@keyframes lw-in { from { opacity: 0; } }
+@keyframes ln-in { from { opacity: 0; transform: translate(-50%, 16px) scale(.97); } }
+@media (prefers-reduced-motion: reduce) { .launch, .launch-wrap { animation: none; } }
+.ic-settings { --c1: #9AA3B5; --c2: #5B6478; }
