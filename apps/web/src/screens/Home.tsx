@@ -40,6 +40,7 @@ export function Home() {
       {mode === "bridge" && conn !== "live" && msg && <Notice>{msg} <a href="#/settings">Connection settings</a></Notice>}
       {mode !== "none" && flight?.status === "completed" && <DebriefTeaser />}
       {/* One card for the flight: live status, the full profile, every time and the logbook in one place. */}
+      {mode !== "none" && flight && flight.status !== "completed" && <HomeScene />}
       {mode !== "none" && flight && <HomeFlightCard />}
       {mode !== "none" && flight && flight.status !== "completed" ? <Bento /> : mode !== "none" && flight ? <FlightFeed /> : null}
       {mode !== "none" && flight && <QuickActions />}
@@ -315,6 +316,20 @@ function PairWithCode() {
       )}
       {msg && <p className="pair-msg">{msg}</p>}
     </form>
+  );
+}
+
+/** Your flight in 3D, under the big number: the chase view, your aircraft in 3D, real buildings. Tap for the full map. */
+function HomeScene() {
+  const L = useLive();
+  const trail = useApp((s) => s.trail);
+  const f = L.frame;
+  const aircraft = f && f.attitude.headingTrueDeg !== null ? { lat: f.position.lat, lon: f.position.lon, hdg: f.attitude.headingTrueDeg, alt: f.position.altMslFt } : null;
+  if (!aircraft) return null;
+  return (
+    <a className="v2-scene" href="#/map" aria-label="Open the live map">
+      <MapView trail={trail} plan={L.plan} aircraft={aircraft} follow threeD interactive={false} agl={f?.position.altAglFt ?? null} onGround={!!f?.position.onGround} />
+    </a>
   );
 }
 

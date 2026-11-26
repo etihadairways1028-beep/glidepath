@@ -217,3 +217,20 @@ html:root[data-theme="light"] .live-card .rp-ap text, html:root[data-theme="ligh
 html:root[data-theme="light"] .live-card .rp-c .rp-pill text { fill: #0784A8 !important; }
 html:root[data-theme="light"] .live-card .rp-d .rp-pill text { fill: #B85E00 !important; }
 html:root[data-theme="light"] .live-card .rp-ground { stroke: rgba(11, 18, 32, .25) !important; }
+
+/* ===================== Closer to the picture: a calmer pass on Home ===================== */
+html:root main .home-head.v2-hero h1.title { max-width: none !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html:root main .home-head.v2-hero .home-head-r { align-self: flex-start; }
+html:root main .home-head .conn-pill, html:root main .home-head [class*="conn"] { background: var(--ds-card) !important; box-shadow: var(--ds-shadow) !important; border-radius: 999px !important; color: var(--ds-ink-2) !important; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+html:root .live-card .lc-mid .under { display: none; }
+html:root .live-card .lc-mid .over { font-weight: 700; }
+html:root .live-card .lc-rp .rp, html:root .live-card .lc-rp svg.rp-svg { max-height: 170px; }
+html:root .live-card .rp-facts { font-size: 12.5px !important; }
+html:root .live-card { padding: 26px 28px !important; border-radius: 34px !important; }
+.v2-scene { display: block; position: relative; height: clamp(260px, 34vw, 380px); margin: -8px -4px -40px; border-radius: 0; overflow: hidden; z-index: 0;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 22%, #000 70%, transparent 100%); mask-image: linear-gradient(180deg, transparent 0%, #000 22%, #000 70%, transparent 100%); }
+.v2-scene .map, .v2-scene .maplibregl-map { position: absolute; inset: 0; width: 100%; height: 100%; }
+.v2-scene .maplibregl-ctrl-attrib { opacity: .6; }
+.v2-scene + * { position: relative; z-index: 1; }
+html:root .stack:has(.v2-scene) .b-map { display: none !important; }
+.v2-scene :is(.notice, [class*="map-err"], [class*="map-fail"], [class*="offline"]) { display: none !important; }

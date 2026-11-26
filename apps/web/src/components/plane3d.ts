@@ -49,4 +49,4 @@ export function planeExtrusion(lon: number, lat: number, hdg: number, k: number,
 }
 
 /** Metres multiplier: about 40 px long on screen at any zoom, never smaller than real size ×2.5. */
-export const planeScale = (zoom: number) => Math.max(2.5, Math.pow(2, 17.8 - zoom));
+export const planeScale = (zoom: number) => Math.max(2.5, Math.pow(2, 17.3 - zoom));

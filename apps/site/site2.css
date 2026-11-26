@@ -1,0 +1,92 @@
+/* Glidepath home page 2.0: the approved design. Simple, readable, fast.
+   One background picture, light glass, no animated backgrounds; motion only on hover. */
+.sky, .bgmap { display: none !important; }
+html { background: #040A1A; }
+html[data-theme="light"] { background: #EAF4FD; }
+body { background: linear-gradient(180deg, #040A1A, #071431 60%, #040A1A); }
+html[data-theme="light"] body, html[data-theme="light"] main { background: linear-gradient(180deg, #EAF4FD, #DCEEFC 60%, #EEF7FF) !important; }
+html[data-theme="light"] { background: #EAF4FD !important; }
+main { position: relative; }
+
+/* ---------- Hover: lift, glow and a light sweep ---------- */
+.fx { position: relative; overflow: hidden; transition: transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s ease, background-color .25s ease !important; }
+.fx::after { content: ""; position: absolute; top: 0; bottom: 0; left: -60%; width: 40%; pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.55), transparent); transform: skewX(-20deg); opacity: 0; }
+.fx:hover { transform: translateY(-3px) scale(1.03) !important; }
+.fx:hover::after { opacity: 1; left: 130%; transition: left .6s ease, opacity .2s; }
+.btn.primary.fx:hover { box-shadow: 0 16px 36px -12px rgba(10,108,255,.75), inset 0 1px 0 #fff !important; }
+.fx:active { transform: translateY(0) scale(.97) !important; }
+@media (prefers-reduced-motion: reduce) { .fx, .fx::after, .ft, .pass { transition: none !important; } .fx:hover, .ft:hover { transform: none !important; } }
+
+/* ---------- Hero ---------- */
+.h2x { position: relative; min-height: min(100svh, 900px); display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, .9fr); align-items: center; gap: 48px;
+  padding: 130px clamp(24px, 6vw, 96px) 80px; max-width: 1440px; margin: 0 auto; isolation: isolate; }
+.h2x-bg { position: absolute; left: 50%; top: 0; bottom: 0; width: 100vw; transform: translateX(-50%); z-index: -1;
+  background: linear-gradient(90deg, rgba(2,5,14,.82) 0%, rgba(2,5,14,.45) 42%, rgba(2,5,14,.1) 70%), linear-gradient(180deg, rgba(2,5,14,.1) 70%, #040A1A 100%), url("assets/hero/flyover-night.webp") 62% 60% / cover no-repeat; }
+html[data-theme="light"] .h2x-bg { background: linear-gradient(90deg, rgba(236,246,255,.94) 0%, rgba(236,246,255,.72) 40%, rgba(236,246,255,.05) 68%), linear-gradient(180deg, rgba(234,244,253,0) 72%, #EAF4FD 100%), url("assets/hero/flyover-day.webp") 62% 60% / cover no-repeat; }
+.h2x-eye { display: inline-flex; align-items: center; gap: 10px; margin: 0 0 18px; font: 700 15px var(--text); color: var(--mist); }
+.h2x-eye i { width: 9px; height: 9px; border-radius: 50%; background: #30D158; box-shadow: 0 0 0 4px rgba(48,209,88,.2); }
+.h2x h1 { white-space: nowrap; font-size: clamp(52px, 7vw, 108px) !important; line-height: .92 !important; margin: 0; color: var(--ink); }
+.h2x h1 span { color: #64B5FF; }
+html[data-theme="light"] .h2x h1 span { color: #0A6CFF; }
+.h2x-lede { font-size: clamp(18px, 1.6vw, 21px); line-height: 1.5; color: var(--mist); max-width: 34ch; margin: 22px 0 30px; }
+.h2x-cta { display: flex; flex-wrap: wrap; gap: 12px; }
+.h2x-facts { list-style: none; display: flex; flex-wrap: wrap; gap: 8px 22px; padding: 0; margin: 22px 0 0; font: 600 14.5px var(--text); color: var(--mist); }
+.h2x-facts li::before { content: "✓ "; color: #30D158; font-weight: 800; }
+
+/* ---------- The boarding pass ---------- */
+.pass { border-radius: 36px; padding: 26px 28px 22px; color: var(--ink); max-width: 540px; justify-self: end; width: 100%;
+  background: linear-gradient(160deg, rgba(40,58,92,.62), rgba(10,18,36,.55)) !important; transition: transform .35s cubic-bezier(.2,.8,.2,1); }
+.pass:hover { transform: translateY(-4px) rotate(-.4deg); }
+html[data-theme="light"] .pass { background: linear-gradient(160deg, rgba(255,255,255,.86), rgba(255,255,255,.62)) !important; }
+.pass-top { display: flex; justify-content: space-between; font: 800 14px var(--text); letter-spacing: .02em; }
+.pass-top em { font-style: normal; color: #30D158; display: inline-flex; align-items: center; gap: 7px; }
+.pass-top em i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.pass-route { display: flex; justify-content: space-between; margin-top: 10px; }
+.pass-route b { display: block; font: 900 clamp(40px, 4.2vw, 58px)/1 var(--display); letter-spacing: -.05em; }
+.pass-route small { display: block; margin-top: 6px; font: 600 14px var(--text); color: var(--mist); }
+.pass-route .r { text-align: right; }
+.pass-arc { width: 100%; height: auto; margin: 8px 0 0; overflow: visible; }
+.pass-arc .done { fill: none; stroke: #3D8BFF; stroke-width: 5; stroke-linecap: round; }
+.pass-arc .ahead { fill: none; stroke: currentColor; stroke-opacity: .45; stroke-width: 3; stroke-dasharray: 2 9; stroke-linecap: round; }
+.pass-arc .tod { fill: #FF9F0A; } .pass-arc .todt { fill: #FF9F0A; font: 800 13px var(--text); text-anchor: middle; }
+.pass-arc .pl { fill: #3D8BFF; stroke: #fff; stroke-width: 1.2; }
+.pass-mid { display: flex; justify-content: space-between; font: 600 14px var(--text); color: var(--mist); margin-top: 4px; }
+.pass-mid b { color: #3D8BFF; font-weight: 800; }
+.pass-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 16px; padding-top: 16px; border-top: 2px dashed rgba(127,150,190,.35); }
+.pass-stats span { display: block; font: 800 11px var(--text); letter-spacing: .12em; text-transform: uppercase; color: var(--faint); }
+.pass-stats b { display: block; margin-top: 5px; font: 900 22px/1 var(--display); letter-spacing: -.03em; }
+.pass-note { margin: 14px 0 0; font: 600 12.5px var(--text); color: var(--faint); }
+
+/* ---------- Sections ---------- */
+.sec { max-width: 1200px; margin: 0 auto; padding: 90px clamp(20px, 5vw, 48px) 40px; }
+.sec-head { text-align: center; margin-bottom: 40px; }
+.kick { margin: 0 0 10px; font: 800 13px var(--text); letter-spacing: .14em; text-transform: uppercase; color: #64B5FF; }
+html[data-theme="light"] .kick { color: #0A6CFF; }
+.sec-head h2 { color: var(--ink); }
+.sec-more { text-align: center; margin-top: 30px; }
+.ft-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.ft { display: block; position: relative; padding: 26px 26px 24px; border-radius: 28px; text-decoration: none; color: var(--ink) !important;
+  transition: transform .3s cubic-bezier(.2,.8,.2,1), box-shadow .3s ease; }
+.ft:hover { transform: translateY(-6px); box-shadow: inset 0 1.5px 0 rgba(255,255,255,.35), 0 30px 60px -24px rgba(10,108,255,.55) !important; }
+.ft-ic { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; color: #fff; background: linear-gradient(160deg, #4FB2FF, #0A6CFF 60%, #0646C9); box-shadow: 0 10px 24px -10px rgba(10,108,255,.8); transition: transform .3s cubic-bezier(.34,1.56,.64,1); }
+.ft:hover .ft-ic { transform: rotate(-8deg) scale(1.1); }
+.ft h3 { margin: 18px 0 8px; font-size: 21px; color: var(--ink); }
+.ft p { margin: 0; font-size: 15.5px; line-height: 1.5; color: var(--mist); }
+.ft-go { position: absolute; right: 22px; top: 22px; font: 800 24px var(--text); color: var(--faint); transition: transform .3s ease, color .3s; }
+.ft:hover .ft-go { transform: translateX(4px); color: #3D8BFF; }
+.steps3 { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.steps3 li { padding: 26px; border-radius: 28px; transition: transform .3s cubic-bezier(.2,.8,.2,1); }
+.steps3 li:hover { transform: translateY(-4px); }
+.steps3 b { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font: 900 18px var(--display); color: #fff; background: #0A6CFF; }
+.steps3 h3 { margin: 16px 0 6px; font-size: 20px; color: var(--ink); }
+.steps3 p { margin: 0; color: var(--mist); line-height: 1.5; }
+.trailer, .download, .faq { max-width: 1200px; margin-left: auto !important; margin-right: auto !important; }
+
+@media (max-width: 960px) {
+  .h2x { grid-template-columns: 1fr; padding-top: 110px; gap: 36px; }
+  .pass { justify-self: stretch; max-width: none; }
+  .ft-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .steps3 { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) { .ft-grid { grid-template-columns: 1fr; } .pass-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
