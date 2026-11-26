@@ -370,7 +370,11 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
         setTilesOk(false);
       }
     });
-    m.on("style.load", () => { addOverlays(m); setReady(true); });
+    m.on("style.load", () => {
+      // Low sun from the south-west: building walls shade clearly, so you can tell how tall and big they are.
+      try { m.setLight({ anchor: "map", position: [1.4, 210, 38], color: "#ffffff", intensity: 0.62 }); } catch { /* older engine */ }
+      addOverlays(m); setReady(true);
+    });
     m.on("click", "traffic", (e) => {
       const f = e.features?.[0];
       if (f) handlers.current.onSelectTraffic?.(JSON.parse(String(f.properties?.raw ?? "null")));

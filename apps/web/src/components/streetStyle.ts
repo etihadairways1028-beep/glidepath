@@ -40,6 +40,11 @@ const DARK: Palette = {
 };
 
 const name: ExpressionSpecification = ["coalesce", ["get", "name:en"], ["get", "name_en"], ["get", "name"]];
+/** A width in metres on the ground, as pixels at every zoom (true scale, about 45 deg latitude). */
+const metres = (m: number, min = 0): ExpressionSpecification => {
+  const at = (z: number) => Math.max(min, (m * 2 ** z) / 110_700);
+  return ["interpolate", ["exponential", 2], ["zoom"], 8, at(8), 12, at(12), 15, at(15), 18, at(18), 22, at(22)] as unknown as ExpressionSpecification;
+};
 const zoomW = (stops: Array<[number, number]>): ExpressionSpecification =>
   ["interpolate", ["exponential", 1.6], ["zoom"], ...stops.flat()] as unknown as ExpressionSpecification;
 const cls = (...c: string[]): ExpressionSpecification => ["in", ["get", "class"], ["literal", c]];
@@ -72,12 +77,17 @@ export function streetStyle(mode: "light" | "dark"): StyleSpecification {
       // Airports in detail: aprons, runways and taxiways from OpenStreetMap, with taxiway names.
       { id: "aeroway-apron", type: "fill", ...src, "source-layer": "aeroway", minzoom: 11, filter: ["all", ["==", ["geometry-type"], "Polygon"], cls("apron")], paint: { "fill-color": mode === "light" ? "#DADDE3" : "#2E323B" } },
       { id: "aeroway-area", type: "fill", ...src, "source-layer": "aeroway", minzoom: 10, filter: ["all", ["==", ["geometry-type"], "Polygon"], cls("runway", "taxiway")], paint: { "fill-color": mode === "light" ? "#7D838D" : "#14171C" } },
-      { id: "aeroway-taxiway", type: "line", ...src, "source-layer": "aeroway", minzoom: 11, filter: ["all", ["==", ["geometry-type"], "LineString"], cls("taxiway")], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": mode === "light" ? "#8E949E" : "#262A31", "line-width": zoomW([[11, 1], [14, 5], [16, 18], [18, 60]]) } },
-      { id: "aeroway-runway", type: "line", ...src, "source-layer": "aeroway", minzoom: 9, filter: ["all", ["==", ["geometry-type"], "LineString"], cls("runway")], paint: { "line-color": mode === "light" ? "#565C66" : "#101317", "line-width": zoomW([[9, 1.5], [12, 5], [14, 14], [16, 50], [18, 190]]) } },
-      { id: "aeroway-runway-centre", type: "line", ...src, "source-layer": "aeroway", minzoom: 13, filter: ["all", ["==", ["geometry-type"], "LineString"], cls("runway")], paint: { "line-color": "#FFFFFF", "line-opacity": 0.9, "line-width": zoomW([[13, 0.6], [16, 1.6], [18, 4]]), "line-dasharray": [6, 5] } },
-      { id: "aeroway-taxiway-centre", type: "line", ...src, "source-layer": "aeroway", minzoom: 13.5, filter: ["all", ["==", ["geometry-type"], "LineString"], cls("taxiway")], paint: { "line-color": "#F5C518", "line-width": zoomW([[13.5, 0.6], [16, 1.4], [18, 3]]) } },
+      { id: "aeroway-taxiway", type: "line", ...src, "source-layer": "aeroway", minzoom: 11, filter: ["all", ["==", ["geometry-type"], "LineString"], cls("taxiway")], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": mode === "light" ? "#8E949E" : "#262A31", "line-width": metres(23, 1) } },
+      { id: "aeroway-taxiway-edge", type: "line", ...src, "source-layer": "aeroway", minzoom: 15, filter: ["all", ["==", ["geometry-type"], "LineString"], cls("taxiway")], layout: { "line-join": "round" }, paint: { "line-color": mode === "light" ? "#F5C518" : "#C9A227", "line-opacity": 0.75, "line-gap-width": metres(21), "line-width": metres(0.6, 0.6) } },
+      { id: "aeroway-runway", type: "line", ...src, "source-layer": "aeroway", minzoom: 9, filter: ["all", ["==", ["geometry-type"], "LineString"], cls("runway")], paint: { "line-color": mode === "light" ? "#4F555E" : "#101317", "line-width": metres(45, 2) } },
+      { id: "aeroway-runway-shoulder", type: "line", ...src, "source-layer": "aeroway", minzoom: 14, filter: ["all", ["==", ["geometry-type"], "LineString"], cls("runway")], paint: { "line-color": "#FFFFFF", "line-opacity": 0.95, "line-gap-width": metres(42), "line-width": metres(0.9, 0.8) } },
+      { id: "aeroway-runway-tdz", type: "line", ...src, "source-layer": "aeroway", minzoom: 15, filter: ["all", ["==", ["geometry-type"], "LineString"], cls("runway")], paint: { "line-color": "#FFFFFF", "line-opacity": 0.85, "line-gap-width": metres(18), "line-width": metres(3, 1), "line-dasharray": [1, 6] } },
+      { id: "aeroway-runway-centre", type: "line", ...src, "source-layer": "aeroway", minzoom: 13, filter: ["all", ["==", ["geometry-type"], "LineString"], cls("runway")], paint: { "line-color": "#FFFFFF", "line-opacity": 0.95, "line-width": metres(0.9, 0.6), "line-dasharray": [30, 20] } },
+      { id: "aeroway-taxiway-centre", type: "line", ...src, "source-layer": "aeroway", minzoom: 13.5, filter: ["all", ["==", ["geometry-type"], "LineString"], cls("taxiway")], paint: { "line-color": "#F5C518", "line-width": metres(0.6, 0.7) } },
       { id: "aeroway-taxiway-name", type: "symbol", ...src, "source-layer": "aeroway", minzoom: 14, filter: ["all", ["==", ["geometry-type"], "LineString"], cls("taxiway"), ["has", "ref"]], layout: { "symbol-placement": "line", "symbol-spacing": 260, "text-field": ["get", "ref"], "text-font": ["Noto Sans Bold"], "text-size": 13, "text-rotation-alignment": "viewport", "text-keep-upright": true, "icon-image": "gp-sign", "icon-text-fit": "both", "icon-text-fit-padding": [3, 6, 3, 6], "icon-rotation-alignment": "viewport" }, paint: { "text-color": "#111111" } },
       { id: "aeroway-runway-name", type: "symbol", ...src, "source-layer": "aeroway", minzoom: 12, filter: ["all", ["==", ["geometry-type"], "LineString"], cls("runway"), ["has", "ref"]], layout: { "symbol-placement": "line-center", "text-field": ["get", "ref"], "text-font": ["Noto Sans Bold"], "text-size": 13, "text-rotation-alignment": "viewport" }, paint: { "text-color": mode === "light" ? "#0B1220" : "#FFFFFF", "text-halo-color": mode === "light" ? "rgba(255,255,255,.95)" : "rgba(0,0,0,.85)", "text-halo-width": 2 } },
+      { id: "aeroway-gate", type: "symbol", ...src, "source-layer": "aeroway", minzoom: 15.5, filter: ["all", ["==", ["geometry-type"], "Point"], cls("gate", "parking_position"), ["has", "ref"]], layout: { "text-field": ["get", "ref"], "text-font": ["Noto Sans Bold"], "text-size": 11, "text-allow-overlap": false }, paint: { "text-color": mode === "light" ? "#0A3D91" : "#9CC8FF", "text-halo-color": mode === "light" ? "#fff" : "#0B1220", "text-halo-width": 1.6 } },
+      { id: "aeroway-helipad", type: "fill", ...src, "source-layer": "aeroway", minzoom: 14, filter: ["all", ["==", ["geometry-type"], "Polygon"], cls("helipad", "heliport")], paint: { "fill-color": mode === "light" ? "#B8BEC8" : "#22262E" } },
       // Water
       { id: "water", type: "fill", ...src, "source-layer": "water", filter: ["!=", ["get", "brunnel"], "tunnel"], paint: { "fill-color": p.water } },
       { id: "waterway", type: "line", ...src, "source-layer": "waterway", minzoom: 8, filter: notTunnel, layout: { "line-cap": "round" }, paint: { "line-color": p.waterLine, "line-width": zoomW([[8, 0.6], [12, 1.4], [16, 4]]) } },
@@ -94,6 +104,8 @@ export function streetStyle(mode: "light" | "dark"): StyleSpecification {
         "fill-extrusion-opacity": ["interpolate", ["linear"], ["zoom"], 14, 0, 14.8, 0.95],
         "fill-extrusion-vertical-gradient": true,
       } },
+      // How tall: tall buildings carry their height when you're close.
+      { id: "building-height", type: "symbol", ...src, "source-layer": "building", minzoom: 16.4, filter: [">=", ["coalesce", ["get", "render_height"], 0], 25], layout: { "text-field": ["concat", ["to-string", ["round", ["get", "render_height"]]], " m"], "text-font": ["Noto Sans Bold"], "text-size": 10.5, "symbol-placement": "point", "text-allow-overlap": false, "text-padding": 6 }, paint: { "text-color": mode === "light" ? "#3A4558" : "#C9D6EA", "text-halo-color": mode === "light" ? "rgba(255,255,255,.9)" : "rgba(10,14,22,.85)", "text-halo-width": 1.4 } },
       // Roads: casings first, then fills
       { id: "road-minor-case", type: "line", ...src, "source-layer": "transportation", minzoom: 13, filter: ["all", notTunnel, cls("minor", "service")], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": p.minorCase, "line-width": zoomW([[13, 1.5], [16, 8], [18, 20]]) } },
       { id: "road-case", type: "line", ...src, "source-layer": "transportation", minzoom: 9, filter: ["all", notTunnel, cls("primary", "secondary", "tertiary")], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": p.roadCase, "line-width": zoomW([[9, 1], [12, 3], [16, 14], [18, 30]]) } },
