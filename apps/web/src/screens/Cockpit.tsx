@@ -11,6 +11,7 @@ import { Icon, Notice, Section } from "../components/ui";
 import { activeBridge } from "../data/bridge";
 import { ADDON_KIND, addonHref, canEmbed, loadExtraPorts, refreshAddons, saveExtraPorts, useAddons, type Addon } from "../data/addons";
 import { useApp } from "../data/store";
+import { EfbApps } from "../components/EfbApps";
 
 /** Kept for older imports. */
 export function addonUrl(a: Addon): string { return addonHref(a); }
@@ -61,6 +62,7 @@ export function CockpitScreen({ initial }: { initial?: string }) {
   const [extra, setExtra] = useState<number[]>(loadExtraPorts);
   const [portText, setPortText] = useState("");
   const [big, setBig] = useState(false);
+  const [pmdg, setPmdg] = useState(false);
   const frameRef = useRef<HTMLElement>(null);
   useEffect(() => { if (initial) { setOpen((o) => [...new Set([initial, ...o])]); setActive(initial); } }, [initial]);
   useEffect(() => { try { localStorage.setItem(TABS_KEY, JSON.stringify({ open, split })); } catch { /* fine */ } }, [open, split]);
@@ -91,12 +93,14 @@ export function CockpitScreen({ initial }: { initial?: string }) {
     <div className="stack cockpit">
       <div className="between wrap">
         <div>
-          <h1 className="title">Cockpit tools</h1>
-          <p className="muted" style={{ margin: "4px 0 0" }}>Your add-ons' EFBs, MCDUs and GSX, right here. Open a few and flick between them.</p>
+          <h1 className="title">EFB</h1>
+          <p className="muted" style={{ margin: "4px 0 0" }}>Your flight bag: plan on SimBrief, charts, performance, and your add-ons' EFBs, MCDUs and GSX, all as apps.</p>
         </div>
         {b && <button className="btn small" onClick={() => void refreshAddons()} disabled={busy}>{busy ? "Checking…" : "Check again"}</button>}
       </div>
 
+      <EfbApps onPmdg={() => { setPmdg(true); requestAnimationFrame(() => document.getElementById("efb-pmdg")?.scrollIntoView({ behavior: "smooth", block: "start" })); }} />
+      <h2 className="h2 efb-sub">Your add-ons</h2>
       {!b && <Notice info>Connect to the Glidepath Bridge on your PC first. Cockpit tools are web pages your add-ons run on that PC, and the Bridge checks which ones are on.</Notice>}
       {err && <Notice>{err}</Notice>}
       {b?.isRelay && <Notice info>You're connected through your account, so this works on any network. Add-on screens (EFB, GSX) run on your PC itself, so they only open when this device is on the same Wi-Fi as the PC.</Notice>}
@@ -153,11 +157,11 @@ export function CockpitScreen({ initial }: { initial?: string }) {
 
       {b && httpsPage && list && !anySecure && <Notice info>To show add-on pages inside Glidepath on this secure address, update the Bridge on your PC to the latest version from the Glidepath website. Until then they open in their own tab.</Notice>}
 
-      <Section title="PMDG 737 and 777">
+      {pmdg && <div id="efb-pmdg"><Section title="PMDG 737 and 777">
         <p className="small">PMDG's EFB isn't served as a web page, so it can't be opened here. The CDU can be mirrored in a later version through PMDG's own SDK. To get ready, add this to <code>737_Options.ini</code> or <code>777_Options.ini</code> in the aircraft's work folder:</p>
         <pre className="code">{"[SDK]\nEnableDataBroadcast=1\nEnableCDUBroadcast.0=1\nEnableCDUBroadcast.1=1"}</pre>
         <p className="small muted">Glidepath doesn't press PMDG buttons yet. That needs the event numbers from the PMDG SDK file on your PC, and guessing them could press the wrong switch.</p>
-      </Section>
+      </Section></div>}
     </div>
   );
 }

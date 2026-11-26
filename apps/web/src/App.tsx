@@ -42,7 +42,8 @@ import { APP_VERSION, WhatsNew } from "./components/WhatsNew";
 import { SideClock } from "./components/Clock";
 import { initSync } from "./data/sync";
 import { settingsStore, store, useApp, useSettings } from "./data/store";
-import { startPlanSync } from "./data/plan";
+import { onNewSimbriefPlan, startPlanSync } from "./data/plan";
+import { postFlightMessage } from "./components/Glideslope";
 import { cloudBases } from "./data/cloud";
 import { CockpitScreen } from "./screens/Cockpit";
 import { WeatherScreen } from "./screens/Weather";
@@ -83,7 +84,7 @@ if (typeof window !== "undefined") {
     requestAnimationFrame(() => { const m = document.getElementById("main"); if (m) m.scrollTop = back ? scrollMemory.get(to) ?? 0 : 0; if (!back) window.scrollTo(0, 0); });
   });
 }
-const TITLES: Record<string, string> = { home: "", map: "Live map", flight: "Flight", remote: "Remote", logbook: "Logbook", review: "Flight review", copilot: "Copilot", charts: "Charts", checklists: "Checklists", performance: "Performance", approach: "Landing helper", tools: "Pilot tools", cockpit: "Cockpit tools", weather: "Weather", airports: "Airports", glance: "Glance", career: "Career", challenge: "Landing challenge", account: "Account", settings: "Settings", updates: "Updates", support: "Support" };
+const TITLES: Record<string, string> = { home: "", map: "Live map", flight: "Flight", remote: "Remote", logbook: "Logbook", review: "Flight review", copilot: "Copilot", charts: "Charts", checklists: "Checklists", performance: "Performance", approach: "Landing helper", tools: "Pilot tools", cockpit: "EFB", weather: "Weather", airports: "Airports", glance: "Glance", career: "Career", challenge: "Landing challenge", account: "Account", settings: "Settings", updates: "Updates", support: "Support" };
 
 /* ---------- hash router (works on GitHub Pages and on the Bridge) ---------- */
 export function useRoute(): string[] {
@@ -159,7 +160,7 @@ const NAV: Array<{ id: string; label: string; icon: () => ReactNode; mobile: boo
   { id: "approach", label: "Landing helper", icon: Icon.approach, mobile: false },
   { id: "checklists", label: "Checklists", icon: Icon.checklist, mobile: false },
   { id: "tools", label: "Pilot tools", icon: Icon.calc, mobile: false },
-  { id: "cockpit", label: "Cockpit tools", icon: Icon.panel, mobile: false },
+  { id: "cockpit", label: "EFB", icon: Icon.panel, mobile: false },
   { id: "weather", label: "Weather", icon: Icon.cloud, mobile: false },
   { id: "airports", label: "Airports", icon: Icon.tower, mobile: false },
   { id: "glance", label: "Glance mode", icon: Icon.expand, mobile: false },
@@ -172,6 +173,7 @@ const NAV: Array<{ id: string; label: string; icon: () => ReactNode; mobile: boo
 export function App() {
   const route = useRoute();
   useEffect(() => startPlanSync(() => settingsStore.get().simbriefUser ?? "", () => activeBridge()), []);
+  useEffect(() => onNewSimbriefPlan((p) => postFlightMessage("New SimBrief flight loaded", `${p.origin.icao} to ${p.destination.icao}${p.callsign ? `, ${p.callsign}` : ""}. It's on your map and Flight screen.`, "info", "#/flight")), []);
   useEffect(() => { const t = TITLES[route[0] ?? "home"]; document.title = t ? `${t} · Glidepath` : "Glidepath"; }, [route[0]]);
   const s = useSettings();
   const mode = useApp((st) => st.mode);

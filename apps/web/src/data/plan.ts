@@ -51,6 +51,7 @@ export function adoptPlan(p: FlightPlan): void {
  */
 export function startPlanSync(getUser: () => string, getBridge: () => { get: <T>(p: string) => Promise<T> } | null): () => void {
   let lastSb = 0;
+  let lastAuto = 0;
   const tick = async () => {
     const b = getBridge();
     const u = getUser().trim();
@@ -77,6 +78,19 @@ export function startPlanSync(getUser: () => string, getBridge: () => { get: <T>
         }
       } catch { /* older Bridge or offline */ }
     }
+    // Planned a new flight on SimBrief? It appears here by itself (on the ground only, never mid-flight).
+    const onGround = appStore.get().frame?.position.onGround !== false;
+    if (u && autoSimbrief() && appStore.get().mode !== "demo" && onGround && Date.now() - lastAuto > 60_000) {
+      lastAuto = Date.now();
+      try {
+        const fresh = FlightPlanSchema.parse(await publicGet<unknown>(`/simbrief?user=${encodeURIComponent(u)}`));
+        if (fresh.ofpId && fresh.ofpId !== current?.ofpId && (!current || current.source !== "simbrief" || fresh.ofpId !== current.ofpId)) {
+          const hadOne = !!current?.ofpId;
+          set(fresh); setNote(null);
+          if (hadOne || !current) onNewPlan(fresh);
+        }
+      } catch { /* no plan yet or offline */ }
+    }
     if (u && appStore.get().mode !== "demo" && (!current || Date.now() - current.fetchedAt > 6 * 3600_000) && Date.now() - lastSb > 10 * 60_000) {
       lastSb = Date.now();
       try { await loadLatestPlan(u); } catch { /* no plan or offline */ }
@@ -86,6 +100,14 @@ export function startPlanSync(getUser: () => string, getBridge: () => { get: <T>
   const t = window.setInterval(() => void tick(), 20_000);
   return () => clearInterval(t);
 }
+
+/** Auto-load new SimBrief flights: on unless you turn it off in the SimBrief app. */
+const AUTO_KEY = "glidepath.simbrief.auto";
+export function autoSimbrief(): boolean { try { return localStorage.getItem(AUTO_KEY) !== "0"; } catch { return true; } }
+export function setAutoSimbrief(on: boolean) { try { localStorage.setItem(AUTO_KEY, on ? "1" : "0"); } catch { /* private mode */ } }
+let newPlanSubs: ((p: FlightPlan) => void)[] = [];
+export function onNewSimbriefPlan(f: (p: FlightPlan) => void): () => void { newPlanSubs.push(f); return () => { newPlanSubs = newPlanSubs.filter((x) => x !== f); }; }
+function onNewPlan(p: FlightPlan) { newPlanSubs.forEach((f) => f(p)); }
 
 /** Load the latest SimBrief plan: through the Bridge when connected (it links to your flight), otherwise directly. */
 export async function loadLatestPlan(user: string): Promise<FlightPlan> {
