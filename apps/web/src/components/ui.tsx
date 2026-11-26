@@ -38,7 +38,7 @@ export const Icon = {
 };
 
 export function Mark({ size = 28 }: { size?: number }) {
-  return <img src="icons/mark.svg" width={size} height={size} alt="" aria-hidden="true" style={{ display: "block", borderRadius: size * 0.234, boxShadow: "0 4px 14px rgba(47,107,255,.35)" }} />;
+  return <img src="icons/mark.svg" width={size} height={size} alt="" aria-hidden="true" style={{ display: "block", filter: "drop-shadow(0 4px 10px rgba(10,108,255,.4))" }} />;
 }
 
 export function ConnPill() {

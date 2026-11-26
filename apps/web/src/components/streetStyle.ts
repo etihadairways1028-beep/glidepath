@@ -69,17 +69,26 @@ export function streetStyle(mode: "light" | "dark"): StyleSpecification {
       { id: "landuse-green", type: "fill", ...src, "source-layer": "landuse", minzoom: 10, filter: cls("cemetery", "stadium", "pitch", "playground"), paint: { "fill-color": p.grass } },
       { id: "park", type: "fill", ...src, "source-layer": "park", paint: { "fill-color": p.park, "fill-opacity": ["interpolate", ["linear"], ["zoom"], 5, 0.5, 9, 1] } },
       { id: "airport-area", type: "fill", ...src, "source-layer": "aeroway", minzoom: 9, filter: ["all", ["==", ["geometry-type"], "Polygon"], cls("aerodrome")], paint: { "fill-color": p.airportArea } },
+      // Airports in detail: aprons, runways and taxiways from OpenStreetMap, with taxiway names.
+      { id: "aeroway-apron", type: "fill", ...src, "source-layer": "aeroway", minzoom: 11, filter: ["all", ["==", ["geometry-type"], "Polygon"], cls("apron")], paint: { "fill-color": mode === "light" ? "#DADDE3" : "#2E323B" } },
+      { id: "aeroway-area", type: "fill", ...src, "source-layer": "aeroway", minzoom: 10, filter: ["all", ["==", ["geometry-type"], "Polygon"], cls("runway", "taxiway")], paint: { "fill-color": mode === "light" ? "#7D838D" : "#14171C" } },
+      { id: "aeroway-taxiway", type: "line", ...src, "source-layer": "aeroway", minzoom: 11, filter: ["all", ["==", ["geometry-type"], "LineString"], cls("taxiway")], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": mode === "light" ? "#8E949E" : "#262A31", "line-width": zoomW([[11, 1], [14, 5], [16, 18], [18, 60]]) } },
+      { id: "aeroway-runway", type: "line", ...src, "source-layer": "aeroway", minzoom: 9, filter: ["all", ["==", ["geometry-type"], "LineString"], cls("runway")], paint: { "line-color": mode === "light" ? "#565C66" : "#101317", "line-width": zoomW([[9, 1.5], [12, 5], [14, 14], [16, 50], [18, 190]]) } },
+      { id: "aeroway-runway-centre", type: "line", ...src, "source-layer": "aeroway", minzoom: 13, filter: ["all", ["==", ["geometry-type"], "LineString"], cls("runway")], paint: { "line-color": "#FFFFFF", "line-opacity": 0.9, "line-width": zoomW([[13, 0.6], [16, 1.6], [18, 4]]), "line-dasharray": [6, 5] } },
+      { id: "aeroway-taxiway-centre", type: "line", ...src, "source-layer": "aeroway", minzoom: 13.5, filter: ["all", ["==", ["geometry-type"], "LineString"], cls("taxiway")], paint: { "line-color": "#F5C518", "line-width": zoomW([[13.5, 0.6], [16, 1.4], [18, 3]]) } },
+      { id: "aeroway-taxiway-name", type: "symbol", ...src, "source-layer": "aeroway", minzoom: 14, filter: ["all", ["==", ["geometry-type"], "LineString"], cls("taxiway"), ["has", "ref"]], layout: { "symbol-placement": "line", "symbol-spacing": 260, "text-field": ["get", "ref"], "text-font": ["Noto Sans Bold"], "text-size": 12, "text-rotation-alignment": "viewport", "text-keep-upright": true }, paint: { "text-color": "#111111", "text-halo-color": "#FFD21F", "text-halo-width": 3 } },
+      { id: "aeroway-runway-name", type: "symbol", ...src, "source-layer": "aeroway", minzoom: 12, filter: ["all", ["==", ["geometry-type"], "LineString"], cls("runway"), ["has", "ref"]], layout: { "symbol-placement": "line-center", "text-field": ["get", "ref"], "text-font": ["Noto Sans Bold"], "text-size": 13, "text-rotation-alignment": "viewport" }, paint: { "text-color": mode === "light" ? "#0B1220" : "#FFFFFF", "text-halo-color": mode === "light" ? "rgba(255,255,255,.95)" : "rgba(0,0,0,.85)", "text-halo-width": 2 } },
       // Water
       { id: "water", type: "fill", ...src, "source-layer": "water", filter: ["!=", ["get", "brunnel"], "tunnel"], paint: { "fill-color": p.water } },
       { id: "waterway", type: "line", ...src, "source-layer": "waterway", minzoom: 8, filter: notTunnel, layout: { "line-cap": "round" }, paint: { "line-color": p.waterLine, "line-width": zoomW([[8, 0.6], [12, 1.4], [16, 4]]) } },
       // Buildings
-      { id: "building", type: "fill", ...src, "source-layer": "building", minzoom: 14, maxzoom: 15.5, paint: { "fill-color": p.building, "fill-outline-color": p.buildingEdge, "fill-opacity": ["interpolate", ["linear"], ["zoom"], 14, 0, 15, 1] } },
+      { id: "building", type: "fill", ...src, "source-layer": "building", minzoom: 13, maxzoom: 14.8, paint: { "fill-color": p.building, "fill-outline-color": p.buildingEdge, "fill-opacity": ["interpolate", ["linear"], ["zoom"], 13, 0, 14, 1] } },
       // Real building heights from OpenStreetMap, raised when you zoom in (and in the 3D view).
-      { id: "building-3d", type: "fill-extrusion", ...src, "source-layer": "building", minzoom: 15, paint: {
+      { id: "building-3d", type: "fill-extrusion", ...src, "source-layer": "building", minzoom: 14, paint: {
         "fill-extrusion-color": p.building,
         "fill-extrusion-height": ["coalesce", ["get", "render_height"], 6],
         "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
-        "fill-extrusion-opacity": ["interpolate", ["linear"], ["zoom"], 15, 0, 15.8, 0.9],
+        "fill-extrusion-opacity": ["interpolate", ["linear"], ["zoom"], 14, 0, 14.8, 0.92],
         "fill-extrusion-vertical-gradient": true,
       } },
       // Roads: casings first, then fills

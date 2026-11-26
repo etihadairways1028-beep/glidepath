@@ -12,6 +12,7 @@
 import type { RunwayLine } from "./FlightSetup";
 import { useEffect, useRef, useState } from "react";
 import { holdShape, type Hold } from "../data/hold";
+import { planeExtrusion, planeScale } from "./plane3d";
 import maplibregl, { type GeoJSONSource, type Map as MLMap, type StyleSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { FlightPlan } from "@glidepath/protocol";
@@ -323,6 +324,11 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     m.addLayer({ id: "sel-at", type: "circle", source: "sel-at", paint: { "circle-radius": 17, "circle-color": "rgba(255,214,10,0.18)", "circle-stroke-color": "#FFD60A", "circle-stroke-width": 2 } });
     m.addLayer({ id: "traffic-label", type: "symbol", source: "traffic", minzoom: 6.2, layout: { "text-field": ["get", "cs"], "text-font": ["Noto Sans Bold"], "text-size": 10.5, "text-offset": [0, 1.35], "text-anchor": "top", "text-optional": true }, paint: { "text-color": light ? "#1C1C1E" : "#EAF0FA", "text-halo-color": light ? "rgba(255,255,255,.95)" : "rgba(5,8,14,.85)", "text-halo-width": 1.4 } });
     m.addLayer({ id: "traffic", type: "symbol", source: "traffic", layout: { "icon-image": ["concat", "traffic-", ["get", "net"]], "icon-rotate": ["get", "hdg"], "icon-rotation-alignment": "map", "icon-allow-overlap": true, "icon-size": ["interpolate", ["linear"], ["zoom"], 2, 0.55, 9, 1] }, paint: { "icon-opacity": 0.95 } });
+    // Your aircraft in 3D: a low-poly airliner made of extrusions, with its shadow on the ground.
+    m.addSource("ac3d", { type: "geojson", data: empty() as never });
+    m.addSource("ac3d-shadow", { type: "geojson", data: empty() as never });
+    m.addLayer({ id: "ac3d-shadow", type: "fill", source: "ac3d-shadow", paint: { "fill-color": "#000", "fill-opacity": light ? 0.22 : 0.4 } });
+    m.addLayer({ id: "ac3d", type: "fill-extrusion", source: "ac3d", paint: { "fill-extrusion-color": ["get", "color"], "fill-extrusion-base": ["get", "base"], "fill-extrusion-height": ["get", "top"], "fill-extrusion-opacity": 1, "fill-extrusion-vertical-gradient": true } });
   };
 
   useEffect(() => {
@@ -388,6 +394,16 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
       try { m.setTerrain(null); } catch { /* ignore */ }
       m.easeTo({ pitch: 0, bearing: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 }, duration: 700 });
     }
+  }, [threeD, ready]);
+
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !ready) return;
+    const redraw = () => { const a = acAnim.current?.at(performance.now()); if (a) draw3d(a[0], a[1], a[2], true); else if (!threeDRef.current) draw3d(0, 0, 0, true); };
+    redraw();
+    m.on("zoomend", redraw);
+    return () => { m.off("zoomend", redraw); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [threeD, ready]);
 
   // Stands and gates near the aircraft
@@ -684,6 +700,24 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     });
   }, [airports.map((a) => a.code + a.role).join()]);
 
+  // 3D aircraft: redrawn at most ~20 times a second, only in the 3D view.
+  const last3d = useRef(0);
+  const liftRef = useRef(0);
+  liftRef.current = onGround ? 0 : 1;
+  const draw3d = (lo: number, la: number, h: number, force = false) => {
+    const m = map.current;
+    if (!m || !m.getSource("ac3d")) return;
+    const on = threeDRef.current;
+    if (acMarker.current) acMarker.current.getElement().style.opacity = on ? "0" : "";
+    const now = performance.now();
+    if (!force && now - last3d.current < 50) return;
+    last3d.current = now;
+    const k = planeScale(m.getZoom());
+    const p = on ? planeExtrusion(lo, la, h, k, liftRef.current * 9 * k) : null;
+    (m.getSource("ac3d") as GeoJSONSource).setData((p?.body ?? empty()) as never);
+    (m.getSource("ac3d-shadow") as GeoJSONSource).setData((p?.shadow ?? empty()) as never);
+  };
+
   // Own aircraft
   useEffect(() => {
     const m = map.current;
@@ -721,6 +755,7 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
           if (!an || !mk || !map.current) { acRaf.current = 0; return; }
           const [lo, la, h] = an.at(performance.now());
           mk.setLngLat([lo, la]).setRotation(h);
+          draw3d(lo, la, h);
           // Stop when the glide is done, so nothing runs between updates (saves battery on iPad).
           acRaf.current = performance.now() < an.end + 32 ? requestAnimationFrame(step) : 0;
         };

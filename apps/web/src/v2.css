@@ -1,0 +1,120 @@
+/*
+ * Glidepath 2.0: bold liquid glass. Loaded after everything else.
+ * Only changes how things look (colours, glass, type, shapes); every screen and
+ * control stays where it was. Applies to the default look (Liquid glass) in
+ * light and dark; Cockpit, Sunset and Neon keep their own palettes.
+ */
+:root {
+  --ds-accent: #0A6CFF;
+  --ds-accent-2: #3D8BFF;
+  --ds-r-card: 28px;
+  --ds-r-ctl: 999px;
+  --ds-h: 44px;
+  --ds-h-sm: 34px;
+  --v2-display: "Inter Display", "SF Pro Display", Inter, system-ui, sans-serif;
+}
+:root:not([data-theme="light"]) {
+  --ds-bg-1: #0E2550;
+  --ds-bg-2: #02050E;
+  --ds-card: linear-gradient(160deg, rgba(46, 64, 98, .58), rgba(14, 22, 40, .46));
+  --ds-card-2: linear-gradient(160deg, rgba(56, 76, 114, .7), rgba(18, 28, 50, .6));
+  --ds-line: rgba(255, 255, 255, .12);
+  --ds-line-2: rgba(255, 255, 255, .2);
+  --ds-hi: rgba(255, 255, 255, .26);
+  --ds-ink: #FFFFFF;
+  --ds-ink-2: rgba(235, 241, 255, .74);
+  --ds-ink-3: rgba(235, 241, 255, .52);
+  --ds-ctl: rgba(255, 255, 255, .1);
+  --ds-ctl-hover: rgba(255, 255, 255, .17);
+  --ds-shadow: inset 0 1.5px 0 rgba(255, 255, 255, .24), inset 0 -1px 0 rgba(255, 255, 255, .06), inset 0 0 0 1px rgba(255, 255, 255, .1), 0 24px 60px -24px rgba(0, 0, 0, .85);
+  --v2-primary: #FFFFFF;
+  --v2-primary-ink: #0B1220;
+}
+:root[data-theme="light"] {
+  --ds-bg-1: #2F7FE0;
+  --ds-bg-2: #DCEEFC;
+  --ds-card: linear-gradient(160deg, rgba(255, 255, 255, .74), rgba(255, 255, 255, .46));
+  --ds-card-2: linear-gradient(160deg, rgba(255, 255, 255, .9), rgba(255, 255, 255, .66));
+  --ds-line: rgba(255, 255, 255, .75);
+  --ds-line-2: rgba(15, 30, 60, .14);
+  --ds-hi: rgba(255, 255, 255, 1);
+  --ds-ink: #0B1220;
+  --ds-ink-2: rgba(11, 18, 32, .7);
+  --ds-ink-3: rgba(11, 18, 32, .52);
+  --ds-field: rgba(255, 255, 255, .9);
+  --ds-ctl: rgba(255, 255, 255, .62);
+  --ds-ctl-hover: rgba(255, 255, 255, .85);
+  --ds-shadow: inset 0 1.5px 0 #fff, inset 0 -1px 0 rgba(255, 255, 255, .5), inset 0 0 0 1px rgba(255, 255, 255, .7), 0 22px 50px -22px rgba(20, 60, 130, .45);
+  --v2-primary: #0B1220;
+  --v2-primary-ink: #FFFFFF;
+}
+
+/* ---------- Canvas: a real sky (day) or night ---------- */
+html:root:not([data-look]) .sky { background: linear-gradient(180deg, #02050E 0%, #071431 46%, #123063 82%, #23508F 100%) !important; }
+html:root[data-theme="light"]:not([data-look]) .sky { background: linear-gradient(180deg, #2F7FE0 0%, #5FA6EE 34%, #A9D3F6 66%, #E6F3FD 100%) !important; }
+html:root[data-theme="light"]:not([data-look]) .sky .ss-orb { opacity: .22 !important; }
+html:root[data-theme="light"]:not([data-look]) .sky .ss-clouds { opacity: .55 !important; }
+
+/* ---------- Type: bold and big ---------- */
+html:root main h1.title, html:root main .home-head h1 {
+  font-family: var(--v2-display) !important; font-size: clamp(32px, 4vw, 46px) !important; font-weight: 900 !important; letter-spacing: -.04em !important; line-height: 1.02 !important;
+}
+html:root main .h2, html:root main section.glass > h2, html:root main .section-title { font-family: var(--v2-display) !important; font-size: 19px !important; font-weight: 800 !important; letter-spacing: -.02em !important; }
+html:root main :is(.stat b, .big, .lc-alt, .tile b) { font-family: var(--v2-display); font-weight: 850; letter-spacing: -.03em; }
+
+/* ---------- Glass cards: rim light, specular, depth ---------- */
+html:root:not([data-look]) main :is(section.glass, .glass.pad, details.glass, a.glass) {
+  background: var(--ds-card) !important;
+  border: 0 !important;
+  box-shadow: var(--ds-shadow) !important;
+  backdrop-filter: blur(30px) saturate(1.9) !important; -webkit-backdrop-filter: blur(30px) saturate(1.9) !important;
+}
+html:root:not([data-look]) main section.glass.strong { background: var(--ds-card-2) !important; }
+html:root:not([data-look]) main section.glass::before { opacity: .55; }
+
+/* ---------- Buttons: bold pills ---------- */
+html:root .btn { font-weight: 750 !important; letter-spacing: -.01em; }
+html:root .btn:not(.round):not(.small):not(.map-tools .btn) { padding: 0 18px !important; }
+html:root .btn.small:not(.round) { border-radius: 999px !important; padding: 0 14px !important; }
+html:root:not([data-look]) .btn { border: 0 !important; box-shadow: inset 0 1px 0 var(--ds-hi), inset 0 0 0 1px var(--ds-line), 0 6px 16px -10px rgba(0, 20, 60, .5) !important; backdrop-filter: blur(18px) saturate(1.8); -webkit-backdrop-filter: blur(18px) saturate(1.8); }
+html:root:not([data-look]) .btn.primary { background: var(--v2-primary) !important; color: var(--v2-primary-ink) !important; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 10px 26px -12px rgba(0, 20, 60, .7) !important; }
+html:root:not([data-look]) .btn.primary:hover:not(:disabled) { background: var(--v2-primary) !important; filter: brightness(1.12); }
+html:root:not([data-look]) .btn.on { background: rgba(10, 108, 255, .2) !important; box-shadow: inset 0 0 0 1.5px rgba(10, 108, 255, .6) !important; }
+
+/* ---------- Segmented controls ---------- */
+html:root .seg { border-radius: 999px !important; }
+html:root .seg button { border-radius: 999px !important; font-weight: 750 !important; }
+
+/* ---------- Sidebar and tab bar: floating glass ---------- */
+html:root:not([data-look]) :is(nav.glass.side, .tabbar) {
+  background: var(--ds-card) !important; border: 0 !important;
+  box-shadow: var(--ds-shadow) !important;
+  backdrop-filter: blur(34px) saturate(2) !important; -webkit-backdrop-filter: blur(34px) saturate(2) !important;
+}
+html:root:not([data-look]) .tabbar { border-radius: 999px !important; }
+html:root nav.glass.side .nav-a { border-radius: 999px !important; font-weight: 700 !important; }
+html:root:not([data-look]) nav.glass.side .nav-a.on, html:root:not([data-look]) .tabbar a.on, html:root:not([data-look]) .tabbar button.on {
+  background: rgba(255, 255, 255, .16) !important; color: var(--ds-ink) !important; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), inset 0 0 0 1px rgba(255, 255, 255, .14) !important;
+}
+html:root[data-theme="light"]:not([data-look]) nav.glass.side .nav-a.on, html:root[data-theme="light"]:not([data-look]) .tabbar a.on, html:root[data-theme="light"]:not([data-look]) .tabbar button.on {
+  background: #fff !important; box-shadow: 0 4px 14px -6px rgba(20, 60, 130, .45) !important;
+}
+html:root:not([data-look]) nav.glass.side .nav-a.on svg { color: var(--ds-accent); }
+
+/* ---------- Fields ---------- */
+html:root:not([data-look]) main :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not(.pc-plain), select, textarea) { border-radius: 14px !important; }
+
+/* ---------- Light mode readability on the bright sky ---------- */
+html:root[data-theme="light"]:not([data-look]) main > :is(h1, .home-head, .between) { text-shadow: 0 1px 12px rgba(255, 255, 255, .35); }
+
+/* ---------- The live flight card: always the night-sky glass, in both modes ---------- */
+html:root .live-card {
+  --ds-ctl: rgba(255, 255, 255, .1); --ds-ctl-hover: rgba(255, 255, 255, .17); --ds-hi: rgba(255, 255, 255, .22); --ds-field: rgba(0, 0, 0, .25);
+  --v2-primary: #FFFFFF; --v2-primary-ink: #0B1220;
+}
+html:root:not([data-look]) main section.glass.live-card, html:root:not([data-look]) main .live-card.glass {
+  background: linear-gradient(160deg, rgba(22, 40, 78, .92), rgba(6, 12, 28, .9)) !important;
+  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, .22), inset 0 0 0 1px rgba(255, 255, 255, .1), 0 30px 70px -28px rgba(0, 20, 70, .8) !important;
+}
+html:root[data-theme="light"] .live-card .seg { background: rgba(255, 255, 255, .08) !important; }
+html:root[data-theme="light"] .live-card .seg button.on { background: rgba(255, 255, 255, .92) !important; color: #0B1220 !important; }

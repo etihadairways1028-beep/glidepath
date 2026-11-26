@@ -6,12 +6,14 @@
 import { useEffect, useState } from "react";
 import { Icon } from "./ui";
 
-export const APP_VERSION = "1.5.0";
+export const APP_VERSION = "1.6.0";
 const KEY = "glidepath.seenVersion";
 
 export type WnIcon = "map" | "flight" | "remote" | "book" | "gear" | "spark" | "download" | "search" | "tower" | "cloud" | "layers" | "target" | "headset";
 export interface WnItem { v: string; ic: WnIcon; t: string; d: string }
 export const WHATS_NEW: WnItem[] = [
+  { v: "1.6.0", ic: "spark", t: "A new look, day and night", d: "Glidepath has been redesigned: bolder type, clearer liquid glass with a light rim, pill buttons and a floating menu. Light mode is now a real daytime sky and dark mode a night sky. Every screen and button is where it was. And there's a new icon." },
+  { v: "1.6.0", ic: "map", t: "A 3D map with your aircraft in 3D", d: "Tap 3D on the map: your aircraft is now a 3D airliner with its shadow on the ground, real buildings from OpenStreetMap rise from a lower zoom, and airports show their aprons, runways with centrelines and names, and taxiways with yellow centrelines and their letters." },
   { v: "1.5.0", ic: "spark", t: "Weekly missions", d: "Three new missions every Monday: one to fly more, one to fly better and one to go somewhere new. They're on Home, measured from your logbook, and tick off on the touchdown card the moment you complete one." },
   { v: "1.5.0", ic: "flight", t: "Your flying streak", d: "Fly at least once a week to keep your streak going. Home shows your streak, the days left and how close your next rank is; Career shows your last 12 weeks, your best streak and every mission you've done." },
   { v: "1.4.5", ic: "flight", t: "Home, simplified", d: "Home showed your times three times, two profiles and two maps. Now one flight card has it all: where you are, the full profile, every milestone from out to in, block and flight time, and Unload. Less on screen, and about half the work for your iPad." },
