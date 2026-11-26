@@ -217,6 +217,9 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
   const [theme, setTheme] = useState(themeNow);
   const kindRef = useRef<Kind>("satellite");
   const data = useRef<{ route: number[][]; trail: number[][]; traffic: unknown; stands: unknown; atc: unknown; metars: unknown; radar: string | null; fixes: unknown; firs?: unknown; history: number[][][]; trailGradient: unknown; procs?: unknown }>({ trailGradient: altGradient([]), history: [], route: [], trail: [], traffic: empty(), stands: empty(), atc: empty(), metars: empty(), radar: null, fixes: empty() });
+  const autoTilted = useRef(false);
+  const interactiveRef = useRef(interactive);
+  interactiveRef.current = interactive;
   const trafficRef = useRef(traffic);
   trafficRef.current = traffic;
   const threeDRef = useRef(threeD);
@@ -417,7 +420,16 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     redraw();
     m.on("zoomend", redraw);
     m.on("moveend", drawTraffic3d);
-    return () => { m.off("zoomend", redraw); m.off("moveend", drawTraffic3d); };
+    // Zoomed right in (about 50 m across the scale bar or less): tilt the camera so the buildings stand up in 3D.
+    // Zoom back out and it lies flat again. A tilt you set yourself is left alone.
+    const autoTilt = () => {
+      if (threeDRef.current || !interactiveRef.current) return;
+      const z = m.getZoom(), pitch = m.getPitch();
+      if (z >= 16.6 && pitch < 5) { autoTilted.current = true; m.easeTo({ pitch: 58, duration: 700 }); }
+      else if (z < 15.6 && autoTilted.current && pitch > 5) { autoTilted.current = false; m.easeTo({ pitch: 0, duration: 600 }); }
+    };
+    m.on("zoomend", autoTilt);
+    return () => { m.off("zoomend", redraw); m.off("moveend", drawTraffic3d); m.off("zoomend", autoTilt); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [threeD, ready]);
 
@@ -805,7 +817,7 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
       if (zoomGoal.current !== null && Math.abs(m.getZoom() - zoomGoal.current) < 0.05) zoomGoal.current = null;
       const z = zoomGoal.current ?? Math.max(m.getZoom(), 5);
       // Ease-out glide: starts fast, so frequent position updates never leave the camera behind.
-      glide(m, { center: [aircraft.lon, aircraft.lat], zoom: z, pitch: 0, bearing: m.getBearing(), top: 0 }, 450);
+      glide(m, { center: [aircraft.lon, aircraft.lat], zoom: z, pitch: autoTilted.current ? m.getPitch() : 0, bearing: m.getBearing(), top: 0 }, 450);
     }
   }, [aircraft?.lat, aircraft?.lon, aircraft?.hdg, follow, threeD]);
 

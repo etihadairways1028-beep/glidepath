@@ -85,10 +85,13 @@ export function streetStyle(mode: "light" | "dark"): StyleSpecification {
       { id: "building", type: "fill", ...src, "source-layer": "building", minzoom: 13, maxzoom: 14.8, paint: { "fill-color": p.building, "fill-outline-color": p.buildingEdge, "fill-opacity": ["interpolate", ["linear"], ["zoom"], 13, 0, 14, 1] } },
       // Real building heights from OpenStreetMap, raised when you zoom in (and in the 3D view).
       { id: "building-3d", type: "fill-extrusion", ...src, "source-layer": "building", minzoom: 14, paint: {
-        "fill-extrusion-color": p.building,
-        "fill-extrusion-height": ["coalesce", ["get", "render_height"], 6],
+        // Coloured like the real thing: low houses in warm stone, taller blocks in cool glass and concrete.
+        "fill-extrusion-color": mode === "light"
+          ? ["interpolate", ["linear"], ["coalesce", ["get", "render_height"], 6], 0, "#ECE6DC", 10, "#E4DDD1", 25, "#D9DEE6", 60, "#C7D3E3", 150, "#B4C6DE"]
+          : ["interpolate", ["linear"], ["coalesce", ["get", "render_height"], 6], 0, "#2C323C", 10, "#323944", 25, "#384254", 60, "#3F4C62", 150, "#4A5B78"],
+        "fill-extrusion-height": ["interpolate", ["linear"], ["zoom"], 14, 0, 15.2, ["coalesce", ["get", "render_height"], 6]],
         "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
-        "fill-extrusion-opacity": ["interpolate", ["linear"], ["zoom"], 14, 0, 14.8, 0.92],
+        "fill-extrusion-opacity": ["interpolate", ["linear"], ["zoom"], 14, 0, 14.8, 0.95],
         "fill-extrusion-vertical-gradient": true,
       } },
       // Roads: casings first, then fills

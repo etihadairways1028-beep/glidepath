@@ -12,6 +12,7 @@ const KEY = "glidepath.seenVersion";
 export type WnIcon = "map" | "flight" | "remote" | "book" | "gear" | "spark" | "download" | "search" | "tower" | "cloud" | "layers" | "target" | "headset";
 export interface WnItem { v: string; ic: WnIcon; t: string; d: string }
 export const WHATS_NEW: WnItem[] = [
+  { v: "1.6.1", ic: "map", t: "Buildings stand up when you zoom in", d: "Zoom right in on the map (about 50 m on the scale or closer) and it tilts by itself so the real buildings rise in 3D, coloured like the real thing: low houses in warm stone, taller blocks in cool glass. Zoom out and it lies flat again." },
   { v: "1.6.1", ic: "layers", t: "Every screen one tap away", d: "Tap More: every other screen opens as app icons right over the page you're on. Tap one and you're there; tap outside to close." },
   { v: "1.6.1", ic: "spark", t: "Connect once, stay on the newest app", d: "The Bridge now keeps its own copy of the app exactly the same as the website's: it checks every few hours, downloads only what changed and checks every file. So opening Glidepath from your PC's address always gives the newest version, and your device stays on that page, already paired, instead of jumping to another one." },
   { v: "1.6.0", ic: "spark", t: "A new look, day and night", d: "Glidepath has been redesigned: bolder type, clearer liquid glass with a light rim, pill buttons and a floating menu. Light mode is now a real daytime sky and dark mode a night sky. Every screen and button is where it was. And there's a new icon." },
