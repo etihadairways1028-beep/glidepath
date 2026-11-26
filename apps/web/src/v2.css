@@ -234,3 +234,29 @@ html:root .live-card { padding: 26px 28px !important; border-radius: 34px !impor
 .v2-scene + * { position: relative; z-index: 1; }
 html:root .stack:has(.v2-scene) .b-map { display: none !important; }
 .v2-scene :is(.notice, [class*="map-err"], [class*="map-fail"], [class*="offline"]) { display: none !important; }
+
+/* ===================== Every screen: readable glass over the 3D sky ===================== */
+:root[data-theme="light"] { --ds-card: linear-gradient(160deg, rgba(255, 255, 255, .88), rgba(255, 255, 255, .7)); --ds-card-2: linear-gradient(160deg, rgba(255, 255, 255, .95), rgba(255, 255, 255, .82)); }
+:root:not([data-theme="light"]) { --ds-card: linear-gradient(160deg, rgba(30, 44, 72, .78), rgba(10, 18, 34, .72)); --ds-card-2: linear-gradient(160deg, rgba(40, 56, 88, .86), rgba(14, 22, 40, .8)); }
+html:root:not([data-look]):is([data-wall="flight"], :not([data-wall])) .sky { filter: saturate(.9); }
+html:root:not([data-look]):is([data-wall="flight"], :not([data-wall])) .sky::after { content: ""; position: absolute; inset: 0; background: rgba(2, 6, 18, .35); pointer-events: none; }
+html:root[data-theme="light"]:not([data-look]):is([data-wall="flight"], :not([data-wall])) .sky::after { background: rgba(226, 240, 255, .42); }
+
+/* More: a tidy grid of app-style tiles on every screen size */
+html:root .more-tile { display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 10px 16px !important; border-radius: 20px !important; text-decoration: none; color: var(--ds-ink) !important; font: 750 16px var(--v2-display);
+  background: var(--ds-card) !important; box-shadow: var(--ds-shadow) !important; transition: transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s ease; }
+html:root .more-tile:hover { transform: translateY(-3px); }
+html:root .more-ic { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; flex: none; background: linear-gradient(180deg, var(--c1, #5E9BFF), var(--c2, #3A5BF0)); box-shadow: inset 0 1px 0 rgba(255,255,255,.45); }
+html:root .more-ic svg { width: 21px !important; height: 21px !important; color: #fff; }
+html:root .more-chev { margin-left: auto; color: var(--ds-ink-3); font-size: 24px; }
+
+/* Hover and press: a quick lift and a light sweep on every button */
+html:root .btn { position: relative; overflow: hidden; }
+html:root .btn::after { content: ""; position: absolute; top: 0; bottom: 0; left: -60%; width: 40%; pointer-events: none; background: linear-gradient(100deg, transparent, rgba(255,255,255,.45), transparent); transform: skewX(-20deg); opacity: 0; }
+@media (hover: hover) {
+  html:root .btn:hover:not(:disabled) { transform: translateY(-2px); }
+  html:root .btn:hover:not(:disabled)::after { opacity: 1; left: 130%; transition: left .55s ease, opacity .15s; }
+  html:root main section.glass, html:root main .glass.pad { transition: transform .3s cubic-bezier(.2,.8,.2,1), box-shadow .3s ease; }
+  html:root .tabbar .tab:hover:not(.on) { color: var(--ds-ink) !important; background: rgba(255,255,255,.12); }
+}
+@media (prefers-reduced-motion: reduce) { html:root .btn::after { display: none; } html:root .btn:hover { transform: none; } }
