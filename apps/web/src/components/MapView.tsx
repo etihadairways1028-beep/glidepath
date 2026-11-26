@@ -165,6 +165,8 @@ export interface MapViewProps {
   zoom?: number;
   /** Tilted chase view with 3D terrain. */
   threeD?: boolean;
+  /** Lighter 3D for small previews: no terrain. */
+  lite?: boolean;
   /** Gates and stands near the aircraft (from OpenStreetMap, via the Bridge). */
   stands?: Array<{ ref: string; kind: "gate" | "stand"; lat: number; lon: number }>;
   /** Height above ground and on-ground state, for the chase camera. */
@@ -199,7 +201,7 @@ function labelBox(light: boolean): ImageData {
   return g.getImageData(0, 0, W, H);
 }
 
-export function MapView({ trail, plan, aircraft, airports = [], traffic = [], atc = [], metars = [], radarTiles = null, centres = [], radarFrames = null, radarIndex = 0, radarOpacity = 0.7, onSelectAtc, onSelectMetar, onView, follow, center, zoom: startZoom, threeD = false, stands = [], agl = null, onGround = false, onSelectTraffic, onUserMove, interactive = true, history, selTrack, flyTo, holds = [], onSelectFix, nextFix = null, fitRoute = 0, runwayLines = [], fitBox = null }: MapViewProps) {
+export function MapView({ trail, plan, aircraft, airports = [], traffic = [], atc = [], metars = [], radarTiles = null, centres = [], radarFrames = null, radarIndex = 0, radarOpacity = 0.7, onSelectAtc, onSelectMetar, onView, follow, center, zoom: startZoom, threeD = false, lite = false, stands = [], agl = null, onGround = false, onSelectTraffic, onUserMove, interactive = true, history, selTrack, flyTo, holds = [], onSelectFix, nextFix = null, fitRoute = 0, runwayLines = [], fitBox = null }: MapViewProps) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<MLMap | null>(null);
   const [ready, setReady] = useState(false);
@@ -394,7 +396,7 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
   useEffect(() => {
     const m = map.current;
     if (!m || !ready) return;
-    if (threeD && m.getSource("gp-dem")) {
+    if (threeD && !lite && m.getSource("gp-dem")) {
       try { m.setTerrain({ source: "gp-dem", exaggeration: 1.25 }); } catch { /* terrain unsupported */ }
       try {
         m.setSky({ "sky-color": "#1d4fbf", "horizon-color": "#9cc8ff", "fog-color": "#cfe2ff", "sky-horizon-blend": 0.6, "horizon-fog-blend": 0.6, "fog-ground-blend": 0.25, "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 1, 12, 0.6] } as never);

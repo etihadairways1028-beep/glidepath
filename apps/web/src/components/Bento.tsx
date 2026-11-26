@@ -86,7 +86,7 @@ function NextWaypoint() {
   );
 }
 
-export function Bento() {
+export function Bento({ noMap = false }: { noMap?: boolean } = {}) {
   const L = useLive();
   const S = useSeries();
   const { fuelUnit } = useSettings();
@@ -105,7 +105,7 @@ export function Bento() {
     <>
     <div className="home-ap"><MiniApproach /></div>
     <div className="bento">
-      {aircraft && (
+      {aircraft && !noMap && (
         <a className="glass b-map" href="#/map" aria-label="Open the live map">
           <MapView trail={trail} plan={L.plan} aircraft={aircraft} follow interactive={false} agl={f.position.altAglFt ?? null} onGround={!!f.position.onGround} />
           <span className="home-map-tag">Live map<span aria-hidden> ›</span></span>

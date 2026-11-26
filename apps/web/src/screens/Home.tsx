@@ -42,7 +42,7 @@ export function Home() {
       {/* One card for the flight: live status, the full profile, every time and the logbook in one place. */}
       {mode !== "none" && flight && flight.status !== "completed" && <HomeScene />}
       {mode !== "none" && flight && <HomeFlightCard />}
-      {mode !== "none" && flight && flight.status !== "completed" ? <Bento /> : mode !== "none" && flight ? <FlightFeed /> : null}
+      {mode !== "none" && flight && flight.status !== "completed" ? <Bento noMap /> : mode !== "none" && flight ? <FlightFeed /> : null}
       {mode !== "none" && flight && <QuickActions />}
       {mode !== "none" && <ThisWeek />}
       {mode !== "none" && flight && <HomeAircraft />}
@@ -328,7 +328,7 @@ function HomeScene() {
   if (!aircraft) return null;
   return (
     <a className="v2-scene" href="#/map" aria-label="Open the live map">
-      <MapView trail={trail} plan={L.plan} aircraft={aircraft} follow threeD interactive={false} agl={f?.position.altAglFt ?? null} onGround={!!f?.position.onGround} />
+      <MapView trail={trail} plan={L.plan} aircraft={aircraft} follow threeD lite interactive={false} agl={f?.position.altAglFt ?? null} onGround={!!f?.position.onGround} />
     </a>
   );
 }

@@ -262,3 +262,19 @@ html:root .btn::after { content: ""; position: absolute; top: 0; bottom: 0; left
 @media (prefers-reduced-motion: reduce) { html:root .btn::after { display: none; } html:root .btn:hover { transform: none; } }
 html:root .map-tools { z-index: 8 !important; }
 html:root body div.shell.shell:not(.glance) { grid-template-columns: minmax(0, 1fr) !important; }
+
+/* ===================== iPad and phones: smooth first ===================== */
+/* Blur is the costly part on tablets: cards become solid glass, only the two bars keep a light blur. */
+html:root:not([data-look]) .sky { filter: none !important; }
+@media (pointer: coarse), (max-width: 1366px) and (hover: none) {
+  html:root:not([data-look]) main :is(section.glass, .glass.pad, details.glass, a.glass, .glass),
+  html:root .more-tile, html:root main .home-head [class*="conn"] { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+  :root[data-theme="light"] { --ds-card: linear-gradient(160deg, rgba(255, 255, 255, .95), rgba(250, 252, 255, .9)); --ds-card-2: linear-gradient(160deg, #fff, rgba(250, 252, 255, .96)); }
+  :root:not([data-theme="light"]) { --ds-card: linear-gradient(160deg, rgba(28, 40, 66, .95), rgba(10, 18, 34, .93)); --ds-card-2: linear-gradient(160deg, rgba(36, 50, 80, .97), rgba(14, 22, 40, .95)); }
+  html:root .v2-pill, html:root .v2-top .side-clock, html:root .tabbar, html:root .tabbar.glass { backdrop-filter: blur(14px) !important; -webkit-backdrop-filter: blur(14px) !important; }
+  html:root .btn { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+  html:root .btn::after { display: none; }
+  html:root main section.glass, html:root main .glass.pad, html:root .more-tile { transition: none !important; }
+  .page-enter { animation-duration: .18s !important; }
+  html:root .sky { background-attachment: scroll !important; }
+}
