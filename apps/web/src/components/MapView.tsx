@@ -215,6 +215,8 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
   const [theme, setTheme] = useState(themeNow);
   const kindRef = useRef<Kind>("satellite");
   const data = useRef<{ route: number[][]; trail: number[][]; traffic: unknown; stands: unknown; atc: unknown; metars: unknown; radar: string | null; fixes: unknown; firs?: unknown; history: number[][][]; trailGradient: unknown; procs?: unknown }>({ trailGradient: altGradient([]), history: [], route: [], trail: [], traffic: empty(), stands: empty(), atc: empty(), metars: empty(), radar: null, fixes: empty() });
+  const trafficRef = useRef(traffic);
+  trafficRef.current = traffic;
   const threeDRef = useRef(threeD);
   threeDRef.current = threeD;
   const glideRaf = useRef(0);
@@ -324,6 +326,16 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     m.addLayer({ id: "sel-at", type: "circle", source: "sel-at", paint: { "circle-radius": 17, "circle-color": "rgba(255,214,10,0.18)", "circle-stroke-color": "#FFD60A", "circle-stroke-width": 2 } });
     m.addLayer({ id: "traffic-label", type: "symbol", source: "traffic", minzoom: 6.2, layout: { "text-field": ["get", "cs"], "text-font": ["Noto Sans Bold"], "text-size": 10.5, "text-offset": [0, 1.35], "text-anchor": "top", "text-optional": true }, paint: { "text-color": light ? "#1C1C1E" : "#EAF0FA", "text-halo-color": light ? "rgba(255,255,255,.95)" : "rgba(5,8,14,.85)", "text-halo-width": 1.4 } });
     m.addLayer({ id: "traffic", type: "symbol", source: "traffic", layout: { "icon-image": ["concat", "traffic-", ["get", "net"]], "icon-rotate": ["get", "hdg"], "icon-rotation-alignment": "map", "icon-allow-overlap": true, "icon-size": ["interpolate", ["linear"], ["zoom"], 2, 0.55, 9, 1] }, paint: { "icon-opacity": 0.95 } });
+    // Taxiway signs: black letters on a yellow board, like the real ones.
+    if (!m.hasImage("gp-sign")) {
+      const c = document.createElement("canvas"); c.width = 48; c.height = 48; const g = c.getContext("2d")!;
+      const rr = (x: number, y: number, w: number, h: number, r: number) => { g.beginPath(); if (g.roundRect) g.roundRect(x, y, w, h, r); else g.rect(x, y, w, h); g.fill(); };
+      g.fillStyle = "#111"; rr(2, 2, 44, 44, 8); g.fillStyle = "#FFD21F"; rr(5, 5, 38, 38, 6);
+      m.addImage("gp-sign", { width: 48, height: 48, data: new Uint8Array(g.getImageData(0, 0, 48, 48).data.buffer) }, { pixelRatio: 2, stretchX: [[12, 36]], stretchY: [[12, 36]], content: [10, 8, 38, 40] });
+    }
+    // Other aircraft on the ground (sim AI traffic and online pilots) in 3D, at their real spots and headings.
+    m.addSource("traffic3d", { type: "geojson", data: empty() as never });
+    m.addLayer({ id: "traffic3d", type: "fill-extrusion", source: "traffic3d", minzoom: 12, paint: { "fill-extrusion-color": ["get", "color"], "fill-extrusion-base": ["get", "base"], "fill-extrusion-height": ["get", "top"], "fill-extrusion-vertical-gradient": true } });
     // Your aircraft in 3D: a low-poly airliner made of extrusions, with its shadow on the ground.
     m.addSource("ac3d", { type: "geojson", data: empty() as never });
     m.addSource("ac3d-shadow", { type: "geojson", data: empty() as never });
@@ -399,10 +411,11 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
   useEffect(() => {
     const m = map.current;
     if (!m || !ready) return;
-    const redraw = () => { const a = acAnim.current?.at(performance.now()); if (a) draw3d(a[0], a[1], a[2], true); else if (!threeDRef.current) draw3d(0, 0, 0, true); };
+    const redraw = () => { const a = acAnim.current?.at(performance.now()); if (a) draw3d(a[0], a[1], a[2], true); else if (!threeDRef.current) draw3d(0, 0, 0, true); drawTraffic3d(); };
     redraw();
     m.on("zoomend", redraw);
-    return () => { m.off("zoomend", redraw); };
+    m.on("moveend", drawTraffic3d);
+    return () => { m.off("zoomend", redraw); m.off("moveend", drawTraffic3d); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [threeD, ready]);
 
@@ -590,7 +603,21 @@ export function MapView({ trail, plan, aircraft, airports = [], traffic = [], at
     };
     data.current.traffic = fc;
     (m.getSource("traffic") as GeoJSONSource | undefined)?.setData(fc);
-  }, [ready, traffic]);
+    drawTraffic3d();
+  }, [ready, traffic, threeD]);
+
+  // Ground traffic in 3D (3D view only, close in): real positions and headings, real size so they fit the stands.
+  const drawTraffic3d = () => {
+    const m = map.current;
+    const src = m?.getSource("traffic3d") as GeoJSONSource | undefined;
+    if (!m || !src) return;
+    if (!threeDRef.current || m.getZoom() < 12) { src.setData(empty() as never); return; }
+    const k = Math.max(1, planeScale(m.getZoom()) * 0.45);
+    const c = m.getCenter();
+    const near = trafficRef.current.filter((p) => p.gsKt < 45 && Math.abs(p.lat - c.lat) < 0.15 && Math.abs(p.lon - c.lng) < 0.25).slice(0, 80);
+    const features = near.flatMap((p) => planeExtrusion(p.lon, p.lat, p.hdg, k, 0).body.features);
+    src.setData({ type: "FeatureCollection", features } as never);
+  };
 
   // ATC
   useEffect(() => {

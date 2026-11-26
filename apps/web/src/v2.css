@@ -260,3 +260,5 @@ html:root .btn::after { content: ""; position: absolute; top: 0; bottom: 0; left
   html:root .tabbar .tab:hover:not(.on) { color: var(--ds-ink) !important; background: rgba(255,255,255,.12); }
 }
 @media (prefers-reduced-motion: reduce) { html:root .btn::after { display: none; } html:root .btn:hover { transform: none; } }
+html:root .map-tools { z-index: 8 !important; }
+html:root body div.shell.shell:not(.glance) { grid-template-columns: minmax(0, 1fr) !important; }
