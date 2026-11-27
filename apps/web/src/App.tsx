@@ -1,3 +1,4 @@
+import { Overlay } from "./screens/Overlay";
 import { flushSync } from "react-dom";
 import { Support } from "./screens/Support";
 import { PerformanceScreen } from "./screens/Performance";
@@ -306,6 +307,7 @@ export function App() {
     default: body = <Home />;
   }
 
+  if (screen === "overlay") return <Overlay layout={rest[0]} />;
   if (!welcomed) return (<><Sky /><Welcome onDone={() => setWelcomed(true)} /></>);
 
   return (

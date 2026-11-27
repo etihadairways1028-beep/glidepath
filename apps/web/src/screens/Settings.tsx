@@ -96,6 +96,8 @@ export function SettingsScreen() {
             </div>
           </Section>
 
+          <StreamOverlay />
+
           <Section title="SimBrief">
             <div className="stack" style={{ gap: 12 }}>
               <div className="field"><label htmlFor="sb">SimBrief username or Pilot ID</label><input id="sb" className="input" value={s.simbriefUser} onChange={(e) => settingsStore.set({ simbriefUser: e.target.value })} placeholder="Your Navigraph alias" /></div>
@@ -278,5 +280,27 @@ function PushKinds() {
       ))}
       <p className="faint push-note">Emails (your debrief and in-flight emails) stay as they are; change those under Account.</p>
     </div>
+  );
+}
+
+/** Stream overlay: the link to add as a Browser source in OBS on the sim PC. */
+function StreamOverlay() {
+  const [copied, setCopied] = useState<string | null>(null);
+  const base = "http://localhost:4810/app/#/overlay";
+  const links: [string, string][] = [["Bar along the bottom", base], ["Small card", `${base}/card`]];
+  const copy = async (u: string) => { try { await navigator.clipboard.writeText(u); setCopied(u); setTimeout(() => setCopied(null), 1800); } catch { setCopied(null); } };
+  return (
+    <Section title="Stream overlay">
+      <div className="stack" style={{ gap: 10 }}>
+        <p className="muted" style={{ margin: 0 }}>Show your live flight on stream. In OBS (or any streaming app) on your sim PC, add a <b>Browser</b> source with one of these links, sized 1920 × 1080. The background is transparent, and it shows nothing when no flight is running.</p>
+        {links.map(([label, u]) => (
+          <div key={u} className="row wrap" style={{ gap: 8, alignItems: "center" }}>
+            <span style={{ minWidth: 150 }}>{label}</span>
+            <code className="data" style={{ fontSize: 12.5, wordBreak: "break-all", flex: 1 }}>{u}</code>
+            <button className="btn small" onClick={() => void copy(u)}>{copied === u ? "Copied" : "Copy"}</button>
+          </div>
+        ))}
+      </div>
+    </Section>
   );
 }

@@ -1,4 +1,5 @@
 import { ShareCardButton } from "../components/ShareCard";
+import { PilotCardButton } from "../components/PilotCard";
 import { ReplayVideo } from "../components/ReplayVideo";
 import { AllFlightsMap } from "../components/AllFlightsMap";
 import { ReviewPending, ReviewScore } from "../components/FlightReview";
@@ -114,6 +115,7 @@ function totalsLine(done: FlightSummary[]): string {
 
 export function Logbook() {
   const { flights, error, fromCloud } = useFlights();
+  const cloud = useCloud();
   const mode = useApp((s) => s.mode);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<"all" | "completed" | "incomplete">("all");
@@ -136,7 +138,10 @@ export function Logbook() {
     <div className="stack">
       <div className="between wrap">
         <h1 className="title">Logbook</h1>
-        <button className="btn small" disabled={!list.length} onClick={() => exportCsv(list)}><span style={{ width: 16, height: 16 }}>{Icon.download()}</span>Export CSV</button>
+        <div className="row" style={{ gap: 8 }}>
+          {flights && <PilotCardButton flights={flights} name={cloud.profile?.display_name ?? ""} />}
+          <button className="btn small" disabled={!list.length} onClick={() => exportCsv(list)}><span style={{ width: 16, height: 16 }}>{Icon.download()}</span>Export CSV</button>
+        </div>
       </div>
       {mode === "none" && !fromCloud && <Notice info>Your logbook lives on your Bridge, so it keeps every flight even when this device is off. <a href="#/settings">Connect your Bridge</a> or <a href="#/account">sign in</a> to see it.</Notice>}
       {fromCloud && <Notice info>Showing the flights saved to your account. Connect your Bridge for full replays and maps of each flight.</Notice>}
