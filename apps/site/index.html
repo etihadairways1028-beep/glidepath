@@ -37,6 +37,7 @@
       <a class="brand" href="#" aria-label="Glidepath home"><img src="assets/mark.svg" alt="" width="28" height="28"><span>Glidepath</span></a>
       <div class="links">
         <a href="#flight">Gate to gate</a>
+        <a href="#try">Try it</a>
         <a href="#free">Free</a>
         <a href="features.html">Features</a>
         <a href="#faq">FAQ</a>
@@ -50,6 +51,8 @@
     <div class="menu-sheet glass strong" id="menu-sheet" hidden>
       <button type="button" class="menu-signin" id="menu-signin" hidden>Sign in or create an account</button>
       <a href="#flight">Gate to gate</a>
+      <a href="#try">Try it here</a>
+      <a href="#apps">EFB apps</a>
       <a href="#free">Everything free</a>
       <a href="#share">Stream and share</a>
       <a href="features.html">Every feature</a>
@@ -79,8 +82,8 @@
         </div>
         <ul class="g3-facts"><li>Every feature free</li><li>No account needed</li><li>Nothing added to your sim</li></ul>
       </div>
-      <div class="g3-hero-device reveal" aria-hidden="true">
-        <div class="g3-ipad"><img src="assets/shots/ipad3-home.webp" alt="" width="1180" height="820"></div>
+      <div class="g3-hero-device" aria-hidden="true">
+        <img class="g3-dev" src="assets/shots/dev-hero.webp" alt="" width="1044" height="836" fetchpriority="high">
       </div>
     </section>
 
@@ -119,7 +122,7 @@
           <article class="g3-step" data-shot="land">
             <span class="g3-ph">04 · Landing</span>
             <h3>Every landing graded.</h3>
-            <p>Rate of descent, g-force, where you touched down and how close to the centreline, with one clear thing to work on next time.</p>
+            <p>The moment you touch down: your grade, rate, g-force and a score out of 100. Then the full debrief, with one clear thing to work on next time.</p>
           </article>
           <article class="g3-step" data-shot="logbook">
             <span class="g3-ph">05 · At the gate</span>
@@ -128,16 +131,56 @@
           </article>
         </div>
         <div class="g3-stage" aria-hidden="true">
-          <div class="g3-ipad">
-            <img class="on" data-shot="efb" src="assets/shots/ipad3-efb.webp" alt="" width="1180" height="820" loading="lazy">
-            <img data-shot="flight" src="assets/shots/ipad3-flight.webp" alt="" width="1180" height="820" loading="lazy">
-            <img data-shot="home" src="assets/shots/ipad3-home.webp" alt="" width="1180" height="820" loading="lazy">
-            <img data-shot="land" src="assets/shots/ipad3-land.webp" alt="" width="1180" height="820" loading="lazy">
-            <img data-shot="logbook" src="assets/shots/ipad3-logbook.webp" alt="" width="1180" height="820" loading="lazy">
+          <div class="g3-devstage">
+            <img class="on" data-shot="efb" src="assets/shots/dev-plan.webp" alt="" width="1078" height="816" loading="lazy">
+            <img data-shot="home" src="assets/shots/dev-fly.webp" alt="" width="1078" height="816" loading="lazy">
+            <img data-shot="flight" src="assets/shots/dev-descent.webp" alt="" width="1078" height="816" loading="lazy">
+            <img data-shot="land" src="assets/shots/dev-land.webp" alt="" width="1078" height="816" loading="lazy">
+            <img data-shot="logbook" src="assets/shots/dev-log.webp" alt="" width="1078" height="816" loading="lazy">
           </div>
-          <p class="g3-note">Real screens from Glidepath, on its built-in test flight from London Heathrow to Manchester.</p>
+          <p class="g3-note">Real screens from Glidepath, on a test flight from Frankfurt to London Heathrow in an A350-900.</p>
         </div>
       </div>
+    </section>
+
+    <!-- TRY IT: the real app, running a demo flight, right on the page -->
+    <section id="try" class="g3-try" aria-labelledby="try-title">
+      <div class="g3-head reveal">
+        <p class="kick">Try it here</p>
+        <h2 id="try-title">Fly the demo. Right on this page.</h2>
+        <p>This is the real Glidepath app running a demo flight, no install and no sign-in. Tap around: Home, Map, Flight, Logbook.</p>
+      </div>
+      <div class="g3-try-dev reveal">
+        <div class="g3-try-frame">
+          <div class="g3-try-screen" id="try-screen">
+            <button class="g3-try-start" type="button" id="try-start"><span><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg></span>Start the demo flight</button>
+          </div>
+        </div>
+      </div>
+      <p class="g3-note"><a href="app/?demo=1">Open it full screen</a> · The demo uses made-up flight data; with the Bridge it shows your real flight.</p>
+    </section>
+
+    <!-- EFB APPS: like an app store, all included -->
+    <section id="apps" class="g3-apps" aria-labelledby="apps-title">
+      <div class="g3-head reveal">
+        <p class="kick">EFB apps</p>
+        <h2 id="apps-title">Your EFB, with the apps already in it.</h2>
+        <p>Open the EFB in Glidepath and everything a flight needs is one tap away. Add-on pages for your aircraft sit right beside them.</p>
+      </div>
+      <ul class="g3-app-grid reveal">
+        <li><i style="--a:#3BA0FF;--b:#1450B8"><svg viewBox="0 0 24 24"><path d="M4 20 20 4M9 4h11v11"/></svg></i><b>SimBrief</b><span>Your latest flight, loaded by itself</span></li>
+        <li><i style="--a:#7DA7FF;--b:#3D5AFE"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM9 12h7M9 16h7"/></svg></i><b>Charts</b><span>Charts for your airports</span></li>
+        <li><i style="--a:#7FD3FF;--b:#2B8BDB"><svg viewBox="0 0 24 24"><path d="M7 18h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 2A3 3 0 0 0 7 18z"/></svg></i><b>Weather</b><span>METAR and TAF for your airports</span></li>
+        <li><i style="--a:#FF9F6B;--b:#E8590C"><svg viewBox="0 0 24 24"><path d="M4 19h16M6 15l4-4 3 3 5-6"/></svg></i><b>Performance</b><span>Takeoff and landing numbers</span></li>
+        <li><i style="--a:#34E0A1;--b:#0FA77A"><svg viewBox="0 0 24 24"><path d="M9 11l3 3 8-8M4 6h2M4 12h2M4 18h2"/></svg></i><b>Checklists</b><span>Tick through every phase</span></li>
+        <li><i style="--a:#FF8AB4;--b:#D6336C"><svg viewBox="0 0 24 24"><path d="M3 18 21 9M3 18h18"/></svg></i><b>Landing helper</b><span>Glide path and speeds on final</span></li>
+        <li><i style="--a:#FFD45E;--b:#E8A400"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h4"/></svg></i><b>Pilot tools</b><span>Conversions and quick maths</span></li>
+        <li><i style="--a:#8E9AAF;--b:#4A5568"><svg viewBox="0 0 24 24"><path d="M7 3h10v18H7zM11 7h2"/></svg></i><b>Remote</b><span>Autopilot, lights and camera</span></li>
+        <li><i style="--a:#2D3748;--b:#0B1220"><svg viewBox="0 0 24 24"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3zM9 3v15M15 6v15"/></svg></i><b>Navigraph</b><span>Opens Navigraph Charts on their site</span></li>
+        <li><i style="--a:#5B6478;--b:#2D3340"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 8h8M8 12h3M13 12h3M8 16h3M13 16h3"/></svg></i><b>PMDG CDU</b><span>The FMC on your iPad</span></li>
+        <li><i style="--a:#14B8A6;--b:#0F766E"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H4zM8 20h8M12 16v4"/></svg></i><b>Fenix · FSLabs · FBW</b><span>Their EFB pages, side by side</span></li>
+        <li><i style="--a:#F97316;--b:#C2410C"><svg viewBox="0 0 24 24"><path d="M3 17h13l3-5h2M5 17v2M14 17v2M7 12h6"/></svg></i><b>GSX</b><span>Ground services from your iPad</span></li>
+      </ul>
     </section>
 
     <!-- EVERYTHING FREE -->
@@ -181,14 +224,14 @@
     <!-- TRAILER -->
     <section class="g3-trailer reveal" aria-label="Glidepath trailer">
       <button class="g3-trailer-btn" type="button" data-trailer>
-        <img src="assets/shots/trailer-poster.webp?v=16" alt="" width="1600" height="900" loading="lazy">
+        <img src="assets/shots/trailer-poster.webp?v=17" alt="" width="1600" height="900" loading="lazy">
         <span class="g3-trailer-play"><svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg></span>
         <span class="g3-trailer-label">Watch the trailer</span>
       </button>
     </section>
     <dialog class="trailer-modal" id="trailer-modal" aria-label="Glidepath trailer">
       <button class="tm-close" type="button" aria-label="Close the trailer">×</button>
-      <video controls playsinline preload="none" poster="assets/shots/trailer-poster.webp?v=16"><source src="assets/video/glidepath-trailer.mp4?v=16" type="video/mp4"></video>
+      <video controls playsinline preload="none" poster="assets/shots/trailer-poster.webp?v=17"><source src="assets/video/glidepath-trailer.mp4?v=17" type="video/mp4"></video>
     </dialog>
     <video class="trailer-loop" hidden muted aria-hidden="true"></video>
 
