@@ -1,49 +1,19 @@
 /**
- * The moment you touch down: your grade lands on screen with your fpm, and a great landing
- * gets confetti. Shown once per landing, from the real landing report. Tap anywhere to close.
+ * The moment you touch down: a calm summary of the landing, from the real landing report:
+ * the grade inside a ring that fills to the score, then rate, g-force and the verdict.
+ * Shown once per landing. Tap anywhere to close.
  */
 import { useEffect, useRef, useState } from "react";
 import type { LandingReport } from "@glidepath/protocol";
 import { store, useApp } from "../data/store";
 import { LandedMissions } from "./Missions";
 
-const GOOD = new Set(["A+", "A"]);
-const COLORS = ["#64D2FF", "#0A84FF", "#5E5CE6", "#BF5AF2", "#30D158", "#FFD60A", "#FF9F0A"];
-
-function confetti(canvas: HTMLCanvasElement, big: boolean): () => void {
-  const c = canvas.getContext("2d");
-  if (!c) return () => undefined;
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  const W = (canvas.width = innerWidth * dpr), H = (canvas.height = innerHeight * dpr);
-  const n = big ? 170 : 70;
-  const ps = Array.from({ length: n }, (_, i) => ({
-    x: W * (0.15 + Math.random() * 0.7), y: H * (0.62 + Math.random() * 0.1),
-    vx: (Math.random() - 0.5) * 16 * dpr, vy: -(10 + Math.random() * 15) * dpr,
-    r: (3 + Math.random() * 5) * dpr, a: Math.random() * Math.PI, va: (Math.random() - .5) * .3, c: COLORS[i % COLORS.length]!, s: Math.random() > .5,
-  }));
-  let raf = 0, t0 = performance.now();
-  const tick = (now: number) => {
-    const dt = Math.min(2, (now - t0) / 16.7); t0 = now;
-    c.clearRect(0, 0, W, H);
-    let alive = 0;
-    for (const p of ps) {
-      p.vy += 0.32 * dpr * dt; p.vx *= 0.992; p.x += p.vx * dt; p.y += p.vy * dt; p.a += p.va * dt;
-      if (p.y < H + 20) alive++;
-      c.save(); c.translate(p.x, p.y); c.rotate(p.a); c.fillStyle = p.c;
-      if (p.s) c.fillRect(-p.r, -p.r / 2.4, p.r * 2, p.r / 1.2); else { c.beginPath(); c.arc(0, 0, p.r / 1.6, 0, Math.PI * 2); c.fill(); }
-      c.restore();
-    }
-    if (alive) raf = requestAnimationFrame(tick);
-  };
-  raf = requestAnimationFrame(tick);
-  return () => cancelAnimationFrame(raf);
-}
+const RING: Record<string, string> = { "A+": "#30D158", A: "#30D158", B: "#34C7A0", C: "#FFD60A", D: "#FF9F0A", F: "#FF453A" };
 
 export function Celebrate() {
   const landing = useApp((s) => s.landing);
   const [shown, setShown] = useState<LandingReport | null>(null);
   const seen = useRef<number | null>(null);
-  const cv = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     if (!landing) return;
     // Not for a landing that was already over when the app opened (compare with the flight's own clock).
@@ -55,21 +25,28 @@ export function Celebrate() {
     const t = window.setTimeout(() => setShown(null), 7000);
     return () => clearTimeout(t);
   }, [landing]);
-  useEffect(() => {
-    if (!shown || !cv.current || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    if (!["A+", "A", "B"].includes(shown.grade)) return;
-    return confetti(cv.current, GOOD.has(shown.grade));
-  }, [shown]);
   if (!shown) return null;
   const fpm = shown.touchdownVsFpm;
+  const score = typeof shown.score === "number" ? Math.max(0, Math.min(100, Math.round(shown.score))) : null;
+  const C = 2 * Math.PI * 54;
+  const ring = RING[shown.grade] ?? "#0A84FF";
   return (
-    <div className={`cel g-${shown.grade.replace("+", "p")}`} role="status" onClick={() => setShown(null)}>
-      <canvas ref={cv} className="cel-cv" aria-hidden="true" />
-      <div className="cel-card">
-        <span className="cel-k">{shown.runway ? `Landed on ${shown.runway.ident}` : "Touchdown"}</span>
-        <b className="cel-grade">{shown.grade}</b>
-        <span className="cel-fpm data">{fpm != null ? `${Math.round(Math.abs(fpm))} fpm` : "—"}{shown.peakG != null ? ` · ${shown.peakG.toFixed(2)} g` : ""}</span>
-        <span className="cel-v">{shown.verdict}</span>
+    <div className="cel2" role="status" onClick={() => setShown(null)}>
+      <div className="cel2-card glass strong">
+        <span className="cel2-k">{shown.runway ? `Landed · Runway ${shown.runway.ident}` : "Touchdown"}</span>
+        <div className="cel2-ring" style={{ ["--ring" as string]: ring }}>
+          <svg viewBox="0 0 120 120" aria-hidden="true">
+            <circle cx="60" cy="60" r="54" className="cel2-track" />
+            <circle cx="60" cy="60" r="54" className="cel2-fill" strokeDasharray={C} style={{ ["--off" as string]: String(C * (1 - (score ?? 0) / 100)), ["--full" as string]: String(C) }} />
+          </svg>
+          <b className="cel2-grade">{shown.grade}</b>
+        </div>
+        <dl className="cel2-stats">
+          <div><dt>Rate</dt><dd className="data">{fpm != null ? `${Math.round(Math.abs(fpm))}` : "—"}<small>fpm</small></dd></div>
+          <div><dt>G-force</dt><dd className="data">{shown.peakG != null ? shown.peakG.toFixed(2) : "—"}<small>g</small></dd></div>
+          <div><dt>Score</dt><dd className="data">{score ?? "—"}<small>/100</small></dd></div>
+        </dl>
+        <span className="cel2-v">{shown.verdict}</span>
         <LandedMissions />
         <a className="btn small" href="#/flight" onClick={(e) => e.stopPropagation()}>See the debrief</a>
       </div>

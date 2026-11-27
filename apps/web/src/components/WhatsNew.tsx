@@ -6,7 +6,7 @@
 import { useEffect, useState } from "react";
 import { Icon } from "./ui";
 
-export const APP_VERSION = "1.7.1";
+export const APP_VERSION = "1.7.2";
 /** What people call this release. The number above is the build that updates follow. */
 export const LAUNCH_NAME = "1.0";
 export const versionLabel = (v: string) => (v === "1.7.0" ? `${LAUNCH_NAME} · launch` : v);
@@ -15,6 +15,7 @@ const KEY = "glidepath.seenVersion";
 export type WnIcon = "map" | "flight" | "remote" | "book" | "gear" | "spark" | "download" | "search" | "tower" | "cloud" | "layers" | "target" | "headset";
 export interface WnItem { v: string; ic: WnIcon; t: string; d: string }
 export const WHATS_NEW: WnItem[] = [
+  { v: "1.7.2", ic: "spark", t: "A calmer landing summary", d: "When you touch down, your grade now sits in a ring that fills to your score, with your rate, g-force and score out of 100 side by side. No more confetti." },
   { v: "1.7.1", ic: "spark", t: "Stream overlay", d: "Show your live flight on stream. In Settings › Stream overlay, copy a link and add it in OBS (or any streaming app) as a Browser source on your sim PC: your callsign, route, progress, altitude, speed and time to the gate along the bottom, on a transparent background. It shows nothing when you're not flying." },
   { v: "1.7.1", ic: "book", t: "Your pilot card", d: "In the Logbook, tap Pilot card for one picture of all your flying: every route on a map, your flights, hours and distance, your landing grades and the airports you visit most. Made from your own completed flights, ready to share or save." },
   { v: "1.7.0", ic: "spark", t: "Glidepath 1.0 is here", d: "The launch: a new look in day and night, your flight up front on Home, the EFB with SimBrief loading new flights by itself, airports in full detail with your sim's own stands and taxiways, 3D buildings, and every screen one tap away from More." },
