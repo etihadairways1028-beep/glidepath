@@ -23,3 +23,19 @@
   var film = document.querySelector(".g3-hero-film");
   if (film) new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) film.play().catch(function () {}); else film.pause(); }); }).observe(film);
 })();
+/* Try it here: load the real app in demo mode inside the iPad, only when asked. */
+(function () {
+  "use strict";
+  var btn = document.getElementById("try-start"), scr = document.getElementById("try-screen");
+  if (!btn || !scr) return;
+  btn.addEventListener("click", function () {
+    var f = document.createElement("iframe");
+    f.src = "app/?demo=1"; f.title = "Glidepath demo flight"; f.loading = "eager";
+    f.setAttribute("allow", "fullscreen");
+    scr.appendChild(f); btn.remove(); fit();
+  });
+  function fit() { scr.style.setProperty("--k", String(scr.clientWidth / 1180)); }
+  fit(); window.addEventListener("resize", fit);
+  // stagger the grid tiles
+  document.querySelectorAll(".g3-free-grid li, .g3-app-grid li").forEach(function (li, i) { li.style.setProperty("--i", String(i % 12)); });
+})();
