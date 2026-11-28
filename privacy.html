@@ -94,6 +94,8 @@
     // Same repo link as the main page.
     fetch("config.js").then(function (r) { return r.text(); }).then(function (t) { var m = /repo:\s*"([^"]+)"/.exec(t); if (m) document.querySelectorAll("[data-repo-link]").forEach(function (a) { a.href = "https://github.com/" + m[1]; }); }).catch(function () {});
   </script>
+  <script src="liquid.js" defer></script>
   <script src="press.js" defer></script>
+  <script src="cursor.js" defer></script>
 </body>
 </html>

@@ -385,16 +385,6 @@ html[data-theme="light"] .lg :is(.btn:not(.primary), .theme-btn, .menu-btn, .g3-
 }
 .lg .g3-play > span { width: 46px; height: 46px; border: 0 !important; }
 
-/* ---- a glass droplet that follows the pointer (desktop) ---- */
-.lg-drop { position: fixed; left: 0; top: 0; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; pointer-events: none; z-index: 60;
-  background: radial-gradient(60% 60% at 35% 30%, rgba(255,255,255,.35), rgba(255,255,255,0) 70%);
-  box-shadow: inset 1.5px 1.5px .5px -.5px #fff, inset -1px -1px .5px -.5px rgba(255,255,255,.6), inset 0 0 14px rgba(255,255,255,.25), 0 8px 20px -8px rgba(0,0,0,.45);
-  -webkit-backdrop-filter: blur(2px) saturate(180%) brightness(1.15); backdrop-filter: blur(2px) saturate(180%) brightness(1.15);
-  opacity: 0; transition: opacity .3s, width .35s cubic-bezier(.2, 1.4, .4, 1), height .35s cubic-bezier(.2, 1.4, .4, 1), margin .35s cubic-bezier(.2, 1.4, .4, 1); will-change: transform; }
-.lg-drop.on { opacity: 1; }
-.lg-drop.big { width: 76px; height: 76px; margin: -38px 0 0 -38px; }
-@media (pointer: coarse) { .lg-drop { display: none; } }
-
 /* ---- motion: a soft wobble on hover; presses are handled by press.js ---- */
 @keyframes jelly { 0% { scale: 1 1; } 25% { scale: 1.06 .94; } 45% { scale: .97 1.04; } 65% { scale: 1.02 .98; } 85% { scale: .995 1.005; } 100% { scale: 1 1; } }
 @keyframes jellySoft { 0% { scale: 1 1; } 30% { scale: 1.025 .975; } 55% { scale: .99 1.012; } 100% { scale: 1 1; } }
@@ -414,7 +404,7 @@ html[data-theme="light"] .g3-hero::after { filter: invert(1) hue-rotate(180deg) 
 /* sections float up as they appear */
 .g3 .reveal { transition: opacity .9s ease, transform 1.1s cubic-bezier(.2, 1.25, .35, 1); }
 
-@media (prefers-reduced-motion: reduce) { .lg-bg i, .lg .btn, .lg .btn.primary, .g3-hero::after { animation: none !important; } .lg-drop { display: none; } }
+@media (prefers-reduced-motion: reduce) { .lg-bg i, .lg .btn, .lg .btn.primary, .g3-hero::after { animation: none !important; } }
 
 /* ---- full liquid on computers: blobs that change shape as they drift, a moving wave and a
    breathing glow inside the main button. iPads and phones keep the calmer version above. ---- */
