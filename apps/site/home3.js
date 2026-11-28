@@ -50,3 +50,34 @@
     el.style.setProperty("--mx", (e.clientX - r.left) + "px"); el.style.setProperty("--my", (e.clientY - r.top) + "px");
   }, { passive: true });
 })();
+/* Buttons: magnetic pull, ripple on press, light that follows the pointer; cards tilt. */
+(function () {
+  "use strict";
+  var fine = matchMedia("(pointer: fine)").matches, reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  document.addEventListener("pointerdown", function (e) {
+    var b = e.target.closest && e.target.closest(".btn"); if (!b) return;
+    var r = b.getBoundingClientRect(), s = Math.max(r.width, r.height) * 2.2, d = document.createElement("span");
+    d.className = "rip"; d.style.width = d.style.height = s + "px"; d.style.left = (e.clientX - r.left - s / 2) + "px"; d.style.top = (e.clientY - r.top - s / 2) + "px";
+    b.appendChild(d); setTimeout(function () { d.remove(); }, 650);
+  });
+  if (!fine || reduce) return;
+  document.querySelectorAll(".btn.big, .btn.primary, .g3-play").forEach(function (b) {
+    b.addEventListener("pointermove", function (e) {
+      var r = b.getBoundingClientRect(), x = e.clientX - r.left - r.width / 2, y = e.clientY - r.top - r.height / 2;
+      b.style.translate = (x * 0.18).toFixed(1) + "px " + (y * 0.25).toFixed(1) + "px";
+      b.style.setProperty("--mx", (e.clientX - r.left) + "px"); b.style.setProperty("--my", (e.clientY - r.top) + "px");
+    });
+    b.addEventListener("pointerleave", function () { b.style.translate = ""; });
+    b.style.transition = (b.style.transition ? b.style.transition + "," : "") + "translate .35s cubic-bezier(.2,1.4,.4,1)";
+  });
+  document.querySelectorAll(".btn.glass").forEach(function (b) {
+    b.addEventListener("pointermove", function (e) { var r = b.getBoundingClientRect(); b.style.setProperty("--mx", (e.clientX - r.left) + "px"); b.style.setProperty("--my", (e.clientY - r.top) + "px"); });
+  });
+  document.querySelectorAll(".g3-free-grid li, .g3-app-grid li, .g3-steps3 li").forEach(function (c) {
+    c.addEventListener("pointermove", function (e) {
+      var r = c.getBoundingClientRect(), px = (e.clientX - r.left) / r.width - 0.5, py = (e.clientY - r.top) / r.height - 0.5;
+      c.style.setProperty("--ry", (px * 7).toFixed(2) + "deg"); c.style.setProperty("--rx", (-py * 7).toFixed(2) + "deg");
+    });
+    c.addEventListener("pointerleave", function () { c.style.setProperty("--ry", "0deg"); c.style.setProperty("--rx", "0deg"); });
+  });
+})();
