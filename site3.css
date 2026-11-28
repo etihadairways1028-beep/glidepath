@@ -477,3 +477,43 @@ html[data-theme="light"] .lg :is(.btn:not(.primary), .theme-btn, .menu-btn, .g3-
 }
 .lg .btn { border-radius: 999px !important; }
 .lg .g3-play > span { width: 46px; height: 46px; border: 0 !important; }
+
+/* ===== Final pass: 95% clear glass, softer colours, lighter on the GPU =====
+   Shape-morphing on the big blurred blobs repainted them every frame, so they
+   now only drift (cheap, runs on the compositor). */
+.lg-bg i { animation-name: lgA !important; animation-duration: 30s !important; border-radius: 50% !important; opacity: .45 !important; }
+.lg-bg .b2 { animation-name: lgB !important; } .lg-bg .b3 { animation-name: lgC !important; }
+html[data-theme="light"] .lg-bg i { opacity: .28 !important; }
+.lg :is(.nav.glass, .btn.glass, .g3-eye, .g3-works li, .g3-card, .g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .dl.glass, .faq-list details, .theme-btn, .menu-btn, .g3-play > span, .g3-try-start, .tm-close, .x) {
+  background: linear-gradient(135deg, rgba(255,255,255,.06), rgba(255,255,255,.015) 50%, rgba(255,255,255,.04)) !important;
+}
+.lg :is(.g3-card, .g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .dl.glass, .faq-list details) {
+  -webkit-backdrop-filter: blur(8px) saturate(140%) !important; backdrop-filter: blur(8px) saturate(140%);
+}
+.lg :is(.nav.glass, .btn, .g3-eye, .g3-works li, .theme-btn, .menu-btn, .g3-play > span, .g3-try-start, .tm-close, .x) {
+  -webkit-backdrop-filter: blur(2px) saturate(140%) brightness(1.04) !important; backdrop-filter: blur(2px) saturate(140%) brightness(1.04);
+}
+.lg .btn:not(.primary) { background: var(--lqb-shine), linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.01)) !important; }
+.lg .btn.primary, html[data-theme="light"] .lg .btn.primary {
+  background: var(--lqb-shine), linear-gradient(180deg, rgba(80,130,220,.5), rgba(40,85,190,.42)) !important;
+  box-shadow: var(--lqb-rim), inset 0 -8px 16px -8px rgba(10,40,140,.4), 0 12px 28px -12px rgba(40,90,200,.55) !important;
+}
+.lg { --lqb-shine: radial-gradient(120% 85% at 50% -30%, rgba(255,255,255,.45), rgba(255,255,255,.06) 50%, transparent 58%), radial-gradient(70% 55% at 50% 120%, rgba(255,255,255,.28), transparent 62%); }
+html[data-theme="light"] .lg :is(.nav.glass, .btn:not(.primary), .g3-eye, .g3-works li, .g3-card, .g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .dl.glass, .faq-list details, .theme-btn, .menu-btn, .g3-try-start, .x) {
+  background: linear-gradient(135deg, rgba(255,255,255,.22), rgba(255,255,255,.08)) !important;
+}
+
+/* ===== Reference look (grey glass) on the site too ===== */
+.lg { --gg-edge: inset 0 0 0 1px rgba(255,255,255,.28), inset 1.5px 1.5px 1px -.5px rgba(255,255,255,.7), inset -1.5px -1.5px 1px -.5px rgba(255,255,255,.35), inset 0 0 0 6px rgba(0,0,0,.035), inset 0 0 22px 2px rgba(0,0,0,.18), inset 0 0 44px -10px rgba(255,255,255,.12); }
+.lg :is(.nav.glass, .g3-card, .g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .dl.glass, .faq-list details, .g3-eye, .g3-works li) {
+  background: linear-gradient(160deg, rgba(150,150,156,.24), rgba(110,110,116,.2)) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(115%) !important; backdrop-filter: blur(16px) saturate(115%);
+  box-shadow: var(--gg-edge), 0 22px 48px -24px rgba(0,0,0,.6) !important;
+}
+.lg :is(.btn:not(.primary), .theme-btn, .menu-btn, .g3-play > span, .g3-try-start, .tm-close, .x) {
+  background: radial-gradient(120% 85% at 50% -30%, rgba(255,255,255,.28), transparent 58%), linear-gradient(180deg, rgba(170,170,176,.28), rgba(130,130,136,.24)) !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.3), inset 1.5px 1.5px 1px -.5px rgba(255,255,255,.75), inset -1.5px -1.5px 1px -.5px rgba(255,255,255,.35), inset 0 0 12px rgba(0,0,0,.12), 0 10px 22px -10px rgba(0,0,0,.5) !important;
+}
+html[data-theme="light"] .lg :is(.nav.glass, .g3-card, .g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .dl.glass, .faq-list details, .g3-eye, .g3-works li, .btn:not(.primary), .theme-btn, .menu-btn, .g3-try-start, .x) {
+  background: linear-gradient(160deg, rgba(235,235,238,.5), rgba(215,215,220,.4)) !important;
+}

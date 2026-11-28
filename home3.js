@@ -98,6 +98,5 @@ if (window.liquidGlass) {
     [".lg .nav.glass", { bezel: 20, strength: 64, extra: "blur(1px) saturate(190%) brightness(1.08)" }],
     [".lg :is(.btn, .g3-eye, .g3-works li, .g3-trailer-play, .theme-btn, .menu-btn, .g3-play > span, .g3-try-start, .tm-close)", pill],
     [".lg-drop", { bezel: 22, strength: 70, extra: "saturate(190%) brightness(1.12)" }],
-    [".lg :is(.g3-card, .g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .dl.glass, .faq-list details)", { bezel: 26, strength: 70, extra: "blur(5px) saturate(180%) brightness(1.06)" }],
   ]);
 }
