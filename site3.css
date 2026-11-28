@@ -221,3 +221,52 @@ body.g3.lg { background: transparent !important; }
 /* the hero sits on the film in both themes: keep its text light */
 html[data-theme="light"] .g3-hero :is(h1, .g3-lede, .g3-facts li, .g3-play, .g3-eye) { color: #f4f7fb !important; }
 html[data-theme="light"] .g3-hero .btn.glass { color: #f4f7fb !important; }
+
+/* =========================================================
+   Apple-style liquid glass v2: clear glass that bends the
+   world at its rim (lensing + a hint of colour split), a
+   bright specular edge, and almost no frosting.
+   ========================================================= */
+.lg { --glass-tint: rgba(255, 255, 255, .035); }
+html[data-theme="light"] .lg { --glass-tint: rgba(255, 255, 255, .28); }
+.lg :is(.nav.glass, .menu-sheet, .g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .g3-card, .g3-works li, .g3-eye, .faq-list details, .dl.glass, .btn.glass, .g3-try-start span, .g3-trailer-play) {
+  background: linear-gradient(180deg, rgba(255, 255, 255, .10), rgba(255, 255, 255, .02) 55%, rgba(255, 255, 255, .05)), var(--glass-tint) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(170%) brightness(1.08);
+  backdrop-filter: blur(10px) saturate(170%) brightness(1.08);
+  border: 0 !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, .10),
+    inset 0 1px 1px rgba(255, 255, 255, .55),
+    inset 0 -1px 1px rgba(255, 255, 255, .18),
+    inset 0 -18px 30px -24px rgba(255, 255, 255, .25),
+    inset 0 18px 30px -24px rgba(255, 255, 255, .35),
+    0 18px 50px -20px rgba(0, 0, 0, .55) !important;
+}
+/* the specular rim: bright top-left and bottom-right, like light caught by a curved edge */
+.lg :is(.nav.glass, .g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .g3-card, .faq-list details, .dl.glass, .btn.glass, .g3-eye, .g3-works li)::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.3px; pointer-events: none; z-index: 2;
+  background: linear-gradient(135deg, rgba(255, 255, 255, .95) 0%, rgba(255, 255, 255, .25) 18%, rgba(255, 255, 255, .04) 45%, rgba(255, 255, 255, .04) 60%, rgba(255, 255, 255, .45) 85%, rgba(255, 255, 255, .85) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+html[data-theme="light"] .lg :is(.nav.glass, .g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .g3-card, .faq-list details, .dl.glass, .btn.glass, .g3-eye, .g3-works li)::before { opacity: .9; }
+.lg .nav.glass, .lg .btn.glass, .lg .g3-eye, .lg .g3-works li { border-radius: 999px; }
+/* lensing at the rim where the browser can do it (Chrome, Edge on desktop) */
+@supports (backdrop-filter: url(#lg-card)) {
+  @media (pointer: fine) {
+    .lg :is(.g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .g3-card, .faq-list details, .dl.glass) { backdrop-filter: url(#lg-card) blur(3px) saturate(175%) brightness(1.08); }
+    .lg :is(.nav.glass, .g3-eye, .g3-works li) { backdrop-filter: url(#lg-pill) blur(2px) saturate(180%) brightness(1.1); }
+    .lg :is(.btn.glass, .g3-trailer-play, .g3-try-start span) { backdrop-filter: url(#lg-btn) blur(2px) saturate(180%) brightness(1.1); }
+  }
+}
+/* more of the world behind to bend: brighter, livelier colour field */
+.lg-bg i { opacity: .75; filter: blur(70px); }
+.lg-bg .b3 { opacity: .55; }
+.lg-bg .b4 { opacity: .5; }
+/* glass pops a little when touched, like Apple's */
+.lg :is(.btn.glass, .btn.primary) { transition: transform .35s cubic-bezier(.2, 1.4, .4, 1), box-shadow .3s; }
+.lg :is(.btn.glass, .btn.primary):hover { transform: scale(1.04); }
+.lg :is(.btn.glass, .btn.primary):active { transform: scale(.97); }
+@media (pointer: coarse) {
+  .lg :is(.g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .g3-card, .faq-list details, .g3-works li, .nav.glass) { -webkit-backdrop-filter: blur(14px) saturate(170%); backdrop-filter: blur(14px) saturate(170%); }
+}
