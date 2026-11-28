@@ -6,7 +6,7 @@
 import { useEffect, useState } from "react";
 import { Icon } from "./ui";
 
-export const APP_VERSION = "1.8.1";
+export const APP_VERSION = "1.8.2";
 /** What people call this release. The number above is the build that updates follow. */
 export const LAUNCH_NAME = "1.0";
 export const versionLabel = (v: string) => (v === "1.7.0" ? `${LAUNCH_NAME} · launch` : v);
@@ -15,6 +15,7 @@ const KEY = "glidepath.seenVersion";
 export type WnIcon = "map" | "flight" | "remote" | "book" | "gear" | "spark" | "download" | "search" | "tower" | "cloud" | "layers" | "target" | "headset";
 export interface WnItem { v: string; ic: WnIcon; t: string; d: string }
 export const WHATS_NEW: WnItem[] = [
+  { v: "1.8.2", ic: "spark", t: "A liquid glass cursor", d: "On a computer, a drop of glass follows your mouse, trailing little droplets and bending whatever is behind it. Over anything you can click it swells and wobbles. Your normal cursor stays as it is." },
   { v: "1.8.1", ic: "remote", t: "Opens even when your PC is off", d: "If you opened Glidepath from your PC's address, it now offers a one-tap switch to the website version, already connected to your PC. That one always opens, even with the Bridge closed, and keeps your logbook." },
   { v: "1.8.1", ic: "spark", t: "Glass that follows your cursor", d: "On a computer, light flows across buttons and cards as your mouse moves, tiles tilt toward it, buttons lean in like a magnet, and every button and card bends what's behind it." },
   { v: "1.8.0", ic: "spark", t: "Liquid glass", d: "Panels, bars and buttons are now clear glass you can see the sky and map through, with a thick edge that catches the light. The tab highlight flows between tabs like a drop of water, and on Chrome and Edge the bars bend what's behind them like a real lens." },
