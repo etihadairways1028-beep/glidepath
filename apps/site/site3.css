@@ -152,3 +152,72 @@ html { scroll-behavior: auto; }
 .g3-free-grid.reveal.in li, .g3-app-grid.reveal.in li { opacity: 1; translate: 0 0; }
 .g3 .g3-free-grid.reveal, .g3 .g3-app-grid.reveal { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: reduce) { .g3-dev { animation: none; } .g3 .reveal { opacity: 1; transform: none; } }
+
+/* =========================================================
+   Liquid glass: a living colour field behind, and glass that
+   blurs, saturates and (in Chromium) gently refracts it.
+   ========================================================= */
+.lg-defs { position: absolute; width: 0; height: 0; }
+.lg-bg { position: fixed; inset: 0; z-index: -5; overflow: hidden; pointer-events: none; background: radial-gradient(120% 80% at 50% 0%, #0b1736 0%, #050915 60%); }
+.lg-bg i { position: absolute; border-radius: 50%; filter: blur(80px); opacity: .55; will-change: transform; }
+.lg-bg .b1 { width: 46vw; height: 46vw; left: -8vw; top: 8vh; background: #1d4ed8; animation: lgA 26s ease-in-out infinite; }
+.lg-bg .b2 { width: 38vw; height: 38vw; right: -6vw; top: 30vh; background: #0ea5e9; animation: lgB 31s ease-in-out infinite; }
+.lg-bg .b3 { width: 34vw; height: 34vw; left: 30vw; bottom: -10vh; background: #7c3aed; opacity: .38; animation: lgC 35s ease-in-out infinite; }
+.lg-bg .b4 { width: 26vw; height: 26vw; right: 22vw; top: -6vh; background: #14b8a6; opacity: .3; animation: lgA 40s ease-in-out infinite reverse; }
+@keyframes lgA { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(8vw, 10vh) scale(1.12); } }
+@keyframes lgB { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(-10vw, -6vh) scale(.9); } }
+@keyframes lgC { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-6vw, -12vh); } }
+html[data-theme="light"] .lg-bg { background: radial-gradient(120% 80% at 50% 0%, #eaf2ff 0%, #f4f7fb 60%); }
+html[data-theme="light"] .lg-bg i { opacity: .35; }
+.g3.lg { background: transparent; }
+
+/* the material */
+.lg { --glass-tint: rgba(255, 255, 255, .075); --glass-edge: rgba(255, 255, 255, .28); --glass-hi: rgba(255, 255, 255, .55); }
+html[data-theme="light"] .lg { --glass-tint: rgba(255, 255, 255, .55); --glass-edge: rgba(255, 255, 255, .9); --glass-hi: rgba(255, 255, 255, 1); }
+.lg :is(.nav.glass, .menu-sheet, .g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .g3-card, .g3-works li, .g3-eye, .faq-list details, .dl.glass, .btn.glass, .g3-try-start span, .g3-trailer-play) {
+  position: relative; isolation: isolate;
+  background: linear-gradient(135deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, .03) 42%, rgba(255, 255, 255, .07)), var(--glass-tint) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(185%) brightness(1.06);
+  backdrop-filter: blur(22px) saturate(185%) brightness(1.06);
+  border: 1px solid var(--glass-edge) !important;
+  box-shadow:
+    inset 0 1.5px 0 var(--glass-hi),
+    inset 0 -1px 0 rgba(255, 255, 255, .10),
+    inset 1px 0 0 rgba(255, 255, 255, .12),
+    inset 0 0 24px rgba(255, 255, 255, .05),
+    0 24px 60px -24px rgba(0, 0, 0, .55) !important;
+}
+/* refraction where supported (Chromium); Safari keeps the blur above */
+@supports (backdrop-filter: url(#lg-refract)) {
+  @media (pointer: fine) {
+    .lg :is(.nav.glass, .g3-card, .dl.glass, .g3-free-grid li, .g3-app-grid li, .g3-steps3 li) { backdrop-filter: url(#lg-refract) blur(18px) saturate(185%) brightness(1.06); }
+  }
+}
+/* specular sheen that follows the pointer */
+.lg :is(.g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .g3-card, .dl.glass, .faq-list details)::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: -1;
+  background: radial-gradient(360px circle at var(--mx, 30%) var(--my, 0%), rgba(255, 255, 255, .16), transparent 55%);
+  opacity: .9; transition: opacity .3s;
+}
+.lg :is(.g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .g3-card, .faq-list details) { border-radius: 24px; }
+.lg .g3-free-grid li:hover, .lg .g3-app-grid li:hover, .lg .g3-steps3 li:hover { transform: translateY(-4px) scale(1.01); }
+.lg .btn.glass { color: inherit; }
+.lg .btn.primary { background: linear-gradient(180deg, #ffffff, #e9eef8) !important; color: #071225 !important; box-shadow: inset 0 1px 0 #fff, 0 10px 30px -10px rgba(120, 170, 255, .7) !important; }
+html[data-theme="light"] .lg .btn.primary { background: linear-gradient(180deg, #2f6df6, #1d4ed8) !important; color: #fff !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 10px 30px -10px rgba(29, 78, 216, .7) !important; }
+.lg .g3-trailer-btn, .lg .g3-try-frame { box-shadow: 0 0 0 1px rgba(255, 255, 255, .18), 0 50px 100px -30px rgba(0, 0, 0, .7); }
+/* sections no longer paint solid colour, so the field shows through */
+.lg .g3-free { background: none; }
+.lg .g3-works { border-color: rgba(255, 255, 255, .12); }
+.lg .foot { background: transparent; }
+/* iPad and phones: lighter glass for smooth scrolling */
+@media (pointer: coarse) {
+  .lg-bg i { animation: none; filter: blur(60px); }
+  .lg :is(.g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .g3-card, .faq-list details, .g3-works li) { -webkit-backdrop-filter: blur(12px) saturate(160%); backdrop-filter: blur(12px) saturate(160%); }
+}
+@media (prefers-reduced-motion: reduce) { .lg-bg i { animation: none; } }
+html:has(body.lg) { background: #050915 !important; }
+html[data-theme="light"]:has(body.lg) { background: #f4f7fb !important; }
+body.g3.lg { background: transparent !important; }
+/* the hero sits on the film in both themes: keep its text light */
+html[data-theme="light"] .g3-hero :is(h1, .g3-lede, .g3-facts li, .g3-play, .g3-eye) { color: #f4f7fb !important; }
+html[data-theme="light"] .g3-hero .btn.glass { color: #f4f7fb !important; }
