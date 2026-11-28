@@ -187,12 +187,6 @@ html[data-theme="light"] .lg { --glass-tint: rgba(255, 255, 255, .55); --glass-e
     inset 0 0 24px rgba(255, 255, 255, .05),
     0 24px 60px -24px rgba(0, 0, 0, .55) !important;
 }
-/* refraction where supported (Chromium); Safari keeps the blur above */
-@supports (backdrop-filter: url(#lg-refract)) {
-  @media (pointer: fine) {
-    .lg :is(.nav.glass, .g3-card, .dl.glass, .g3-free-grid li, .g3-app-grid li, .g3-steps3 li) { backdrop-filter: url(#lg-refract) blur(18px) saturate(185%) brightness(1.06); }
-  }
-}
 /* specular sheen that follows the pointer */
 .lg :is(.g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .g3-card, .dl.glass, .faq-list details)::after {
   content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: -1;
@@ -251,14 +245,6 @@ html[data-theme="light"] .lg { --glass-tint: rgba(255, 255, 255, .28); }
 }
 html[data-theme="light"] .lg :is(.nav.glass, .g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .g3-card, .faq-list details, .dl.glass, .btn.glass, .g3-eye, .g3-works li)::before { opacity: .9; }
 .lg .nav.glass, .lg .btn.glass, .lg .g3-eye, .lg .g3-works li { border-radius: 999px; }
-/* lensing at the rim where the browser can do it (Chrome, Edge on desktop) */
-@supports (backdrop-filter: url(#lg-card)) {
-  @media (pointer: fine) {
-    .lg :is(.g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .g3-card, .faq-list details, .dl.glass) { backdrop-filter: url(#lg-card) blur(3px) saturate(175%) brightness(1.08); }
-    .lg :is(.nav.glass, .g3-eye, .g3-works li) { backdrop-filter: url(#lg-pill) blur(2px) saturate(180%) brightness(1.1); }
-    .lg :is(.btn.glass, .g3-trailer-play, .g3-try-start span) { backdrop-filter: url(#lg-btn) blur(2px) saturate(180%) brightness(1.1); }
-  }
-}
 /* more of the world behind to bend: brighter, livelier colour field */
 .lg-bg i { opacity: .75; filter: blur(70px); }
 .lg-bg .b3 { opacity: .55; }
@@ -340,50 +326,83 @@ html[data-theme="light"] .lg .nav .links a:hover { background: rgba(36, 83, 255,
 .lg .g3-app-grid li:hover i { transform: scale(1.12) rotate(-6deg); }
 @media (prefers-reduced-motion: reduce) { .lg .btn.primary, .lg .btn.primary::before, .g3-play span::after, .g3-trailer-play::after { animation: none; } }
 
-/* =========================================================
-   Liquid: things that flow, wobble and stretch like water.
-   ========================================================= */
-/* the colour field: blobs that morph shape as they drift */
-.lg-bg i { border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%; animation-name: lgA, morph; animation-duration: 26s, 14s; animation-timing-function: ease-in-out, ease-in-out; animation-iteration-count: infinite, infinite; }
-.lg-bg .b2 { animation-name: lgB, morph; animation-duration: 31s, 17s; }
-.lg-bg .b3 { animation-name: lgC, morph; animation-duration: 35s, 19s; }
-.lg-bg .b4 { animation-name: lgA, morph; animation-duration: 40s, 21s; animation-direction: reverse, alternate; }
-@keyframes morph {
-  0%, 100% { border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%; rotate: 0deg; }
-  33% { border-radius: 63% 37% 41% 59% / 58% 63% 37% 42%; rotate: 60deg; }
-  66% { border-radius: 37% 63% 56% 44% / 33% 52% 48% 67%; rotate: -40deg; }
+/* =========================================================================
+   Liquid glass (site) — matches the app
+   Clear glass with a thick, light-catching edge. liquid.js bends the
+   background at the rim of the nav and buttons (Chromium only); press.js
+   animates every press. Kept cheap: light blurs, blobs only drift.
+   ========================================================================= */
+
+/* ---- tokens ---- */
+.lg {
+  --gg-edge: inset 0 0 0 1px rgba(255,255,255,.28), inset 1.5px 1.5px 1px -.5px rgba(255,255,255,.7), inset -1.5px -1.5px 1px -.5px rgba(255,255,255,.35),
+    inset 0 0 0 6px rgba(0,0,0,.035), inset 0 0 22px 2px rgba(0,0,0,.18), inset 0 0 44px -10px rgba(255,255,255,.12);
+  --lqb-rim: inset 3px 3px 1.5px -1.5px rgba(255,255,255,1), inset -3px -3px 1.5px -1.5px rgba(255,255,255,.7), inset 0 0 0 1px rgba(255,255,255,.22),
+    inset 0 14px 16px -11px rgba(255,255,255,.7), inset 0 -12px 14px -10px rgba(255,255,255,.5), inset 0 0 20px -2px rgba(255,255,255,.16);
+  --lqb-shine: radial-gradient(120% 85% at 50% -30%, rgba(255,255,255,.45), rgba(255,255,255,.06) 50%, transparent 58%), radial-gradient(70% 55% at 50% 120%, rgba(255,255,255,.28), transparent 62%);
 }
 
-/* a glass droplet that follows the pointer, stretching with its speed (desktop) */
+/* ---- the colour field: soft blobs that drift (transform only, cheap) ---- */
+.lg-bg i { border-radius: 50%; opacity: .45 !important; }
+@media (pointer: coarse) { .lg-bg i { animation: none !important; } }
+html[data-theme="light"] .lg-bg i { opacity: .28 !important; }
+
+/* ---- panels: clear glass ---- */
+.lg :is(.nav.glass, .g3-card, .g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .dl.glass, .faq-list details, .g3-eye, .g3-works li) {
+  background: linear-gradient(160deg, rgba(255,255,255,.07), rgba(255,255,255,.025)) !important;
+  -webkit-backdrop-filter: blur(8px) saturate(150%) brightness(1.04) !important; backdrop-filter: blur(8px) saturate(150%) brightness(1.04);
+  border-color: transparent !important;
+  box-shadow: var(--gg-edge), 0 22px 48px -24px rgba(0,0,0,.6) !important;
+}
+.lg :is(.nav.glass, .g3-eye, .g3-works li) { -webkit-backdrop-filter: blur(3px) saturate(150%) brightness(1.05) !important; backdrop-filter: blur(3px) saturate(150%) brightness(1.05); }
+html[data-theme="light"] .lg :is(.nav.glass, .g3-card, .g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .dl.glass, .faq-list details, .g3-eye, .g3-works li) {
+  background: linear-gradient(160deg, rgba(255,255,255,.3), rgba(255,255,255,.14)) !important;
+}
+.lg .nav.glass :is(a, button) { text-shadow: 0 1px 2px rgba(0,0,0,.35); }
+/* the older pointer-light rim would double the edge where the lens is on */
+.lg :is(.nav.glass, .btn.glass, .g3-eye, .g3-works li).lq-lens::before { opacity: .35; }
+
+/* ---- buttons: glass pills ---- */
+.lg :is(.btn, .theme-btn, .menu-btn, .g3-play > span, .g3-try-start, .tm-close, .x) {
+  -webkit-backdrop-filter: blur(2px) saturate(140%) brightness(1.04) !important; backdrop-filter: blur(2px) saturate(140%) brightness(1.04);
+  border-color: transparent !important; color: #fff;
+}
+.lg .btn { border-radius: 999px !important; }
+.lg :is(.btn:not(.primary), .theme-btn, .menu-btn, .g3-play > span, .g3-try-start, .tm-close, .x) {
+  background: radial-gradient(120% 85% at 50% -30%, rgba(255,255,255,.32), transparent 58%), linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,.03)) !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.3), inset 1.5px 1.5px 1px -.5px rgba(255,255,255,.75), inset -1.5px -1.5px 1px -.5px rgba(255,255,255,.35), inset 0 0 12px rgba(0,0,0,.12), 0 10px 22px -10px rgba(0,0,0,.5) !important;
+}
+html[data-theme="light"] .lg :is(.btn:not(.primary), .theme-btn, .menu-btn, .g3-try-start, .x) {
+  color: #0b1530; background: var(--lqb-shine), linear-gradient(180deg, rgba(255,255,255,.4), rgba(255,255,255,.18)) !important;
+}
+.lg :is(.btn, .theme-btn, .menu-btn, .g3-try-start, .tm-close, .x):hover, .lg .g3-play:hover > span { filter: brightness(1.12) saturate(1.1); }
+/* colour sits inside the glass as a soft tint */
+.lg .btn.primary, html[data-theme="light"] .lg .btn.primary {
+  color: #fff !important; text-shadow: 0 1px 2px rgba(10,40,120,.5);
+  background: var(--lqb-shine), linear-gradient(180deg, rgba(80,130,220,.5), rgba(40,85,190,.42)) !important;
+  box-shadow: var(--lqb-rim), inset 0 -8px 16px -8px rgba(10,40,140,.4), 0 12px 28px -12px rgba(40,90,200,.55) !important;
+  background-size: 100% 100% !important; background-repeat: no-repeat !important; animation: none;
+}
+.lg .g3-play > span { width: 46px; height: 46px; border: 0 !important; }
+
+/* ---- a glass droplet that follows the pointer (desktop) ---- */
 .lg-drop { position: fixed; left: 0; top: 0; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; pointer-events: none; z-index: 60;
-  background: radial-gradient(circle at 32% 28%, rgba(255, 255, 255, .55), rgba(255, 255, 255, .06) 45%, rgba(255, 255, 255, .02) 70%);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, .7), inset 0 -2px 6px rgba(255, 255, 255, .15), 0 8px 24px -8px rgba(0, 0, 0, .4);
+  background: radial-gradient(60% 60% at 35% 30%, rgba(255,255,255,.35), rgba(255,255,255,0) 70%);
+  box-shadow: inset 1.5px 1.5px .5px -.5px #fff, inset -1px -1px .5px -.5px rgba(255,255,255,.6), inset 0 0 14px rgba(255,255,255,.25), 0 8px 20px -8px rgba(0,0,0,.45);
   -webkit-backdrop-filter: blur(2px) saturate(180%) brightness(1.15); backdrop-filter: blur(2px) saturate(180%) brightness(1.15);
   opacity: 0; transition: opacity .3s, width .35s cubic-bezier(.2, 1.4, .4, 1), height .35s cubic-bezier(.2, 1.4, .4, 1), margin .35s cubic-bezier(.2, 1.4, .4, 1); will-change: transform; }
-@supports (backdrop-filter: url(#lg-btn)) { .lg-drop { backdrop-filter: url(#lg-btn) blur(1px) saturate(190%) brightness(1.12); } }
 .lg-drop.on { opacity: 1; }
 .lg-drop.big { width: 76px; height: 76px; margin: -38px 0 0 -38px; }
 @media (pointer: coarse) { .lg-drop { display: none; } }
 
-/* jelly: glass that wobbles when you touch it */
-@keyframes jelly {
-  0% { scale: 1 1; } 25% { scale: 1.06 .94; } 45% { scale: .97 1.04; } 65% { scale: 1.02 .98; } 85% { scale: .995 1.005; } 100% { scale: 1 1; }
-}
+/* ---- motion: a soft wobble on hover; presses are handled by press.js ---- */
+@keyframes jelly { 0% { scale: 1 1; } 25% { scale: 1.06 .94; } 45% { scale: .97 1.04; } 65% { scale: 1.02 .98; } 85% { scale: .995 1.005; } 100% { scale: 1 1; } }
 @keyframes jellySoft { 0% { scale: 1 1; } 30% { scale: 1.025 .975; } 55% { scale: .99 1.012; } 100% { scale: 1 1; } }
-.lg .btn:hover { animation: jelly .7s cubic-bezier(.3, .7, .4, 1); }
-.lg .btn.primary:hover { animation: jelly .7s cubic-bezier(.3, .7, .4, 1), btnBreathe 3.2s ease-in-out infinite; }
-.lg .btn:active { scale: .94 1.02; transition: scale .08s; }
-.lg :is(.g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .faq-list details):hover { animation: jellySoft .6s cubic-bezier(.3, .7, .4, 1); }
-.lg .nav .links a:hover { animation: jelly .55s cubic-bezier(.3, .7, .4, 1); }
-
-/* liquid inside the main button: a slow wave of light rolls through it */
-.lg .btn.primary { background-image:
-  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 40' preserveAspectRatio='none'%3E%3Cpath d='M0 26 Q25 18 50 26 T100 26 T150 26 T200 26 V40 H0Z' fill='rgba(255,255,255,0.16)'/%3E%3C/svg%3E"),
-  linear-gradient(180deg, #4d82ff 0%, #2453ff 55%, #1b3fd6 100%) !important;
-  background-size: 200% 100%, 100% 100%; background-repeat: repeat-x, no-repeat; animation: btnBreathe 3.2s ease-in-out infinite, wave 4s linear infinite; }
-@keyframes wave { to { background-position: -200% 0, 0 0; } }
-.lg .btn.primary:hover { animation: jelly .7s cubic-bezier(.3, .7, .4, 1), btnBreathe 3.2s ease-in-out infinite, wave 1.6s linear infinite; }
-
+@media (hover: hover) {
+  .lg .btn:hover { animation: jelly .7s cubic-bezier(.3, .7, .4, 1); }
+  .lg :is(.g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .faq-list details):hover { animation: jellySoft .6s cubic-bezier(.3, .7, .4, 1); }
+  .lg .nav .links a:hover { animation: jelly .55s cubic-bezier(.3, .7, .4, 1); }
+}
 /* a liquid edge where the hero meets the page */
 .g3-hero::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 90px; z-index: 0; pointer-events: none;
   background:
@@ -392,128 +411,7 @@ html[data-theme="light"] .lg .nav .links a:hover { background: rgba(36, 83, 255,
   animation: heroWave 18s linear infinite; }
 @keyframes heroWave { to { background-position: -100% 0, 100% 0; } }
 html[data-theme="light"] .g3-hero::after { filter: invert(1) hue-rotate(180deg) brightness(1.9); opacity: .9; }
-
-/* sections float up like they're surfacing */
+/* sections float up as they appear */
 .g3 .reveal { transition: opacity .9s ease, transform 1.1s cubic-bezier(.2, 1.25, .35, 1); }
 
 @media (prefers-reduced-motion: reduce) { .lg-bg i, .lg .btn, .lg .btn.primary, .g3-hero::after { animation: none !important; } .lg-drop { display: none; } }
-
-/* ===== Clear glass (Apple's "clear" Liquid Glass) =====
-   Nearly see-through middle, a thick rim that catches light on the top-left
-   and glows softly on the bottom-right. liquid.js adds the bending lens on
-   Chromium; everywhere else this CSS alone gives the look. */
-.lg :is(.nav.glass, .btn.glass, .g3-eye, .g3-works li, .g3-trailer-play, .theme-btn, .g3-card, .g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .dl.glass, .faq-list details) {
-  background: linear-gradient(135deg, rgba(255,255,255,.10), rgba(255,255,255,.02) 45%, rgba(255,255,255,.06)) !important;
-  -webkit-backdrop-filter: blur(4px) saturate(190%) brightness(1.08) !important;
-  backdrop-filter: blur(4px) saturate(190%) brightness(1.08);
-  border-color: transparent !important;
-  box-shadow:
-    inset 1.5px 1.5px 0.5px -0.5px rgba(255,255,255,.95),
-    inset -1px -1px 0.5px -0.5px rgba(255,255,255,.55),
-    inset 0 0 0 1px rgba(255,255,255,.14),
-    inset 8px 10px 18px -12px rgba(255,255,255,.55),
-    inset -8px -10px 20px -12px rgba(255,255,255,.28),
-    inset 0 0 22px -6px rgba(255,255,255,.14),
-    0 12px 34px -14px rgba(0,0,0,.5) !important;
-}
-.lg :is(.g3-card, .g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .dl.glass, .faq-list details) {
-  -webkit-backdrop-filter: blur(9px) saturate(180%) brightness(1.06) !important;
-  backdrop-filter: blur(9px) saturate(180%) brightness(1.06);
-}
-html[data-theme="light"] .lg :is(.nav.glass, .btn.glass, .g3-eye, .g3-works li, .g3-card, .g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .dl.glass, .faq-list details) {
-  background: linear-gradient(135deg, rgba(255,255,255,.42), rgba(255,255,255,.18) 50%, rgba(255,255,255,.3)) !important;
-  box-shadow:
-    inset 1.5px 1.5px 0.5px -0.5px #fff,
-    inset -1px -1px 0.5px -0.5px rgba(255,255,255,.9),
-    inset 0 0 0 1px rgba(255,255,255,.5),
-    inset 8px 10px 18px -12px rgba(255,255,255,.9),
-    0 14px 34px -16px rgba(20,30,60,.35) !important;
-}
-/* the old rim overlays would double the edge now */
-.lg :is(.nav.glass, .btn.glass, .g3-eye, .g3-works li, .g3-card, .g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .dl.glass, .faq-list details).lq-lens::before { opacity: .35; }
-.lg .nav.glass :is(a, button) { text-shadow: 0 1px 2px rgba(0,0,0,.35); }
-.lg-drop { background: radial-gradient(60% 60% at 35% 30%, rgba(255,255,255,.35), rgba(255,255,255,0) 70%) !important;
-  box-shadow: inset 1.5px 1.5px 0.5px -0.5px #fff, inset -1px -1px 0.5px -0.5px rgba(255,255,255,.6), inset 0 0 14px rgba(255,255,255,.25), 0 8px 20px -8px rgba(0,0,0,.45) !important; }
-
-/* ===== Liquid glass buttons (every button): thick clear glass with a bright
-   rim, a curved shine across the top, and colour held inside as a tint.
-   liquid.js bends the background at the rim on Chromium. ===== */
-.lg {
-  --lqb-rim: inset 2px 2px 1px -1px rgba(255,255,255,.95), inset -2px -2px 1px -1px rgba(255,255,255,.55), inset 0 0 0 1px rgba(255,255,255,.16),
-    inset 0 12px 14px -10px rgba(255,255,255,.55), inset 0 -10px 14px -10px rgba(255,255,255,.32), inset 0 0 16px -4px rgba(255,255,255,.12);
-  --lqb-shine: radial-gradient(130% 90% at 50% -35%, rgba(255,255,255,.55), rgba(255,255,255,.08) 52%, transparent 60%),
-    radial-gradient(90% 60% at 50% 125%, rgba(255,255,255,.28), transparent 60%);
-}
-.lg :is(.btn, .theme-btn, .menu-btn, .g3-play > span, .g3-try-start, .tm-close, .x) {
-  background: var(--lqb-shine), linear-gradient(180deg, rgba(255,255,255,.13), rgba(255,255,255,.03)) !important;
-  -webkit-backdrop-filter: blur(2px) saturate(210%) brightness(1.12) !important; backdrop-filter: blur(2px) saturate(210%) brightness(1.12);
-  border-color: transparent !important; color: #fff;
-  box-shadow: var(--lqb-rim), 0 12px 26px -10px rgba(0,0,0,.55) !important;
-}
-.lg :is(.btn, .theme-btn, .menu-btn, .g3-play:hover > span, .g3-try-start, .tm-close, .x):hover {
-  filter: brightness(1.12) saturate(1.1);
-  box-shadow: var(--lqb-rim), inset 0 0 24px -6px rgba(255,255,255,.4), 0 16px 32px -10px rgba(0,0,0,.55) !important;
-}
-.lg .btn.primary, html[data-theme="light"] .lg .btn.primary {
-  color: #fff !important; text-shadow: 0 1px 2px rgba(10,40,120,.5);
-  background: var(--lqb-shine), linear-gradient(180deg, rgba(90,160,255,.74), rgba(30,95,245,.64)) !important;
-  box-shadow: var(--lqb-rim), inset 0 -8px 16px -8px rgba(10,50,180,.55), 0 14px 34px -10px rgba(47,107,255,.85) !important;
-  background-size: 100% 100% !important; background-repeat: no-repeat !important;
-}
-.lg .btn.primary > svg.wave, .lg .btn.primary .wave { opacity: .35; }
-html[data-theme="light"] .lg :is(.btn:not(.primary), .theme-btn, .menu-btn, .g3-try-start, .x) {
-  color: #0b1530;
-  background: var(--lqb-shine), linear-gradient(180deg, rgba(255,255,255,.6), rgba(255,255,255,.28)) !important;
-  box-shadow: var(--lqb-rim), inset 0 0 0 1px rgba(255,255,255,.6), 0 12px 26px -12px rgba(20,30,60,.35) !important;
-}
-
-/* bolder glass: thicker light-catching rim, a caustic glow along the bottom edge, pill shapes */
-.lg {
-  --lqb-rim: inset 3px 3px 1.5px -1.5px rgba(255,255,255,1), inset -3px -3px 1.5px -1.5px rgba(255,255,255,.7), inset 0 0 0 1px rgba(255,255,255,.22),
-    inset 0 14px 16px -11px rgba(255,255,255,.7), inset 0 -12px 14px -10px rgba(255,255,255,.5), inset 0 0 20px -2px rgba(255,255,255,.16);
-  --lqb-shine: radial-gradient(120% 85% at 50% -30%, rgba(255,255,255,.7), rgba(255,255,255,.12) 50%, transparent 58%),
-    radial-gradient(70% 55% at 50% 120%, rgba(255,255,255,.45), transparent 62%),
-    linear-gradient(115deg, transparent 30%, rgba(255,255,255,.14) 45%, transparent 52%);
-}
-.lg .btn { border-radius: 999px !important; }
-.lg .g3-play > span { width: 46px; height: 46px; border: 0 !important; }
-
-/* ===== Final pass: 95% clear glass, softer colours, lighter on the GPU =====
-   Shape-morphing on the big blurred blobs repainted them every frame, so they
-   now only drift (cheap, runs on the compositor). */
-.lg-bg i { animation-name: lgA !important; animation-duration: 30s !important; border-radius: 50% !important; opacity: .45 !important; }
-.lg-bg .b2 { animation-name: lgB !important; } .lg-bg .b3 { animation-name: lgC !important; }
-html[data-theme="light"] .lg-bg i { opacity: .28 !important; }
-.lg :is(.nav.glass, .btn.glass, .g3-eye, .g3-works li, .g3-card, .g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .dl.glass, .faq-list details, .theme-btn, .menu-btn, .g3-play > span, .g3-try-start, .tm-close, .x) {
-  background: linear-gradient(135deg, rgba(255,255,255,.06), rgba(255,255,255,.015) 50%, rgba(255,255,255,.04)) !important;
-}
-.lg :is(.g3-card, .g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .dl.glass, .faq-list details) {
-  -webkit-backdrop-filter: blur(8px) saturate(140%) !important; backdrop-filter: blur(8px) saturate(140%);
-}
-.lg :is(.nav.glass, .btn, .g3-eye, .g3-works li, .theme-btn, .menu-btn, .g3-play > span, .g3-try-start, .tm-close, .x) {
-  -webkit-backdrop-filter: blur(2px) saturate(140%) brightness(1.04) !important; backdrop-filter: blur(2px) saturate(140%) brightness(1.04);
-}
-.lg .btn:not(.primary) { background: var(--lqb-shine), linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.01)) !important; }
-.lg .btn.primary, html[data-theme="light"] .lg .btn.primary {
-  background: var(--lqb-shine), linear-gradient(180deg, rgba(80,130,220,.5), rgba(40,85,190,.42)) !important;
-  box-shadow: var(--lqb-rim), inset 0 -8px 16px -8px rgba(10,40,140,.4), 0 12px 28px -12px rgba(40,90,200,.55) !important;
-}
-.lg { --lqb-shine: radial-gradient(120% 85% at 50% -30%, rgba(255,255,255,.45), rgba(255,255,255,.06) 50%, transparent 58%), radial-gradient(70% 55% at 50% 120%, rgba(255,255,255,.28), transparent 62%); }
-html[data-theme="light"] .lg :is(.nav.glass, .btn:not(.primary), .g3-eye, .g3-works li, .g3-card, .g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .dl.glass, .faq-list details, .theme-btn, .menu-btn, .g3-try-start, .x) {
-  background: linear-gradient(135deg, rgba(255,255,255,.22), rgba(255,255,255,.08)) !important;
-}
-
-/* ===== Reference look (grey glass) on the site too ===== */
-.lg { --gg-edge: inset 0 0 0 1px rgba(255,255,255,.28), inset 1.5px 1.5px 1px -.5px rgba(255,255,255,.7), inset -1.5px -1.5px 1px -.5px rgba(255,255,255,.35), inset 0 0 0 6px rgba(0,0,0,.035), inset 0 0 22px 2px rgba(0,0,0,.18), inset 0 0 44px -10px rgba(255,255,255,.12); }
-.lg :is(.nav.glass, .g3-card, .g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .dl.glass, .faq-list details, .g3-eye, .g3-works li) {
-  background: linear-gradient(160deg, rgba(150,150,156,.24), rgba(110,110,116,.2)) !important;
-  -webkit-backdrop-filter: blur(16px) saturate(115%) !important; backdrop-filter: blur(16px) saturate(115%);
-  box-shadow: var(--gg-edge), 0 22px 48px -24px rgba(0,0,0,.6) !important;
-}
-.lg :is(.btn:not(.primary), .theme-btn, .menu-btn, .g3-play > span, .g3-try-start, .tm-close, .x) {
-  background: radial-gradient(120% 85% at 50% -30%, rgba(255,255,255,.28), transparent 58%), linear-gradient(180deg, rgba(170,170,176,.28), rgba(130,130,136,.24)) !important;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.3), inset 1.5px 1.5px 1px -.5px rgba(255,255,255,.75), inset -1.5px -1.5px 1px -.5px rgba(255,255,255,.35), inset 0 0 12px rgba(0,0,0,.12), 0 10px 22px -10px rgba(0,0,0,.5) !important;
-}
-html[data-theme="light"] .lg :is(.nav.glass, .g3-card, .g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .dl.glass, .faq-list details, .g3-eye, .g3-works li, .btn:not(.primary), .theme-btn, .menu-btn, .g3-try-start, .x) {
-  background: linear-gradient(160deg, rgba(235,235,238,.5), rgba(215,215,220,.4)) !important;
-}
