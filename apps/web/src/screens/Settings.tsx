@@ -14,6 +14,7 @@ import { startDemo, stopDemo } from "../data/demo";
 import { loadLatestPlan as loadPlan } from "../data/plan";
 import { fmt, zulu } from "../data/derive";
 import { settingsStore, store, useApp, useSettings } from "../data/store";
+import { secureBaseFromAddress } from "../data/pair";
 
 /** Running on the sim PC itself: show the iPad code here, so the Bridge page is never needed. */
 function OnThisPc() {
@@ -49,11 +50,16 @@ export function SettingsScreen() {
   const [planMsg, setPlanMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const https = location.protocol === "https:";
-  const nonLocal = https && !/^https?:\/\/(localhost|127\.0\.0\.1)/.test(url);
+  const nonLocal = https && /^http:\/\//.test(url.trim()) && !/^http:\/\/(localhost|127\.0\.0\.1)/.test(url.trim());
 
   const connect = () => {
     stopDemo();
-    settingsStore.set({ bridgeUrl: url.trim().replace(/\/+$/, ""), token: token.trim() });
+    let u = url.trim().replace(/\/+$/, "");
+    // On the website, a plain PC address can't be reached directly, so use the PC's secure
+    // local address instead. This keeps you on the website version, which opens even when
+    // the Bridge is closed, rather than sending you to the copy on your PC.
+    if (nonLocal) { const secure = secureBaseFromAddress(u); if (secure) { u = secure; setUrl(secure); } }
+    settingsStore.set({ bridgeUrl: u, token: token.trim(), pcRelay: null });
     connectFromSettings();
   };
   const disconnect = () => { setActiveBridge(null); settingsStore.set({ token: "" }); store.reset("none"); };
@@ -78,7 +84,7 @@ export function SettingsScreen() {
             <div className="stack" style={{ gap: 12 }}>
               <div className="field"><label htmlFor="b-url">Bridge address</label><input id="b-url" className="input data" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="http://192.168.1.20:4810" /></div>
               <div className="field"><label htmlFor="b-tok">Pairing key</label><input id="b-tok" className="input data" value={token} onChange={(e) => setToken(e.target.value)} placeholder="From the Bridge page on your PC" autoComplete="off" /></div>
-              {nonLocal && <Notice>Browsers block this secure page from reaching other computers on your network. On your iPad, open the link shown on the Bridge's page instead: it opens this same app directly from your PC.</Notice>}
+              {nonLocal && <Notice>Easiest: use the 6-digit code on the Home screen, or sign in with the same account as your PC. Both keep you on this website version, which opens even when the Bridge is closed. Connect here also works: Glidepath will use your PC's secure address.</Notice>}
               <div className="row wrap">
                 <button className="btn primary" onClick={connect} disabled={!token.trim()}>Connect</button>
                 {mode === "bridge" && <button className="btn" onClick={disconnect}>Disconnect</button>}
@@ -192,6 +198,7 @@ export function SettingsScreen() {
           </Section>
           <Section title="About">
             <Kv k="Version" v={`Glidepath ${LAUNCH_NAME} (build ${APP_VERSION})`} />
+            <Kv k="This copy" v={location.protocol === "https:" ? "Website version: opens even when your PC is off" : /^(localhost|127\.)/.test(location.hostname) ? "On this PC" : "From your PC: only opens while the Bridge runs"} />
             <div className="row" style={{ gap: 8, flexWrap: "wrap", margin: "6px 0 10px" }}>
               <button className="btn" onClick={showWhatsNew}>What's new</button>
               <a className="btn" href="#/updates">Updates</a>
