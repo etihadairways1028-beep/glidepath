@@ -398,3 +398,45 @@ html.ov-page .sky, html.ov-page .glide-banners { display: none !important; }
 .cel2-stats small { font-size: 12px; font-weight: 500; color: rgba(235, 240, 250, .55); margin-left: 3px; }
 .cel2-v { font-size: 14.5px; line-height: 1.45; color: rgba(235, 240, 250, .78); }
 @media (prefers-reduced-motion: reduce) { .cel2-card, .cel2-fill { animation: none; } }
+
+/* =========================================================
+   Liquid (app): bars made of clear glass with a curved,
+   light-catching rim; a tab highlight that flows like a
+   drop of water; buttons and cards that wobble when pressed.
+   Kept light for iPad: only the two floating bars blur.
+   ========================================================= */
+html:root .tabbar, html:root .tabbar.glass, html:root .v2-top > .glass {
+  background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.04) 60%, rgba(255,255,255,.08)) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(190%) brightness(1.08) !important; backdrop-filter: blur(14px) saturate(190%) brightness(1.08) !important;
+  border: 0 !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.10), inset 0 1px 1px rgba(255,255,255,.6), inset 0 -1px 1px rgba(255,255,255,.18), inset 0 14px 24px -20px rgba(255,255,255,.45), 0 18px 44px -16px rgba(0,0,0,.55) !important;
+}
+html:root[data-theme="light"] .tabbar, html:root[data-theme="light"] .tabbar.glass, html:root[data-theme="light"] .v2-top > .glass {
+  background: linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.45)) !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.7), inset 0 1px 1px #fff, 0 18px 40px -16px rgba(30,40,70,.35) !important;
+}
+@supports (backdrop-filter: url(#lq-pill)) { @media (pointer: fine) {
+  html:root .tabbar, html:root .tabbar.glass { backdrop-filter: url(#lq-pill) blur(8px) saturate(190%) brightness(1.08) !important; }
+} }
+/* the tab highlight: a drop that stretches as it travels, then settles with a wobble */
+:root .tabbar.glass::before {
+  background: radial-gradient(120% 140% at 30% 0%, rgba(255,255,255,.42), rgba(255,255,255,.10) 55%, rgba(255,255,255,.16)) !important;
+  box-shadow: inset 0 1px 1px rgba(255,255,255,.85), inset 0 -1px 2px rgba(255,255,255,.25), inset 0 0 12px rgba(255,255,255,.12), 0 8px 18px -10px rgba(0,0,0,.55) !important;
+  transition: left .7s cubic-bezier(.3, 1.45, .5, 1) !important;
+  animation: tabDrop .7s cubic-bezier(.3, .8, .3, 1) !important;
+}
+@keyframes tabDrop { 0% { scale: 1 1; } 25% { scale: 1.35 .82; } 55% { scale: .92 1.1; } 75% { scale: 1.04 .97; } 100% { scale: 1 1; } }
+:root .tabbar .tab.on svg { animation: iconBob .6s cubic-bezier(.3, 1.6, .4, 1); }
+@keyframes iconBob { 0% { transform: translateY(0) scale(1); } 40% { transform: translateY(-3px) scale(1.15); } 100% { transform: none; } }
+/* jelly on press for buttons, chips and tiles */
+@keyframes lqJelly { 0% { scale: 1 1; } 25% { scale: 1.06 .94; } 45% { scale: .97 1.04; } 65% { scale: 1.02 .98; } 100% { scale: 1 1; } }
+:root :is(.btn, .seg button, .launch-app, .efb-app, .chip):active { scale: .94 1.03; transition: scale .08s; }
+:root :is(.btn, .launch-app, .efb-app):hover { animation: lqJelly .65s cubic-bezier(.3, .7, .4, 1); }
+:root :is(.btn.primary, .btn.accent) { background-image: linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0) 55%) !important; box-shadow: inset 0 1px 1px rgba(255,255,255,.6), 0 8px 22px -8px rgba(47,107,255,.7) !important; }
+/* cards get a specular rim instead of flat edges (no extra blur: cheap on iPad) */
+:root .glass:not(.tabbar):not(.side) { box-shadow: inset 0 1px 1px rgba(255,255,255,.28), inset 0 -1px 1px rgba(255,255,255,.07), inset 0 0 0 1px rgba(255,255,255,.06), 0 16px 40px -22px rgba(0,0,0,.6); }
+:root[data-theme="light"] .glass:not(.tabbar):not(.side) { box-shadow: inset 0 1px 1px #fff, inset 0 0 0 1px rgba(255,255,255,.6), 0 16px 36px -22px rgba(30,40,70,.35); }
+/* sheets pour in: they grow from the bottom with a soft overshoot */
+:root :is(.launch, .wn-sheet, .share-sheet) { animation: lqPour .55s cubic-bezier(.25, 1.35, .45, 1) both; transform-origin: 50% 100%; }
+@keyframes lqPour { 0% { opacity: 0; transform: translateY(24px) scale(.92, .86); border-radius: 48px; } 60% { opacity: 1; transform: translateY(-3px) scale(1.01, 1.02); } 100% { transform: none; } }
+@media (prefers-reduced-motion: reduce) { :root .tabbar.glass::before, :root .tabbar .tab.on svg, :root :is(.btn, .launch-app, .efb-app):hover, :root :is(.launch, .wn-sheet, .share-sheet) { animation: none !important; } }

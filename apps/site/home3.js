@@ -81,3 +81,18 @@
     c.addEventListener("pointerleave", function () { c.style.setProperty("--ry", "0deg"); c.style.setProperty("--rx", "0deg"); });
   });
 })();
+/* Liquid droplet that follows the pointer and stretches with speed. */
+(function () {
+  "use strict";
+  if (!matchMedia("(pointer: fine)").matches || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  var d = document.createElement("div"); d.className = "lg-drop"; d.setAttribute("aria-hidden", "true"); document.body.appendChild(d);
+  var x = innerWidth / 2, y = innerHeight / 2, tx = x, ty = y, vx = 0, vy = 0, on = false;
+  addEventListener("pointermove", function (e) { tx = e.clientX; ty = e.clientY; if (!on) { on = true; d.classList.add("on"); x = tx; y = ty; } var t = e.target; d.classList.toggle("big", !!(t.closest && t.closest("a, button, .btn, summary, li"))); }, { passive: true });
+  document.addEventListener("pointerleave", function () { on = false; d.classList.remove("on"); });
+  (function tick() {
+    var ax = (tx - x) * 0.16, ay = (ty - y) * 0.16; vx = vx * 0.62 + ax; vy = vy * 0.62 + ay; x += vx; y += vy;
+    var sp = Math.min(Math.hypot(vx, vy), 40), ang = Math.atan2(vy, vx) * 180 / Math.PI, st = 1 + sp / 55;
+    d.style.transform = "translate(" + x.toFixed(1) + "px," + y.toFixed(1) + "px) rotate(" + ang.toFixed(1) + "deg) scale(" + st.toFixed(3) + "," + (1 / Math.sqrt(st)).toFixed(3) + ")";
+    requestAnimationFrame(tick);
+  })();
+})();
