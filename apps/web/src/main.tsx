@@ -80,6 +80,7 @@ function keepCurrent(): void {
       [".v2-pill, .v2-top .side-clock", { bezel: 18, strength: 46, extra: "blur(1px) saturate(200%) brightness(1.1)" }],
       [".gs-msg, .launch", { bezel: 26, strength: 60, extra: "blur(12px) saturate(190%) brightness(1.06)" }],
     ];
+    if (fine) rules.push([".btn, .chip, .ts-chip, .radar-btn, .seg", { bezel: 14, strength: 34, extra: "blur(1px) saturate(210%) brightness(1.12)" }]);
     if (fine) rules.push([".b-card, .b-tile", { bezel: 26, strength: 64, extra: "blur(20px) saturate(190%) brightness(1.05)" }]);
     lg.watch(rules);
   };
