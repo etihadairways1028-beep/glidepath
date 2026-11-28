@@ -74,15 +74,12 @@ function keepCurrent(): void {
   const start = () => {
     const lg = (window as unknown as { liquidGlass?: LG }).liquidGlass;
     if (!lg) return;
-    const fine = matchMedia("(pointer: fine)").matches;
+    // Only the few floating bars bend the background: lensing every card and button
+    // costs too much while scrolling.
     const rules: [string, { bezel?: number; strength?: number; extra?: string }][] = [
-      [".tabbar", { bezel: 22, strength: 56, extra: "blur(1px) saturate(200%) brightness(1.1)" }],
-      [".v2-pill, .v2-top .side-clock", { bezel: 18, strength: 46, extra: "blur(1px) saturate(200%) brightness(1.1)" }],
-      [".gs-msg, .launch", { bezel: 26, strength: 60, extra: "blur(12px) saturate(190%) brightness(1.06)" }],
+      [".tabbar", { bezel: 22, strength: 56, extra: "blur(1px) saturate(140%) brightness(1.04)" }],
+      [".v2-pill, .v2-top .side-clock", { bezel: 18, strength: 46, extra: "blur(1px) saturate(140%) brightness(1.04)" }],
     ];
-    if (fine) rules.push([".btn, .chip, .ts-chip, .radar-btn, .seg", { bezel: 14, strength: 34, extra: "blur(1px) saturate(210%) brightness(1.12)" }]);
-    if (fine) rules.push([".b-card, .b-tile, .more-tile, .glass.pad, .glass.strong:not(.launch):not(.gs-msg)", { bezel: 30, strength: 80, extra: "blur(18px) saturate(190%) brightness(1.05)" }]);
-    if (fine) rules.push([".launch-app .more-ic", { bezel: 14, strength: 36, extra: "blur(4px) saturate(200%)" }]);
     lg.watch(rules);
   };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
