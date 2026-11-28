@@ -1381,3 +1381,9 @@ body::before, body::after { z-index: -1; }
 .pd-line i { left: 0 !important; animation-name: pdMoveT !important; }
 @keyframes pdMoveT { 0% { transform: translateX(0); opacity: 0; } 15%, 85% { opacity: 1; } 100% { transform: translateX(var(--pd-w, 120px)); opacity: 0; } }
 .bgmap .lh-map { contain: strict; }
+
+/* Features page: its card grid (.tile cards) shares the .bento name with the older home page's
+   12-column grid above, which squashed these cards into narrow columns. Give it its own layout back. */
+.bento:has(> .tile) { position: static; left: auto; transform: none; width: auto; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-auto-rows: auto; grid-auto-flow: row dense; }
+@media (max-width: 980px) { .bento:has(> .tile) { grid-template-columns: repeat(2, minmax(0, 1fr)); } .bento:has(> .tile) .t-traffic { grid-column: span 2; } }
+@media (max-width: 640px) { .bento:has(> .tile) { grid-template-columns: minmax(0, 1fr); } .bento:has(> .tile) .t-traffic { grid-column: auto; } }
