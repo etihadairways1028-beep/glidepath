@@ -415,3 +415,27 @@ html[data-theme="light"] .g3-hero::after { filter: invert(1) hue-rotate(180deg) 
 .g3 .reveal { transition: opacity .9s ease, transform 1.1s cubic-bezier(.2, 1.25, .35, 1); }
 
 @media (prefers-reduced-motion: reduce) { .lg-bg i, .lg .btn, .lg .btn.primary, .g3-hero::after { animation: none !important; } .lg-drop { display: none; } }
+
+/* ---- full liquid on computers: blobs that change shape as they drift, a moving wave and a
+   breathing glow inside the main button. iPads and phones keep the calmer version above. ---- */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .lg-bg i { border-radius: 42% 58% 63% 37% / 41% 44% 56% 59% !important; }
+  .lg-bg .b1 { animation: lgA 26s ease-in-out infinite, morph 14s ease-in-out infinite; }
+  .lg-bg .b2 { animation: lgB 31s ease-in-out infinite, morph 17s ease-in-out infinite; }
+  .lg-bg .b3 { animation: lgC 35s ease-in-out infinite, morph 19s ease-in-out infinite; }
+  .lg-bg .b4 { animation: lgA 40s ease-in-out infinite reverse, morph 21s ease-in-out infinite alternate; }
+  .lg .btn.primary, html[data-theme="light"] .lg .btn.primary {
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 40' preserveAspectRatio='none'%3E%3Cpath d='M0 26 Q25 18 50 26 T100 26 T150 26 T200 26 V40 H0Z' fill='rgba(255,255,255,0.16)'/%3E%3C/svg%3E") 0 0 / 200% 100% repeat-x,
+      var(--lqb-shine), linear-gradient(180deg, rgba(80,130,220,.5), rgba(40,85,190,.42)) !important;
+    animation: wave 4s linear infinite, lqBreathe 3.2s ease-in-out infinite;
+  }
+  .lg .btn.primary:hover { animation: jelly .7s cubic-bezier(.3, .7, .4, 1), wave 1.6s linear infinite, lqBreathe 3.2s ease-in-out infinite; }
+}
+@keyframes morph {
+  0%, 100% { border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%; rotate: 0deg; }
+  33% { border-radius: 63% 37% 41% 59% / 58% 63% 37% 42%; rotate: 60deg; }
+  66% { border-radius: 37% 63% 56% 44% / 33% 52% 48% 67%; rotate: -40deg; }
+}
+@keyframes wave { to { background-position: -200% 0, 0 0, 0 0; } }
+@keyframes lqBreathe { 50% { filter: drop-shadow(0 0 14px rgba(70,120,255,.55)); } }

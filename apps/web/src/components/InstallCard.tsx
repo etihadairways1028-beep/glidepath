@@ -4,6 +4,7 @@
  * apps, so it gets the Share steps; Android/Chrome gets a real Install button.
  */
 import { useEffect, useState } from "react";
+import { settingsStore } from "../data/store";
 
 interface InstallPrompt extends Event { prompt: () => Promise<void> }
 let deferred: InstallPrompt | null = null;
@@ -51,27 +52,58 @@ export function InstallCard() {
 }
 
 /**
- * Shown inside a Home Screen app that was added from the Bridge (plain http). Safari can't keep a
- * saved copy of those, so the icon won't open while the PC or the Bridge is off. Offer the website
- * version, which always opens and still connects to the PC.
+ * Shown whenever the app is opened from the Bridge's own address (plain http on the local network).
+ * That copy lives on the PC, so once the Bridge is closed it can't open at all, and Safari won't
+ * keep a saved copy of a plain-http page. The website version keeps a saved copy, always opens,
+ * and reaches this PC through the Bridge's online link. While that link is up, one tap moves you
+ * over already paired, with no code to type.
  */
 export function BridgeIconTip() {
   const TIP = "glidepath.bridgeIconTip";
-  const [hidden, setHidden] = useState(() => { try { return localStorage.getItem(TIP) === "1"; } catch { return false; } });
+  const LINK = "glidepath.pcLink";
   const fromBridge = location.protocol === "http:" && !/^(localhost|127\.)/.test(location.hostname);
-  if (hidden || !fromBridge || !isStandalone()) return null;
-  const hide = () => { setHidden(true); try { localStorage.setItem(TIP, "1"); } catch { /* ignore */ } };
+  // "Not now" hides it for three days, not forever: this is what makes the app fail later.
+  const [hidden, setHidden] = useState(() => { try { const t = Number(localStorage.getItem(TIP) || 0); return t > 1 && Date.now() - t < 3 * 864e5; } catch { return false; } });
+  const [bid, setBid] = useState<string | null>(() => { try { return localStorage.getItem(LINK); } catch { return null; } });
+  const [online, setOnline] = useState(false);
+  useEffect(() => {
+    if (!fromBridge) return;
+    let live = true;
+    const check = () => fetch("/api/pclink", { headers: { Authorization: `Bearer ${settingsStore.get().token}` }, cache: "no-store" }).then((r) => r.json() as Promise<{ online: boolean; bid: string }>).then((j) => {
+      if (!live) return;
+      setOnline(!!j.online);
+      if (j.bid) { setBid(j.bid); try { localStorage.setItem(LINK, j.bid); } catch { /* ignore */ } }
+    }).catch(() => { if (live) setOnline(false); });
+    check();
+    const t = setInterval(check, 60_000);
+    return () => { live = false; clearInterval(t); };
+  }, [fromBridge]);
+  if (hidden || !fromBridge) return null;
+  const hide = () => { setHidden(true); try { localStorage.setItem(TIP, String(Date.now())); } catch { /* ignore */ } };
+  const { token } = settingsStore.get();
+  const paired = bid && token ? `${HOSTED}#pc=${encodeURIComponent(bid)}&token=${encodeURIComponent(token)}` : null;
+  const standalone = isStandalone();
   return (
-    <section className="glass install-card" aria-label="Get a Home Screen icon that always opens" style={{ marginBottom: 14 }}>
+    <section className="glass install-card" aria-label="Make Glidepath open even when your PC is off" style={{ marginBottom: 14 }}>
       <div className="between">
-        <h2 className="h2" style={{ margin: 0 }}>Get an icon that always opens</h2>
+        <h2 className="h2" style={{ margin: 0 }}>Make Glidepath open even when your PC is off</h2>
         <button className="btn small" onClick={hide}>Not now</button>
       </div>
       <p className="small muted" style={{ margin: 0 }}>
-        This icon was added from your PC, so it can only open while the Bridge is running. If you close the Bridge after a flight, it shows a blank screen.
-        For one that always opens: in Safari go to <b>{HOSTED.replace("https://", "")}</b>, type the code shown on your PC, tap Share, then <b>Add to Home Screen</b>. Then delete this icon.
+        You opened Glidepath from your PC{standalone ? "'s Home Screen icon" : ""}, so it only works while the Bridge is running. Close the Bridge and {standalone ? "this icon" : "this page"} won't open.
+        The website version always opens, keeps your logbook, and still connects to this PC.
       </p>
-      <a className="btn primary" href={HOSTED} target="_blank" rel="noreferrer">Open the website version</a>
+      {online && paired ? (
+        <>
+          <a className="btn primary" href={paired}>Switch to the always-on version</a>
+          <p className="small muted" style={{ margin: 0 }}>It opens already connected to this PC. Then tap <b>Share</b>, <b>Add to Home Screen</b>{standalone ? ", and delete this old icon" : ""}.</p>
+        </>
+      ) : (
+        <>
+          <a className="btn primary" href={HOSTED}>Open the website version</a>
+          <p className="small muted" style={{ margin: 0 }}>There, type the code shown on your PC, then tap <b>Share</b>, <b>Add to Home Screen</b>{standalone ? ", and delete this old icon" : ""}.</p>
+        </>
+      )}
     </section>
   );
 }

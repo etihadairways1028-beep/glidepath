@@ -552,3 +552,26 @@ html:root .v2-acct .pfp { width: 44px !important; height: 44px !important; }
 .pfp-opt:focus-visible { outline: 2px solid #4C8DFF; outline-offset: 2px; }
 .pfp-err { color: #FF8A65; font-size: 14px; }
 html:root .acct .pfp { font-size: 15px; }
+
+/* ---- liquid hover (mouse / Pencil hover): light that follows the pointer, tilting tiles, magnetic buttons ---- */
+@media (hover: hover) and (pointer: fine) {
+  html:root :is(.btn, .chip, .ts-chip, .seg, .more-tile, .b-card, .b-tile, .launch-app, .v2-pill) {
+    --lq-hl: radial-gradient(150px circle at var(--mx, -300px) var(--my, -300px), rgba(255,255,255,.38), rgba(255,255,255,.08) 45%, transparent 70%);
+  }
+  html:root :is(.glass:not(.tabbar):not(.side), .b-card, .b-tile, .more-tile) {
+    --lq-hl: radial-gradient(320px circle at var(--mx, -400px) var(--my, -400px), rgba(255,255,255,.22), rgba(255,255,255,.05) 45%, transparent 70%);
+    background-image: var(--lq-hl), var(--ds-card) !important;
+  }
+  html:root .glass.strong:not(.tabbar), html:root .launch.glass { background-image: var(--lq-hl, none), var(--ds-card-2) !important; }
+  html:root :is(.btn:not(.primary):not(.danger):not(.accent), .chip:not(.accent), .ts-chip:not(.emerg), .stat-chip, .radar-btn, .seg) {
+    background: var(--lq-hl), radial-gradient(120% 85% at 50% -30%, rgba(255,255,255,.32), transparent 58%), linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,.03)) !important;
+  }
+  html:root[data-theme="light"] :is(.btn:not(.primary):not(.danger):not(.accent), .chip:not(.accent), .ts-chip:not(.emerg), .stat-chip, .radar-btn, .seg) {
+    background: var(--lq-hl), var(--lqb-shine), linear-gradient(180deg, rgba(255,255,255,.24), rgba(255,255,255,.08)) !important;
+  }
+  html:root :is(.btn.primary, .btn.accent, .chip.accent), html:root:not([data-look]) :is(.btn.primary, .btn.accent, .chip.accent) {
+    background: var(--lq-hl), radial-gradient(120% 85% at 50% -30%, rgba(255,255,255,.3), transparent 58%), linear-gradient(180deg, rgba(90,125,190,.5), rgba(60,95,165,.44)) !important;
+  }
+  html:root :is(.more-tile, .b-card, .b-tile, .launch-app) { transition: transform .45s cubic-bezier(.2, 1.3, .4, 1), translate .45s cubic-bezier(.2, 1.4, .4, 1); }
+  html:root :is(.btn, .chip, .v2-pill) { transition: translate .4s cubic-bezier(.2, 1.4, .4, 1), scale .35s cubic-bezier(.3, 1.6, .4, 1), box-shadow .25s, filter .25s; }
+}

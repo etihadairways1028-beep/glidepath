@@ -94,6 +94,8 @@
 /* Real lens glass on the floating pieces (Chromium; others keep the CSS glass). */
 if (window.liquidGlass) {
   const pill = { bezel: 16, strength: 46, extra: "blur(0.6px) saturate(190%) brightness(1.1)" };
+  const desktop = matchMedia("(hover: hover) and (pointer: fine)").matches;
+  if (desktop) window.liquidGlass.watch([[".lg :is(.g3-card, .g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .dl.glass, .faq-list details)", { bezel: 26, strength: 70, extra: "blur(8px) saturate(150%) brightness(1.04)" }]]);
   window.liquidGlass.watch([
     [".lg .nav.glass", { bezel: 20, strength: 64, extra: "blur(1px) saturate(190%) brightness(1.08)" }],
     [".lg :is(.btn, .g3-eye, .g3-works li, .g3-trailer-play, .theme-btn, .menu-btn, .g3-play > span, .g3-try-start, .tm-close)", pill],

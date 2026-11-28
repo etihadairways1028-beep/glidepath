@@ -74,13 +74,21 @@ function keepCurrent(): void {
   const start = () => {
     const lg = (window as unknown as { liquidGlass?: LG }).liquidGlass;
     if (!lg) return;
-    // Only the few floating bars bend the background: lensing every card and button
-    // costs too much while scrolling.
+    // The floating bars always bend the background. On computers (mouse, plenty of power) every
+    // button, card and icon does too; iPads and phones keep it to the bars so scrolling stays smooth.
+    const fine = matchMedia("(hover: hover) and (pointer: fine)").matches;
     const rules: [string, { bezel?: number; strength?: number; extra?: string }][] = [
-      [".tabbar", { bezel: 22, strength: 56, extra: "blur(1px) saturate(140%) brightness(1.04)" }],
-      [".v2-pill, .v2-top .side-clock", { bezel: 18, strength: 46, extra: "blur(1px) saturate(140%) brightness(1.04)" }],
+      [".tabbar", { bezel: 22, strength: 56, extra: "blur(1px) saturate(150%) brightness(1.05)" }],
+      [".v2-pill, .v2-top .side-clock", { bezel: 18, strength: 46, extra: "blur(1px) saturate(150%) brightness(1.05)" }],
     ];
+    if (fine) {
+      rules.push([".btn, .chip, .ts-chip, .radar-btn, .seg", { bezel: 14, strength: 34, extra: "blur(1px) saturate(140%) brightness(1.04)" }]);
+      rules.push([".b-card, .b-tile, .more-tile, .glass.pad, .glass.strong:not(.launch):not(.gs-msg), .live-card", { bezel: 30, strength: 80, extra: "blur(5px) saturate(150%) brightness(1.04)" }]);
+      rules.push([".launch.glass, .gs-msg", { bezel: 26, strength: 60, extra: "blur(6px) saturate(160%) brightness(1.05)" }]);
+    }
     lg.watch(rules);
   };
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
+  // liquid.js loads after this bundle, so wait for it rather than giving up.
+  const begin = () => { if ((window as unknown as { liquidGlass?: unknown }).liquidGlass) start(); else window.addEventListener("load", start, { once: true }); };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", begin); else begin();
 }

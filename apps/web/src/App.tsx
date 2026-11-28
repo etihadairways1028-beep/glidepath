@@ -97,10 +97,12 @@ export function useRoute(): string[] {
     const on = () => {
       const next = location.hash;
       const top = (h: string) => h.replace(/^#\/?/, "").split(/[/?]/)[0] || "home";
-      const doc = document as Document & { startViewTransition?: (cb: () => void) => unknown };
+      const doc = document as Document & { startViewTransition?: (cb: () => void) => { finished: Promise<void>; ready: Promise<void>; updateCallbackDone: Promise<void> } };
       // Cross-fade between screens (old one fades out while the new one rises in), where the browser can.
       if (doc.startViewTransition && top(next) !== top(hashRef.current) && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        doc.startViewTransition(() => flushSync(() => setHash(next)));
+        // Switching screens quickly skips the previous transition; that's expected, not an error.
+        const vt = doc.startViewTransition(() => flushSync(() => setHash(next)));
+        for (const p of [vt.finished, vt.ready, vt.updateCallbackDone]) p?.catch?.(() => undefined);
       } else setHash(next);
       hashRef.current = next;
     };
@@ -252,23 +254,40 @@ export function App() {
     return () => { mq.removeEventListener("change", apply); window.removeEventListener("glidepath-look", apply); };
   }, [s.theme]);
 
-  // The glass highlight follows the pointer (desktop / Apple Pencil hover).
+  // Liquid hover (mouse and Apple Pencil hover): the glass highlight follows the pointer on every
+  // glass surface; tiles tilt toward it and buttons lean toward it like a magnet.
   useEffect(() => {
     let raf = 0;
+    let last: HTMLElement | null = null;
+    const TILT = ".more-tile, .b-card, .b-tile, .launch-app";
+    const MAGNET = ".btn, .chip, .v2-pill";
+    const reset = (el: HTMLElement) => { el.style.removeProperty("transform"); el.style.removeProperty("translate"); };
     const on = (e: PointerEvent) => {
       if (e.pointerType === "touch" && e.type === "pointermove") return;
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        const el = (e.target as Element | null)?.closest?.(".glass") as HTMLElement | null;
-        if (!el) return;
+        const t = e.target as Element | null;
+        const glass = t?.closest?.(".glass") as HTMLElement | null;
+        if (glass) { const r = glass.getBoundingClientRect(); glass.style.setProperty("--mx", `${e.clientX - r.left}px`); glass.style.setProperty("--my", `${e.clientY - r.top}px`); }
+        const el = t?.closest?.(`${TILT}, ${MAGNET}, .seg, .ts-chip`) as HTMLElement | null;
+        if (last && last !== el) reset(last);
+        last = el;
+        if (!el || e.pointerType !== "mouse" || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          if (el) { const r = el.getBoundingClientRect(); el.style.setProperty("--mx", `${e.clientX - r.left}px`); el.style.setProperty("--my", `${e.clientY - r.top}px`); }
+          return;
+        }
         const r = el.getBoundingClientRect();
-        el.style.setProperty("--mx", `${e.clientX - r.left}px`);
-        el.style.setProperty("--my", `${e.clientY - r.top}px`);
+        const x = e.clientX - r.left, y = e.clientY - r.top;
+        el.style.setProperty("--mx", `${x}px`); el.style.setProperty("--my", `${y}px`);
+        if (el.matches(TILT)) el.style.setProperty("transform", `perspective(900px) rotateX(${(-(y / r.height - 0.5) * 9).toFixed(2)}deg) rotateY(${((x / r.width - 0.5) * 9).toFixed(2)}deg) translateY(-3px)`, "important");
+        else if (el.matches(MAGNET) && r.width < 360) el.style.translate = `${((x - r.width / 2) * 0.16).toFixed(1)}px ${((y - r.height / 2) * 0.22).toFixed(1)}px`;
       });
     };
+    const out = (e: PointerEvent) => { if (last && !(e.relatedTarget instanceof Node && last.contains(e.relatedTarget))) { reset(last); last = null; } };
     window.addEventListener("pointermove", on, { passive: true });
     window.addEventListener("pointerdown", on, { passive: true });
-    return () => { window.removeEventListener("pointermove", on); window.removeEventListener("pointerdown", on); };
+    document.addEventListener("pointerout", out, { passive: true });
+    return () => { window.removeEventListener("pointermove", on); window.removeEventListener("pointerdown", on); document.removeEventListener("pointerout", out); };
   }, []);
 
   const [welcomed, setWelcomed] = useState(hasBeenWelcomed);
