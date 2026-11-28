@@ -67,3 +67,21 @@ function keepCurrent(): void {
   window.setInterval(() => void check(), 10 * 60_000);
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") void check(); });
 }
+
+/* Real lens glass on the floating controls (Chromium; other browsers keep the CSS glass). */
+{
+  type LG = { watch: (rules: [string, { bezel?: number; strength?: number; extra?: string }][]) => void };
+  const start = () => {
+    const lg = (window as unknown as { liquidGlass?: LG }).liquidGlass;
+    if (!lg) return;
+    const fine = matchMedia("(pointer: fine)").matches;
+    const rules: [string, { bezel?: number; strength?: number; extra?: string }][] = [
+      [".tabbar", { bezel: 22, strength: 56, extra: "blur(1px) saturate(200%) brightness(1.1)" }],
+      [".v2-pill, .v2-top .side-clock", { bezel: 18, strength: 46, extra: "blur(1px) saturate(200%) brightness(1.1)" }],
+      [".gs-msg, .launch", { bezel: 26, strength: 60, extra: "blur(12px) saturate(190%) brightness(1.06)" }],
+    ];
+    if (fine) rules.push([".b-card, .b-tile", { bezel: 26, strength: 64, extra: "blur(20px) saturate(190%) brightness(1.05)" }]);
+    lg.watch(rules);
+  };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
+}

@@ -6,7 +6,7 @@
 import { useEffect, useState } from "react";
 import { Icon } from "./ui";
 
-export const APP_VERSION = "1.7.3";
+export const APP_VERSION = "1.7.4";
 /** What people call this release. The number above is the build that updates follow. */
 export const LAUNCH_NAME = "1.0";
 export const versionLabel = (v: string) => (v === "1.7.0" ? `${LAUNCH_NAME} · launch` : v);
@@ -15,6 +15,7 @@ const KEY = "glidepath.seenVersion";
 export type WnIcon = "map" | "flight" | "remote" | "book" | "gear" | "spark" | "download" | "search" | "tower" | "cloud" | "layers" | "target" | "headset";
 export interface WnItem { v: string; ic: WnIcon; t: string; d: string }
 export const WHATS_NEW: WnItem[] = [
+  { v: "1.7.4", ic: "spark", t: "Real liquid glass", d: "Bars, buttons and cards are now clear glass you can see through, with a thick rim that catches the light. On Chrome and Edge the rim bends what is behind it, like a real glass lens." },
   { v: "1.7.3", ic: "spark", t: "More liquid glass", d: "The tab bar and top bar are now clear glass with a curved rim that catches the light. The tab highlight flows between tabs like a drop of water, and buttons wobble softly when you press them." },
   { v: "1.7.2", ic: "spark", t: "A calmer landing summary", d: "When you touch down, your grade now sits in a ring that fills to your score, with your rate, g-force and score out of 100 side by side. No more confetti." },
   { v: "1.7.1", ic: "spark", t: "Stream overlay", d: "Show your live flight on stream. In Settings › Stream overlay, copy a link and add it in OBS (or any streaming app) as a Browser source on your sim PC: your callsign, route, progress, altitude, speed and time to the gate along the bottom, on a transparent background. It shows nothing when you're not flying." },
