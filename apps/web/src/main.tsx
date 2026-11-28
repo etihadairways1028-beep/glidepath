@@ -81,7 +81,8 @@ function keepCurrent(): void {
       [".gs-msg, .launch", { bezel: 26, strength: 60, extra: "blur(12px) saturate(190%) brightness(1.06)" }],
     ];
     if (fine) rules.push([".btn, .chip, .ts-chip, .radar-btn, .seg", { bezel: 14, strength: 34, extra: "blur(1px) saturate(210%) brightness(1.12)" }]);
-    if (fine) rules.push([".b-card, .b-tile", { bezel: 26, strength: 64, extra: "blur(20px) saturate(190%) brightness(1.05)" }]);
+    if (fine) rules.push([".b-card, .b-tile, .more-tile, .glass.pad, .glass.strong:not(.launch):not(.gs-msg)", { bezel: 30, strength: 80, extra: "blur(18px) saturate(190%) brightness(1.05)" }]);
+    if (fine) rules.push([".launch-app .more-ic", { bezel: 14, strength: 36, extra: "blur(4px) saturate(200%)" }]);
     lg.watch(rules);
   };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
