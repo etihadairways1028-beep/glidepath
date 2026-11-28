@@ -1,3 +1,4 @@
+import { Avatar } from "./components/Avatar";
 import { Overlay } from "./screens/Overlay";
 import { flushSync } from "react-dom";
 import { Support } from "./screens/Support";
@@ -334,7 +335,7 @@ export function App() {
             <a className="v2-pill v2-search" href="#/airports"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg><span>Any airport, any chart</span></a>
             <span className="v2-gap" />
             <SideClock />
-            <a className="v2-pill v2-acct" href="#/account" aria-label="Account"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21c1-4 4-6 8-6s7 2 8 6" /></svg></a>
+            <a className="v2-pill v2-acct" href="#/account" aria-label="Account and profile picture"><Avatar size={44} /></a>
           </header>
         )}
         <main className="main" id="main">

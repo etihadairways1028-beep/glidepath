@@ -1,6 +1,7 @@
 /** Account: sign in (several accounts per device), monthly brief, saved PCs, flight sync. */
 import { useEffect, useState, type ReactElement } from "react";
 import { Icon, Notice, Section } from "../components/ui";
+import { Avatar, PfpPicker } from "../components/Avatar";
 import { authed, deleteAccount, forgotPassword, resetPassword, setEmailPrefs, forgetBridge, savedBridges, sendBriefPreview, setMonthlyEmail, signIn, signOut, signUp, switchAccount, useCloud, type SavedBridge } from "../data/cloud";
 
 export function Account() {
@@ -13,6 +14,7 @@ export function Account() {
     return (
       <div className="stack">
         <h1 className="title">Account</h1>
+        <PfpPicker />
         <section className="glass pad">
           <div className="h2" style={{ margin: 0 }}>Accounts aren't switched on yet</div>
           <p className="muted" style={{ margin: "8px 0 0", maxWidth: "60ch" }}>Once they are, you'll sign in here to keep your logbook on every device, find your PC automatically, and get a monthly email about your flying. Until then, every flight is still saved on your PC by the Bridge.</p>
@@ -28,6 +30,8 @@ export function Account() {
         {c.accounts.length > 0 && !adding && <button className="btn small" onClick={() => setAdding(true)}><span style={{ width: 16, height: 16 }}>{Icon.plus()}</span>Add account</button>}
       </div>
 
+      <PfpPicker />
+
       {(c.accounts.length === 0 || adding) && <SignInCard onDone={() => setAdding(false)} canCancel={c.accounts.length > 0} />}
 
       {c.accounts.length > 0 && (
@@ -36,7 +40,7 @@ export function Account() {
             <div className="acct-list">
               {c.accounts.map((a) => (
                 <div key={a.slot} className={`acct${a.slot === c.active ? " on" : ""}`}>
-                  <span className="av" aria-hidden="true">{(a.name ?? a.email).slice(0, 1).toUpperCase()}</span>
+                  <Avatar size={40} slot={a.slot} name={a.name ?? a.email.split("@")[0] ?? null} />
                   <span className="acct-t"><b>{a.name ?? a.email.split("@")[0]}</b><span>{a.email}</span></span>
                   {a.slot === c.active ? <span className="pill">In use</span> : <button className="btn small" onClick={() => switchAccount(a.slot)}>Switch</button>}
                   <button className="btn small ghost" onClick={() => void signOut(a.slot)} aria-label={`Sign out ${a.email}`}>Sign out</button>

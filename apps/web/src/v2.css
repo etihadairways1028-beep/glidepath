@@ -399,22 +399,36 @@ html.ov-page .sky, html.ov-page .glide-banners { display: none !important; }
 .cel2-v { font-size: 14.5px; line-height: 1.45; color: rgba(235, 240, 250, .78); }
 @media (prefers-reduced-motion: reduce) { .cel2-card, .cel2-fill { animation: none; } }
 
-/* =========================================================
-   Liquid (app): bars made of clear glass with a curved,
-   light-catching rim; a tab highlight that flows like a
-   drop of water; buttons and cards that wobble when pressed.
-   Kept light for iPad: only the two floating bars blur.
-   ========================================================= */
-html:root .tabbar, html:root .tabbar.glass, html:root .v2-top > .glass {
-  background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.04) 60%, rgba(255,255,255,.08)) !important;
-  -webkit-backdrop-filter: blur(14px) saturate(190%) brightness(1.08) !important; backdrop-filter: blur(14px) saturate(190%) brightness(1.08) !important;
+/* =========================================================================
+   Liquid glass (app)
+   Clear glass panels with a thick, light-catching edge; floating bars that
+   bend the background (public/liquid.js, Chromium only); glossy full-colour
+   icons; glass buttons. The press animation lives in public/press.js.
+   Kept cheap for iPad: light blurs, and only the bars use the lens.
+   ========================================================================= */
+
+/* ---- tokens ---- */
+:root:not([data-theme="light"]) { --ds-card: linear-gradient(160deg, rgba(255,255,255,.07), rgba(255,255,255,.025)); --ds-card-2: linear-gradient(160deg, rgba(255,255,255,.09), rgba(255,255,255,.035)); }
+:root[data-theme="light"] { --ds-card: linear-gradient(160deg, rgba(255,255,255,.16), rgba(255,255,255,.06)); --ds-card-2: linear-gradient(160deg, rgba(255,255,255,.2), rgba(255,255,255,.08)); }
+html:root {
+  /* thick glass edge: thin bright line, darker band toward the rim */
+  --gg-edge: inset 0 0 0 1px rgba(255,255,255,.28), inset 1.5px 1.5px 1px -.5px rgba(255,255,255,.7), inset -1.5px -1.5px 1px -.5px rgba(255,255,255,.35),
+    inset 0 0 0 6px rgba(0,0,0,.035), inset 0 0 22px 2px rgba(0,0,0,.16), inset 0 0 44px -10px rgba(255,255,255,.12);
+  /* button rim and curved shine */
+  --lqb-rim: inset 3px 3px 1.5px -1.5px rgba(255,255,255,1), inset -3px -3px 1.5px -1.5px rgba(255,255,255,.7), inset 0 0 0 1px rgba(255,255,255,.22),
+    inset 0 13px 15px -11px rgba(255,255,255,.7), inset 0 -11px 13px -10px rgba(255,255,255,.5), inset 0 0 18px -2px rgba(255,255,255,.16);
+  --lqb-shine: radial-gradient(120% 85% at 50% -30%, rgba(255,255,255,.42), rgba(255,255,255,.06) 50%, transparent 58%), radial-gradient(70% 55% at 50% 120%, rgba(255,255,255,.26), transparent 62%);
+}
+
+/* ---- floating bars: tab bar, top pills, clock ---- */
+html:root :is(.tabbar, .tabbar.glass, .v2-pill, .v2-top .side-clock),
+html:root[data-theme="light"] :is(.tabbar, .tabbar.glass, .v2-pill, .v2-top .side-clock) {
+  background: linear-gradient(160deg, rgba(255,255,255,.1), rgba(255,255,255,.03)) !important;
+  -webkit-backdrop-filter: blur(3px) saturate(150%) brightness(1.05) !important; backdrop-filter: blur(3px) saturate(150%) brightness(1.05) !important;
   border: 0 !important;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.10), inset 0 1px 1px rgba(255,255,255,.6), inset 0 -1px 1px rgba(255,255,255,.18), inset 0 14px 24px -20px rgba(255,255,255,.45), 0 18px 44px -16px rgba(0,0,0,.55) !important;
+  box-shadow: var(--gg-edge), 0 16px 36px -14px rgba(0,0,0,.5) !important;
 }
-html:root[data-theme="light"] .tabbar, html:root[data-theme="light"] .tabbar.glass, html:root[data-theme="light"] .v2-top > .glass {
-  background: linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.45)) !important;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.7), inset 0 1px 1px #fff, 0 18px 40px -16px rgba(30,40,70,.35) !important;
-}
+html:root[data-theme="light"] :is(.tabbar, .tabbar.glass, .v2-pill, .v2-top .side-clock) { background: linear-gradient(160deg, rgba(255,255,255,.24), rgba(255,255,255,.1)) !important; }
 /* the tab highlight: a drop that stretches as it travels, then settles with a wobble */
 :root .tabbar.glass::before {
   background: radial-gradient(120% 140% at 30% 0%, rgba(255,255,255,.42), rgba(255,255,255,.10) 55%, rgba(255,255,255,.16)) !important;
@@ -425,226 +439,20 @@ html:root[data-theme="light"] .tabbar, html:root[data-theme="light"] .tabbar.gla
 @keyframes tabDrop { 0% { scale: 1 1; } 25% { scale: 1.35 .82; } 55% { scale: .92 1.1; } 75% { scale: 1.04 .97; } 100% { scale: 1 1; } }
 :root .tabbar .tab.on svg { animation: iconBob .6s cubic-bezier(.3, 1.6, .4, 1); }
 @keyframes iconBob { 0% { transform: translateY(0) scale(1); } 40% { transform: translateY(-3px) scale(1.15); } 100% { transform: none; } }
-/* jelly on press for buttons, chips and tiles */
-@keyframes lqJelly { 0% { scale: 1 1; } 25% { scale: 1.06 .94; } 45% { scale: .97 1.04; } 65% { scale: 1.02 .98; } 100% { scale: 1 1; } }
-:root :is(.btn, .seg button, .launch-app, .efb-app, .chip):active { scale: .94 1.03; transition: scale .08s; }
-:root :is(.btn, .launch-app, .efb-app):hover { animation: lqJelly .65s cubic-bezier(.3, .7, .4, 1); }
-:root :is(.btn.primary, .btn.accent) { background-image: linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0) 55%) !important; box-shadow: inset 0 1px 1px rgba(255,255,255,.6), 0 8px 22px -8px rgba(47,107,255,.7) !important; }
-/* cards get a specular rim instead of flat edges (no extra blur: cheap on iPad) */
-:root .glass:not(.tabbar):not(.side) { box-shadow: inset 0 1px 1px rgba(255,255,255,.28), inset 0 -1px 1px rgba(255,255,255,.07), inset 0 0 0 1px rgba(255,255,255,.06), 0 16px 40px -22px rgba(0,0,0,.6); }
-:root[data-theme="light"] .glass:not(.tabbar):not(.side) { box-shadow: inset 0 1px 1px #fff, inset 0 0 0 1px rgba(255,255,255,.6), 0 16px 36px -22px rgba(30,40,70,.35); }
-/* sheets pour in: they grow from the bottom with a soft overshoot */
-:root :is(.launch, .wn-sheet, .share-sheet) { animation: lqPour .55s cubic-bezier(.25, 1.35, .45, 1) both; transform-origin: 50% 100%; }
-@keyframes lqPour { 0% { opacity: 0; transform: translateY(24px) scale(.92, .86); border-radius: 48px; } 60% { opacity: 1; transform: translateY(-3px) scale(1.01, 1.02); } 100% { transform: none; } }
-@media (prefers-reduced-motion: reduce) { :root .tabbar.glass::before, :root .tabbar .tab.on svg, :root :is(.btn, .launch-app, .efb-app):hover, :root :is(.launch, .wn-sheet, .share-sheet) { animation: none !important; } }
 
-/* ===== Clear glass (Apple-style): see-through panels with a thick, light-catching rim.
-   liquid.js adds a real lens on Chromium that bends the background at the edges. ===== */
-:root:not([data-theme="light"]) { --ds-card: linear-gradient(150deg, rgba(60, 84, 128, .40), rgba(14, 24, 46, .34)); --ds-card-2: linear-gradient(150deg, rgba(70, 94, 138, .50), rgba(18, 28, 50, .44)); }
-:root[data-theme="light"] { --ds-card: linear-gradient(150deg, rgba(255, 255, 255, .58), rgba(255, 255, 255, .34)); --ds-card-2: linear-gradient(150deg, rgba(255, 255, 255, .72), rgba(255, 255, 255, .5)); }
-:root .glass:not(.tabbar):not(.side), :root .b-card, :root .b-tile {
-  -webkit-backdrop-filter: blur(22px) saturate(190%) brightness(1.05) !important; backdrop-filter: blur(22px) saturate(190%) brightness(1.05) !important;
-  box-shadow: inset 1.5px 1.5px .5px -.5px rgba(255,255,255,.7), inset -1px -1px .5px -.5px rgba(255,255,255,.3), inset 0 0 0 1px rgba(255,255,255,.07),
-    inset 10px 12px 22px -16px rgba(255,255,255,.35), inset -10px -12px 24px -16px rgba(255,255,255,.16), 0 18px 44px -22px rgba(0,0,0,.6) !important;
+/* ---- panels and tiles ---- */
+html:root :is(.glass:not(.tabbar):not(.side), .b-card, .b-tile, .more-tile) {
+  background-image: var(--ds-card) !important;
+  -webkit-backdrop-filter: blur(5px) saturate(150%) brightness(1.04) !important; backdrop-filter: blur(5px) saturate(150%) brightness(1.04) !important;
+  box-shadow: var(--gg-edge), 0 24px 50px -26px rgba(0,0,0,.55) !important;
 }
-:root[data-theme="light"] .glass:not(.tabbar):not(.side), :root[data-theme="light"] .b-card, :root[data-theme="light"] .b-tile {
-  box-shadow: inset 1.5px 1.5px .5px -.5px #fff, inset -1px -1px .5px -.5px rgba(255,255,255,.9), inset 0 0 0 1px rgba(255,255,255,.45),
-    inset 10px 12px 22px -16px #fff, 0 18px 40px -22px rgba(30,40,70,.35) !important;
-}
-/* the floating controls: almost clear, like Apple's clear glass */
-:root :is(.tabbar, .tabbar.glass, .v2-pill, .v2-top .side-clock) {
-  background: linear-gradient(135deg, rgba(255,255,255,.12), rgba(255,255,255,.02) 50%, rgba(255,255,255,.07)) !important;
-  -webkit-backdrop-filter: blur(3px) saturate(200%) brightness(1.1) !important; backdrop-filter: blur(3px) saturate(200%) brightness(1.1) !important;
-  border: 0 !important;
-  box-shadow: inset 1.5px 1.5px .5px -.5px rgba(255,255,255,.95), inset -1px -1px .5px -.5px rgba(255,255,255,.55), inset 0 0 0 1px rgba(255,255,255,.14),
-    inset 8px 10px 16px -10px rgba(255,255,255,.5), inset -8px -10px 18px -10px rgba(255,255,255,.25), 0 14px 36px -14px rgba(0,0,0,.5) !important;
-}
-:root[data-theme="light"] :is(.tabbar, .tabbar.glass, .v2-pill, .v2-top .side-clock) {
-  background: linear-gradient(135deg, rgba(255,255,255,.5), rgba(255,255,255,.22) 50%, rgba(255,255,255,.36)) !important;
-  box-shadow: inset 1.5px 1.5px .5px -.5px #fff, inset -1px -1px .5px -.5px #fff, inset 0 0 0 1px rgba(255,255,255,.5), inset 8px 10px 16px -10px #fff, 0 14px 34px -14px rgba(20,30,60,.35) !important;
-}
-:root:not([data-theme="light"]) :is(.tabbar .tab, .v2-pill, .v2-top .side-clock) { text-shadow: 0 1px 3px rgba(0,0,0,.45); }
-:root[data-theme="light"] :is(.tabbar .tab, .v2-pill, .v2-top .side-clock) { text-shadow: 0 1px 2px rgba(255,255,255,.7); }
-
-/* ===== Liquid glass buttons: every button is a thick, clear glass drop.
-   A bright rim on the top-left, a softer one bottom-right, a curved shine
-   across the top, and the colour of primary/danger buttons sits inside the
-   glass as a tint. On Chromium, liquid.js also bends the background at the rim. ===== */
-html:root {
-  --lqb-rim: inset 2px 2px 1px -1px rgba(255,255,255,.95), inset -2px -2px 1px -1px rgba(255,255,255,.55), inset 0 0 0 1px rgba(255,255,255,.16),
-    inset 0 10px 12px -9px rgba(255,255,255,.55), inset 0 -9px 12px -9px rgba(255,255,255,.32), inset 0 0 14px -4px rgba(255,255,255,.12);
-  --lqb-shine: radial-gradient(130% 90% at 50% -35%, rgba(255,255,255,.55), rgba(255,255,255,.08) 52%, transparent 60%),
-    radial-gradient(90% 60% at 50% 125%, rgba(255,255,255,.28), transparent 60%);
-}
-html:root :is(.btn, .chip, .ts-chip, .stat-chip, .radar-btn, .seg) {
-  background: var(--lqb-shine), linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.03)) !important;
-  -webkit-backdrop-filter: blur(2px) saturate(210%) brightness(1.12) !important; backdrop-filter: blur(2px) saturate(210%) brightness(1.12) !important;
-  border: 0 !important;
-  box-shadow: var(--lqb-rim), 0 10px 22px -10px rgba(0,0,0,.55) !important;
-  transition: scale .35s cubic-bezier(.3, 1.6, .4, 1), box-shadow .25s, filter .25s;
-}
-html:root :is(.btn, .chip, .ts-chip, .radar-btn):hover { filter: brightness(1.12) saturate(1.1); box-shadow: var(--lqb-rim), inset 0 0 22px -6px rgba(255,255,255,.35), 0 14px 28px -10px rgba(0,0,0,.55) !important; }
-html:root :is(.btn.primary, .btn.accent, .chip.accent) {
-  color: #fff !important; text-shadow: 0 1px 2px rgba(10,40,120,.5);
-  background: var(--lqb-shine), linear-gradient(180deg, rgba(90,160,255,.72), rgba(30,95,245,.62)) !important;
-  box-shadow: var(--lqb-rim), inset 0 -6px 14px -6px rgba(10,50,180,.5), 0 12px 28px -10px rgba(47,107,255,.75) !important;
-}
-html:root .btn.danger { color: #fff !important; background: var(--lqb-shine), linear-gradient(180deg, rgba(255,110,110,.7), rgba(225,50,60,.6)) !important;
-  box-shadow: var(--lqb-rim), 0 12px 26px -10px rgba(230,60,70,.7) !important; }
-html:root .ts-chip.emerg { color: #fff !important; background: var(--lqb-shine), linear-gradient(180deg, rgba(255,120,90,.7), rgba(220,60,40,.6)) !important; }
-html:root .btn.ghost { background: var(--lqb-shine), rgba(255,255,255,.04) !important; box-shadow: var(--lqb-rim) !important; }
-/* segmented controls: a glass track with a glass drop for the chosen option */
-html:root .seg { padding: 4px !important; }
-html:root .seg button { background: transparent !important; box-shadow: none !important; transition: scale .35s cubic-bezier(.3,1.6,.4,1); }
-html:root .seg button.on { background: var(--lqb-shine), linear-gradient(180deg, rgba(255,255,255,.3), rgba(255,255,255,.1)) !important;
-  box-shadow: var(--lqb-rim), 0 6px 14px -6px rgba(0,0,0,.5) !important; animation: lqJelly .55s cubic-bezier(.3,.7,.4,1); }
-html:root .seg button:active { scale: .92 1.04; }
-/* app icons in the launcher: glossy glass tiles like the iOS dock */
-html:root .launch-app .more-ic { position: relative; overflow: hidden;
-  box-shadow: inset 2px 2px 1px -1px rgba(255,255,255,.9), inset -2px -2px 1px -1px rgba(255,255,255,.45), inset 0 0 0 1px rgba(255,255,255,.22),
-    inset 0 12px 14px -10px rgba(255,255,255,.6), inset 0 -10px 14px -10px rgba(0,0,0,.25), 0 10px 22px -10px rgba(0,0,0,.55) !important; }
-html:root .launch-app .more-ic::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-  background: radial-gradient(120% 70% at 50% -10%, rgba(255,255,255,.55), transparent 55%), radial-gradient(80% 50% at 50% 115%, rgba(255,255,255,.3), transparent 60%); }
-/* light theme: brighter glass so it still reads on white */
-html:root[data-theme="light"] :is(.btn:not(.primary):not(.danger):not(.accent), .chip:not(.accent), .ts-chip:not(.emerg), .stat-chip, .radar-btn, .seg) {
-  background: var(--lqb-shine), linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,.25)) !important;
-  box-shadow: var(--lqb-rim), inset 0 0 0 1px rgba(255,255,255,.6), 0 10px 22px -12px rgba(20,30,60,.35) !important;
-}
-@media (prefers-reduced-motion: reduce) { html:root .seg button.on { animation: none; } }
-
-/* bolder glass for app buttons too */
-html:root {
-  --lqb-rim: inset 3px 3px 1.5px -1.5px rgba(255,255,255,1), inset -3px -3px 1.5px -1.5px rgba(255,255,255,.7), inset 0 0 0 1px rgba(255,255,255,.22),
-    inset 0 13px 15px -11px rgba(255,255,255,.7), inset 0 -11px 13px -10px rgba(255,255,255,.5), inset 0 0 18px -2px rgba(255,255,255,.16);
-  --lqb-shine: radial-gradient(120% 85% at 50% -30%, rgba(255,255,255,.7), rgba(255,255,255,.12) 50%, transparent 58%),
-    radial-gradient(70% 55% at 50% 120%, rgba(255,255,255,.45), transparent 62%),
-    linear-gradient(115deg, transparent 30%, rgba(255,255,255,.14) 45%, transparent 52%);
-}
-/* settings and screen tiles are buttons too: give them the glass rim */
-html:root :is(.set-tile, .more-tile, .hub-tile) { box-shadow: var(--lqb-rim), 0 12px 26px -12px rgba(0,0,0,.5) !important; background-image: var(--lqb-shine) !important; }
-html:root .launch.glass { background: linear-gradient(150deg, rgba(255,255,255,.2), rgba(255,255,255,.06)) !important; box-shadow: var(--lqb-rim), 0 24px 60px -20px rgba(0,0,0,.6) !important; }
-html:root[data-theme="light"] .launch.glass { background: linear-gradient(150deg, rgba(255,255,255,.42), rgba(255,255,255,.2)) !important; }
-
-/* ===== Like the reference pictures =====
-   Icons: clear glass tiles holding their colour as a tint (the iOS dock).
-   Cards and tiles: a thick bevelled glass edge with a bright band of light
-   around the rim and a clear middle (the iOS 27 tile). */
-html:root .more-ic {
-  position: relative; overflow: hidden;
-  background: radial-gradient(120% 75% at 50% -12%, rgba(255,255,255,.55), rgba(255,255,255,.06) 52%, transparent 60%),
-    linear-gradient(160deg, color-mix(in srgb, var(--c1, #5E9BFF) 88%, transparent), color-mix(in srgb, var(--c2, #3A5BF0) 72%, transparent)) !important;
-  -webkit-backdrop-filter: blur(6px) saturate(200%); backdrop-filter: blur(6px) saturate(200%);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.35), inset 2px 2px 1px -1px #fff, inset -2px -2px 1px -1px rgba(255,255,255,.6),
-    inset 0 0 10px 1px rgba(255,255,255,.28), inset 0 -8px 12px -8px rgba(255,255,255,.45), 0 8px 18px -8px rgba(0,0,0,.45) !important;
-}
-html:root .more-ic svg { filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.35)); position: relative; z-index: 1; }
-html:root .more-ic::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-  background: radial-gradient(90% 50% at 50% 112%, rgba(255,255,255,.4), transparent 62%), linear-gradient(125deg, transparent 35%, rgba(255,255,255,.18) 47%, transparent 55%); }
-html:root {
-  --lq-bevel: inset 0 0 0 1.5px rgba(255,255,255,.42), inset 3px 4px 2px -2px rgba(255,255,255,.95), inset -3px -4px 3px -2px rgba(255,255,255,.55),
-    inset 0 0 16px 1px rgba(255,255,255,.2), inset 0 0 42px -12px rgba(255,255,255,.3);
-}
-html:root :is(.glass:not(.tabbar):not(.side), .b-card, .b-tile, .more-tile) { box-shadow: var(--lq-bevel), 0 22px 50px -24px rgba(0,0,0,.55) !important; }
 html:root[data-theme="light"] :is(.glass:not(.tabbar):not(.side), .b-card, .b-tile, .more-tile) {
   box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.75), inset 3px 4px 2px -2px #fff, inset -3px -4px 3px -2px rgba(255,255,255,.85),
     inset 0 0 18px 2px rgba(255,255,255,.45), inset 0 0 46px -12px rgba(255,255,255,.55), 0 22px 46px -24px rgba(20,30,60,.35) !important;
 }
-/* the tab bar and top pills get the same thick edge */
-html:root :is(.tabbar, .tabbar.glass, .v2-pill, .v2-top .side-clock) { box-shadow: var(--lq-bevel), 0 16px 38px -14px rgba(0,0,0,.5) !important; }
-/* the press effect replaces the old "fade on press" */
-html:root :is(.btn, .rc-tog, .seg button, .nav-a, .tab, .more-tile, .cl-items button, .ch-list button, .rc-steps button, .map-tools .btn):active { opacity: 1 !important; }
-
-/* ===== Final pass: 95% clear glass like the website, softer colours, less GPU work ===== */
-:root:not([data-theme="light"]) { --ds-card: linear-gradient(150deg, rgba(255,255,255,.07), rgba(255,255,255,.02)); --ds-card-2: linear-gradient(150deg, rgba(255,255,255,.1), rgba(255,255,255,.03)); }
-:root[data-theme="light"] { --ds-card: linear-gradient(150deg, rgba(255,255,255,.2), rgba(255,255,255,.07)); --ds-card-2: linear-gradient(150deg, rgba(255,255,255,.26), rgba(255,255,255,.1)); }
-html:root :is(.glass:not(.tabbar):not(.side), .b-card, .b-tile, .more-tile) {
-  background-image: var(--ds-card) !important;
-  -webkit-backdrop-filter: blur(10px) saturate(140%) !important; backdrop-filter: blur(10px) saturate(140%) !important;
-}
-html:root .glass.strong:not(.tabbar), html:root .launch.glass { background-image: var(--ds-card-2) !important; }
-html:root :is(.tabbar, .tabbar.glass, .v2-pill, .v2-top .side-clock) {
-  background: linear-gradient(135deg, rgba(255,255,255,.07), rgba(255,255,255,.015) 50%, rgba(255,255,255,.04)) !important;
-  -webkit-backdrop-filter: blur(3px) saturate(140%) brightness(1.04) !important; backdrop-filter: blur(3px) saturate(140%) brightness(1.04) !important;
-}
-html:root :is(.btn, .chip, .ts-chip, .stat-chip, .radar-btn, .seg) {
-  -webkit-backdrop-filter: blur(2px) saturate(140%) !important; backdrop-filter: blur(2px) saturate(140%) !important;
-}
-html:root :is(.btn:not(.primary):not(.danger):not(.accent), .chip:not(.accent), .ts-chip:not(.emerg), .stat-chip, .radar-btn, .seg) {
-  background: var(--lqb-shine), linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.01)) !important;
-}
-html:root[data-theme="light"] :is(.btn:not(.primary):not(.danger):not(.accent), .chip:not(.accent), .ts-chip:not(.emerg), .stat-chip, .radar-btn, .seg) {
-  background: var(--lqb-shine), linear-gradient(180deg, rgba(255,255,255,.24), rgba(255,255,255,.08)) !important;
-}
-html:root { --lqb-shine: radial-gradient(120% 85% at 50% -30%, rgba(255,255,255,.42), rgba(255,255,255,.06) 50%, transparent 58%), radial-gradient(70% 55% at 50% 120%, rgba(255,255,255,.26), transparent 62%); }
-/* softer colour: tinted glass, not candy */
-html:root :is(.btn.primary, .btn.accent, .chip.accent) { background: var(--lqb-shine), linear-gradient(180deg, rgba(80,130,220,.5), rgba(40,85,190,.42)) !important;
-  box-shadow: var(--lqb-rim), inset 0 -6px 14px -6px rgba(10,40,140,.4), 0 10px 24px -12px rgba(40,90,200,.55) !important; }
-html:root .btn.danger { background: var(--lqb-shine), linear-gradient(180deg, rgba(220,100,100,.5), rgba(180,50,60,.42)) !important; }
-html:root .more-ic {
-  background: radial-gradient(120% 75% at 50% -12%, rgba(255,255,255,.4), rgba(255,255,255,.04) 52%, transparent 60%),
-    linear-gradient(160deg, color-mix(in srgb, var(--c1, #5E9BFF) 55%, transparent), color-mix(in srgb, var(--c2, #3A5BF0) 42%, transparent)) !important;
-  -webkit-backdrop-filter: none !important; backdrop-filter: none !important; filter: saturate(.85);
-}
-
-/* ===== Reference look (grey glass): neutral grey frosted glass, a strong blur behind,
-   thick edges that darken toward the rim with a thin bright line, inner panels a
-   shade darker, grey pill buttons. No blue tint. ===== */
-:root:not([data-theme="light"]) { --ds-card: linear-gradient(160deg, rgba(150,150,156,.30), rgba(110,110,116,.26)); --ds-card-2: linear-gradient(160deg, rgba(150,150,156,.36), rgba(110,110,116,.32)); }
-:root[data-theme="light"] { --ds-card: linear-gradient(160deg, rgba(235,235,238,.42), rgba(215,215,220,.34)); --ds-card-2: linear-gradient(160deg, rgba(240,240,243,.5), rgba(220,220,225,.42)); }
-html:root {
-  --gg-edge: inset 0 0 0 1px rgba(255,255,255,.28), inset 1.5px 1.5px 1px -.5px rgba(255,255,255,.7), inset -1.5px -1.5px 1px -.5px rgba(255,255,255,.35),
-    inset 0 0 0 6px rgba(0,0,0,.035), inset 0 0 22px 2px rgba(0,0,0,.16), inset 0 0 44px -10px rgba(255,255,255,.12);
-}
-html:root :is(.glass:not(.tabbar):not(.side), .b-card, .b-tile, .more-tile) {
-  -webkit-backdrop-filter: blur(16px) saturate(115%) !important; backdrop-filter: blur(16px) saturate(115%) !important;
-  box-shadow: var(--gg-edge), 0 24px 50px -26px rgba(0,0,0,.55) !important;
-}
-/* panels inside panels sit a shade darker, like the app grid in the reference */
-html:root .glass .glass, html:root .glass :is(.b-card, .more-tile, .gc-tiles > *, .cr-tile) { background-image: linear-gradient(160deg, rgba(90,90,96,.22), rgba(70,70,76,.2)) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
-html:root :is(.tabbar, .tabbar.glass, .v2-pill, .v2-top .side-clock) {
-  background: linear-gradient(160deg, rgba(160,160,166,.26), rgba(120,120,126,.22)) !important;
-  -webkit-backdrop-filter: blur(14px) saturate(115%) !important; backdrop-filter: blur(14px) saturate(115%) !important;
-  box-shadow: var(--gg-edge), 0 16px 36px -14px rgba(0,0,0,.5) !important;
-}
-html:root :is(.btn:not(.primary):not(.danger):not(.accent), .chip:not(.accent), .ts-chip:not(.emerg), .stat-chip, .radar-btn, .seg) {
-  background: radial-gradient(120% 85% at 50% -30%, rgba(255,255,255,.28), transparent 58%), linear-gradient(180deg, rgba(170,170,176,.30), rgba(130,130,136,.26)) !important;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.3), inset 1.5px 1.5px 1px -.5px rgba(255,255,255,.75), inset -1.5px -1.5px 1px -.5px rgba(255,255,255,.35), inset 0 0 12px rgba(0,0,0,.12), 0 8px 18px -10px rgba(0,0,0,.45) !important;
-}
-html:root :is(.btn.primary, .btn.accent, .chip.accent) { background: radial-gradient(120% 85% at 50% -30%, rgba(255,255,255,.3), transparent 58%), linear-gradient(180deg, rgba(90,125,190,.5), rgba(60,95,165,.44)) !important; }
-html:root .more-ic { filter: saturate(.8); }
-html:root:not([data-theme="light"]) :is(.glass, .b-card, .more-tile, .tabbar, .v2-pill) { color: #fff; }
-
-/* ===== Clear glass, full-colour icons =====
-   Panels: almost no tint and a light blur, so the sky and map show through
-   clearly; the thick edge does the work of saying "glass".
-   Icons: back to full colour, with a glossy glass shine on top. */
-:root:not([data-theme="light"]) { --ds-card: linear-gradient(160deg, rgba(255,255,255,.07), rgba(255,255,255,.025)); --ds-card-2: linear-gradient(160deg, rgba(255,255,255,.09), rgba(255,255,255,.035)); }
-:root[data-theme="light"] { --ds-card: linear-gradient(160deg, rgba(255,255,255,.16), rgba(255,255,255,.06)); --ds-card-2: linear-gradient(160deg, rgba(255,255,255,.2), rgba(255,255,255,.08)); }
-html:root :is(.glass:not(.tabbar):not(.side), .b-card, .b-tile, .more-tile) {
-  -webkit-backdrop-filter: blur(5px) saturate(150%) brightness(1.04) !important; backdrop-filter: blur(5px) saturate(150%) brightness(1.04) !important;
-}
 html:root .glass.strong:not(.tabbar), html:root .launch.glass { background-image: var(--ds-card-2) !important; background-color: transparent !important; }
-html:root .launch.glass { -webkit-backdrop-filter: blur(4px) saturate(160%) brightness(1.05) !important; backdrop-filter: blur(4px) saturate(160%) brightness(1.05) !important; }
-html:root .glass .glass, html:root .glass :is(.b-card, .more-tile, .gc-tiles > *, .cr-tile) { background-image: linear-gradient(160deg, rgba(255,255,255,.08), rgba(255,255,255,.03)) !important; }
-html:root :is(.tabbar, .tabbar.glass, .v2-pill, .v2-top .side-clock) {
-  background: linear-gradient(160deg, rgba(255,255,255,.1), rgba(255,255,255,.03)) !important;
-  -webkit-backdrop-filter: blur(3px) saturate(150%) brightness(1.05) !important; backdrop-filter: blur(3px) saturate(150%) brightness(1.05) !important;
-}
-html:root :is(.btn:not(.primary):not(.danger):not(.accent), .chip:not(.accent), .ts-chip:not(.emerg), .stat-chip, .radar-btn, .seg) {
-  background: radial-gradient(120% 85% at 50% -30%, rgba(255,255,255,.32), transparent 58%), linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,.03)) !important;
-}
-/* labels stay readable on clear glass */
-html:root[data-theme="light"] :is(.launch-app, .more-tile, .tabbar .tab, .v2-pill) { text-shadow: 0 0 6px rgba(255,255,255,.75), 0 1px 1px rgba(255,255,255,.6); }
-html:root:not([data-theme="light"]) :is(.launch-app, .more-tile, .tabbar .tab, .v2-pill) { text-shadow: 0 1px 3px rgba(0,0,0,.55); }
-/* full-colour glossy icons */
-html:root .more-ic {
-  filter: none !important;
-  background: radial-gradient(120% 70% at 50% -10%, rgba(255,255,255,.5), rgba(255,255,255,.06) 50%, transparent 58%),
-    linear-gradient(180deg, var(--c1, #5E9BFF), var(--c2, #3A5BF0)) !important;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.3), inset 1.5px 1.5px 1px -.5px rgba(255,255,255,.9), inset -1.5px -1.5px 1px -.5px rgba(255,255,255,.4),
-    inset 0 -8px 12px -8px rgba(255,255,255,.4), 0 8px 18px -8px rgba(0,0,0,.4) !important;
-}
-/* panels that had their own near-solid backgrounds: clear glass too */
+html:root .glass :is(.gc-tiles > *, .cr-tile) { background-image: linear-gradient(160deg, rgba(255,255,255,.08), rgba(255,255,255,.03)) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+/* panels that had their own near-solid backgrounds */
 html:root:not([data-look]) main section.glass.live-card, html:root:not([data-look]) main .live-card.glass,
 html:root[data-theme="light"]:not([data-look]) main section.glass.live-card, html:root[data-theme="light"]:not([data-look]) main .live-card.glass,
 html:root:not([data-look]) nav.glass.side, html:root[data-theme="light"]:not([data-look]) nav.glass.side,
@@ -653,9 +461,94 @@ html:root .welcome :is(.glass, li), html:root[data-theme="light"] .welcome :is(.
   background: var(--ds-card-2) !important;
   -webkit-backdrop-filter: blur(6px) saturate(150%) brightness(1.04) !important; backdrop-filter: blur(6px) saturate(150%) brightness(1.04) !important;
 }
+/* a little more blur where text sits over a busy map */
 html:root .map-sheet.map-route.glass { -webkit-backdrop-filter: blur(14px) saturate(150%) !important; backdrop-filter: blur(14px) saturate(150%) !important; }
 :root .gs-msg.glass.strong, :root .fc-sheet.glass.strong, :root[data-theme="dark"] .gs-msg.glass.strong, :root[data-theme="dark"] .fc-sheet.glass.strong {
   background: var(--ds-card-2) !important;
   -webkit-backdrop-filter: blur(8px) saturate(160%) brightness(1.05) !important; backdrop-filter: blur(8px) saturate(160%) brightness(1.05) !important;
   box-shadow: var(--gg-edge), 0 16px 36px -14px rgba(0,0,0,.45) !important;
 }
+/* readable labels on clear glass */
+html:root:not([data-theme="light"]) :is(.glass, .b-card, .more-tile, .tabbar, .v2-pill) { color: #fff; }
+html:root[data-theme="light"] :is(.launch-app, .more-tile, .tabbar .tab, .v2-pill) { text-shadow: 0 0 6px rgba(255,255,255,.75), 0 1px 1px rgba(255,255,255,.6); }
+html:root:not([data-theme="light"]) :is(.launch-app, .more-tile, .tabbar .tab, .v2-pill, .v2-top .side-clock) { text-shadow: 0 1px 3px rgba(0,0,0,.55); }
+/* sheets pour in from the bottom with a soft overshoot */
+:root :is(.launch, .wn-sheet, .share-sheet) { animation: lqPour .55s cubic-bezier(.25, 1.35, .45, 1) both; transform-origin: 50% 100%; }
+@keyframes lqPour { 0% { opacity: 0; transform: translateY(24px) scale(.92, .86); border-radius: 48px; } 60% { opacity: 1; transform: translateY(-3px) scale(1.01, 1.02); } 100% { transform: none; } }
+
+/* ---- icons: full colour with a glossy glass shine ---- */
+html:root .more-ic {
+  position: relative; overflow: hidden; filter: none !important;
+  background: radial-gradient(120% 70% at 50% -10%, rgba(255,255,255,.5), rgba(255,255,255,.06) 50%, transparent 58%),
+    linear-gradient(180deg, var(--c1, #5E9BFF), var(--c2, #3A5BF0)) !important;
+  -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.3), inset 1.5px 1.5px 1px -.5px rgba(255,255,255,.9), inset -1.5px -1.5px 1px -.5px rgba(255,255,255,.4),
+    inset 0 -8px 12px -8px rgba(255,255,255,.4), 0 8px 18px -8px rgba(0,0,0,.4) !important;
+}
+html:root .launch-app .more-ic {
+  box-shadow: inset 2px 2px 1px -1px rgba(255,255,255,.9), inset -2px -2px 1px -1px rgba(255,255,255,.45), inset 0 0 0 1px rgba(255,255,255,.22),
+    inset 0 12px 14px -10px rgba(255,255,255,.6), inset 0 -10px 14px -10px rgba(0,0,0,.25), 0 10px 22px -10px rgba(0,0,0,.55) !important;
+}
+html:root .more-ic svg { filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.35)); position: relative; z-index: 1; }
+html:root .more-ic::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(90% 50% at 50% 112%, rgba(255,255,255,.4), transparent 62%), linear-gradient(125deg, transparent 35%, rgba(255,255,255,.18) 47%, transparent 55%); }
+html:root .launch-app .more-ic::after { background: radial-gradient(120% 70% at 50% -10%, rgba(255,255,255,.55), transparent 55%), radial-gradient(80% 50% at 50% 115%, rgba(255,255,255,.3), transparent 60%); }
+
+/* ---- buttons, chips and segmented controls ---- */
+html:root :is(.btn, .chip, .ts-chip, .stat-chip, .radar-btn, .seg) {
+  -webkit-backdrop-filter: blur(2px) saturate(140%) !important; backdrop-filter: blur(2px) saturate(140%) !important;
+  border: 0 !important;
+  transition: scale .35s cubic-bezier(.3, 1.6, .4, 1), box-shadow .25s, filter .25s;
+}
+html:root :is(.btn:not(.primary):not(.danger):not(.accent), .chip:not(.accent), .ts-chip:not(.emerg), .stat-chip, .radar-btn, .seg) {
+  background: radial-gradient(120% 85% at 50% -30%, rgba(255,255,255,.32), transparent 58%), linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,.03)) !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.3), inset 1.5px 1.5px 1px -.5px rgba(255,255,255,.75), inset -1.5px -1.5px 1px -.5px rgba(255,255,255,.35), inset 0 0 12px rgba(0,0,0,.12), 0 8px 18px -10px rgba(0,0,0,.45) !important;
+}
+html:root[data-theme="light"] :is(.btn:not(.primary):not(.danger):not(.accent), .chip:not(.accent), .ts-chip:not(.emerg), .stat-chip, .radar-btn, .seg) {
+  background: var(--lqb-shine), linear-gradient(180deg, rgba(255,255,255,.24), rgba(255,255,255,.08)) !important;
+  box-shadow: var(--lqb-rim), inset 0 0 0 1px rgba(255,255,255,.6), 0 10px 22px -12px rgba(20,30,60,.35) !important;
+}
+html:root :is(.btn, .chip, .ts-chip, .radar-btn):hover { filter: brightness(1.12) saturate(1.1); }
+/* colour sits inside the glass as a soft tint */
+html:root :is(.btn.primary, .btn.accent, .chip.accent), html:root:not([data-look]) :is(.btn.primary, .btn.accent, .chip.accent) {
+  color: #fff !important; text-shadow: 0 1px 2px rgba(10,40,120,.5);
+  background: radial-gradient(120% 85% at 50% -30%, rgba(255,255,255,.3), transparent 58%), linear-gradient(180deg, rgba(90,125,190,.5), rgba(60,95,165,.44)) !important;
+  box-shadow: var(--lqb-rim), inset 0 -6px 14px -6px rgba(10,40,140,.4), 0 10px 24px -12px rgba(40,90,200,.55) !important;
+}
+html:root .btn.danger { color: #fff !important; background: var(--lqb-shine), linear-gradient(180deg, rgba(220,100,100,.5), rgba(180,50,60,.42)) !important;
+  box-shadow: var(--lqb-rim), 0 12px 26px -10px rgba(230,60,70,.7) !important; }
+html:root .ts-chip.emerg { color: #fff !important; background: var(--lqb-shine), linear-gradient(180deg, rgba(255,120,90,.7), rgba(220,60,40,.6)) !important; }
+/* segmented controls: a glass track with a glass drop for the chosen option */
+html:root .seg { padding: 4px !important; }
+html:root .seg button { background: transparent !important; box-shadow: none !important; transition: scale .35s cubic-bezier(.3,1.6,.4,1); }
+html:root .seg button.on { background: var(--lqb-shine), linear-gradient(180deg, rgba(255,255,255,.3), rgba(255,255,255,.1)) !important;
+  box-shadow: var(--lqb-rim), 0 6px 14px -6px rgba(0,0,0,.5) !important; animation: lqJelly .55s cubic-bezier(.3,.7,.4,1); }
+/* a soft wobble on hover (desktop); presses are animated by press.js, which replaces the old fade */
+@keyframes lqJelly { 0% { scale: 1 1; } 25% { scale: 1.06 .94; } 45% { scale: .97 1.04; } 65% { scale: 1.02 .98; } 100% { scale: 1 1; } }
+@media (hover: hover) { :root :is(.btn, .launch-app, .efb-app):hover { animation: lqJelly .65s cubic-bezier(.3, .7, .4, 1); } }
+html:root :is(.btn, .rc-tog, .seg button, .nav-a, .tab, .more-tile, .cl-items button, .ch-list button, .rc-steps button, .map-tools .btn):active { opacity: 1 !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  :root .tabbar.glass::before, :root .tabbar .tab.on svg, :root :is(.btn, .launch-app, .efb-app):hover,
+  :root :is(.launch, .wn-sheet, .share-sheet), html:root .seg button.on { animation: none !important; }
+}
+
+/* ---- profile picture ---- */
+.pfp { position: relative; display: inline-grid; place-items: center; flex: none; border-radius: 50%; overflow: hidden; color: #fff; font-weight: 800; letter-spacing: -.02em;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.35), inset 1.5px 1.5px 1px -.5px rgba(255,255,255,.9), inset 0 -6px 10px -6px rgba(255,255,255,.35), 0 6px 14px -8px rgba(0,0,0,.45); }
+.pfp img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pfp::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(110% 70% at 50% -10%, rgba(255,255,255,.45), transparent 55%); box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); }
+.pfp b { font-size: inherit; line-height: 1; text-shadow: 0 1px 2px rgba(0,0,0,.3); position: relative; z-index: 1; }
+.pfp-g { width: 52%; height: 52%; display: grid; position: relative; z-index: 1; filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.3)); }
+.pfp-g svg { width: 100%; height: 100%; }
+html:root .v2-acct { padding: 4px !important; width: 52px; }
+html:root .v2-acct .pfp { width: 44px !important; height: 44px !important; }
+@media (max-width: 760px) { html:root .v2-acct { width: 46px; } html:root .v2-acct .pfp { width: 38px !important; height: 38px !important; } }
+.pfp-pick-top { display: flex; align-items: center; gap: 16px; }
+.pfp-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.pfp-opt { padding: 3px; border: 0; border-radius: 50%; background: transparent; cursor: pointer; box-shadow: inset 0 0 0 2px transparent; transition: box-shadow .2s; }
+.pfp-opt.on { box-shadow: inset 0 0 0 2.5px #4C8DFF; }
+.pfp-opt:focus-visible { outline: 2px solid #4C8DFF; outline-offset: 2px; }
+.pfp-err { color: #FF8A65; font-size: 14px; }
+html:root .acct .pfp { font-size: 15px; }
