@@ -54,12 +54,6 @@
 (function () {
   "use strict";
   var fine = matchMedia("(pointer: fine)").matches, reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  document.addEventListener("pointerdown", function (e) {
-    var b = e.target.closest && e.target.closest(".btn"); if (!b) return;
-    var r = b.getBoundingClientRect(), s = Math.max(r.width, r.height) * 2.2, d = document.createElement("span");
-    d.className = "rip"; d.style.width = d.style.height = s + "px"; d.style.left = (e.clientX - r.left - s / 2) + "px"; d.style.top = (e.clientY - r.top - s / 2) + "px";
-    b.appendChild(d); setTimeout(function () { d.remove(); }, 650);
-  });
   if (!fine || reduce) return;
   document.querySelectorAll(".btn.big, .btn.primary, .g3-play").forEach(function (b) {
     b.addEventListener("pointermove", function (e) {
