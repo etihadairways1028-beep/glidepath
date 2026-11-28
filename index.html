@@ -30,7 +30,15 @@
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Glidepath","applicationCategory":"GameApplication","operatingSystem":"Windows 10, Windows 11, iPadOS, iOS, Android, macOS","description":"A free companion for Microsoft Flight Simulator 2020 and 2024: your flight live on your iPad, phone or second screen, with a review after every landing.","url":"https://glidepath-ad9.pages.dev/","image":"https://glidepath-ad9.pages.dev/assets/og.jpg","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
   <script>(function(){try{var t=localStorage.getItem("gp-theme");if(t!=="light"&&t!=="dark")t=matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme="dark";}})();</script>
 </head>
-<body class="g3">
+<body class="g3 lg">
+  <div class="lg-bg" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i><i class="b4"></i></div>
+  <svg class="lg-defs" aria-hidden="true" focusable="false" width="0" height="0">
+    <filter id="lg-refract" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.008 0.012" numOctaves="2" seed="7" result="n"/>
+      <feGaussianBlur in="n" stdDeviation="2" result="nb"/>
+      <feDisplacementMap in="SourceGraphic" in2="nb" scale="38" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </svg>
   <a class="skip" href="#main">Skip to content</a>
   <header class="top">
     <nav class="nav glass" aria-label="Main">

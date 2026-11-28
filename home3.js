@@ -39,3 +39,14 @@
   // stagger the grid tiles
   document.querySelectorAll(".g3-free-grid li, .g3-app-grid li").forEach(function (li, i) { li.style.setProperty("--i", String(i % 12)); });
 })();
+/* Liquid glass: the light on each glass card follows the pointer. */
+(function () {
+  "use strict";
+  if (!matchMedia("(pointer: fine)").matches) return;
+  var sel = ".g3-free-grid li, .g3-app-grid li, .g3-steps3 li, .g3-card, .dl.glass, .faq-list details";
+  document.addEventListener("pointermove", function (e) {
+    var el = e.target.closest && e.target.closest(sel); if (!el) return;
+    var r = el.getBoundingClientRect();
+    el.style.setProperty("--mx", (e.clientX - r.left) + "px"); el.style.setProperty("--my", (e.clientY - r.top) + "px");
+  }, { passive: true });
+})();
