@@ -613,3 +613,49 @@ html:root :is(.btn:not(.primary):not(.danger):not(.accent), .chip:not(.accent), 
 html:root :is(.btn.primary, .btn.accent, .chip.accent) { background: radial-gradient(120% 85% at 50% -30%, rgba(255,255,255,.3), transparent 58%), linear-gradient(180deg, rgba(90,125,190,.5), rgba(60,95,165,.44)) !important; }
 html:root .more-ic { filter: saturate(.8); }
 html:root:not([data-theme="light"]) :is(.glass, .b-card, .more-tile, .tabbar, .v2-pill) { color: #fff; }
+
+/* ===== Clear glass, full-colour icons =====
+   Panels: almost no tint and a light blur, so the sky and map show through
+   clearly; the thick edge does the work of saying "glass".
+   Icons: back to full colour, with a glossy glass shine on top. */
+:root:not([data-theme="light"]) { --ds-card: linear-gradient(160deg, rgba(255,255,255,.07), rgba(255,255,255,.025)); --ds-card-2: linear-gradient(160deg, rgba(255,255,255,.09), rgba(255,255,255,.035)); }
+:root[data-theme="light"] { --ds-card: linear-gradient(160deg, rgba(255,255,255,.16), rgba(255,255,255,.06)); --ds-card-2: linear-gradient(160deg, rgba(255,255,255,.2), rgba(255,255,255,.08)); }
+html:root :is(.glass:not(.tabbar):not(.side), .b-card, .b-tile, .more-tile) {
+  -webkit-backdrop-filter: blur(5px) saturate(150%) brightness(1.04) !important; backdrop-filter: blur(5px) saturate(150%) brightness(1.04) !important;
+}
+html:root .glass.strong:not(.tabbar), html:root .launch.glass { background-image: var(--ds-card-2) !important; background-color: transparent !important; }
+html:root .launch.glass { -webkit-backdrop-filter: blur(4px) saturate(160%) brightness(1.05) !important; backdrop-filter: blur(4px) saturate(160%) brightness(1.05) !important; }
+html:root .glass .glass, html:root .glass :is(.b-card, .more-tile, .gc-tiles > *, .cr-tile) { background-image: linear-gradient(160deg, rgba(255,255,255,.08), rgba(255,255,255,.03)) !important; }
+html:root :is(.tabbar, .tabbar.glass, .v2-pill, .v2-top .side-clock) {
+  background: linear-gradient(160deg, rgba(255,255,255,.1), rgba(255,255,255,.03)) !important;
+  -webkit-backdrop-filter: blur(3px) saturate(150%) brightness(1.05) !important; backdrop-filter: blur(3px) saturate(150%) brightness(1.05) !important;
+}
+html:root :is(.btn:not(.primary):not(.danger):not(.accent), .chip:not(.accent), .ts-chip:not(.emerg), .stat-chip, .radar-btn, .seg) {
+  background: radial-gradient(120% 85% at 50% -30%, rgba(255,255,255,.32), transparent 58%), linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,.03)) !important;
+}
+/* labels stay readable on clear glass */
+html:root[data-theme="light"] :is(.launch-app, .more-tile, .tabbar .tab, .v2-pill) { text-shadow: 0 0 6px rgba(255,255,255,.75), 0 1px 1px rgba(255,255,255,.6); }
+html:root:not([data-theme="light"]) :is(.launch-app, .more-tile, .tabbar .tab, .v2-pill) { text-shadow: 0 1px 3px rgba(0,0,0,.55); }
+/* full-colour glossy icons */
+html:root .more-ic {
+  filter: none !important;
+  background: radial-gradient(120% 70% at 50% -10%, rgba(255,255,255,.5), rgba(255,255,255,.06) 50%, transparent 58%),
+    linear-gradient(180deg, var(--c1, #5E9BFF), var(--c2, #3A5BF0)) !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.3), inset 1.5px 1.5px 1px -.5px rgba(255,255,255,.9), inset -1.5px -1.5px 1px -.5px rgba(255,255,255,.4),
+    inset 0 -8px 12px -8px rgba(255,255,255,.4), 0 8px 18px -8px rgba(0,0,0,.4) !important;
+}
+/* panels that had their own near-solid backgrounds: clear glass too */
+html:root:not([data-look]) main section.glass.live-card, html:root:not([data-look]) main .live-card.glass,
+html:root[data-theme="light"]:not([data-look]) main section.glass.live-card, html:root[data-theme="light"]:not([data-look]) main .live-card.glass,
+html:root:not([data-look]) nav.glass.side, html:root[data-theme="light"]:not([data-look]) nav.glass.side,
+html:root main .map-sheet.map-route.glass, html:root[data-theme="light"] main .map-sheet.map-route.glass,
+html:root .welcome :is(.glass, li), html:root[data-theme="light"] .welcome :is(.glass, li) {
+  background: var(--ds-card-2) !important;
+  -webkit-backdrop-filter: blur(6px) saturate(150%) brightness(1.04) !important; backdrop-filter: blur(6px) saturate(150%) brightness(1.04) !important;
+}
+html:root .map-sheet.map-route.glass { -webkit-backdrop-filter: blur(14px) saturate(150%) !important; backdrop-filter: blur(14px) saturate(150%) !important; }
+:root .gs-msg.glass.strong, :root .fc-sheet.glass.strong, :root[data-theme="dark"] .gs-msg.glass.strong, :root[data-theme="dark"] .fc-sheet.glass.strong {
+  background: var(--ds-card-2) !important;
+  -webkit-backdrop-filter: blur(8px) saturate(160%) brightness(1.05) !important; backdrop-filter: blur(8px) saturate(160%) brightness(1.05) !important;
+  box-shadow: var(--gg-edge), 0 16px 36px -14px rgba(0,0,0,.45) !important;
+}

@@ -6,7 +6,7 @@
 import { useEffect, useState } from "react";
 import { Icon } from "./ui";
 
-export const APP_VERSION = "1.7.7";
+export const APP_VERSION = "1.7.8";
 /** What people call this release. The number above is the build that updates follow. */
 export const LAUNCH_NAME = "1.0";
 export const versionLabel = (v: string) => (v === "1.7.0" ? `${LAUNCH_NAME} · launch` : v);
@@ -15,6 +15,7 @@ const KEY = "glidepath.seenVersion";
 export type WnIcon = "map" | "flight" | "remote" | "book" | "gear" | "spark" | "download" | "search" | "tower" | "cloud" | "layers" | "target" | "headset";
 export interface WnItem { v: string; ic: WnIcon; t: string; d: string }
 export const WHATS_NEW: WnItem[] = [
+  { v: "1.7.8", ic: "spark", t: "Clearer glass, colour back", d: "Panels and the app launcher are now clear glass you can see the sky and map through, and app icons are back in full colour with a glossy glass shine." },
   { v: "1.7.7", ic: "spark", t: "Grey glass, smoother", d: "Panels are now neutral grey glass with a thick edge and softer colours, and only the floating bars bend the background, so scrolling stays smooth on iPad." },
   { v: "1.7.6", ic: "spark", t: "Pressing feels liquid", d: "Every button squashes like jelly when you press it, a ring of glass ripples out from your finger, little droplets splash off, and light runs across it as it springs back. Icons are now glass tiles and cards have a thick glass edge." },
   { v: "1.7.5", ic: "spark", t: "Glass buttons", d: "Every button, switch and tile is now a drop of clear glass with a bright rim and a curved shine, and coloured buttons hold their colour inside the glass." },
